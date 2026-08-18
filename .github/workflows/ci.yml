@@ -25,10 +25,18 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Validate Compose configuration
         run: docker compose --env-file .env.example config --quiet
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install JSON Schema validator
+        run: python -m pip install --disable-pip-version-check "jsonschema[format-nongpl]==4.23.0"
 
       - name: Parse and check OpenAPI contract
         shell: bash
@@ -41,11 +49,39 @@ jobs:
           abort "OpenAPI document must be an object" unless spec.is_a?(Hash)
           abort "OpenAPI 3.1.0 is required" unless spec["openapi"] == "3.1.0"
 
-          required_paths = ["/v1/calls", "/v1/calls/{id}"]
+          required_paths = ["/v1/calls", "/v1/calls/{id}", "/v1/calls/{id}/revisions"]
           required_paths.each do |required_path|
             operation = spec.dig("paths", required_path, "get")
             abort "Missing GET #{required_path}" unless operation.is_a?(Hash)
           end
+
+          revisions_path = spec.dig("paths", "/v1/calls/{id}/revisions")
+          abort "Revision subresource must expose GET only" unless revisions_path.keys == ["get"]
+          http_methods = %w[get put post delete options head patch trace]
+          mutation_operations = spec.fetch("paths").flat_map do |candidate_path, path_item|
+            next [] unless candidate_path.start_with?("/v1/calls/{id}/revisions")
+
+            path_item.keys & (http_methods - ["get"])
+          end
+          abort "Revision resources must be read-only" unless mutation_operations.empty?
+          revision_get = revisions_path.fetch("get")
+          expected_responses = %w[200 400 404 500]
+          abort "Unexpected revision responses" unless revision_get.fetch("responses").keys.sort == expected_responses
+          revision_success = revision_get.dig("responses", "200", "content", "application/json", "schema", "$ref")
+          abort "Revision success must use the canonical list schema" unless revision_success == "#/components/schemas/AnalystCallRevisionList"
+          expected_error_responses = {
+            "400" => "#/components/responses/BadRequest",
+            "404" => "#/components/responses/NotFound",
+            "500" => "#/components/responses/InternalServerError"
+          }
+          expected_error_responses.each do |status, expected_reference|
+            response_reference = revision_get.dig("responses", status, "$ref")
+            abort "Revision #{status} response is miswired" unless response_reference == expected_reference
+          end
+
+          revision_list_schema = spec.dig("components", "schemas", "AnalystCallRevisionList")
+          abort "Revision list must be an array" unless revision_list_schema["type"] == "array"
+          abort "Revision list item schema is miswired" unless revision_list_schema.dig("items", "$ref") == "#/components/schemas/AnalystCallRevision"
 
           list_parameters = spec.dig("paths", "/v1/calls", "get", "parameters")
           abort "List parameters must be an array" unless list_parameters.is_a?(Array)
@@ -91,9 +127,10 @@ jobs:
       - name: Parse canonical JSON Schemas
         shell: bash
         run: |
-          python3 <<'PYTHON'
+          python <<'PYTHON'
           import json
           from pathlib import Path
+          from jsonschema import Draft202012Validator
 
           paths = sorted(Path("schemas").glob("*.schema.json"))
           if not paths:
@@ -103,6 +140,7 @@ jobs:
           for path in paths:
               with path.open(encoding="utf-8") as handle:
                   schema = json.load(handle)
+              Draft202012Validator.check_schema(schema)
               if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
                   raise SystemExit(f"{path}: Draft 2020-12 marker is required")
               schema_id = schema.get("$id")
@@ -130,16 +168,119 @@ jobs:
             ' "$file" >/dev/null
           done
 
+      - name: Validate analyst-call revision lineage
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import json
+          from collections import defaultdict
+          from datetime import datetime
+          from pathlib import Path
+          from jsonschema import Draft202012Validator, FormatChecker
+
+          fixture_dir = Path("fixtures/v1")
+          manifest = json.loads((fixture_dir / "manifest.json").read_text(encoding="utf-8"))
+          declared = {entry["path"] for entry in manifest["files"]}
+          actual = {path.name for path in fixture_dir.glob("*.json")} - {"manifest.json"}
+          if declared != actual:
+              raise SystemExit(f"Fixture manifest mismatch: declared={sorted(declared)}, actual={sorted(actual)}")
+
+          call_document = json.loads((fixture_dir / "analyst-calls.json").read_text(encoding="utf-8"))
+          revision_document = json.loads(
+              (fixture_dir / "analyst-call-revisions.json").read_text(encoding="utf-8")
+          )
+          calls = {item["callId"]: item for item in call_document["calls"]}
+          source_references = {
+              item["sourceReferenceId"] for item in call_document["sourceReferences"]
+          }
+          revisions = revision_document["revisions"]
+          revision_schema = json.loads(
+              Path("schemas/analyst-call-revision.schema.json").read_text(encoding="utf-8")
+          )
+          revision_validator = Draft202012Validator(revision_schema, format_checker=FormatChecker())
+          revision_fields = {
+              "revisionId", "schemaVersion", "callId", "supersedesRevisionId",
+              "sequenceNumber", "provider", "providerEventId", "revisionType",
+              "eventTime", "processingTime", "correctedTerms", "reason",
+              "sourceReferenceId", "dataMode", "capturedAt", "provenanceId",
+          }
+          corrected_term_fields = {
+              "direction", "originalRating", "previousTarget", "target", "currency", "targetDate",
+          }
+
+          if {item["revisionType"] for item in revisions} != {"CORRECTION", "CANCELLATION"}:
+              raise SystemExit("DEMO revisions must exercise both correction and cancellation")
+          if len({item["revisionId"] for item in revisions}) != len(revisions):
+              raise SystemExit("Duplicate revisionId")
+          provider_events = {(item["provider"], item["providerEventId"]) for item in revisions}
+          if len(provider_events) != len(revisions):
+              raise SystemExit("Duplicate revision provider event identity")
+          base_provider_events = {(item["provider"], item["providerEventId"]) for item in calls.values()}
+          if provider_events & base_provider_events:
+              raise SystemExit("Base call and revision provider event identities must be disjoint")
+
+          by_call = defaultdict(list)
+          for item in revisions:
+              revision_validator.validate(item)
+              if set(item) != revision_fields:
+                  raise SystemExit(f"Revision is not a closed canonical record: {item.get('revisionId')}")
+              if item["schemaVersion"] != "1.0.0" or item["dataMode"] != "DEMO":
+                  raise SystemExit(f"Invalid revision version or data mode: {item['revisionId']}")
+              if item["provenanceId"] != revision_document["provenance"]["id"]:
+                  raise SystemExit(f"Revision provenance mismatch: {item['revisionId']}")
+              call = calls.get(item["callId"])
+              if call is None:
+                  raise SystemExit(f"Orphan revision {item['revisionId']}")
+              if item["sourceReferenceId"] not in source_references:
+                  raise SystemExit(f"Unknown source reference for {item['revisionId']}")
+              if item["revisionType"] == "CORRECTION" and item["correctedTerms"] is None:
+                  raise SystemExit(f"Correction has no corrected terms: {item['revisionId']}")
+              if item["correctedTerms"] is not None and set(item["correctedTerms"]) != corrected_term_fields:
+                  raise SystemExit(f"Corrected terms are not closed: {item['revisionId']}")
+              if item["revisionType"] == "CANCELLATION" and item["correctedTerms"] is not None:
+                  raise SystemExit(f"Cancellation has corrected terms: {item['revisionId']}")
+
+              original_time = datetime.fromisoformat(call["eventTime"].replace("Z", "+00:00"))
+              event_time = datetime.fromisoformat(item["eventTime"].replace("Z", "+00:00"))
+              processing_time = datetime.fromisoformat(item["processingTime"].replace("Z", "+00:00"))
+              captured_at = datetime.fromisoformat(item["capturedAt"].replace("Z", "+00:00"))
+              if not original_time <= event_time <= processing_time <= captured_at:
+                  raise SystemExit(f"Invalid revision time order: {item['revisionId']}")
+              by_call[item["callId"]].append(item)
+
+          required_demo_chain_found = False
+          for call_id, lineage in by_call.items():
+              lineage.sort(key=lambda item: item["sequenceNumber"])
+              if [item["revisionType"] for item in lineage] == ["CORRECTION", "CANCELLATION"]:
+                  required_demo_chain_found = True
+              previous_event_time = None
+              for index, item in enumerate(lineage, start=1):
+                  expected_predecessor = None if index == 1 else lineage[index - 2]["revisionId"]
+                  if item["sequenceNumber"] != index or item["supersedesRevisionId"] != expected_predecessor:
+                      raise SystemExit(f"Broken revision chain for {call_id} at sequence {index}")
+                  if item["revisionType"] == "CANCELLATION" and index != len(lineage):
+                      raise SystemExit(f"Cancellation must terminate revision chain for {call_id}")
+                  event_time = datetime.fromisoformat(item["eventTime"].replace("Z", "+00:00"))
+                  if previous_event_time is not None and event_time < previous_event_time:
+                      raise SystemExit(f"Revision event time moved backwards for {call_id}")
+                  previous_event_time = event_time
+
+          if not required_demo_chain_found:
+              raise SystemExit("At least one DEMO lineage must exercise correction then cancellation")
+
+          print(f"Validated {len(revisions)} analyst-call revisions across {len(by_call)} call lineage(s)")
+          PYTHON
+
   web:
     name: Web
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
 
@@ -167,10 +308,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21

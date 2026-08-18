@@ -40,6 +40,7 @@ class AnalystCallPersistenceTest {
     void rootFixturesArePackagedAndMappedToCanonicalModels() {
         assertThat(new ClassPathResource("fixtures/v1/master-data.json").exists()).isTrue();
         assertThat(new ClassPathResource("fixtures/v1/analyst-calls.json").exists()).isTrue();
+        assertThat(new ClassPathResource("fixtures/v1/analyst-call-revisions.json").exists()).isTrue();
         assertThat(new ClassPathResource("fixtures/v1/market-snapshots.json").exists()).isTrue();
 
         AnalystCallDataSet dataSet = provider.load();
@@ -47,6 +48,7 @@ class AnalystCallPersistenceTest {
         assertThat(dataSet.analysts()).hasSize(2);
         assertThat(dataSet.assets()).hasSize(4);
         assertThat(dataSet.calls()).hasSize(2);
+        assertThat(dataSet.revisions()).hasSize(2);
         assertThat(dataSet.snapshots()).hasSize(2);
         assertThat(dataSet.calls()).allMatch(call -> call.target() == null || call.target().scale() >= 1);
     }

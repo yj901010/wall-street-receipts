@@ -101,7 +101,49 @@ Status: complete for this vertical slice; the broader P1 phase remains in progre
 
 ### Remaining P1 work
 
-- Add explicit `AnalystCallRevision` lineage so corrections and cancellations link to, but never overwrite, the original event.
+- Add the versioned outcome model and deterministic recalculation boundary; scoring itself remains deferred to P3.
+- Add the remaining macro/context snapshot domain needed by the full P1 model.
+- Exercise nullable source-document metadata through a full persistence and HTTP round trip.
+
+## P1 — Analyst Call Revision lineage
+
+Status: complete for this vertical slice; the broader P1 phase remains in progress
+
+### Scope
+
+- Add a canonical append-only `AnalystCallRevision` event for corrections and cancellations.
+- Preserve the original analyst-call row, source evidence, and immutable market snapshot without mutation.
+- Persist deterministic sequence and supersession lineage through Flyway V3.
+- Add a fixture-backed correction followed by a terminal cancellation without changing the two base calls.
+- Expose a read-only audit subresource while leaving the existing list/detail response shapes unchanged.
+
+### Technical decisions
+
+- A correction carries complete replacement forecast terms so JSON `null` means an observed corrected absence, not an omitted patch field.
+- A cancellation carries no corrected terms and terminates the lineage; no later revision is accepted.
+- Sequence numbers are one-based and contiguous. Every non-root revision must supersede the immediately preceding event for the same call.
+- Revision and base-call writers atomically claim a shared `(provider, provider_event_id)` registry key, preserving idempotency and preventing cross-kind races.
+- Revision time is monotonic and preserves `eventTime <= processingTime <= capturedAt`; source reference, data mode, and provenance are required.
+- Existing call `status` values and filters continue to describe the immutable base event. Effective lifecycle projections, outcome recalculation, and web revision UI remain separate follow-up work.
+- No POST, PATCH, PUT, or DELETE revision route exists.
+
+### Route
+
+- `GET /v1/calls/{id}/revisions` — sequence-ascending canonical revision history; a known call without revisions returns `[]` and an unknown call returns the standard closed 404 Problem.
+
+### Verification
+
+- OpenAPI 3.1 parsing, exact additive revision route, Draft 2020-12 schema validation with format checks, fixture manifest parity, and closed correction→cancellation lineage checks: passed.
+- Compose configuration: passed with PostgreSQL as the only stateful runtime.
+- ESLint: passed with zero warnings.
+- Vitest: 5 files and 11 tests passed.
+- Next.js production build: passed for `/`, `/calls`, and `/calls/[id]`; the existing web contract remained unchanged.
+- Maven `verify`: 61 tests passed with zero failures, errors, or skips.
+- PostgreSQL 17 Testcontainers applied Flyway V1–V3 from a fresh schema, upgraded a populated V2 schema with provider-identity backfill, and verified the shared provider-event registry, two-call/two-revision idempotent fixture import, failed-batch rollback, same-call contiguous supersession, terminal cancellation, ISO-shaped currency, source provenance, base-call and snapshot preservation, and raw-SQL constraint rejection.
+- MockMvc verified ordered canonical revision fields, a known empty lineage, the closed 404 Problem, request-ID propagation, the exact GET-only mapping surface, and 405 responses for POST, PUT, PATCH, and DELETE.
+
+### Remaining P1 work
+
 - Add the versioned outcome model and deterministic recalculation boundary; scoring itself remains deferred to P3.
 - Add the remaining macro/context snapshot domain needed by the full P1 model.
 - Exercise nullable source-document metadata through a full persistence and HTTP round trip.

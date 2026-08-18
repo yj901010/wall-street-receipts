@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wallstreetreceipts.api.application.port.out.AnalystCallDataSet;
 import com.wallstreetreceipts.api.application.port.out.AnalystCallProvider;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.AnalystCallsDocument;
+import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.AnalystCallRevisionsDocument;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.MasterDataDocument;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.MarketSnapshotsDocument;
 
@@ -21,6 +22,7 @@ public final class FixtureAnalystCallProvider implements AnalystCallProvider {
     private static final String PROVIDER_NAME = "fixture";
     private static final String MASTER_DATA = "fixtures/v1/master-data.json";
     private static final String ANALYST_CALLS = "fixtures/v1/analyst-calls.json";
+    private static final String ANALYST_CALL_REVISIONS = "fixtures/v1/analyst-call-revisions.json";
     private static final String MARKET_SNAPSHOTS = "fixtures/v1/market-snapshots.json";
 
     private final ObjectMapper objectMapper;
@@ -42,6 +44,7 @@ public final class FixtureAnalystCallProvider implements AnalystCallProvider {
                 cached = FixtureAnalystCallMapper.toCanonical(
                         read(MASTER_DATA, MasterDataDocument.class),
                         read(ANALYST_CALLS, AnalystCallsDocument.class),
+                        read(ANALYST_CALL_REVISIONS, AnalystCallRevisionsDocument.class),
                         read(MARKET_SNAPSHOTS, MarketSnapshotsDocument.class));
             }
             return cached;

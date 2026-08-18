@@ -1,8 +1,12 @@
 package com.wallstreetreceipts.api.web.call;
 
+import java.util.List;
+
 import com.wallstreetreceipts.api.application.call.AnalystCallDetail;
 import com.wallstreetreceipts.api.application.call.AnalystCallPage;
 import com.wallstreetreceipts.api.domain.call.AnalystCall;
+import com.wallstreetreceipts.api.domain.call.AnalystCallRevision;
+import com.wallstreetreceipts.api.domain.call.CorrectedCallTerms;
 import com.wallstreetreceipts.api.domain.market.MarketSnapshot;
 import com.wallstreetreceipts.api.domain.source.SourceDocument;
 import com.wallstreetreceipts.api.domain.source.SourceReference;
@@ -27,6 +31,28 @@ final class AnalystCallResponseMapper {
         return new AnalystCallResponses.Detail(
                 item.call(), item.institution(), item.analyst(), item.asset(), item.source(),
                 toSnapshot(detail.snapshot()));
+    }
+
+    static List<AnalystCallResponses.Revision> toRevisions(List<AnalystCallRevision> revisions) {
+        return revisions.stream().map(AnalystCallResponseMapper::toRevision).toList();
+    }
+
+    private static AnalystCallResponses.Revision toRevision(AnalystCallRevision revision) {
+        return new AnalystCallResponses.Revision(
+                revision.id(), revision.schemaVersion(), revision.callId(), revision.supersedesRevisionId(),
+                revision.sequenceNumber(), revision.provider(), revision.providerEventId(), revision.type(),
+                revision.eventTime(), revision.processingTime(), toCorrectedTerms(revision.correctedTerms()),
+                revision.reason(), revision.sourceReference().id(), revision.dataMode(), revision.capturedAt(),
+                revision.provenanceId());
+    }
+
+    private static AnalystCallResponses.CorrectedTerms toCorrectedTerms(CorrectedCallTerms terms) {
+        if (terms == null) {
+            return null;
+        }
+        return new AnalystCallResponses.CorrectedTerms(
+                terms.direction(), terms.originalRating(), terms.previousTarget(), terms.target(),
+                terms.currency() == null ? null : terms.currency().getCurrencyCode(), terms.targetDate());
     }
 
     private static AnalystCallResponses.Item toItem(AnalystCallDetail detail) {

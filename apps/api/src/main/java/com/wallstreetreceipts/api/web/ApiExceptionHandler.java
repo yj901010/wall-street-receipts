@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,26 @@ public class ApiExceptionHandler {
         problem.setTitle("Invalid query parameters");
         problem.setInstance(URI.create(request.getRequestURI()));
         return problem(problem, HttpStatus.BAD_REQUEST, "INVALID_QUERY", request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<ProblemDetail> handleMethodNotAllowed(
+            HttpRequestMethodNotSupportedException exception,
+            HttpServletRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "This resource is read-only.");
+        problem.setType(URI.create("https://wall-street-receipts.invalid/problems/method-not-allowed"));
+        problem.setTitle("Method not allowed");
+        problem.setInstance(URI.create(request.getRequestURI()));
+        ResponseEntity<ProblemDetail> response = problem(
+                problem, HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", request);
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .headers(headers -> {
+                    headers.putAll(response.getHeaders());
+                    headers.setAllow(exception.getSupportedHttpMethods());
+                })
+                .body(response.getBody());
     }
 
     @ExceptionHandler(Exception.class)

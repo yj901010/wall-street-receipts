@@ -43,6 +43,8 @@ import com.wallstreetreceipts.api.domain.source.SourceType;
 @Repository
 public class JdbcAnalystCallRepository implements AnalystCallRepository {
 
+    private static final String PROVIDER_EVENT_KIND = "ANALYST_CALL";
+
     private static final String SELECT_DETAIL = """
             SELECT
                 c.call_id AS c_call_id,
@@ -183,6 +185,10 @@ public class JdbcAnalystCallRepository implements AnalystCallRepository {
                 || !snapshot.eventTime().equals(call.eventTime()))) {
             throw new IllegalArgumentException("Snapshot identity and eventTime must match its analyst call");
         }
+        if (!claimProviderEventIdentity(
+                call.provider(), call.providerEventId(), PROVIDER_EVENT_KIND, call.id())) {
+            return false;
+        }
 
         insertInstitutionIfAbsent(call.institution());
         if (call.analyst() != null) {
@@ -191,9 +197,7 @@ public class JdbcAnalystCallRepository implements AnalystCallRepository {
         insertAssetIfAbsent(call.asset());
         insertSourceDocumentIfAbsent(call.sourceReference().document());
         insertSourceReferenceIfAbsent(call.sourceReference());
-        if (!insertCall(call)) {
-            return false;
-        }
+        insertCall(call);
         if (snapshot != null) {
             insertSnapshot(snapshot);
         }
@@ -423,10 +427,7 @@ public class JdbcAnalystCallRepository implements AnalystCallRepository {
                         .addValue("provenanceId", reference.provenanceId()));
     }
 
-    private boolean insertCall(AnalystCall call) {
-        if (!isPostgreSql() && providerEventExists(call.provider(), call.providerEventId())) {
-            return false;
-        }
+    private void insertCall(AnalystCall call) {
         String insertSql = """
                 INSERT INTO analyst_calls (
                     call_id, provider, provider_event_id, institution_id, analyst_id, asset_id,
@@ -463,7 +464,9 @@ public class JdbcAnalystCallRepository implements AnalystCallRepository {
                         .addValue("dataMode", call.dataMode().name())
                         .addValue("capturedAt", utc(call.capturedAt()))
                         .addValue("provenanceId", call.provenanceId()));
-        return inserted == 1;
+        if (inserted != 1) {
+            throw new IllegalStateException("claimed provider event did not create an analyst call");
+        }
     }
 
     private void insertSnapshot(MarketSnapshot snapshot) {
@@ -525,17 +528,52 @@ public class JdbcAnalystCallRepository implements AnalystCallRepository {
         }
     }
 
-    private boolean providerEventExists(String provider, String providerEventId) {
-        Long count = jdbc.queryForObject(
+    private boolean claimProviderEventIdentity(
+            String provider,
+            String providerEventId,
+            String eventKind,
+            String canonicalEventId) {
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("provider", provider)
+                .addValue("providerEventId", providerEventId)
+                .addValue("eventKind", eventKind)
+                .addValue("canonicalEventId", canonicalEventId);
+        String insert = """
+                INSERT INTO provider_event_identities (
+                    provider, provider_event_id, event_kind, canonical_event_id
+                ) VALUES (
+                    :provider, :providerEventId, :eventKind, :canonicalEventId
+                )
+                """;
+        int claimed;
+        if (isPostgreSql()) {
+            claimed = jdbc.update(insert + " ON CONFLICT (provider, provider_event_id) DO NOTHING", parameters);
+        } else {
+            Long existing = jdbc.queryForObject(
+                    """
+                            SELECT COUNT(*) FROM provider_event_identities
+                            WHERE provider = :provider AND provider_event_id = :providerEventId
+                            """,
+                    parameters,
+                    Long.class);
+            claimed = existing == null || existing == 0 ? jdbc.update(insert, parameters) : 0;
+        }
+        if (claimed == 1) {
+            return true;
+        }
+
+        String claimedKind = jdbc.queryForObject(
                 """
-                        SELECT COUNT(*) FROM analyst_calls
+                        SELECT event_kind FROM provider_event_identities
                         WHERE provider = :provider AND provider_event_id = :providerEventId
                         """,
-                new MapSqlParameterSource()
-                        .addValue("provider", provider)
-                        .addValue("providerEventId", providerEventId),
-                Long.class);
-        return count != null && count > 0;
+                parameters,
+                String.class);
+        if (eventKind.equals(claimedKind)) {
+            return false;
+        }
+        throw new IllegalArgumentException(
+                "provider event identity is already claimed by " + claimedKind);
     }
 
     private boolean isPostgreSql() {

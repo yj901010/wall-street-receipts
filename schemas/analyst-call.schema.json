@@ -120,6 +120,7 @@
     },
     "status": {
       "type": "string",
+      "description": "Status recorded on this immutable original event. Correction and cancellation revisions do not rewrite it.",
       "enum": [
         "ACTIVE",
         "CORRECTED",

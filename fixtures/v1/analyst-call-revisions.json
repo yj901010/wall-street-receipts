@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureVersion": "v1",
+  "dataMode": "DEMO",
+  "generatedAt": "2026-08-18T00:00:00Z",
+  "provenance": {
+    "id": "fixture-analyst-call-revisions-v1",
+    "sourceType": "LOCAL_SPECIFICATION",
+    "sourcePaths": [
+      "docs/contracts/events.md",
+      "docs/docs/DOMAIN_MODEL.md"
+    ],
+    "capturedAt": "2026-08-18T00:00:00Z",
+    "synthetic": true,
+    "licenseClass": "INTERNAL_DEMO"
+  },
+  "revisions": [
+    {
+      "revisionId": "demo-call-revision-001",
+      "schemaVersion": "1.0.0",
+      "callId": "demo-call-002",
+      "supersedesRevisionId": null,
+      "sequenceNumber": 1,
+      "provider": "fixture",
+      "providerEventId": "fixture-call-revision-001",
+      "revisionType": "CORRECTION",
+      "eventTime": "2026-08-11T14:40:00Z",
+      "processingTime": "2026-08-11T14:42:00Z",
+      "correctedTerms": {
+        "direction": "BULLISH",
+        "originalRating": "DEMO Buy (corrected)",
+        "previousTarget": 210.0,
+        "target": 232.0,
+        "currency": "USD",
+        "targetDate": null
+      },
+      "reason": "Synthetic target correction for deterministic lifecycle testing.",
+      "sourceReferenceId": "source-ref-demo-002",
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-11T14:42:00Z",
+      "provenanceId": "fixture-analyst-call-revisions-v1"
+    },
+    {
+      "revisionId": "demo-call-revision-002",
+      "schemaVersion": "1.0.0",
+      "callId": "demo-call-002",
+      "supersedesRevisionId": "demo-call-revision-001",
+      "sequenceNumber": 2,
+      "provider": "fixture",
+      "providerEventId": "fixture-call-revision-002",
+      "revisionType": "CANCELLATION",
+      "eventTime": "2026-08-11T15:00:00Z",
+      "processingTime": "2026-08-11T15:02:00Z",
+      "correctedTerms": null,
+      "reason": "Synthetic cancellation event for deterministic lifecycle testing.",
+      "sourceReferenceId": "source-ref-demo-002",
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-11T15:02:00Z",
+      "provenanceId": "fixture-analyst-call-revisions-v1"
+    }
+  ],
+  "disclaimer": "Synthetic DEMO revisions only; they do not represent an actual analyst statement, correction, or cancellation."
+}

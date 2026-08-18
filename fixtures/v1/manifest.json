@@ -31,6 +31,10 @@
       "description": "Analyst call events with source documents and references"
     },
     {
+      "path": "analyst-call-revisions.json",
+      "description": "Append-only correction and cancellation events linked to original analyst calls"
+    },
+    {
       "path": "market-snapshots.json",
       "description": "Immutable point-in-time market context for calls"
     },

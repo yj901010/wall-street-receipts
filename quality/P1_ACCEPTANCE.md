@@ -1,9 +1,9 @@
 # P1 Acceptance Checks — Analyst Calls
 
-Current status: the analyst-call list/detail vertical slice is complete, but the
-broader P1 phase remains open. Explicit correction/cancellation revision
-lineage (P1-D08), the outcome model, and remaining context models are deferred
-to subsequent P1 feature branches and must pass before P1 is marked complete.
+Current status: the analyst-call list/detail vertical slice and explicit
+correction/cancellation lineage are complete, but the broader P1 phase remains
+open. The outcome model and remaining context models are deferred to subsequent
+P1 feature branches and must pass before P1 is marked complete.
 
 P1 is complete only when the analyst-call list/detail vertical slice satisfies
 every check below with deterministic DEMO data and no commercial provider or
@@ -46,12 +46,25 @@ growth-phase runtime dependency.
 | P1-D07 | Duplicate provider event | Re-ingesting the same `(provider, providerEventId)` produces one canonical call. |
 | P1-D08 | Correction or cancellation | The original call is not overwritten; lifecycle/revision behavior remains auditable. |
 
+## Revision-lineage gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P1-R01 | Deterministic DEMO lineage | The versioned fixture contains a correction followed by a cancellation for a known opaque call ID, and the canonical revision schema is closed and versioned. |
+| P1-R02 | Original preservation | Importing the lineage leaves every original analyst-call column and its immutable snapshot unchanged. |
+| P1-R03 | Revision identity | Re-ingesting `(provider, providerEventId)` resolves to one canonical event, while a base-call/revision kind collision is rejected atomically by the shared identity registry. |
+| P1-R04 | Ordered append-only chain | Sequence numbers are contiguous, each non-root revision supersedes the immediately preceding revision for the same call, and no event follows a cancellation. |
+| P1-R05 | Time and evidence | Every revision preserves `eventTime <= processingTime <= capturedAt`, source reference, data mode, and provenance; a correction carries complete replacement terms while a cancellation carries none. |
+| P1-R06 | Read-only audit surface | `GET /v1/calls/{id}/revisions` returns sequence-ascending canonical records, returns `[]` for a known call without revisions, returns a closed 404 Problem for an unknown call, and no revision mutation endpoint exists. |
+
 ## Architecture and runtime gate
 
 - Provider DTOs stay under the provider adapter and do not appear in controller,
   canonical schema, or domain packages.
 - Financial values use decimal-safe types in Java; timestamps use UTC instants
   and time-dependent behavior uses an injected `Clock`.
+- `call.status` is the value recorded on the immutable original event. Revision
+  history never rewrites it; an effective lifecycle projection is out of scope.
 - No call or snapshot mutation endpoint is introduced in P1.
 - The app boots and tests run with fixture mode and PostgreSQL only; no vendor
   key, Redis, Kafka, ClickHouse, OpenSearch, or object storage is required.

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import com.wallstreetreceipts.api.application.port.out.AnalystCallProvider;
 import com.wallstreetreceipts.api.application.port.out.AnalystCallRepository;
+import com.wallstreetreceipts.api.application.port.out.AnalystCallRevisionRepository;
 
 @Component
 @ConditionalOnProperty(name = "app.providers.analyst", havingValue = "fixture", matchIfMissing = true)
@@ -14,14 +15,21 @@ class FixtureAnalystCallImporter implements ApplicationRunner {
 
     private final AnalystCallProvider provider;
     private final AnalystCallRepository repository;
+    private final AnalystCallRevisionRepository revisionRepository;
 
-    FixtureAnalystCallImporter(AnalystCallProvider provider, AnalystCallRepository repository) {
+    FixtureAnalystCallImporter(
+            AnalystCallProvider provider,
+            AnalystCallRepository repository,
+            AnalystCallRevisionRepository revisionRepository) {
         this.provider = provider;
         this.repository = repository;
+        this.revisionRepository = revisionRepository;
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        repository.importDataSet(provider.load());
+        var dataSet = provider.load();
+        repository.importDataSet(dataSet);
+        revisionRepository.importAll(dataSet.revisions());
     }
 }
