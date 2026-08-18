@@ -1,6 +1,22 @@
 import type { MarketProvider } from "./market-provider";
 import { FixtureMarketProvider } from "./fixture-market-provider";
 
+export { callsProvider, FixtureCallsProvider } from "./fixture-calls-provider";
+export type {
+  AnalystCall,
+  AnalystCallDetail,
+  AnalystCallPage,
+  AnalystCallView,
+  CallDirection,
+  CallSortField,
+  CallStatus,
+  CallsMetadata,
+  CallsProvider,
+  CallsQuery,
+  MarketSnapshot,
+  SourceEvidence,
+} from "./calls-provider";
+
 export function marketProvider(): MarketProvider {
   const configuredProvider = process.env.MARKET_PROVIDER?.toLowerCase() ?? "fixture";
 

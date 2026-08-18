@@ -4,10 +4,11 @@ Wall Street Receipts is a point-in-time financial research product that records
 public analyst calls, preserves the market context that was available when each
 call was made, and evaluates later outcomes with a reproducible methodology.
 
-The repository is currently in the P0 foundation phase. The runnable surface is
-intentionally small: a Next.js web app, a Spring Boot API, PostgreSQL, and
-versioned fixtures. Kafka, Redis, ClickHouse, OpenSearch, object storage, and
-commercial data providers are later-phase extension points, not P0 runtime
+The P0 foundation is complete and the repository is progressing through P1.
+The first P1 vertical slice provides a canonical analyst-call ledger, source
+evidence, immutable point-in-time snapshots, list/detail APIs, and responsive
+web routes. Kafka, Redis, ClickHouse, OpenSearch, object storage, and commercial
+data providers remain later-phase extension points rather than runtime
 dependencies.
 
 > All bundled records use `DATA_MODE=DEMO`. They are synthetic examples, not
@@ -44,6 +45,8 @@ On macOS or Linux, use `cp .env.example .env` and
 - Web: <http://localhost:3000>
 - API: <http://localhost:8080>
 - PostgreSQL: `localhost:5432`
+- Analyst calls: <http://localhost:3000/calls>
+- Analyst-call API: <http://localhost:8080/v1/calls>
 
 Stop the database without deleting its volume:
 
@@ -86,8 +89,11 @@ adapters before they reach the canonical domain.
 apps/web/        Next.js user interface
 apps/api/        Spring Boot API and Flyway migrations
 fixtures/v1/     Versioned canonical DEMO fixtures
+contracts/       OpenAPI contracts
+schemas/         Canonical JSON Schemas
+quality/         Phase acceptance checks
 .github/         Continuous integration workflows
-compose.yaml     P0 PostgreSQL service
+compose.yaml     PostgreSQL service
 ```
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the Git Flow, Conventional Commits,

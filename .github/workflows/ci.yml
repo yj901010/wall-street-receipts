@@ -30,6 +30,91 @@ jobs:
       - name: Validate Compose configuration
         run: docker compose --env-file .env.example config --quiet
 
+      - name: Parse and check OpenAPI contract
+        shell: bash
+        run: |
+          ruby <<'RUBY'
+          require "yaml"
+
+          path = "contracts/openapi.yaml"
+          spec = YAML.safe_load_file(path, aliases: false)
+          abort "OpenAPI document must be an object" unless spec.is_a?(Hash)
+          abort "OpenAPI 3.1.0 is required" unless spec["openapi"] == "3.1.0"
+
+          required_paths = ["/v1/calls", "/v1/calls/{id}"]
+          required_paths.each do |required_path|
+            operation = spec.dig("paths", required_path, "get")
+            abort "Missing GET #{required_path}" unless operation.is_a?(Hash)
+          end
+
+          list_parameters = spec.dig("paths", "/v1/calls", "get", "parameters")
+          abort "List parameters must be an array" unless list_parameters.is_a?(Array)
+          actual_filters = list_parameters.map do |entry|
+            reference = entry["$ref"]
+            parameter = reference ? spec.dig("components", "parameters", reference.split("/").last) : entry
+            parameter && parameter["name"]
+          end.compact.sort
+          expected_filters = %w[
+            analystId assetId dataMode direction from institutionId order page size sort status ticker to
+          ].sort
+          abort "Unexpected list filters: #{actual_filters.inspect}" unless actual_filters == expected_filters
+
+          page_schema = spec.dig("components", "schemas", "AnalystCallPage")
+          page_keys = page_schema.fetch("properties").keys.sort
+          page_required = page_schema.fetch("required").sort
+          abort "List response must be exactly items/page" unless page_keys == %w[items page] && page_required == %w[items page]
+
+          sort_schema = spec.dig("components", "schemas", "SortMetadata")
+          sort_keys = sort_schema.fetch("properties").keys.sort
+          abort "page.sort must be exactly field/order" unless sort_keys == %w[field order]
+
+          references = []
+          walk = lambda do |value|
+            case value
+            when Hash
+              references << value["$ref"] if value["$ref"].is_a?(String)
+              value.each_value { |child| walk.call(child) }
+            when Array
+              value.each { |child| walk.call(child) }
+            end
+          end
+          walk.call(spec)
+          references.grep(%r{^\.\./schemas/}).each do |reference|
+            relative_path = reference.split("#", 2).first
+            resolved = File.expand_path(relative_path, File.dirname(path))
+            abort "Missing external schema #{reference}" unless File.file?(resolved)
+          end
+
+          puts "OpenAPI contract parsed and required P1 surface is present"
+          RUBY
+
+      - name: Parse canonical JSON Schemas
+        shell: bash
+        run: |
+          python3 <<'PYTHON'
+          import json
+          from pathlib import Path
+
+          paths = sorted(Path("schemas").glob("*.schema.json"))
+          if not paths:
+              raise SystemExit("No canonical JSON Schemas found")
+
+          schema_ids = set()
+          for path in paths:
+              with path.open(encoding="utf-8") as handle:
+                  schema = json.load(handle)
+              if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
+                  raise SystemExit(f"{path}: Draft 2020-12 marker is required")
+              schema_id = schema.get("$id")
+              if not isinstance(schema_id, str) or not schema_id:
+                  raise SystemExit(f"{path}: non-empty $id is required")
+              if schema_id in schema_ids:
+                  raise SystemExit(f"{path}: duplicate $id {schema_id}")
+              schema_ids.add(schema_id)
+
+          print(f"Parsed {len(paths)} canonical JSON Schemas")
+          PYTHON
+
       - name: Validate versioned DEMO fixtures
         shell: bash
         run: |

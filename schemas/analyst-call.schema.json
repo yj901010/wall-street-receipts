@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:analyst-call:1.0.0",
+  "title": "Canonical Analyst Call",
+  "description": "An immutable normalized analyst-call event. The provider identity pair is retained for idempotency, and event time is distinct from ingestion processing time.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "callId",
+    "provider",
+    "providerEventId",
+    "institutionId",
+    "analystId",
+    "assetId",
+    "eventTime",
+    "processingTime",
+    "direction",
+    "originalRating",
+    "previousTarget",
+    "target",
+    "currency",
+    "targetDate",
+    "sourceReferenceId",
+    "status",
+    "dataMode",
+    "capturedAt",
+    "provenanceId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "callId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "providerEventId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "institutionId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "analystId": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/identifier"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "assetId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "eventTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC instant at which the source statement was made or published."
+    },
+    "processingTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC instant at which the platform accepted the event."
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "STRONG_BULLISH",
+        "BULLISH",
+        "NEUTRAL",
+        "BEARISH",
+        "STRONG_BEARISH"
+      ]
+    },
+    "originalRating": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200,
+      "description": "Source wording when present; null means it was not observed."
+    },
+    "previousTarget": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "target": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "currency": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Z]{3}$"
+    },
+    "targetDate": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "sourceReferenceId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "CORRECTED",
+        "CANCELLED"
+      ]
+    },
+    "dataMode": {
+      "$ref": "#/$defs/dataMode"
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provenanceId": {
+      "$ref": "#/$defs/identifier"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "dataMode": {
+      "type": "string",
+      "enum": [
+        "REALTIME",
+        "DELAYED",
+        "EOD",
+        "DEMO"
+      ]
+    }
+  }
+}

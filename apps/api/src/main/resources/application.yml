@@ -11,6 +11,9 @@ spring:
     locations: classpath:db/migration
   jackson:
     time-zone: UTC
+  mvc:
+    problemdetails:
+      enabled: true
   lifecycle:
     timeout-per-shutdown-phase: 20s
 
@@ -36,3 +39,4 @@ info:
 app:
   providers:
     market: ${MARKET_PROVIDER:fixture}
+    analyst: ${ANALYST_PROVIDER:fixture}

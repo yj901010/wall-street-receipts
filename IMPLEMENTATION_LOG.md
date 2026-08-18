@@ -55,3 +55,53 @@ Status: complete
 ### Next phase
 
 After the P0 gate passes, begin P1 with the analyst-call list/detail vertical slice, canonical provider-event identity, immutable point-in-time snapshots, and source provenance.
+
+## P1 — Analyst Calls vertical slice
+
+Status: complete for this vertical slice; the broader P1 phase remains in progress
+
+### Scope
+
+- Add the canonical institution, analyst, asset, analyst-call, source, and point-in-time snapshot models.
+- Preserve the provider DTO → adapter → canonical domain boundary with fixture mode as the only runtime provider.
+- Persist canonical calls and evidence through Flyway V2 and a PostgreSQL-backed repository.
+- Expose paginated list and detail APIs with deterministic filtering, stable sorting, source traceability, and closed Problem responses.
+- Add fixture-backed `/calls` and `/calls/[id]` routes with loading, error, empty, and not-found states.
+- Version OpenAPI 3.1 and Draft 2020-12 JSON Schemas for the implemented read surface.
+
+### Technical decisions
+
+- The list response is exactly `{items, page}`; page numbers are zero-based and sort metadata is exactly `{field, order}`.
+- Canonical identifiers are opaque strings. Provider idempotency is keyed by `(provider, provider_event_id)` and uses PostgreSQL `ON CONFLICT` atomically.
+- Event time, processing time, and capture time stay distinct UTC instants; decimal financial fields use `BigDecimal` in Java.
+- Market snapshots are insert-only records tied to the call and asset, and their event time must equal the call event time. No update or delete surface exists.
+- Missing analyst, ticker, source metadata, snapshot, targets, or market measures remain `null`; the web layer renders `NA` and does not infer USD or other values.
+- Root `fixtures/v1` remains the canonical fixture source and is copied into the API artifact at build time rather than duplicated under the application.
+- Request IDs are propagated through `X-Request-Id`; 400, 404, and 500 errors use a closed `application/problem+json` shape.
+- Native Git commands remain sufficient for local Git Flow. No GitHub CLI dependency was added.
+
+### Routes
+
+- `GET /v1/calls` — filterable, deterministic, paginated canonical analyst-call list.
+- `GET /v1/calls/{id}` — canonical call detail with source evidence and nullable immutable snapshot.
+- `GET /calls` — responsive DEMO analyst-call ledger with filters, sorting, pagination, and explicit empty state.
+- `GET /calls/[id]` — evidence, event/processing times, target change, snapshot context, and unavailable outcome state.
+
+### Verification
+
+- OpenAPI 3.1, external schema references, exact filters, and closed response keys: passed.
+- Four Draft 2020-12 JSON Schemas and six versioned fixture files parsed successfully.
+- Compose configuration: passed with PostgreSQL as the only stateful runtime.
+- ESLint: passed with zero warnings.
+- Vitest: 5 files and 11 tests passed.
+- Next.js production build: passed for `/`, `/calls`, and `/calls/[id]`.
+- Browser QA: `/calls`, `/calls/demo-call-002`, and the not-found state rendered at 1440 px and 390 px without page-level horizontal overflow or console warnings/errors.
+- Maven `verify`: 48 tests passed with zero failures, errors, or skips, including PostgreSQL 17 Testcontainers, both Flyway migrations, provider-event idempotency, nullable analyst/snapshot behavior, strict filters, source traceability, and snapshot invariants.
+- Runtime smoke: the packaged Spring Boot API started against Compose PostgreSQL 17, migrated the existing schema from V1 to V2, and returned HTTP 200 from `/actuator/health`, `/v1/calls?page=0&size=1`, and `/v1/calls/demo-call-002` with the expected request ID, canonical call, source, and snapshot.
+
+### Remaining P1 work
+
+- Add explicit `AnalystCallRevision` lineage so corrections and cancellations link to, but never overwrite, the original event.
+- Add the versioned outcome model and deterministic recalculation boundary; scoring itself remains deferred to P3.
+- Add the remaining macro/context snapshot domain needed by the full P1 model.
+- Exercise nullable source-document metadata through a full persistence and HTTP round trip.

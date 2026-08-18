@@ -1,3 +1,4 @@
+import { SiteHeader } from "@/components/site-header";
 import { marketProvider } from "@/lib/providers";
 
 const utcFormatter = new Intl.DateTimeFormat("en-US", {
@@ -15,17 +16,7 @@ export default async function DashboardPage() {
 
   return (
     <main>
-      <header className="site-header">
-        <a className="wordmark" href="#top" aria-label="Wall Street Receipts home">
-          WALL STREET <span>RECEIPTS</span>
-        </a>
-        <nav aria-label="Primary navigation">
-          <a aria-current="page" href="#market">Market</a>
-          <a href="#calls">Calls</a>
-          <a href="#methodology">Methodology</a>
-        </nav>
-        <span className="mode-badge">{snapshot.dataMode}</span>
-      </header>
+      <SiteHeader current="dashboard" dataMode={snapshot.dataMode} />
 
       <div className="page-shell" id="top">
         <section className="page-heading" aria-labelledby="page-title">

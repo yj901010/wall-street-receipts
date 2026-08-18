@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:source-reference:1.0.0",
+  "title": "Canonical Source Reference",
+  "description": "The precise, reviewable link between an analyst call and a source document.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceReferenceId",
+    "sourceDocumentId",
+    "page",
+    "startMs",
+    "endMs",
+    "extractedFragment",
+    "extractionConfidence",
+    "verified",
+    "dataMode",
+    "capturedAt",
+    "provenanceId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "sourceReferenceId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "sourceDocumentId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "page": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "startMs": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "endMs": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "When present, application validation requires endMs >= startMs."
+    },
+    "extractedFragment": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4000,
+      "description": "A rights-cleared evidence fragment only; never a full article or report."
+    },
+    "extractionConfidence": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "verified": {
+      "type": "boolean"
+    },
+    "dataMode": {
+      "$ref": "#/$defs/dataMode"
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provenanceId": {
+      "$ref": "#/$defs/identifier"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "dataMode": {
+      "type": "string",
+      "enum": [
+        "REALTIME",
+        "DELAYED",
+        "EOD",
+        "DEMO"
+      ]
+    }
+  }
+}

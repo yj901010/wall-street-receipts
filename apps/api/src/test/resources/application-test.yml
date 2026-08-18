@@ -11,3 +11,4 @@ spring:
 app:
   providers:
     market: fixture
+    analyst: fixture

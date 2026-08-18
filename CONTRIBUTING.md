@@ -29,9 +29,25 @@ git pull --ff-only origin develop
 git switch -c feature/<scope>
 ```
 
-Open a pull request into `develop`. Do not commit directly to `main` or
-`develop`. Feature branches should be short-lived and are squash-merged after
-approval. Delete the branch after merging.
+When a hosted pull-request workflow is available, opening a pull request into
+`develop` is preferred. It does not require the GitHub CLI; use the repository's
+hosted web interface or native integration tooling. Do not commit directly to
+`main` or `develop`. Feature branches should be short-lived and are squash-
+merged after approval. Delete the branch after merging.
+
+If no hosted pull-request workflow is available, native Git integration is
+allowed only after the full local gate below passes and its evidence is recorded.
+Merge the feature branch with an explicit merge commit:
+
+```bash
+git switch develop
+git merge --no-ff feature/<scope>
+```
+
+Do not use a fast-forward merge to bypass reviewable branch history, and do not
+replace the feature merge with direct commits on `develop`. The same native
+`git merge --no-ff` rule applies to both required destinations for release and
+hotfix branches when hosted pull requests are unavailable.
 
 For a release, create `release/<version>` from `develop`, allow only release
 notes, versioning, and stabilization fixes, then merge it into both `main` and
@@ -62,9 +78,9 @@ ci: verify web and api independently
 Keep commits focused and buildable. Use `!` and a `BREAKING CHANGE:` footer for
 an intentional incompatible change.
 
-## Pull request gate
+## Integration gate
 
-Before requesting review:
+Before requesting review or performing an approved native merge:
 
 1. Rebase or merge the latest `develop` as agreed by the team and resolve all
    conflicts locally.
