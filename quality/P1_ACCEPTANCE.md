@@ -1,9 +1,9 @@
 # P1 Acceptance Checks — Analyst Calls
 
-Current status: the analyst-call list/detail vertical slice and explicit
-correction/cancellation lineage are complete, but the broader P1 phase remains
-open. The outcome model and remaining context models are deferred to subsequent
-P1 feature branches and must pass before P1 is marked complete.
+Current status: the analyst-call list/detail vertical slice, explicit
+correction/cancellation lineage, and versioned outcome contract/fixture slice
+are complete. The broader P1 phase remains open until its runtime gates and the
+remaining context models pass. Numeric scoring methodology is deferred to P3.
 
 P1 is complete only when the analyst-call list/detail vertical slice satisfies
 every check below with deterministic DEMO data and no commercial provider or
@@ -57,6 +57,41 @@ growth-phase runtime dependency.
 | P1-R05 | Time and evidence | Every revision preserves `eventTime <= processingTime <= capturedAt`, source reference, data mode, and provenance; a correction carries complete replacement terms while a cancellation carries none. |
 | P1-R06 | Read-only audit surface | `GET /v1/calls/{id}/revisions` returns sequence-ascending canonical records, returns `[]` for a known call without revisions, returns a closed 404 Problem for an unknown call, and no revision mutation endpoint exists. |
 
+## Versioned outcome gate
+
+P1 establishes an immutable, deterministic calculation boundary and auditable
+result envelope. It does not claim that financial scoring has been implemented.
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P1-O01 | Closed canonical contracts | `scoring-methodology` and `call-outcome` schemas are Draft 2020-12, versioned, closed, and accept only their documented exact field sets. Every versioned DEMO instance validates with format checking enabled. |
+| P1-O02 | Methodology identity and coexistence | The fixture contains exactly two methodologies. `(methodologyId, methodologyVersion)` identifies an immutable definition hash; a version/hash conflict is rejected while both definitions remain readable. Schema, fixture, methodology, and outcome sequence versions are distinct concepts. |
+| P1-O03 | Complete outcome envelope | Every outcome has an opaque ID, call/horizon, nullable snapshot, correction-basis, and cancellation-evidence references, methodology version and definition hash, input fingerprint, append-only sequence/supersession, explicit status/reason, event/processing/capture times, data mode, and provenance. A non-null `basisRevisionId` belongs to the same call and is a correction; a non-null `cancellationRevisionId` belongs to the same call and is a cancellation. |
+| P1-O04 | Missing-value and decimal semantics | All P1 DEMO financial metrics and result booleans are JSON null, not zero or false. A missing target, neutral direction, or unavailable benchmark/sector observation does not invent a result; clients render null as `NA`. Future numeric results use decimal precision 38/scale 12 and magnitude strictly below `1e26`; `targetError` is in `[0, 1e26)`. Values requiring silent scale rounding or exceeding these bounds are rejected rather than altered. |
+| P1-O05 | Status, reason, and cancellation evidence | The only valid pairs are `PENDING/HORIZON_NOT_REACHED`, `INCOMPLETE/HORIZON_DATA_MISSING`, `EXCLUDED/CALL_CANCELLED`, and `CALCULATED/null`. `dataComplete` is true only for `CALCULATED`. `EXCLUDED/CALL_CANCELLED` requires `cancellationRevisionId`; every other status requires it to be null. The P1 DEMO fixture contains only pending and incomplete model records. |
+| P1-O06 | Natural input identity and idempotency | The natural calculation input key is the five-field lineage plus `inputFingerprint` and is unique. Snapshot or cancellation-evidence changes must produce a new fingerprint, not a second payload under the same natural key. Replaying an identical key and payload returns the existing outcome without mutation; the same key with a different payload/hash is rejected atomically. |
+| P1-O07 | Append-only recalculation lineage | A lineage is scoped exactly by `(callId, basisRevisionId, horizon, methodologyId, methodologyVersion)`. The version-1 D1 DEMO lineage is sequence 1 followed by sequence 2, where a changed input fingerprint appends sequence 2 and supersedes sequence 1. Every other fixture lineage is a root, and supersession never crosses the five-field lineage scope. |
+| P1-O08 | Source preservation and point-in-time safety | Creating or replaying outcomes does not change the original call, snapshot, revision, methodology definition, or a prior outcome. Canonical methodology and outcome timestamps are UTC `Z` instants with zero to six fractional digits; finer precision is rejected rather than rounded. Call and snapshot evidence preserves `eventTime <= processingTime <= capturedAt`, lineage time does not move backwards, and every referenced call, snapshot, correction basis, and cancellation evidence was both processed and captured no later than outcome processing time. Methodology effective/capture times also precede outcome processing, and fixture generation is not earlier than any contained processing/capture time. |
+| P1-O09 | Read-only audit endpoint | `GET /v1/calls/{id}/outcomes` returns the closed canonical array, `[]` for a known call without outcomes, a closed 400 Problem for an invalid opaque ID, a closed 404 Problem for an unknown call, and a closed 500 Problem for an unexpected failure. No outcomes-prefix mutation operation exists. |
+| P1-O10 | Backward compatibility | Adding outcomes does not add a property to the exact `/v1/calls` list or `/v1/calls/{id}` detail response. Outcome history is available only from the additive subresource. |
+| P1-O11 | Deterministic boundary | P1 exposes no calculator or scheduler. Outcome persistence accepts only explicit immutable input identity and a registered methodology definition; it does not fetch current prices or invoke a provider, network, clock, or LLM, and unknown methodology versions are rejected. P3 must preserve that pure-input boundary when calculation is added. |
+| P1-O12 | Repository fixture gate | CI verifies exactly two methodology instances and four outcome instances, manifest parity, schema/format validity, closed fields, all references, provenance, natural-key uniqueness, lineage, time order, and status/reason/data-completeness rules in under five minutes. |
+
+Whether a terminal cancellation should produce an
+`EXCLUDED/CALL_CANCELLED` outcome is intentionally not inferred by the
+repository fixture check. A cancellation is never a valid scoring basis;
+effective lifecycle projection and cancellation eligibility remain a later
+service rule.
+
+### Deferred scoring acceptance (P3)
+
+P3 owns horizon due-date resolution and trading calendars, corporate-action
+adjustment, deterministic return/alpha/sector-alpha calculations, target-hit and
+target-error logic, MFE/MAE, directional-win rules, benchmark and sector
+selection, numeric golden tests, sample confidence, and leaderboard inclusion.
+Introducing a non-null computed DEMO metric makes its versioned input fixture and
+corresponding P3 golden test mandatory.
+
 ## Architecture and runtime gate
 
 - Provider DTOs stay under the provider adapter and do not appear in controller,
@@ -65,7 +100,8 @@ growth-phase runtime dependency.
   and time-dependent behavior uses an injected `Clock`.
 - `call.status` is the value recorded on the immutable original event. Revision
   history never rewrites it; an effective lifecycle projection is out of scope.
-- No call or snapshot mutation endpoint is introduced in P1.
+- No call, snapshot, revision, methodology, or outcome mutation endpoint is
+  introduced in P1.
 - The app boots and tests run with fixture mode and PostgreSQL only; no vendor
   key, Redis, Kafka, ClickHouse, OpenSearch, or object storage is required.
 - Source payloads contain metadata/evidence only. Full articles, reports, and

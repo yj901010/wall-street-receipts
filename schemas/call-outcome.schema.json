@@ -1,0 +1,424 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:call-outcome:1.0.0",
+  "title": "Canonical Call Outcome",
+  "description": "An append-only, methodology-versioned evaluation record for one analyst-call horizon.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "outcomeId",
+    "schemaVersion",
+    "callId",
+    "horizon",
+    "basisRevisionId",
+    "cancellationRevisionId",
+    "snapshotId",
+    "methodologyId",
+    "methodologyVersion",
+    "methodologyDefinitionHash",
+    "inputFingerprint",
+    "sequenceNumber",
+    "supersedesOutcomeId",
+    "evaluationStatus",
+    "reasonCode",
+    "eventTime",
+    "processingTime",
+    "assetReturn",
+    "benchmarkReturn",
+    "sectorReturn",
+    "alpha",
+    "sectorAlpha",
+    "mfe",
+    "mae",
+    "targetHit",
+    "directionalWin",
+    "targetError",
+    "dataComplete",
+    "dataMode",
+    "capturedAt",
+    "provenanceId"
+  ],
+  "properties": {
+    "outcomeId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "callId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "horizon": {
+      "type": "string",
+      "enum": [
+        "D1",
+        "W1",
+        "M1",
+        "M3",
+        "M6",
+        "Y1"
+      ]
+    },
+    "basisRevisionId": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/identifier"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cancellationRevisionId": {
+      "description": "Same-call cancellation evidence; required only when evaluationStatus is EXCLUDED.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/identifier"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "snapshotId": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/identifier"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "methodologyId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "methodologyVersion": {
+      "$ref": "#/$defs/methodologyVersion"
+    },
+    "methodologyDefinitionHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "inputFingerprint": {
+      "$ref": "#/$defs/sha256"
+    },
+    "sequenceNumber": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "supersedesOutcomeId": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/identifier"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "evaluationStatus": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "CALCULATED",
+        "INCOMPLETE",
+        "EXCLUDED"
+      ]
+    },
+    "reasonCode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "HORIZON_NOT_REACHED",
+        "HORIZON_DATA_MISSING",
+        "CALL_CANCELLED",
+        null
+      ]
+    },
+    "eventTime": {
+      "$ref": "#/$defs/utcInstant",
+      "description": "Domain time at which this recorded evaluation state applies; P3 defines horizon scheduling semantics."
+    },
+    "processingTime": {
+      "$ref": "#/$defs/utcInstant",
+      "description": "Time at which the evaluation state was produced."
+    },
+    "assetReturn": {
+      "$ref": "#/$defs/nullableRatio"
+    },
+    "benchmarkReturn": {
+      "$ref": "#/$defs/nullableRatio"
+    },
+    "sectorReturn": {
+      "$ref": "#/$defs/nullableRatio"
+    },
+    "alpha": {
+      "$ref": "#/$defs/nullableRatio"
+    },
+    "sectorAlpha": {
+      "$ref": "#/$defs/nullableRatio"
+    },
+    "mfe": {
+      "$ref": "#/$defs/nullableRatio"
+    },
+    "mae": {
+      "$ref": "#/$defs/nullableRatio"
+    },
+    "targetHit": {
+      "$ref": "#/$defs/nullableBoolean"
+    },
+    "directionalWin": {
+      "$ref": "#/$defs/nullableBoolean"
+    },
+    "targetError": {
+      "oneOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 100000000000000000000000000,
+          "multipleOf": 0.000000000001
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dataComplete": {
+      "type": "boolean"
+    },
+    "dataMode": {
+      "$ref": "#/$defs/dataMode"
+    },
+    "capturedAt": {
+      "$ref": "#/$defs/utcInstant",
+      "description": "Time at which the evaluation state was persisted as evidence."
+    },
+    "provenanceId": {
+      "$ref": "#/$defs/identifier"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "sequenceNumber": {
+            "const": 1
+          }
+        },
+        "required": [
+          "sequenceNumber"
+        ]
+      },
+      "then": {
+        "properties": {
+          "supersedesOutcomeId": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "supersedesOutcomeId": {
+            "$ref": "#/$defs/identifier"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evaluationStatus": {
+            "const": "EXCLUDED"
+          }
+        },
+        "required": [
+          "evaluationStatus"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cancellationRevisionId": {
+            "$ref": "#/$defs/identifier"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "cancellationRevisionId": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evaluationStatus": {
+            "const": "CALCULATED"
+          }
+        },
+        "required": [
+          "evaluationStatus"
+        ]
+      },
+      "then": {
+        "properties": {
+          "dataComplete": {
+            "const": true
+          },
+          "reasonCode": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evaluationStatus": {
+            "const": "PENDING"
+          }
+        },
+        "required": [
+          "evaluationStatus"
+        ]
+      },
+      "then": {
+        "properties": {
+          "dataComplete": {
+            "const": false
+          },
+          "reasonCode": {
+            "const": "HORIZON_NOT_REACHED"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evaluationStatus": {
+            "const": "INCOMPLETE"
+          }
+        },
+        "required": [
+          "evaluationStatus"
+        ]
+      },
+      "then": {
+        "properties": {
+          "dataComplete": {
+            "const": false
+          },
+          "reasonCode": {
+            "const": "HORIZON_DATA_MISSING"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evaluationStatus": {
+            "const": "EXCLUDED"
+          }
+        },
+        "required": [
+          "evaluationStatus"
+        ]
+      },
+      "then": {
+        "properties": {
+          "dataComplete": {
+            "const": false
+          },
+          "reasonCode": {
+            "const": "CALL_CANCELLED"
+          },
+          "assetReturn": {
+            "type": "null"
+          },
+          "benchmarkReturn": {
+            "type": "null"
+          },
+          "sectorReturn": {
+            "type": "null"
+          },
+          "alpha": {
+            "type": "null"
+          },
+          "sectorAlpha": {
+            "type": "null"
+          },
+          "mfe": {
+            "type": "null"
+          },
+          "mae": {
+            "type": "null"
+          },
+          "targetHit": {
+            "type": "null"
+          },
+          "directionalWin": {
+            "type": "null"
+          },
+          "targetError": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "methodologyVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "utcInstant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+      "description": "Canonical UTC instant with at most microsecond precision; finer values are rejected rather than rounded."
+    },
+    "nullableRatio": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "exclusiveMinimum": -100000000000000000000000000,
+      "exclusiveMaximum": 100000000000000000000000000,
+      "multipleOf": 0.000000000001,
+      "description": "Decimal ratio with at most 12 fractional digits; 0.05 represents five percent."
+    },
+    "nullableBoolean": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "dataMode": {
+      "type": "string",
+      "enum": [
+        "REALTIME",
+        "DELAYED",
+        "EOD",
+        "DEMO"
+      ]
+    }
+  }
+}

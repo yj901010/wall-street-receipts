@@ -96,6 +96,7 @@
                     <include>analyst-calls.json</include>
                     <include>analyst-call-revisions.json</include>
                     <include>market-snapshots.json</include>
+                    <include>call-outcomes.json</include>
                 </includes>
             </resource>
         </resources>

@@ -101,7 +101,6 @@ Status: complete for this vertical slice; the broader P1 phase remains in progre
 
 ### Remaining P1 work
 
-- Add the versioned outcome model and deterministic recalculation boundary; scoring itself remains deferred to P3.
 - Add the remaining macro/context snapshot domain needed by the full P1 model.
 - Exercise nullable source-document metadata through a full persistence and HTTP round trip.
 
@@ -144,6 +143,47 @@ Status: complete for this vertical slice; the broader P1 phase remains in progre
 
 ### Remaining P1 work
 
-- Add the versioned outcome model and deterministic recalculation boundary; scoring itself remains deferred to P3.
+- Add the remaining macro/context snapshot domain needed by the full P1 model.
+- Exercise nullable source-document metadata through a full persistence and HTTP round trip.
+
+## P1 — Call Outcome audit lineage
+
+Status: complete for this vertical slice; the broader P1 phase remains in progress
+
+### Scope
+
+- Add closed, versioned `ScoringMethodology` and `CallOutcome` contracts without claiming P3 financial calculations.
+- Package deterministic DEMO methodology/outcome fixtures through the provider DTO → mapper → canonical domain boundary.
+- Persist immutable calculation identity, point-in-time references, and append-only recalculation lineage through Flyway V4.
+- Expose a read-only outcome audit subresource without changing the exact call list/detail response shapes.
+- Keep scoring, horizon scheduling, trading calendars, corporate actions, and golden calculation tests deferred to P3.
+
+### Technical decisions
+
+- An outcome lineage is scoped by `(callId, basisRevisionId, horizon, methodologyId, methodologyVersion)`; changed inputs append a new sequence with a new SHA-256 `inputFingerprint`.
+- A non-null basis revision must be a same-call correction. Cancellation is separate evidence required exactly for `EXCLUDED/CALL_CANCELLED`; cancellation eligibility remains a later service policy.
+- Every metric key is present but nullable. The P1 DEMO fixture uses only `PENDING` and `INCOMPLETE` records and never invents a numeric or boolean result.
+- Outcome decimals use exact ratio units and the PostgreSQL `NUMERIC(38,12)` boundary. Values needing scale rounding or more than 26 integer digits are rejected.
+- Persisted instants are canonical UTC values with at most microsecond precision. Calls, snapshots, revisions, methodologies, and outcomes preserve processing/capture point-in-time bounds.
+- Methodology rows provide deterministic PostgreSQL lock ordering. Inserts use `ON CONFLICT DO NOTHING` followed by natural-key and outcome-ID rereads, so exact replay is idempotent and conflicting races are explicit.
+- Application repositories expose insert-if-absent and read operations only. Privileged direct SQL remains an administrative trust boundary; any future external writer must use restricted roles or database mutation guards.
+
+### Route
+
+- `GET /v1/calls/{id}/outcomes` — deterministic horizon/methodology/sequence-ordered canonical history; a known call without outcomes returns `[]`, and invalid or unknown IDs use the existing closed Problem contracts.
+
+### Verification
+
+- OpenAPI 3.1 parsing, exact GET-only outcome route, external closed schema wiring, unchanged call detail shape, and exact 400/404/500 response references: passed.
+- Seven Draft 2020-12 schemas and canonical fixture instances passed format validation, including UTC `Z`/microsecond precision and nullable source publication time.
+- The fixture gate verified exactly two methodologies, four outcomes, three append-only lineages, manifest parity, hashes, natural identities, cross-references, point-in-time bounds, and null metric semantics.
+- Maven `verify`: 91 tests passed with zero failures, errors, or skips.
+- PostgreSQL 17 Testcontainers applied V1–V4 from a fresh schema and upgraded a populated V3 schema. It verified 128-character call/snapshot IDs, exact decimal and timestamp replay, raw reference/state/lineage constraints, transactional fixture import, and concurrent natural-key/outcome-ID races.
+- MockMvc verified the exact canonical array, deterministic order, known-empty response, closed 400/404/500 Problems, request-ID propagation, and 405 responses for POST, PUT, PATCH, and DELETE.
+- Existing web regression remained green: ESLint passed with zero warnings, Vitest passed 5 files and 11 tests, and the Next.js production build completed for `/`, `/calls`, and `/calls/[id]`.
+- Compose configuration passed with PostgreSQL as the only stateful runtime.
+
+### Remaining P1 work
+
 - Add the remaining macro/context snapshot domain needed by the full P1 model.
 - Exercise nullable source-document metadata through a full persistence and HTTP round trip.

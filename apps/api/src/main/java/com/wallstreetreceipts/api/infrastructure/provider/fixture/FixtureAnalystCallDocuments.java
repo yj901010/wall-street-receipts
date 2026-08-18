@@ -32,6 +32,12 @@ final class FixtureAnalystCallDocuments {
     record MarketSnapshotsDocument(List<MarketSnapshotDto> snapshots) {
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record CallOutcomesDocument(
+            List<ScoringMethodologyDto> methodologies,
+            List<CallOutcomeDto> outcomes) {
+    }
+
     record InstitutionDto(
             String institutionId,
             String canonicalName,
@@ -167,6 +173,52 @@ final class FixtureAnalystCallDocuments {
             BigDecimal distanceFrom52WeekHigh,
             BigDecimal distanceFromAth,
             boolean immutable,
+            String dataMode,
+            String capturedAt,
+            String provenanceId) {
+    }
+
+    record ScoringMethodologyDto(
+            String methodologyId,
+            String methodologyVersion,
+            String schemaVersion,
+            String definitionHash,
+            String status,
+            String effectiveAt,
+            String dataMode,
+            String capturedAt,
+            String provenanceId) {
+    }
+
+    record CallOutcomeDto(
+            String outcomeId,
+            String schemaVersion,
+            String callId,
+            String horizon,
+            String basisRevisionId,
+            String cancellationRevisionId,
+            String snapshotId,
+            String methodologyId,
+            String methodologyVersion,
+            String methodologyDefinitionHash,
+            String inputFingerprint,
+            int sequenceNumber,
+            String supersedesOutcomeId,
+            String evaluationStatus,
+            String reasonCode,
+            String eventTime,
+            String processingTime,
+            BigDecimal assetReturn,
+            BigDecimal benchmarkReturn,
+            BigDecimal sectorReturn,
+            BigDecimal alpha,
+            BigDecimal sectorAlpha,
+            BigDecimal mfe,
+            BigDecimal mae,
+            Boolean targetHit,
+            Boolean directionalWin,
+            BigDecimal targetError,
+            boolean dataComplete,
             String dataMode,
             String capturedAt,
             String provenanceId) {

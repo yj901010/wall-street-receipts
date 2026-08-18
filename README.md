@@ -8,7 +8,9 @@ The P0 foundation is complete and the repository is progressing through P1.
 The first P1 vertical slice provides a canonical analyst-call ledger, source
 evidence, immutable point-in-time snapshots, list/detail APIs, and responsive
 web routes. Append-only correction and cancellation events now preserve an
-auditable revision chain without rewriting the original call. Kafka, Redis,
+auditable revision chain without rewriting the original call. Versioned,
+append-only outcome records now preserve methodology and input lineage without
+claiming P3 scoring results. Kafka, Redis,
 ClickHouse, OpenSearch, object storage, and commercial data providers remain
 later-phase extension points rather than runtime dependencies.
 
@@ -49,6 +51,7 @@ On macOS or Linux, use `cp .env.example .env` and
 - Analyst calls: <http://localhost:3000/calls>
 - Analyst-call API: <http://localhost:8080/v1/calls>
 - Revision audit API: <http://localhost:8080/v1/calls/demo-call-002/revisions>
+- Outcome audit API: <http://localhost:8080/v1/calls/demo-call-001/outcomes>
 
 Stop the database without deleting its volume:
 
@@ -81,6 +84,10 @@ a schema version, fixture version, generation timestamp, `DEMO` data mode, and
 provenance. Missing values remain JSON `null`; presentation layers render them
 as `NA` and must never coerce them to zero or invent a value.
 
+The P1 outcome fixtures are model-only audit records. Their financial metrics
+and result booleans are deliberately `null`; deterministic return, alpha,
+target, and MFE/MAE calculations belong to P3 and require golden tests.
+
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
 adapters before they reach the canonical domain.
@@ -94,6 +101,7 @@ fixtures/v1/     Versioned canonical DEMO fixtures
 contracts/       OpenAPI contracts
 schemas/         Canonical JSON Schemas
 quality/         Phase acceptance checks
+decisions/       Versioned architecture decisions
 .github/         Continuous integration workflows
 compose.yaml     PostgreSQL service
 ```

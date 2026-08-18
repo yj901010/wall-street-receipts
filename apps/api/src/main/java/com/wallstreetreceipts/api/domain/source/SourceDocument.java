@@ -4,6 +4,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.Objects;
 
+import com.wallstreetreceipts.api.domain.PersistentInstant;
 import com.wallstreetreceipts.api.domain.market.DataMode;
 
 public record SourceDocument(
@@ -29,6 +30,8 @@ public record SourceDocument(
         requireText(licenseClass, "licenseClass");
         Objects.requireNonNull(dataMode, "dataMode must not be null");
         Objects.requireNonNull(capturedAt, "capturedAt must not be null");
+        PersistentInstant.requireNullableMicrosecondPrecision(publishedAt, "publishedAt");
+        PersistentInstant.requireMicrosecondPrecision(capturedAt, "capturedAt");
         requireText(provenanceId, "provenanceId");
     }
 

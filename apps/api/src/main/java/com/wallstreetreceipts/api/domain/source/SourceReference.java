@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 
+import com.wallstreetreceipts.api.domain.PersistentInstant;
 import com.wallstreetreceipts.api.domain.market.DataMode;
 
 public record SourceReference(
@@ -24,6 +25,7 @@ public record SourceReference(
         Objects.requireNonNull(document, "document must not be null");
         Objects.requireNonNull(dataMode, "dataMode must not be null");
         Objects.requireNonNull(capturedAt, "capturedAt must not be null");
+        PersistentInstant.requireMicrosecondPrecision(capturedAt, "capturedAt");
         requireText(provenanceId, "provenanceId");
 
         if (page != null && page <= 0) {

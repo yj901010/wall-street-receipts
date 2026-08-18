@@ -8,6 +8,8 @@ import com.wallstreetreceipts.api.domain.market.MarketSnapshot;
 import com.wallstreetreceipts.api.domain.master.Analyst;
 import com.wallstreetreceipts.api.domain.master.Asset;
 import com.wallstreetreceipts.api.domain.master.Institution;
+import com.wallstreetreceipts.api.domain.outcome.CallOutcome;
+import com.wallstreetreceipts.api.domain.outcome.ScoringMethodology;
 
 public record AnalystCallDataSet(
         List<Institution> institutions,
@@ -15,7 +17,9 @@ public record AnalystCallDataSet(
         List<Asset> assets,
         List<AnalystCall> calls,
         List<AnalystCallRevision> revisions,
-        List<MarketSnapshot> snapshots) {
+        List<MarketSnapshot> snapshots,
+        List<ScoringMethodology> methodologies,
+        List<CallOutcome> outcomes) {
 
     public AnalystCallDataSet {
         institutions = List.copyOf(institutions);
@@ -24,5 +28,7 @@ public record AnalystCallDataSet(
         calls = List.copyOf(calls);
         revisions = List.copyOf(revisions);
         snapshots = List.copyOf(snapshots);
+        methodologies = List.copyOf(methodologies);
+        outcomes = List.copyOf(outcomes);
     }
 }
