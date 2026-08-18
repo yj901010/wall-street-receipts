@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureVersion": "v1",
+  "dataMode": "DEMO",
+  "generatedAt": "2026-08-18T00:00:00Z",
+  "provenance": {
+    "id": "fixture-market-map-v1",
+    "sourceType": "LOCAL_SPECIFICATION",
+    "sourcePaths": [
+      "docs/fixtures/map-sp500.json",
+      "docs/schemas/map-cell.schema.json"
+    ],
+    "capturedAt": "2026-08-18T00:00:00Z",
+    "synthetic": true,
+    "licenseClass": "INTERNAL_DEMO"
+  },
+  "universe": "sp500",
+  "mode": "ANALYST_CONSENSUS",
+  "asOf": "2026-08-12T06:00:00Z",
+  "metric": {
+    "name": "analystConsensus",
+    "unit": "score",
+    "minimum": -1.0,
+    "maximum": 1.0,
+    "missingDisplay": "NA"
+  },
+  "cells": [
+    {
+      "assetId": "asset-nvda",
+      "ticker": "NVDA",
+      "sector": "Technology",
+      "weight": 8.1,
+      "metric": 0.82,
+      "callCount": 18,
+      "timestamp": "2026-08-12T06:00:00Z",
+      "dataMode": "DEMO",
+      "provenanceId": "fixture-market-map-v1"
+    },
+    {
+      "assetId": "asset-msft",
+      "ticker": "MSFT",
+      "sector": "Technology",
+      "weight": 7.0,
+      "metric": 0.71,
+      "callCount": 14,
+      "timestamp": "2026-08-12T06:00:00Z",
+      "dataMode": "DEMO",
+      "provenanceId": "fixture-market-map-v1"
+    },
+    {
+      "assetId": "asset-aapl",
+      "ticker": "AAPL",
+      "sector": "Technology",
+      "weight": 6.5,
+      "metric": null,
+      "callCount": 0,
+      "timestamp": "2026-08-12T06:00:00Z",
+      "dataMode": "DEMO",
+      "provenanceId": "fixture-market-map-v1"
+    }
+  ],
+  "disclaimer": "Synthetic DEMO metric values only; a null metric must render as NA, not zero or bearish."
+}

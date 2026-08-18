@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureVersion": "v1",
+  "dataMode": "DEMO",
+  "generatedAt": "2026-08-18T00:00:00Z",
+  "provenance": {
+    "id": "fixture-market-snapshots-v1",
+    "sourceType": "LOCAL_SPECIFICATION",
+    "sourcePaths": [
+      "docs/fixtures/calls.json",
+      "docs/docs/DOMAIN_MODEL.md",
+      "docs/docs/DATA_SOURCE_POLICY.md"
+    ],
+    "capturedAt": "2026-08-18T00:00:00Z",
+    "synthetic": true,
+    "licenseClass": "INTERNAL_DEMO"
+  },
+  "snapshots": [
+    {
+      "snapshotId": "market-snapshot-demo-001",
+      "callId": "demo-call-001",
+      "assetId": "asset-spx",
+      "eventTime": "2026-08-10T12:00:00Z",
+      "processingTime": "2026-08-10T12:03:00Z",
+      "assetPrice": 7758.42,
+      "spx": 7758.42,
+      "ndx": null,
+      "vix": null,
+      "treasury2y": null,
+      "treasury10y": null,
+      "realYield": null,
+      "dxy": null,
+      "wti": null,
+      "gold": null,
+      "volatility": null,
+      "distanceFrom52WeekHigh": null,
+      "distanceFromAth": null,
+      "immutable": true,
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-10T12:03:00Z",
+      "provenanceId": "fixture-market-snapshots-v1"
+    },
+    {
+      "snapshotId": "market-snapshot-demo-002",
+      "callId": "demo-call-002",
+      "assetId": "asset-nvda",
+      "eventTime": "2026-08-11T14:20:00Z",
+      "processingTime": "2026-08-11T14:22:00Z",
+      "assetPrice": 183.42,
+      "spx": null,
+      "ndx": null,
+      "vix": null,
+      "treasury2y": null,
+      "treasury10y": null,
+      "realYield": null,
+      "dxy": null,
+      "wti": null,
+      "gold": null,
+      "volatility": null,
+      "distanceFrom52WeekHigh": null,
+      "distanceFromAth": null,
+      "immutable": true,
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-11T14:22:00Z",
+      "provenanceId": "fixture-market-snapshots-v1"
+    }
+  ],
+  "missingValueDisplay": "NA"
+}

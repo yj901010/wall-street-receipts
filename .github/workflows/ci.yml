@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-contracts:
+    name: Repository contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate Compose configuration
+        run: docker compose --env-file .env.example config --quiet
+
+      - name: Validate versioned DEMO fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in fixtures/v1/*.json; do
+            jq empty "$file"
+            jq -e '
+              .schemaVersion == "1.0.0"
+              and .fixtureVersion == "v1"
+              and .dataMode == "DEMO"
+              and (.generatedAt | type == "string")
+              and (.provenance | type == "object")
+            ' "$file" >/dev/null
+          done
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --dir apps/web lint
+
+      - name: Test
+        run: pnpm --dir apps/web test
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+          NEXT_PUBLIC_DATA_MODE: DEMO
+        run: pnpm --dir apps/web build
+
+  api:
+    name: API
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+          cache-dependency-path: apps/api/pom.xml
+
+      - name: Make Maven wrapper executable
+        run: chmod +x apps/api/mvnw
+
+      - name: Verify
+        working-directory: apps/api
+        env:
+          APP_ENV: test
+          DATA_MODE: DEMO
+        run: ./mvnw -B -ntp verify

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureVersion": "v1",
+  "dataMode": "DEMO",
+  "generatedAt": "2026-08-18T00:00:00Z",
+  "provenance": {
+    "id": "fixture-manifest-v1",
+    "sourceType": "LOCAL_SPECIFICATION",
+    "sourcePaths": [
+      "docs/fixtures",
+      "docs/schemas",
+      "docs/docs/DOMAIN_MODEL.md",
+      "docs/docs/DATA_SOURCE_POLICY.md"
+    ],
+    "capturedAt": "2026-08-18T00:00:00Z",
+    "synthetic": true,
+    "licenseClass": "INTERNAL_DEMO"
+  },
+  "missingValuePolicy": {
+    "storageValue": null,
+    "displayValue": "NA",
+    "zeroRepresentsMissing": false
+  },
+  "files": [
+    {
+      "path": "master-data.json",
+      "description": "Canonical institution, analyst, and asset identities"
+    },
+    {
+      "path": "analyst-calls.json",
+      "description": "Analyst call events with source documents and references"
+    },
+    {
+      "path": "market-snapshots.json",
+      "description": "Immutable point-in-time market context for calls"
+    },
+    {
+      "path": "market-map.json",
+      "description": "S&P 500 analyst-consensus map shell data"
+    },
+    {
+      "path": "timeline-nvda.json",
+      "description": "Evidence-linked NVDA timeline events"
+    }
+  ],
+  "disclaimer": "All records are synthetic DEMO data and do not describe actual analyst statements or investment performance."
+}
