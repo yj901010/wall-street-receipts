@@ -1,0 +1,32 @@
+# Local product specification bundle
+/docs/
+
+# Secrets and local overrides
+.env
+.env.*
+!.env.example
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Java / Maven / Gradle
+target/
+build/
+.gradle/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+.cache/
