@@ -1,0 +1,123 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureVersion": "v1",
+  "dataMode": "DEMO",
+  "generatedAt": "2026-08-18T00:00:00Z",
+  "provenance": {
+    "id": "fixture-analyst-calls-v1",
+    "sourceType": "LOCAL_SPECIFICATION",
+    "sourcePaths": [
+      "docs/fixtures/calls.json",
+      "docs/schemas/analyst-call.schema.json",
+      "docs/docs/DOMAIN_MODEL.md"
+    ],
+    "capturedAt": "2026-08-18T00:00:00Z",
+    "synthetic": true,
+    "licenseClass": "INTERNAL_DEMO"
+  },
+  "sourceDocuments": [
+    {
+      "sourceDocumentId": "source-demo-article-001",
+      "sourceType": "ARTICLE",
+      "publisher": "DEMO Publisher",
+      "title": "DEMO index outlook",
+      "canonicalUrl": "https://example.invalid/demo-call-001",
+      "publishedAt": "2026-08-10T12:00:00Z",
+      "provider": "fixture",
+      "externalId": "demo-source-001",
+      "contentHash": null,
+      "licenseClass": "INTERNAL_DEMO",
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-10T12:03:00Z",
+      "provenanceId": "fixture-analyst-calls-v1"
+    },
+    {
+      "sourceDocumentId": "source-demo-video-002",
+      "sourceType": "VIDEO",
+      "publisher": "DEMO Channel",
+      "title": "DEMO equity interview",
+      "canonicalUrl": "https://example.invalid/demo-call-002",
+      "publishedAt": "2026-08-11T14:20:00Z",
+      "provider": "fixture",
+      "externalId": "demo-source-002",
+      "contentHash": null,
+      "licenseClass": "INTERNAL_DEMO",
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-11T14:22:00Z",
+      "provenanceId": "fixture-analyst-calls-v1"
+    }
+  ],
+  "sourceReferences": [
+    {
+      "sourceReferenceId": "source-ref-demo-001",
+      "sourceDocumentId": "source-demo-article-001",
+      "page": null,
+      "startMs": null,
+      "endMs": null,
+      "extractedFragment": null,
+      "extractionConfidence": null,
+      "verified": false,
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-10T12:03:00Z",
+      "provenanceId": "fixture-analyst-calls-v1"
+    },
+    {
+      "sourceReferenceId": "source-ref-demo-002",
+      "sourceDocumentId": "source-demo-video-002",
+      "page": null,
+      "startMs": null,
+      "endMs": null,
+      "extractedFragment": null,
+      "extractionConfidence": null,
+      "verified": false,
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-11T14:22:00Z",
+      "provenanceId": "fixture-analyst-calls-v1"
+    }
+  ],
+  "calls": [
+    {
+      "callId": "demo-call-001",
+      "provider": "fixture",
+      "providerEventId": "fixture-call-001",
+      "institutionId": "inst-jpm",
+      "analystId": "analyst-demo-a",
+      "assetId": "asset-spx",
+      "eventTime": "2026-08-10T12:00:00Z",
+      "processingTime": "2026-08-10T12:03:00Z",
+      "direction": "BULLISH",
+      "originalRating": "DEMO Bullish",
+      "previousTarget": 7800.0,
+      "target": 8000.0,
+      "currency": "USD",
+      "targetDate": null,
+      "sourceReferenceId": "source-ref-demo-001",
+      "status": "ACTIVE",
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-10T12:03:00Z",
+      "provenanceId": "fixture-analyst-calls-v1"
+    },
+    {
+      "callId": "demo-call-002",
+      "provider": "fixture",
+      "providerEventId": "fixture-call-002",
+      "institutionId": "inst-gs",
+      "analystId": "analyst-demo-b",
+      "assetId": "asset-nvda",
+      "eventTime": "2026-08-11T14:20:00Z",
+      "processingTime": "2026-08-11T14:22:00Z",
+      "direction": "BULLISH",
+      "originalRating": "DEMO Buy",
+      "previousTarget": 210.0,
+      "target": 235.0,
+      "currency": "USD",
+      "targetDate": null,
+      "sourceReferenceId": "source-ref-demo-002",
+      "status": "ACTIVE",
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-11T14:22:00Z",
+      "provenanceId": "fixture-analyst-calls-v1"
+    }
+  ],
+  "disclaimer": "Synthetic DEMO events only; no record represents a real JPMorgan or Goldman Sachs analyst statement."
+}

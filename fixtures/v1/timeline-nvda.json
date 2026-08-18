@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureVersion": "v1",
+  "dataMode": "DEMO",
+  "generatedAt": "2026-08-18T00:00:00Z",
+  "provenance": {
+    "id": "fixture-timeline-nvda-v1",
+    "sourceType": "LOCAL_SPECIFICATION",
+    "sourcePaths": [
+      "docs/fixtures/timeline-nvda.json",
+      "docs/docs/MEDIA_AND_TIMELINE.md"
+    ],
+    "capturedAt": "2026-08-18T00:00:00Z",
+    "synthetic": true,
+    "licenseClass": "INTERNAL_DEMO"
+  },
+  "assetId": "asset-nvda",
+  "ticker": "NVDA",
+  "asOf": "2026-08-12T06:00:00Z",
+  "events": [
+    {
+      "eventId": "timeline-demo-macro-001",
+      "eventTime": "2026-08-11T12:30:00Z",
+      "processingTime": "2026-08-11T12:31:00Z",
+      "eventType": "MACRO",
+      "title": "DEMO CPI event",
+      "linkedCallId": null,
+      "source": {
+        "sourceType": "FIXTURE",
+        "title": "DEMO macro calendar",
+        "canonicalUrl": null
+      },
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-11T12:31:00Z",
+      "provenanceId": "fixture-timeline-nvda-v1"
+    },
+    {
+      "eventId": "timeline-demo-call-002",
+      "eventTime": "2026-08-11T14:20:00Z",
+      "processingTime": "2026-08-11T14:22:00Z",
+      "eventType": "ANALYST_CALL",
+      "title": "DEMO target raised",
+      "linkedCallId": "demo-call-002",
+      "source": {
+        "sourceType": "VIDEO",
+        "title": "DEMO equity interview",
+        "canonicalUrl": "https://example.invalid/demo-call-002"
+      },
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-11T14:22:00Z",
+      "provenanceId": "fixture-timeline-nvda-v1"
+    }
+  ],
+  "disclaimer": "Timeline order denotes time only and does not assert causation."
+}

@@ -9,7 +9,8 @@
 # Node / Next.js
 node_modules/
 .next/
-out/
+/out/
+.pnpm-store/
 coverage/
 playwright-report/
 test-results/

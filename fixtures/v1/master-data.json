@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureVersion": "v1",
+  "dataMode": "DEMO",
+  "generatedAt": "2026-08-18T00:00:00Z",
+  "provenance": {
+    "id": "fixture-master-data-v1",
+    "sourceType": "LOCAL_SPECIFICATION",
+    "sourcePaths": [
+      "docs/fixtures/institutions.json",
+      "docs/docs/DOMAIN_MODEL.md"
+    ],
+    "capturedAt": "2026-08-18T00:00:00Z",
+    "synthetic": true,
+    "licenseClass": "INTERNAL_DEMO"
+  },
+  "institutions": [
+    {
+      "institutionId": "inst-jpm",
+      "canonicalName": "JPMorgan",
+      "slug": "jpmorgan",
+      "country": "US",
+      "active": true,
+      "dataMode": "DEMO",
+      "effectiveAt": "2026-08-10T00:00:00Z",
+      "capturedAt": "2026-08-18T00:00:00Z",
+      "provenanceId": "fixture-master-data-v1"
+    },
+    {
+      "institutionId": "inst-gs",
+      "canonicalName": "Goldman Sachs",
+      "slug": "goldman-sachs",
+      "country": "US",
+      "active": true,
+      "dataMode": "DEMO",
+      "effectiveAt": "2026-08-10T00:00:00Z",
+      "capturedAt": "2026-08-18T00:00:00Z",
+      "provenanceId": "fixture-master-data-v1"
+    }
+  ],
+  "analysts": [
+    {
+      "analystId": "analyst-demo-a",
+      "canonicalName": "Demo Analyst A",
+      "active": true,
+      "dataMode": "DEMO",
+      "effectiveAt": "2026-08-10T00:00:00Z",
+      "capturedAt": "2026-08-18T00:00:00Z",
+      "provenanceId": "fixture-master-data-v1"
+    },
+    {
+      "analystId": "analyst-demo-b",
+      "canonicalName": "Demo Analyst B",
+      "active": true,
+      "dataMode": "DEMO",
+      "effectiveAt": "2026-08-10T00:00:00Z",
+      "capturedAt": "2026-08-18T00:00:00Z",
+      "provenanceId": "fixture-master-data-v1"
+    }
+  ],
+  "analystEmployments": [
+    {
+      "analystId": "analyst-demo-a",
+      "institutionId": "inst-jpm",
+      "role": "DEMO Strategist",
+      "startedAt": "2026-01-01T00:00:00Z",
+      "endedAt": null,
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-18T00:00:00Z",
+      "provenanceId": "fixture-master-data-v1"
+    },
+    {
+      "analystId": "analyst-demo-b",
+      "institutionId": "inst-gs",
+      "role": "DEMO Equity Analyst",
+      "startedAt": "2026-01-01T00:00:00Z",
+      "endedAt": null,
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-18T00:00:00Z",
+      "provenanceId": "fixture-master-data-v1"
+    }
+  ],
+  "assets": [
+    {
+      "assetId": "asset-spx",
+      "assetType": "INDEX",
+      "canonicalName": "S&P 500 Index",
+      "ticker": "SPX",
+      "primaryCurrency": "USD",
+      "active": true,
+      "dataMode": "DEMO",
+      "effectiveAt": "2026-08-10T00:00:00Z",
+      "capturedAt": "2026-08-18T00:00:00Z",
+      "provenanceId": "fixture-master-data-v1"
+    },
+    {
+      "assetId": "asset-nvda",
+      "assetType": "EQUITY",
+      "canonicalName": "NVIDIA Corporation",
+      "ticker": "NVDA",
+      "primaryCurrency": "USD",
+      "active": true,
+      "dataMode": "DEMO",
+      "effectiveAt": "2026-08-10T00:00:00Z",
+      "capturedAt": "2026-08-18T00:00:00Z",
+      "provenanceId": "fixture-master-data-v1"
+    },
+    {
+      "assetId": "asset-msft",
+      "assetType": "EQUITY",
+      "canonicalName": "Microsoft Corporation",
+      "ticker": "MSFT",
+      "primaryCurrency": "USD",
+      "active": true,
+      "dataMode": "DEMO",
+      "effectiveAt": "2026-08-10T00:00:00Z",
+      "capturedAt": "2026-08-18T00:00:00Z",
+      "provenanceId": "fixture-master-data-v1"
+    },
+    {
+      "assetId": "asset-aapl",
+      "assetType": "EQUITY",
+      "canonicalName": "Apple Inc.",
+      "ticker": "AAPL",
+      "primaryCurrency": "USD",
+      "active": true,
+      "dataMode": "DEMO",
+      "effectiveAt": "2026-08-10T00:00:00Z",
+      "capturedAt": "2026-08-18T00:00:00Z",
+      "provenanceId": "fixture-master-data-v1"
+    }
+  ]
+}
