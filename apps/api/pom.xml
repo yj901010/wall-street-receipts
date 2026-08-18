@@ -84,6 +84,20 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/../../fixtures/v1</directory>
+                <targetPath>fixtures/v1</targetPath>
+                <includes>
+                    <include>master-data.json</include>
+                    <include>analyst-calls.json</include>
+                    <include>market-snapshots.json</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

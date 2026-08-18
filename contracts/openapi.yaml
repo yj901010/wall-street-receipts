@@ -1,0 +1,679 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: Wall Street Receipts API
+  version: 0.1.0
+  summary: Point-in-time analyst-call read API
+  description: |
+    P1 read contract for canonical analyst-call events. All timestamps are UTC
+    RFC 3339 instants. Filters are combined with logical AND. Missing numeric
+    values remain JSON null and must not be interpreted as zero.
+  license:
+    name: Proprietary
+servers:
+  - url: /
+    description: Current origin
+tags:
+  - name: Analyst Calls
+    description: Immutable analyst-call event queries
+
+paths:
+  /v1/calls:
+    get:
+      tags:
+        - Analyst Calls
+      operationId: listAnalystCalls
+      summary: List analyst calls
+      description: |
+        Returns a deterministic, zero-based page of canonical analyst-call
+        events. Query filters are intersected. `from` is inclusive and `to` is
+        exclusive. Equal primary sort values are ordered by `callId` ascending
+        so that page boundaries are stable.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/Ticker'
+        - $ref: '#/components/parameters/InstitutionId'
+        - $ref: '#/components/parameters/AnalystId'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/DataMode'
+        - $ref: '#/components/parameters/FromEventTime'
+        - $ref: '#/components/parameters/ToEventTime'
+      responses:
+        '200':
+          description: >-
+            A page of analyst calls. An empty match returns `items: []`.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalystCallPage'
+              examples:
+                demo:
+                  $ref: '#/components/examples/AnalystCallPageDemo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/calls/{id}:
+    get:
+      tags:
+        - Analyst Calls
+      operationId: getAnalystCall
+      summary: Get one analyst call
+      description: |
+        Returns the canonical event, normalized identities, its source evidence,
+        and the immutable point-in-time market snapshot when one is available.
+        A missing snapshot is represented by JSON null, never an empty object or
+        invented market values.
+      parameters:
+        - $ref: '#/components/parameters/CallId'
+      responses:
+        '200':
+          description: Analyst-call detail
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalystCallDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    CallId:
+      in: path
+      name: id
+      required: true
+      description: Opaque canonical call identifier; it is not required to be a UUID.
+      schema:
+        $ref: '#/components/schemas/Identifier'
+      example: demo-call-002
+    Page:
+      in: query
+      name: page
+      required: false
+      description: Zero-based page number.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      example: 0
+    Size:
+      in: query
+      name: size
+      required: false
+      description: Number of records per page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+      example: 25
+    Sort:
+      in: query
+      name: sort
+      required: false
+      description: Primary sort field. `callId` ascending is always the tie-breaker.
+      schema:
+        $ref: '#/components/schemas/CallSortField'
+      example: eventTime
+    Order:
+      in: query
+      name: order
+      required: false
+      description: Primary sort direction.
+      schema:
+        $ref: '#/components/schemas/SortOrder'
+      example: desc
+    AssetId:
+      in: query
+      name: assetId
+      required: false
+      description: Exact canonical asset identifier.
+      schema:
+        $ref: '#/components/schemas/Identifier'
+      example: asset-nvda
+    Ticker:
+      in: query
+      name: ticker
+      required: false
+      description: Current ticker symbol, matched case-insensitively after normalization.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 24
+        pattern: '^[A-Za-z0-9.^/-]+$'
+      example: NVDA
+    InstitutionId:
+      in: query
+      name: institutionId
+      required: false
+      description: Exact canonical institution identifier.
+      schema:
+        $ref: '#/components/schemas/Identifier'
+      example: inst-gs
+    AnalystId:
+      in: query
+      name: analystId
+      required: false
+      description: Exact canonical analyst identifier.
+      schema:
+        $ref: '#/components/schemas/Identifier'
+      example: analyst-demo-b
+    Direction:
+      in: query
+      name: direction
+      required: false
+      description: Exact normalized direction.
+      schema:
+        $ref: '#/components/schemas/Direction'
+      example: BULLISH
+    Status:
+      in: query
+      name: status
+      required: false
+      description: Exact event lifecycle state.
+      schema:
+        $ref: '#/components/schemas/CallStatus'
+    DataMode:
+      in: query
+      name: dataMode
+      required: false
+      description: Exact data mode.
+      schema:
+        $ref: '#/components/schemas/DataMode'
+      example: DEMO
+    FromEventTime:
+      in: query
+      name: from
+      required: false
+      description: Inclusive lower bound on `eventTime`, expressed as a UTC instant.
+      schema:
+        type: string
+        format: date-time
+      example: '2026-08-01T00:00:00Z'
+    ToEventTime:
+      in: query
+      name: to
+      required: false
+      description: Exclusive upper bound on `eventTime`; it must be later than `from`.
+      schema:
+        type: string
+        format: date-time
+      example: '2026-09-01T00:00:00Z'
+
+  headers:
+    RequestId:
+      description: Correlation identifier for support and observability.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+
+  responses:
+    BadRequest:
+      description: The identifier, filter, time range, sort, or page request is invalid.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            invalidRange:
+              value:
+                type: https://wall-street-receipts.invalid/problems/invalid-query
+                title: Invalid query parameters
+                status: 400
+                detail: '`to` must be later than `from`.'
+                instance: /v1/calls
+                code: INVALID_QUERY
+                timestamp: '2026-08-18T00:00:00Z'
+                requestId: req-demo-001
+                violations:
+                  - field: to
+                    message: must be later than from
+                    rejectedValue: '2026-08-01T00:00:00Z'
+    NotFound:
+      description: No analyst call exists for the supplied canonical identifier.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            missingCall:
+              value:
+                type: https://wall-street-receipts.invalid/problems/call-not-found
+                title: Analyst call not found
+                status: 404
+                detail: No analyst call exists with id `missing-call`.
+                instance: /v1/calls/missing-call
+                code: CALL_NOT_FOUND
+                timestamp: '2026-08-18T00:00:00Z'
+                requestId: req-demo-002
+                violations: []
+    InternalServerError:
+      description: An unexpected server error occurred without exposing sensitive details.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+  schemas:
+    Identifier:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
+
+    Direction:
+      type: string
+      enum:
+        - STRONG_BULLISH
+        - BULLISH
+        - NEUTRAL
+        - BEARISH
+        - STRONG_BEARISH
+
+    CallStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - CORRECTED
+        - CANCELLED
+
+    DataMode:
+      type: string
+      enum:
+        - REALTIME
+        - DELAYED
+        - EOD
+        - DEMO
+
+    SourceType:
+      type: string
+      enum:
+        - VIDEO
+        - ARTICLE
+        - RESEARCH
+        - PODCAST
+        - FILING
+        - TRANSCRIPT
+
+    CallSortField:
+      type: string
+      enum:
+        - eventTime
+        - processingTime
+        - capturedAt
+      default: eventTime
+
+    SortOrder:
+      type: string
+      enum:
+        - asc
+        - desc
+      default: desc
+
+    AnalystCall:
+      $ref: ../schemas/analyst-call.schema.json
+
+    SourceDocument:
+      $ref: ../schemas/source-document.schema.json
+
+    SourceReference:
+      $ref: ../schemas/source-reference.schema.json
+
+    MarketSnapshot:
+      $ref: ../schemas/market-snapshot.schema.json
+
+    InstitutionSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - institutionId
+        - canonicalName
+        - slug
+      properties:
+        institutionId:
+          $ref: '#/components/schemas/Identifier'
+        canonicalName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+
+    AnalystSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - analystId
+        - canonicalName
+      properties:
+        analystId:
+          $ref: '#/components/schemas/Identifier'
+        canonicalName:
+          type: string
+          minLength: 1
+          maxLength: 200
+
+    AssetSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - assetId
+        - assetType
+        - canonicalName
+        - ticker
+      properties:
+        assetId:
+          $ref: '#/components/schemas/Identifier'
+        assetType:
+          type: string
+          enum:
+            - INDEX
+            - EQUITY
+            - ETF
+            - BOND
+            - COMMODITY
+            - FX
+        canonicalName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        ticker:
+          type:
+            - string
+            - 'null'
+          maxLength: 24
+
+    SourceEvidence:
+      type: object
+      additionalProperties: false
+      required:
+        - document
+        - reference
+      properties:
+        document:
+          $ref: '#/components/schemas/SourceDocument'
+        reference:
+          $ref: '#/components/schemas/SourceReference'
+
+    AnalystCallView:
+      type: object
+      additionalProperties: false
+      required:
+        - call
+        - institution
+        - analyst
+        - asset
+        - source
+      properties:
+        call:
+          $ref: '#/components/schemas/AnalystCall'
+        institution:
+          $ref: '#/components/schemas/InstitutionSummary'
+        analyst:
+          oneOf:
+            - $ref: '#/components/schemas/AnalystSummary'
+            - type: 'null'
+        asset:
+          $ref: '#/components/schemas/AssetSummary'
+        source:
+          $ref: '#/components/schemas/SourceEvidence'
+
+    AnalystCallDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - call
+        - institution
+        - analyst
+        - asset
+        - source
+        - snapshot
+      properties:
+        call:
+          $ref: '#/components/schemas/AnalystCall'
+        institution:
+          $ref: '#/components/schemas/InstitutionSummary'
+        analyst:
+          oneOf:
+            - $ref: '#/components/schemas/AnalystSummary'
+            - type: 'null'
+        asset:
+          $ref: '#/components/schemas/AssetSummary'
+        source:
+          $ref: '#/components/schemas/SourceEvidence'
+        snapshot:
+          oneOf:
+            - $ref: '#/components/schemas/MarketSnapshot'
+            - type: 'null'
+
+    SortMetadata:
+      type: object
+      additionalProperties: false
+      required:
+        - field
+        - order
+      properties:
+        field:
+          $ref: '#/components/schemas/CallSortField'
+        order:
+          $ref: '#/components/schemas/SortOrder'
+
+    PageMetadata:
+      type: object
+      additionalProperties: false
+      required:
+        - number
+        - size
+        - totalElements
+        - totalPages
+        - first
+        - last
+        - sort
+      properties:
+        number:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+        first:
+          type: boolean
+        last:
+          type: boolean
+        sort:
+          $ref: '#/components/schemas/SortMetadata'
+
+    AnalystCallPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - page
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalystCallView'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+
+    ValidationViolation:
+      type: object
+      additionalProperties: false
+      required:
+        - field
+        - message
+        - rejectedValue
+      properties:
+        field:
+          type: string
+          minLength: 1
+          maxLength: 200
+        message:
+          type: string
+          minLength: 1
+          maxLength: 500
+        rejectedValue: {}
+
+    Problem:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - instance
+        - code
+        - timestamp
+        - requestId
+        - violations
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          type: string
+          pattern: '^[A-Z][A-Z0-9_]*$'
+          maxLength: 100
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationViolation'
+
+  examples:
+    AnalystCallPageDemo:
+      summary: One synthetic DEMO call
+      value:
+        items:
+          - call:
+              schemaVersion: 1.0.0
+              callId: demo-call-002
+              provider: fixture
+              providerEventId: fixture-call-002
+              institutionId: inst-gs
+              analystId: analyst-demo-b
+              assetId: asset-nvda
+              eventTime: '2026-08-11T14:20:00Z'
+              processingTime: '2026-08-11T14:22:00Z'
+              direction: BULLISH
+              originalRating: DEMO Buy
+              previousTarget: 210.0
+              target: 235.0
+              currency: USD
+              targetDate: null
+              sourceReferenceId: source-ref-demo-002
+              status: ACTIVE
+              dataMode: DEMO
+              capturedAt: '2026-08-11T14:22:00Z'
+              provenanceId: fixture-analyst-calls-v1
+            institution:
+              institutionId: inst-gs
+              canonicalName: Goldman Sachs
+              slug: goldman-sachs
+            analyst:
+              analystId: analyst-demo-b
+              canonicalName: Demo Analyst B
+            asset:
+              assetId: asset-nvda
+              assetType: EQUITY
+              canonicalName: NVIDIA Corporation
+              ticker: NVDA
+            source:
+              document:
+                schemaVersion: 1.0.0
+                sourceDocumentId: source-demo-video-002
+                sourceType: VIDEO
+                publisher: DEMO Channel
+                title: DEMO equity interview
+                canonicalUrl: https://example.invalid/demo-call-002
+                publishedAt: '2026-08-11T14:20:00Z'
+                provider: fixture
+                externalId: demo-source-002
+                contentHash: null
+                licenseClass: INTERNAL_DEMO
+                dataMode: DEMO
+                capturedAt: '2026-08-11T14:22:00Z'
+                provenanceId: fixture-analyst-calls-v1
+              reference:
+                schemaVersion: 1.0.0
+                sourceReferenceId: source-ref-demo-002
+                sourceDocumentId: source-demo-video-002
+                page: null
+                startMs: null
+                endMs: null
+                extractedFragment: null
+                extractionConfidence: null
+                verified: false
+                dataMode: DEMO
+                capturedAt: '2026-08-11T14:22:00Z'
+                provenanceId: fixture-analyst-calls-v1
+        page:
+          number: 0
+          size: 25
+          totalElements: 1
+          totalPages: 1
+          first: true
+          last: true
+          sort:
+            field: eventTime
+            order: desc

@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:source-document:1.0.0",
+  "title": "Canonical Source Document",
+  "description": "Metadata for evidence supporting an analyst call. Full copyrighted content is outside this contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceDocumentId",
+    "sourceType",
+    "publisher",
+    "title",
+    "canonicalUrl",
+    "publishedAt",
+    "provider",
+    "externalId",
+    "contentHash",
+    "licenseClass",
+    "dataMode",
+    "capturedAt",
+    "provenanceId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "sourceDocumentId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "sourceType": {
+      "type": "string",
+      "enum": [
+        "VIDEO",
+        "ARTICLE",
+        "RESEARCH",
+        "PODCAST",
+        "FILING",
+        "TRANSCRIPT"
+      ]
+    },
+    "publisher": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "canonicalUrl": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri",
+      "maxLength": 2048
+    },
+    "publishedAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "externalId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 256
+    },
+    "contentHash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Fa-f0-9]{64}$",
+      "description": "SHA-256 when permitted and available; null means no content was retained."
+    },
+    "licenseClass": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "dataMode": {
+      "$ref": "#/$defs/dataMode"
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provenanceId": {
+      "$ref": "#/$defs/identifier"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "dataMode": {
+      "type": "string",
+      "enum": [
+        "REALTIME",
+        "DELAYED",
+        "EOD",
+        "DEMO"
+      ]
+    }
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:market-snapshot:1.0.0",
+  "title": "Canonical Market Snapshot",
+  "description": "Immutable point-in-time market context reconstructed for an analyst call's event time. Every unavailable measurement is explicitly null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "callId",
+    "assetId",
+    "eventTime",
+    "processingTime",
+    "assetPrice",
+    "spx",
+    "ndx",
+    "vix",
+    "treasury2y",
+    "treasury10y",
+    "realYield",
+    "dxy",
+    "wti",
+    "gold",
+    "volatility",
+    "distanceFrom52WeekHigh",
+    "distanceFromAth",
+    "immutable",
+    "dataMode",
+    "capturedAt",
+    "provenanceId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "snapshotId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "callId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "assetId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "eventTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The call event time whose known market state is represented."
+    },
+    "processingTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The platform processing time, retained separately from eventTime."
+    },
+    "assetPrice": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "spx": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "ndx": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "vix": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "treasury2y": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "treasury10y": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "realYield": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "dxy": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "wti": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "gold": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "volatility": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "distanceFrom52WeekHigh": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "distanceFromAth": {
+      "$ref": "#/$defs/nullableNumber"
+    },
+    "immutable": {
+      "type": "boolean",
+      "const": true
+    },
+    "dataMode": {
+      "$ref": "#/$defs/dataMode"
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provenanceId": {
+      "$ref": "#/$defs/identifier"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "nullableNumber": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "dataMode": {
+      "type": "string",
+      "enum": [
+        "REALTIME",
+        "DELAYED",
+        "EOD",
+        "DEMO"
+      ]
+    }
+  }
+}
