@@ -2,7 +2,7 @@ openapi: 3.1.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: Wall Street Receipts API
-  version: 0.2.0
+  version: 0.3.0
   summary: Point-in-time analyst-call read API
   description: |
     P1 read contract for canonical analyst-call events. All timestamps are UTC
@@ -114,6 +114,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnalystCallRevisionList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/calls/{id}/outcomes:
+    get:
+      tags:
+        - Analyst Calls
+      operationId: listAnalystCallOutcomes
+      summary: List the immutable outcome history for one analyst call
+      description: |
+        Returns append-only, methodology-versioned outcome records for the
+        canonical call. A known call with no outcomes returns an empty array.
+        Missing or not-yet-calculated P1 values remain JSON null; this endpoint
+        does not trigger calculation, mutation, or lifecycle projection.
+        An excluded outcome links its same-call cancellation evidence through
+        `cancellationRevisionId`; every other outcome carries JSON null there.
+      parameters:
+        - $ref: '#/components/parameters/CallId'
+      responses:
+        '200':
+          description: Immutable analyst-call outcome history
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallOutcomeList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -377,6 +409,14 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/AnalystCallRevision'
+
+    CallOutcome:
+      $ref: ../schemas/call-outcome.schema.json
+
+    CallOutcomeList:
+      type: array
+      items:
+        $ref: '#/components/schemas/CallOutcome'
 
     SourceDocument:
       $ref: ../schemas/source-document.schema.json

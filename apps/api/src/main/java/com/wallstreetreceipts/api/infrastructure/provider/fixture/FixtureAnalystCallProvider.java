@@ -12,6 +12,7 @@ import com.wallstreetreceipts.api.application.port.out.AnalystCallDataSet;
 import com.wallstreetreceipts.api.application.port.out.AnalystCallProvider;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.AnalystCallsDocument;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.AnalystCallRevisionsDocument;
+import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.CallOutcomesDocument;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.MasterDataDocument;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.MarketSnapshotsDocument;
 
@@ -24,6 +25,7 @@ public final class FixtureAnalystCallProvider implements AnalystCallProvider {
     private static final String ANALYST_CALLS = "fixtures/v1/analyst-calls.json";
     private static final String ANALYST_CALL_REVISIONS = "fixtures/v1/analyst-call-revisions.json";
     private static final String MARKET_SNAPSHOTS = "fixtures/v1/market-snapshots.json";
+    private static final String CALL_OUTCOMES = "fixtures/v1/call-outcomes.json";
 
     private final ObjectMapper objectMapper;
     private volatile AnalystCallDataSet cached;
@@ -45,7 +47,8 @@ public final class FixtureAnalystCallProvider implements AnalystCallProvider {
                         read(MASTER_DATA, MasterDataDocument.class),
                         read(ANALYST_CALLS, AnalystCallsDocument.class),
                         read(ANALYST_CALL_REVISIONS, AnalystCallRevisionsDocument.class),
-                        read(MARKET_SNAPSHOTS, MarketSnapshotsDocument.class));
+                        read(MARKET_SNAPSHOTS, MarketSnapshotsDocument.class),
+                        read(CALL_OUTCOMES, CallOutcomesDocument.class));
             }
             return cached;
         }

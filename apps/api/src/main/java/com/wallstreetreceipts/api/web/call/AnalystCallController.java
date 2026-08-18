@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.wallstreetreceipts.api.application.call.AnalystCallFilter;
 import com.wallstreetreceipts.api.application.call.AnalystCallQueryService;
 import com.wallstreetreceipts.api.application.call.AnalystCallRevisionQueryService;
+import com.wallstreetreceipts.api.application.call.AnalystCallOutcomeQueryService;
 import com.wallstreetreceipts.api.application.call.CallSortField;
 import com.wallstreetreceipts.api.application.call.SortOrder;
 import com.wallstreetreceipts.api.domain.call.CallDirection;
@@ -28,12 +29,15 @@ public class AnalystCallController {
 
     private final AnalystCallQueryService queryService;
     private final AnalystCallRevisionQueryService revisionQueryService;
+    private final AnalystCallOutcomeQueryService outcomeQueryService;
 
     public AnalystCallController(
             AnalystCallQueryService queryService,
-            AnalystCallRevisionQueryService revisionQueryService) {
+            AnalystCallRevisionQueryService revisionQueryService,
+            AnalystCallOutcomeQueryService outcomeQueryService) {
         this.queryService = queryService;
         this.revisionQueryService = revisionQueryService;
+        this.outcomeQueryService = outcomeQueryService;
     }
 
     @GetMapping
@@ -73,6 +77,12 @@ public class AnalystCallController {
     public List<AnalystCallResponses.Revision> revisions(@PathVariable String id) {
         return AnalystCallResponseMapper.toRevisions(
                 revisionQueryService.findByCallId(requiredIdentifier(id, "id")));
+    }
+
+    @GetMapping("/{id}/outcomes")
+    public List<AnalystCallResponses.Outcome> outcomes(@PathVariable String id) {
+        return AnalystCallResponseMapper.toOutcomes(
+                outcomeQueryService.findByCallId(requiredIdentifier(id, "id")));
     }
 
     private static String optionalIdentifier(String value, String field) {

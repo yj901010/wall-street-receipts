@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 
+import com.wallstreetreceipts.api.domain.PersistentInstant;
+
 public record MarketSnapshot(
         String id,
         String callId,
@@ -35,10 +37,16 @@ public record MarketSnapshot(
         Objects.requireNonNull(processingTime, "processingTime must not be null");
         Objects.requireNonNull(dataMode, "dataMode must not be null");
         Objects.requireNonNull(capturedAt, "capturedAt must not be null");
+        PersistentInstant.requireMicrosecondPrecision(eventTime, "eventTime");
+        PersistentInstant.requireMicrosecondPrecision(processingTime, "processingTime");
+        PersistentInstant.requireMicrosecondPrecision(capturedAt, "capturedAt");
         requireText(provenanceId, "provenanceId");
 
         if (processingTime.isBefore(eventTime)) {
             throw new IllegalArgumentException("processingTime must not precede eventTime");
+        }
+        if (capturedAt.isBefore(processingTime)) {
+            throw new IllegalArgumentException("capturedAt must not precede processingTime");
         }
         if (assetPrice != null && assetPrice.signum() <= 0) {
             throw new IllegalArgumentException("assetPrice must be positive");

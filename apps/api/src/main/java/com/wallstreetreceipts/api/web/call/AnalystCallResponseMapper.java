@@ -8,6 +8,7 @@ import com.wallstreetreceipts.api.domain.call.AnalystCall;
 import com.wallstreetreceipts.api.domain.call.AnalystCallRevision;
 import com.wallstreetreceipts.api.domain.call.CorrectedCallTerms;
 import com.wallstreetreceipts.api.domain.market.MarketSnapshot;
+import com.wallstreetreceipts.api.domain.outcome.CallOutcome;
 import com.wallstreetreceipts.api.domain.source.SourceDocument;
 import com.wallstreetreceipts.api.domain.source.SourceReference;
 
@@ -35,6 +36,22 @@ final class AnalystCallResponseMapper {
 
     static List<AnalystCallResponses.Revision> toRevisions(List<AnalystCallRevision> revisions) {
         return revisions.stream().map(AnalystCallResponseMapper::toRevision).toList();
+    }
+
+    static List<AnalystCallResponses.Outcome> toOutcomes(List<CallOutcome> outcomes) {
+        return outcomes.stream().map(AnalystCallResponseMapper::toOutcome).toList();
+    }
+
+    private static AnalystCallResponses.Outcome toOutcome(CallOutcome outcome) {
+        return new AnalystCallResponses.Outcome(
+                outcome.outcomeId(), outcome.schemaVersion(), outcome.callId(), outcome.horizon(),
+                outcome.basisRevisionId(), outcome.cancellationRevisionId(), outcome.snapshotId(), outcome.methodologyId(),
+                outcome.methodologyVersion(), outcome.methodologyDefinitionHash(), outcome.inputFingerprint(),
+                outcome.sequenceNumber(), outcome.supersedesOutcomeId(), outcome.evaluationStatus(),
+                outcome.reasonCode(), outcome.eventTime(), outcome.processingTime(), outcome.assetReturn(),
+                outcome.benchmarkReturn(), outcome.sectorReturn(), outcome.alpha(), outcome.sectorAlpha(),
+                outcome.mfe(), outcome.mae(), outcome.targetHit(), outcome.directionalWin(), outcome.targetError(),
+                outcome.dataComplete(), outcome.dataMode(), outcome.capturedAt(), outcome.provenanceId());
     }
 
     private static AnalystCallResponses.Revision toRevision(AnalystCallRevision revision) {

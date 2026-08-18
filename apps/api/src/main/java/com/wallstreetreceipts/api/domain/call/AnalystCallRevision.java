@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+import com.wallstreetreceipts.api.domain.PersistentInstant;
 import com.wallstreetreceipts.api.domain.market.DataMode;
 import com.wallstreetreceipts.api.domain.source.SourceReference;
 
@@ -45,6 +46,9 @@ public record AnalystCallRevision(
         Objects.requireNonNull(sourceReference, "sourceReference must not be null");
         Objects.requireNonNull(dataMode, "dataMode must not be null");
         Objects.requireNonNull(capturedAt, "capturedAt must not be null");
+        PersistentInstant.requireMicrosecondPrecision(eventTime, "eventTime");
+        PersistentInstant.requireMicrosecondPrecision(processingTime, "processingTime");
+        PersistentInstant.requireMicrosecondPrecision(capturedAt, "capturedAt");
         requireIdentifier(provenanceId, "provenanceId");
 
         if (sequenceNumber < 1) {

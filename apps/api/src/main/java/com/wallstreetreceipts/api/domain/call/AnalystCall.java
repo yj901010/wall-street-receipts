@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.Currency;
 import java.util.Objects;
 
+import com.wallstreetreceipts.api.domain.PersistentInstant;
 import com.wallstreetreceipts.api.domain.market.DataMode;
 import com.wallstreetreceipts.api.domain.master.Analyst;
 import com.wallstreetreceipts.api.domain.master.Asset;
@@ -46,10 +47,16 @@ public record AnalystCall(
         Objects.requireNonNull(status, "status must not be null");
         Objects.requireNonNull(dataMode, "dataMode must not be null");
         Objects.requireNonNull(capturedAt, "capturedAt must not be null");
+        PersistentInstant.requireMicrosecondPrecision(eventTime, "eventTime");
+        PersistentInstant.requireMicrosecondPrecision(processingTime, "processingTime");
+        PersistentInstant.requireMicrosecondPrecision(capturedAt, "capturedAt");
         requireText(provenanceId, "provenanceId");
 
         if (processingTime.isBefore(eventTime)) {
             throw new IllegalArgumentException("processingTime must not precede eventTime");
+        }
+        if (capturedAt.isBefore(processingTime)) {
+            throw new IllegalArgumentException("capturedAt must not precede processingTime");
         }
         requirePositive(previousTarget, "previousTarget");
         requirePositive(target, "target");

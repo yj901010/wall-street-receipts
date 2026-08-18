@@ -45,13 +45,11 @@
       "$ref": "#/$defs/identifier"
     },
     "eventTime": {
-      "type": "string",
-      "format": "date-time",
+      "$ref": "#/$defs/utcInstant",
       "description": "The call event time whose known market state is represented."
     },
     "processingTime": {
-      "type": "string",
-      "format": "date-time",
+      "$ref": "#/$defs/utcInstant",
       "description": "The platform processing time, retained separately from eventTime."
     },
     "assetPrice": {
@@ -101,8 +99,7 @@
       "$ref": "#/$defs/dataMode"
     },
     "capturedAt": {
-      "type": "string",
-      "format": "date-time"
+      "$ref": "#/$defs/utcInstant"
     },
     "provenanceId": {
       "$ref": "#/$defs/identifier"
@@ -114,6 +111,12 @@
       "minLength": 1,
       "maxLength": 128,
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "utcInstant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+      "description": "Canonical UTC instant with at most microsecond precision; finer values are rejected rather than rounded."
     },
     "nullableNumber": {
       "type": [

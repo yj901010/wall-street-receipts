@@ -149,6 +149,29 @@ class AnalystCallPersistenceTest {
         assertThat(incomplete.assetPrice()).isNull();
     }
 
+    @Test
+    void callAndSnapshotCaptureCannotPrecedeTheirProcessingTime() {
+        AnalystCall call = provider.load().calls().getFirst();
+        assertThatThrownBy(() -> new AnalystCall(
+                "capture-before-processing-call", call.provider(), "capture-before-processing-event",
+                call.institution(), call.analyst(), call.asset(), call.eventTime(), call.processingTime(),
+                call.direction(), call.originalRating(), call.previousTarget(), call.target(), call.currency(),
+                call.targetDate(), call.sourceReference(), call.status(), call.dataMode(),
+                call.processingTime().minusSeconds(1), call.provenanceId()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("capturedAt");
+
+        MarketSnapshot snapshot = provider.load().snapshots().getFirst();
+        assertThatThrownBy(() -> new MarketSnapshot(
+                "capture-before-processing-snapshot", snapshot.callId(), snapshot.assetId(), snapshot.eventTime(),
+                snapshot.processingTime(), snapshot.assetPrice(), snapshot.spx(), snapshot.ndx(), snapshot.vix(),
+                snapshot.treasury2y(), snapshot.treasury10y(), snapshot.realYield(), snapshot.dxy(), snapshot.wti(),
+                snapshot.gold(), snapshot.volatility(), snapshot.distanceFrom52WeekHigh(), snapshot.distanceFromAth(),
+                snapshot.dataMode(), snapshot.processingTime().minusSeconds(1), snapshot.provenanceId()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("capturedAt");
+    }
+
     private static AnalystCall copyWithId(AnalystCall source, String id) {
         return new AnalystCall(
                 id, source.provider(), source.providerEventId(), source.institution(), source.analyst(), source.asset(),

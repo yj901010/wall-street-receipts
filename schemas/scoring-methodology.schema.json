@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:scoring-methodology:1.0.0",
+  "title": "Canonical Scoring Methodology",
+  "description": "A versioned definition identity for deterministic call-outcome scoring.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "methodologyId",
+    "methodologyVersion",
+    "schemaVersion",
+    "definitionHash",
+    "status",
+    "effectiveAt",
+    "dataMode",
+    "capturedAt",
+    "provenanceId"
+  ],
+  "properties": {
+    "methodologyId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "methodologyVersion": {
+      "$ref": "#/$defs/methodologyVersion"
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "definitionHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "MODEL_ONLY",
+        "ACTIVE",
+        "RETIRED"
+      ]
+    },
+    "effectiveAt": {
+      "$ref": "#/$defs/utcInstant"
+    },
+    "dataMode": {
+      "$ref": "#/$defs/dataMode"
+    },
+    "capturedAt": {
+      "$ref": "#/$defs/utcInstant"
+    },
+    "provenanceId": {
+      "$ref": "#/$defs/identifier"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "methodologyVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "utcInstant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+      "description": "Canonical UTC instant with at most microsecond precision; finer values are rejected rather than rounded."
+    },
+    "dataMode": {
+      "type": "string",
+      "enum": [
+        "REALTIME",
+        "DELAYED",
+        "EOD",
+        "DEMO"
+      ]
+    }
+  }
+}

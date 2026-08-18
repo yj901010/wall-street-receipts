@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "fixtureVersion": "v1",
   "dataMode": "DEMO",
-  "generatedAt": "2026-08-18T00:00:00Z",
+  "generatedAt": "2026-08-18T00:10:00Z",
   "provenance": {
     "id": "fixture-manifest-v1",
     "sourceType": "LOCAL_SPECIFICATION",
@@ -33,6 +33,10 @@
     {
       "path": "analyst-call-revisions.json",
       "description": "Append-only correction and cancellation events linked to original analyst calls"
+    },
+    {
+      "path": "call-outcomes.json",
+      "description": "Versioned scoring methodology models and append-only call-outcome audit fixtures"
     },
     {
       "path": "market-snapshots.json",

@@ -61,11 +61,14 @@
       "maxLength": 2048
     },
     "publishedAt": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "format": "date-time"
+      "oneOf": [
+        {
+          "$ref": "#/$defs/utcInstant"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "provider": {
       "type": "string",
@@ -96,8 +99,7 @@
       "$ref": "#/$defs/dataMode"
     },
     "capturedAt": {
-      "type": "string",
-      "format": "date-time"
+      "$ref": "#/$defs/utcInstant"
     },
     "provenanceId": {
       "$ref": "#/$defs/identifier"
@@ -109,6 +111,12 @@
       "minLength": 1,
       "maxLength": 128,
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "utcInstant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+      "description": "Canonical UTC instant with at most microsecond precision; finer values are rejected rather than rounded."
     },
     "dataMode": {
       "type": "string",

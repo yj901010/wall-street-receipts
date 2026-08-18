@@ -3,6 +3,7 @@ package com.wallstreetreceipts.api.domain.master;
 import java.time.Instant;
 import java.util.Objects;
 
+import com.wallstreetreceipts.api.domain.PersistentInstant;
 import com.wallstreetreceipts.api.domain.market.DataMode;
 
 public record Institution(
@@ -26,6 +27,8 @@ public record Institution(
         Objects.requireNonNull(dataMode, "dataMode must not be null");
         Objects.requireNonNull(effectiveAt, "effectiveAt must not be null");
         Objects.requireNonNull(capturedAt, "capturedAt must not be null");
+        PersistentInstant.requireMicrosecondPrecision(effectiveAt, "effectiveAt");
+        PersistentInstant.requireMicrosecondPrecision(capturedAt, "capturedAt");
         requireText(provenanceId, "provenanceId");
     }
 

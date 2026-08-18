@@ -10,6 +10,9 @@ import com.wallstreetreceipts.api.domain.call.CallDirection;
 import com.wallstreetreceipts.api.domain.call.CallStatus;
 import com.wallstreetreceipts.api.domain.market.DataMode;
 import com.wallstreetreceipts.api.domain.master.AssetType;
+import com.wallstreetreceipts.api.domain.outcome.OutcomeEvaluationStatus;
+import com.wallstreetreceipts.api.domain.outcome.OutcomeHorizon;
+import com.wallstreetreceipts.api.domain.outcome.OutcomeReasonCode;
 import com.wallstreetreceipts.api.domain.source.SourceType;
 
 public final class AnalystCallResponses {
@@ -145,6 +148,40 @@ public final class AnalystCallResponses {
             CorrectedTerms correctedTerms,
             String reason,
             String sourceReferenceId,
+            DataMode dataMode,
+            Instant capturedAt,
+            String provenanceId) {
+    }
+
+    public record Outcome(
+            String outcomeId,
+            String schemaVersion,
+            String callId,
+            OutcomeHorizon horizon,
+            String basisRevisionId,
+            String cancellationRevisionId,
+            String snapshotId,
+            String methodologyId,
+            String methodologyVersion,
+            String methodologyDefinitionHash,
+            String inputFingerprint,
+            int sequenceNumber,
+            String supersedesOutcomeId,
+            OutcomeEvaluationStatus evaluationStatus,
+            OutcomeReasonCode reasonCode,
+            Instant eventTime,
+            Instant processingTime,
+            BigDecimal assetReturn,
+            BigDecimal benchmarkReturn,
+            BigDecimal sectorReturn,
+            BigDecimal alpha,
+            BigDecimal sectorAlpha,
+            BigDecimal mfe,
+            BigDecimal mae,
+            Boolean targetHit,
+            Boolean directionalWin,
+            BigDecimal targetError,
+            boolean dataComplete,
             DataMode dataMode,
             Instant capturedAt,
             String provenanceId) {
