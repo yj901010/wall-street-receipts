@@ -7,9 +7,10 @@ call was made, and evaluates later outcomes with a reproducible methodology.
 The P0 foundation is complete and the repository is progressing through P1.
 The first P1 vertical slice provides a canonical analyst-call ledger, source
 evidence, immutable point-in-time snapshots, list/detail APIs, and responsive
-web routes. Kafka, Redis, ClickHouse, OpenSearch, object storage, and commercial
-data providers remain later-phase extension points rather than runtime
-dependencies.
+web routes. Append-only correction and cancellation events now preserve an
+auditable revision chain without rewriting the original call. Kafka, Redis,
+ClickHouse, OpenSearch, object storage, and commercial data providers remain
+later-phase extension points rather than runtime dependencies.
 
 > All bundled records use `DATA_MODE=DEMO`. They are synthetic examples, not
 > investment advice or representations of real analyst statements.
@@ -47,6 +48,7 @@ On macOS or Linux, use `cp .env.example .env` and
 - PostgreSQL: `localhost:5432`
 - Analyst calls: <http://localhost:3000/calls>
 - Analyst-call API: <http://localhost:8080/v1/calls>
+- Revision audit API: <http://localhost:8080/v1/calls/demo-call-002/revisions>
 
 Stop the database without deleting its volume:
 

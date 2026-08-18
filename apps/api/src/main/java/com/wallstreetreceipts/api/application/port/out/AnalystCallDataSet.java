@@ -3,6 +3,7 @@ package com.wallstreetreceipts.api.application.port.out;
 import java.util.List;
 
 import com.wallstreetreceipts.api.domain.call.AnalystCall;
+import com.wallstreetreceipts.api.domain.call.AnalystCallRevision;
 import com.wallstreetreceipts.api.domain.market.MarketSnapshot;
 import com.wallstreetreceipts.api.domain.master.Analyst;
 import com.wallstreetreceipts.api.domain.master.Asset;
@@ -13,6 +14,7 @@ public record AnalystCallDataSet(
         List<Analyst> analysts,
         List<Asset> assets,
         List<AnalystCall> calls,
+        List<AnalystCallRevision> revisions,
         List<MarketSnapshot> snapshots) {
 
     public AnalystCallDataSet {
@@ -20,6 +22,7 @@ public record AnalystCallDataSet(
         analysts = List.copyOf(analysts);
         assets = List.copyOf(assets);
         calls = List.copyOf(calls);
+        revisions = List.copyOf(revisions);
         snapshots = List.copyOf(snapshots);
     }
 }

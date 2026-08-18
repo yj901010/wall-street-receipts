@@ -2,7 +2,7 @@ openapi: 3.1.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: Wall Street Receipts API
-  version: 0.1.0
+  version: 0.2.0
   summary: Point-in-time analyst-call read API
   description: |
     P1 read contract for canonical analyst-call events. All timestamps are UTC
@@ -85,6 +85,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnalystCallDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/calls/{id}/revisions:
+    get:
+      tags:
+        - Analyst Calls
+      operationId: listAnalystCallRevisions
+      summary: List the immutable revision history for one analyst call
+      description: |
+        Returns append-only correction and cancellation events in ascending
+        `sequenceNumber` order. The original analyst-call event is never
+        overwritten. A known call with no revisions returns an empty array.
+      parameters:
+        - $ref: '#/components/parameters/CallId'
+      responses:
+        '200':
+          description: Ordered analyst-call revision history
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalystCallRevisionList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -186,7 +215,9 @@ components:
       in: query
       name: status
       required: false
-      description: Exact event lifecycle state.
+      description: >-
+        Exact status recorded on the immutable original event. Revision events
+        never rewrite this value; effective lifecycle projection is separate.
       schema:
         $ref: '#/components/schemas/CallStatus'
     DataMode:
@@ -338,6 +369,14 @@ components:
 
     AnalystCall:
       $ref: ../schemas/analyst-call.schema.json
+
+    AnalystCallRevision:
+      $ref: ../schemas/analyst-call-revision.schema.json
+
+    AnalystCallRevisionList:
+      type: array
+      items:
+        $ref: '#/components/schemas/AnalystCallRevision'
 
     SourceDocument:
       $ref: ../schemas/source-document.schema.json

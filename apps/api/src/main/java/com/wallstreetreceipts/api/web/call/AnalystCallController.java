@@ -1,6 +1,7 @@
 package com.wallstreetreceipts.api.web.call;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.wallstreetreceipts.api.application.call.AnalystCallFilter;
 import com.wallstreetreceipts.api.application.call.AnalystCallQueryService;
+import com.wallstreetreceipts.api.application.call.AnalystCallRevisionQueryService;
 import com.wallstreetreceipts.api.application.call.CallSortField;
 import com.wallstreetreceipts.api.application.call.SortOrder;
 import com.wallstreetreceipts.api.domain.call.CallDirection;
@@ -25,9 +27,13 @@ public class AnalystCallController {
     private static final Pattern TICKER = Pattern.compile("^[A-Za-z0-9.^/-]{1,24}$");
 
     private final AnalystCallQueryService queryService;
+    private final AnalystCallRevisionQueryService revisionQueryService;
 
-    public AnalystCallController(AnalystCallQueryService queryService) {
+    public AnalystCallController(
+            AnalystCallQueryService queryService,
+            AnalystCallRevisionQueryService revisionQueryService) {
         this.queryService = queryService;
+        this.revisionQueryService = revisionQueryService;
     }
 
     @GetMapping
@@ -61,6 +67,12 @@ public class AnalystCallController {
     @GetMapping("/{id}")
     public AnalystCallResponses.Detail detail(@PathVariable String id) {
         return AnalystCallResponseMapper.toDetail(queryService.findById(requiredIdentifier(id, "id")));
+    }
+
+    @GetMapping("/{id}/revisions")
+    public List<AnalystCallResponses.Revision> revisions(@PathVariable String id) {
+        return AnalystCallResponseMapper.toRevisions(
+                revisionQueryService.findByCallId(requiredIdentifier(id, "id")));
     }
 
     private static String optionalIdentifier(String value, String field) {

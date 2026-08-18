@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.wallstreetreceipts.api.domain.call.AnalystCallRevisionType;
 import com.wallstreetreceipts.api.domain.call.CallDirection;
 import com.wallstreetreceipts.api.domain.call.CallStatus;
 import com.wallstreetreceipts.api.domain.market.DataMode;
@@ -119,6 +120,34 @@ public final class AnalystCallResponses {
             Asset asset,
             Source source,
             Snapshot snapshot) {
+    }
+
+    public record CorrectedTerms(
+            CallDirection direction,
+            String originalRating,
+            BigDecimal previousTarget,
+            BigDecimal target,
+            String currency,
+            LocalDate targetDate) {
+    }
+
+    public record Revision(
+            String revisionId,
+            String schemaVersion,
+            String callId,
+            String supersedesRevisionId,
+            int sequenceNumber,
+            String provider,
+            String providerEventId,
+            AnalystCallRevisionType revisionType,
+            Instant eventTime,
+            Instant processingTime,
+            CorrectedTerms correctedTerms,
+            String reason,
+            String sourceReferenceId,
+            DataMode dataMode,
+            Instant capturedAt,
+            String provenanceId) {
     }
 
     public record Sort(String field, String order) {

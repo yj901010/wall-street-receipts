@@ -11,8 +11,11 @@ import java.util.stream.Collectors;
 
 import com.wallstreetreceipts.api.application.port.out.AnalystCallDataSet;
 import com.wallstreetreceipts.api.domain.call.AnalystCall;
+import com.wallstreetreceipts.api.domain.call.AnalystCallRevision;
+import com.wallstreetreceipts.api.domain.call.AnalystCallRevisionType;
 import com.wallstreetreceipts.api.domain.call.CallDirection;
 import com.wallstreetreceipts.api.domain.call.CallStatus;
+import com.wallstreetreceipts.api.domain.call.CorrectedCallTerms;
 import com.wallstreetreceipts.api.domain.market.DataMode;
 import com.wallstreetreceipts.api.domain.market.MarketSnapshot;
 import com.wallstreetreceipts.api.domain.master.Analyst;
@@ -23,6 +26,8 @@ import com.wallstreetreceipts.api.domain.source.SourceDocument;
 import com.wallstreetreceipts.api.domain.source.SourceReference;
 import com.wallstreetreceipts.api.domain.source.SourceType;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.AnalystCallsDocument;
+import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.AnalystCallRevisionsDocument;
+import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.CorrectedCallTermsDto;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.MasterDataDocument;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallDocuments.MarketSnapshotsDocument;
 
@@ -34,6 +39,7 @@ final class FixtureAnalystCallMapper {
     static AnalystCallDataSet toCanonical(
             MasterDataDocument masterData,
             AnalystCallsDocument callData,
+            AnalystCallRevisionsDocument revisionData,
             MarketSnapshotsDocument snapshotData) {
         List<Institution> institutions = masterData.institutions().stream()
                 .map(source -> new Institution(
@@ -89,6 +95,16 @@ final class FixtureAnalystCallMapper {
                         source.provenanceId()))
                 .toList();
 
+        List<AnalystCallRevision> revisions = revisionData.revisions().stream()
+                .map(source -> new AnalystCallRevision(
+                        source.revisionId(), source.schemaVersion(), source.callId(), source.supersedesRevisionId(),
+                        source.sequenceNumber(), source.provider(), source.providerEventId(),
+                        AnalystCallRevisionType.valueOf(source.revisionType()), instant(source.eventTime()),
+                        instant(source.processingTime()), correctedTerms(source.correctedTerms()), source.reason(),
+                        required(referencesById, source.sourceReferenceId(), "source reference"),
+                        dataMode(source.dataMode()), instant(source.capturedAt()), source.provenanceId()))
+                .toList();
+
         List<MarketSnapshot> snapshots = snapshotData.snapshots().stream()
                 .map(source -> {
                     if (!source.immutable()) {
@@ -103,7 +119,7 @@ final class FixtureAnalystCallMapper {
                 })
                 .toList();
 
-        return new AnalystCallDataSet(institutions, analysts, assets, calls, snapshots);
+        return new AnalystCallDataSet(institutions, analysts, assets, calls, revisions, snapshots);
     }
 
     private static <T> Map<String, T> index(List<T> values, Function<T, String> keyExtractor) {
@@ -140,6 +156,15 @@ final class FixtureAnalystCallMapper {
 
     private static Currency currency(String value) {
         return value == null ? null : Currency.getInstance(value);
+    }
+
+    private static CorrectedCallTerms correctedTerms(CorrectedCallTermsDto source) {
+        if (source == null) {
+            return null;
+        }
+        return new CorrectedCallTerms(
+                CallDirection.valueOf(source.direction()), source.originalRating(), source.previousTarget(),
+                source.target(), currency(source.currency()), localDate(source.targetDate()));
     }
 
     private static DataMode dataMode(String value) {

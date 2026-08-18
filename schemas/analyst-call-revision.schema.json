@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:analyst-call-revision:1.0.0",
+  "title": "Canonical Analyst Call Revision",
+  "description": "An immutable correction or cancellation event that preserves and links back to the original analyst call.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "revisionId",
+    "schemaVersion",
+    "callId",
+    "supersedesRevisionId",
+    "sequenceNumber",
+    "provider",
+    "providerEventId",
+    "revisionType",
+    "eventTime",
+    "processingTime",
+    "correctedTerms",
+    "reason",
+    "sourceReferenceId",
+    "dataMode",
+    "capturedAt",
+    "provenanceId"
+  ],
+  "properties": {
+    "revisionId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "callId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "supersedesRevisionId": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/identifier"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sequenceNumber": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "providerEventId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "revisionType": {
+      "type": "string",
+      "enum": [
+        "CORRECTION",
+        "CANCELLATION"
+      ]
+    },
+    "eventTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "processingTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correctedTerms": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/correctedTerms"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "sourceReferenceId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "dataMode": {
+      "$ref": "#/$defs/dataMode"
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provenanceId": {
+      "$ref": "#/$defs/identifier"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "sequenceNumber": {
+            "const": 1
+          }
+        },
+        "required": [
+          "sequenceNumber"
+        ]
+      },
+      "then": {
+        "properties": {
+          "supersedesRevisionId": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "supersedesRevisionId": {
+            "$ref": "#/$defs/identifier"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "revisionType": {
+            "const": "CORRECTION"
+          }
+        },
+        "required": [
+          "revisionType"
+        ]
+      },
+      "then": {
+        "properties": {
+          "correctedTerms": {
+            "$ref": "#/$defs/correctedTerms"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "correctedTerms": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "dataMode": {
+      "type": "string",
+      "enum": [
+        "REALTIME",
+        "DELAYED",
+        "EOD",
+        "DEMO"
+      ]
+    },
+    "correctedTerms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "direction",
+        "originalRating",
+        "previousTarget",
+        "target",
+        "currency",
+        "targetDate"
+      ],
+      "properties": {
+        "direction": {
+          "type": "string",
+          "enum": [
+            "STRONG_BULLISH",
+            "BULLISH",
+            "NEUTRAL",
+            "BEARISH",
+            "STRONG_BEARISH"
+          ]
+        },
+        "originalRating": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "previousTarget": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "target": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z]{3}$"
+        },
+        "targetDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "previousTarget": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "previousTarget"
+                ]
+              },
+              {
+                "properties": {
+                  "target": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "target"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

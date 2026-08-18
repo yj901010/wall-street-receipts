@@ -94,6 +94,7 @@
                 <includes>
                     <include>master-data.json</include>
                     <include>analyst-calls.json</include>
+                    <include>analyst-call-revisions.json</include>
                     <include>market-snapshots.json</include>
                 </includes>
             </resource>

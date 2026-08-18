@@ -25,6 +25,10 @@ final class FixtureAnalystCallDocuments {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
+    record AnalystCallRevisionsDocument(List<AnalystCallRevisionDto> revisions) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
     record MarketSnapshotsDocument(List<MarketSnapshotDto> snapshots) {
     }
 
@@ -113,6 +117,34 @@ final class FixtureAnalystCallDocuments {
             String dataMode,
             String capturedAt,
             String provenanceId) {
+    }
+
+    record AnalystCallRevisionDto(
+            String revisionId,
+            String schemaVersion,
+            String callId,
+            String supersedesRevisionId,
+            int sequenceNumber,
+            String provider,
+            String providerEventId,
+            String revisionType,
+            String eventTime,
+            String processingTime,
+            CorrectedCallTermsDto correctedTerms,
+            String reason,
+            String sourceReferenceId,
+            String dataMode,
+            String capturedAt,
+            String provenanceId) {
+    }
+
+    record CorrectedCallTermsDto(
+            String direction,
+            String originalRating,
+            BigDecimal previousTarget,
+            BigDecimal target,
+            String currency,
+            String targetDate) {
     }
 
     record MarketSnapshotDto(
