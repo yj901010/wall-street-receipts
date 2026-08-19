@@ -1,9 +1,10 @@
 # P2 Acceptance Checks — Core UI
 
-Current status: the methodology-registry and multiple market-map shell vertical
-slices and the sector/industry PRICE_CHANGE treemap slice are complete. These
-checks close only delivered P2 slices; dashboard, leaderboard, screener,
-full-universe map, and production market-mode work stays open.
+Current status: the methodology-registry, multiple market-map shell,
+sector/industry PRICE_CHANGE treemap, and dashboard evidence-composition
+vertical slices are complete. These checks close only delivered P2 slices;
+leaderboard, screener, full-universe map, and production market-mode work stays
+open.
 
 The methodology registry is a read-only, fixture-backed explanation surface. It
 publishes the immutable definition identities already present in
@@ -228,6 +229,96 @@ P7 retains sourced complete-universe membership/classification, official market
 capitalization or index-weight geometry, live/observed price mode, filters, rich
 tooltips, zoom/history, additional map modes, and persistent/materialized map
 read models. The P2 fixture does not bootstrap or imply those capabilities.
+
+## Dashboard evidence composition slice boundary
+
+- The public web route remains `GET /`. This slice replaces its display-ready
+  hard-coded payload with a deterministic composition of the existing
+  `CallsProvider` and `MarketTreemapProvider` ports.
+- `DashboardSnapshot` contains only `dataMode`, `latestCalls`, `mapPreviews`,
+  `marketBoard`, `eventCalendar`, and `ranking`. There is no dashboard-global
+  `asOf` or source: the call ledger and each map document retain different,
+  semantically scoped timestamps and provenance.
+- `latestCalls` owns `items`, `asOf`, `dataMode`, `source`, and `disclaimer`. It
+  projects the canonical call ledger in `eventTime` descending, `callId`
+  ascending tie order, with size three. The current exact order is `demo-call-002`,
+  `demo-call-001`, then `demo-call-003`.
+- `mapPreviews` contains the full canonical PRICE_CHANGE treemap snapshots for
+  exactly `sp500` followed by `nasdaq100`. Each preview preserves its own
+  universe, mode, as-of time, coverage, metric, provenance, disclaimer, and
+  nullable cells without copying or recalculating values.
+- The market board is exactly `{status: NOT_PUBLISHED, missingDisplay: NA}`.
+  Immutable call-event market snapshots are not current/global quotes and are
+  not projected into this section.
+- The event calendar is exactly `{status: NOT_PUBLISHED, missingDisplay: NA}`.
+  A schedule captured in a call-bound `EventContext` is not a global upcoming
+  calendar and is not projected into this section.
+- Ranking is exactly `{status: P3_DEFERRED, missingDisplay: NA}`. It has no
+  metric, score, rank, row, sort order, winner, or performance claim.
+- The two provider ports are constructor-injected into the fixture composer.
+  The composer does not import raw fixture JSON, reach through a provider, use
+  the P0 Java fixture quote seam, or synthesize a common timestamp.
+- This composition adds no schema, fixture, manifest member, API endpoint,
+  OpenAPI path, database migration, persistence write, network provider, market
+  calculation, event-calendar aggregation, or leaderboard calculation.
+
+## Dashboard evidence composition contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-D01 | Existing-provider composition | The dashboard fixture adapter receives only `CallsProvider` and `MarketTreemapProvider`. It does not duplicate canonical calls/maps in application source or add a dashboard fixture/schema. |
+| P2-D02 | No false global as-of | `DashboardSnapshot` has no global `asOf`, generated-at, or source field. Latest calls retain their canonical fixture `asOf`, source, and disclaimer; each map preview retains its own canonical `asOf`, generated-at evidence, provenance, and disclaimer. |
+| P2-D03 | Deterministic latest calls | The adapter requests page zero, size three, sort `eventTime`, order `desc`. Equal event times use the existing `callId` ascending tie break. Current output is exactly call 002, call 001, call 003, with canonical institution, analyst-nullability, asset, source, target-nullability, event/capture time, and DEMO mode unchanged. |
+| P2-D04 | Exact map previews | The adapter requests exactly `sp500` then `nasdaq100`, requires distinct universes and exact `PRICE_CHANGE` mode, and returns the complete canonical snapshots in that order. Both remain incomplete three-cell SAMPLE evidence with synthetic classifications, changes, and market-cap proxies. |
+| P2-D05 | Mode parity | Calls metadata, every selected call, and both map previews are exactly DEMO. Mixed or unsupported mode input fails closed rather than being relabelled. |
+| P2-D06 | Market board not published | The market-board section has exact status `NOT_PUBLISHED`, displays `NA`, and has no rows or numeric fields. It never promotes `market-snapshots.json`, `MarketDataProvider.latestQuote`, treemap changes, or hard-coded literals to current/global quote, price, change, or market-status facts. |
+| P2-D07 | Event calendar not published | The event-calendar section has exact status `NOT_PUBLISHED`, displays `NA`, and has no rows or dates. It never promotes call-bound `EventContext` schedule fields to a global/today/upcoming calendar. |
+| P2-D08 | Ranking deferred | The ranking section has exact status `P3_DEFERRED`, displays `NA`, and has no rows, metrics, or ordering. Call counts, outcome placeholders, methodology versions, and MODEL_ONLY status are not translated into accuracy, score, sample confidence, rank, or recommendation. |
+| P2-D09 | Null and source preservation | Nullable analyst, target, metric, and evidence fields remain null and render `NA`; no zero, currency, source URL, or display-ready number is invented. Calls and maps expose their own exact canonical source/provenance and time evidence. |
+| P2-D10 | Append-safe projection | Additional canonical calls may change the top-three window only through the locked sort/page rule. Unsupported, duplicate, reordered, wrong-mode, or malformed map results fail closed; neither unavailable section silently becomes populated. |
+| P2-D11 | Later-phase boundary | P3 owns ranking aggregates and performance metrics; P5 owns observed/licensed market quotes; a separately sourced global calendar owns event publication. Existing call-event snapshots and contexts remain immutable call-detail evidence. |
+
+## Dashboard web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-DW01 | Evidence-first route | `/` is server rendered and exposes a compact DEMO dashboard with latest calls, both PRICE_CHANGE previews, and three explicit unavailable/deferred states. It has no marketing hero or claim that the fixture represents current markets. |
+| P2-DW02 | Latest-call evidence | All three canonical call rows link to their existing details and show event time, institution, asset, direction, nullable target, source title, DEMO mode, and the section-local call-fixture as-of/source evidence. Call 003 preserves its null analyst/targets/currency/source-document metadata rather than borrowing another call's values. |
+| P2-DW03 | Map preview evidence | S&P 500 and Nasdaq 100 previews link to their existing PRICE_CHANGE routes and preserve each document's as-of, provenance, SAMPLE/incomplete coverage, synthetic proxy/change disclosure, raw null policy, and one-sector limitation. A preview is not labelled observed, live, official, or full-universe. |
+| P2-DW04 | Honest unavailable sections | Market board and event calendar render `Not published` plus `NA` with the exact point-in-time reason; ranking renders `P3 deferred` plus `NA`. None renders a placeholder row, chart, metric, rank, or fake loading success. |
+| P2-DW05 | Section-local semantics | The page does not display a dashboard-global `As of` or source. Calls and both maps label their own distinct times and sources; `asOf`, event time, processing/capture time, and fixture generation are not collapsed into one timestamp. |
+| P2-DW06 | Loading, error, and empty behavior | The route has explicit loading and recoverable error boundaries. An empty latest-call result, empty/malformed map result, wrong mode, duplicate universe, or provider failure does not fall back to the old hard-coded values. Contract-defined NOT_PUBLISHED/P3_DEFERRED states are data, not errors. |
+| P2-DW07 | Accessibility and responsive layout | Calls, preview links, status explanations, and retry/navigation controls are semantic, keyboard reachable, and visibly focused. At 1440, 1280, and 390 pixels, dense regions remain locally contained, the page has no horizontal overflow, and console warnings, errors, and page errors are zero. |
+| P2-DW08 | Regression boundary | Existing `/calls`, `/calls/{id}`, `/methodology`, both map modes/universes, and all API contracts remain unchanged. The obsolete hard-coded SPX/NDX/VIX display values and percentage literals are absent from production web source. |
+
+## Dashboard evidence composition required tests
+
+- Provider tests inject the two ports and prove the exact query, call order,
+  complete canonical row preservation, exact two-preview order, DEMO parity,
+  section-local metadata, and the three closed unavailable/deferred states.
+- Negative provider tests reject mixed mode, wrong or duplicate universe,
+  non-PRICE_CHANGE previews, reordered results, and provider failures without a
+  hard-coded or cross-universe fallback.
+- Route/component tests cover all canonical call rows, both preview summaries,
+  per-section time/source labels, call-003 nulls, honest unavailable copy,
+  missing-value `NA`, loading/error/empty behavior, semantic links, and the
+  absence of current-market, global-calendar, ranking, and performance claims.
+- Responsive Playwright extends the shared 1440/1280/390 matrix across `/`,
+  keyboard navigation, links to calls/maps/methodology, page/local overflow,
+  exact NOT_PUBLISHED/P3_DEFERRED states, and zero console warnings, errors, or
+  page errors.
+- Existing market/call/context/methodology schema and fixture gates are not
+  duplicated. Repository CI may add a focused production-source check that the
+  obsolete hard-coded dashboard market literals cannot reappear.
+
+## Dashboard evidence composition deferred work
+
+P3 retains deterministic ranking and performance aggregates. P5 retains
+observed/licensed current market quotes and coherent market-board publication.
+A future calendar slice requires a separately sourced global event catalog;
+call-bound context remains point-in-time call evidence. Institution and analyst
+leaderboards, the screener shell, S&P history, persistent dashboard read models,
+realtime refresh, and personalized layout remain open.
 
 ## Local gate
 

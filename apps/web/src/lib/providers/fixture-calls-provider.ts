@@ -17,6 +17,7 @@ import {
   type CallsProvider,
   type CallsQuery,
   type CallContext,
+  type CallSortField,
   type EventContext,
   type InstitutionSummary,
   type MacroObservation,
@@ -25,6 +26,7 @@ import {
   type SourceDocument,
   type SourceEvidence,
   type SourceReference,
+  type SortOrder,
 } from "./calls-provider";
 
 type AnalystCallFixture = Omit<AnalystCall, "schemaVersion" | "dataMode"> & { dataMode: string };
@@ -94,6 +96,8 @@ const masterDataFixture = masterDataFixtureJson as MasterDataFixture;
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
+const utcInstantPattern = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?Z$/;
+const offsetInstantPattern = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?([+-])(\d{2}):(\d{2})$/;
 
 function normalized(value: string | undefined) {
   return value?.trim().toLocaleLowerCase("en-US") ?? "";
@@ -115,16 +119,99 @@ function nonNegativeInteger(value: number | undefined, fallback: number) {
   return Math.trunc(value);
 }
 
+function canonicalInstant(value: string, owner: string) {
+  const match = utcInstantPattern.exec(value);
+
+  if (!match) {
+    throw new Error(`${owner} has an invalid UTC instant: ${value}.`);
+  }
+
+  const parsed = Date.parse(`${match[1]}Z`);
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== `${match[1]}.000Z`) {
+    throw new Error(`${owner} has an invalid UTC instant: ${value}.`);
+  }
+
+  const microseconds = (match[2] ?? "").padEnd(6, "0");
+  return BigInt(parsed) * 1_000n + BigInt(microseconds || "0");
+}
+
 function instant(value: string | undefined, field: "from" | "to") {
   if (!value) {
     return null;
   }
 
-  if (!Number.isFinite(Date.parse(value))) {
+  const canonicalMatch = utcInstantPattern.exec(value);
+  if (canonicalMatch) {
+    return canonicalInstant(value, `${field} query`);
+  }
+
+  const offsetMatch = offsetInstantPattern.exec(value);
+  if (!offsetMatch) {
     throw new Error(`Invalid ${field} instant: ${value}`);
   }
 
-  return new Date(value).toISOString();
+  const localSecond = Date.parse(`${offsetMatch[1]}Z`);
+  const offsetHours = Number(offsetMatch[4]);
+  const offsetMinutes = Number(offsetMatch[5]);
+  if (
+    !Number.isFinite(localSecond) ||
+    new Date(localSecond).toISOString() !== `${offsetMatch[1]}.000Z` ||
+    offsetHours > 23 ||
+    offsetMinutes > 59
+  ) {
+    throw new Error(`Invalid ${field} instant: ${value}`);
+  }
+
+  const direction = offsetMatch[3] === "+" ? 1 : -1;
+  const offsetMilliseconds = direction * (offsetHours * 60 + offsetMinutes) * 60_000;
+  const utcSecond = localSecond - offsetMilliseconds;
+  if (!Number.isSafeInteger(utcSecond)) {
+    throw new Error(`Invalid ${field} instant: ${value}`);
+  }
+
+  const microseconds = (offsetMatch[2] ?? "").padEnd(6, "0");
+  return BigInt(utcSecond) * 1_000n + BigInt(microseconds || "0");
+}
+
+export function compareFixtureCallInstants(left: string, right: string) {
+  const leftInstant = canonicalInstant(left, "Fixture call");
+  const rightInstant = canonicalInstant(right, "Fixture call");
+  return leftInstant < rightInstant ? -1 : leftInstant > rightInstant ? 1 : 0;
+}
+
+type FixtureCallSortRecord = Pick<
+  AnalystCall,
+  "callId" | "eventTime" | "processingTime" | "capturedAt"
+>;
+
+export function compareFixtureCallRecords(
+  left: FixtureCallSortRecord,
+  right: FixtureCallSortRecord,
+  sort: CallSortField,
+  order: SortOrder,
+) {
+  const primary = compareFixtureCallInstants(left[sort], right[sort]);
+  if (primary !== 0) return order === "asc" ? primary : -primary;
+  return left.callId < right.callId ? -1 : left.callId > right.callId ? 1 : 0;
+}
+
+export function fixtureCallMatchesEventRange(
+  eventTime: string,
+  from?: string,
+  to?: string,
+) {
+  const eventInstant = canonicalInstant(eventTime, "Fixture call");
+  const fromInstant = instant(from, "from");
+  const toInstant = instant(to, "to");
+
+  if (fromInstant !== null && toInstant !== null && fromInstant >= toInstant) {
+    throw new Error("Invalid event-time range: to must be later than from.");
+  }
+
+  return (
+    (fromInstant === null || eventInstant >= fromInstant) &&
+    (toInstant === null || eventInstant < toInstant)
+  );
 }
 
 function canonicalCall(call: AnalystCallFixture): AnalystCall {
@@ -209,13 +296,7 @@ function canonicalSnapshot(snapshot: SnapshotFixture): MarketSnapshot {
 }
 
 function fixtureInstant(value: string) {
-  const parsed = Date.parse(value);
-
-  if (!Number.isFinite(parsed)) {
-    throw new Error(`Fixture context has an invalid instant: ${value}.`);
-  }
-
-  return parsed;
+  return canonicalInstant(value, "Fixture context");
 }
 
 function occursAfter(candidate: string, cutoff: string) {
@@ -483,7 +564,7 @@ export class FixtureCallsProvider implements CallsProvider {
     const from = instant(query.from, "from");
     const to = instant(query.to, "to");
 
-    if (from && to && from >= to) {
+    if (from !== null && to !== null && from >= to) {
       throw new Error("Invalid event-time range: to must be later than from.");
     }
 
@@ -497,8 +578,9 @@ export class FixtureCallsProvider implements CallsProvider {
       const directionMatches = !query.direction || call.direction === query.direction;
       const statusMatches = !query.status || call.status === query.status;
       const dataModeMatches = !query.dataMode || call.dataMode === query.dataMode;
-      const fromMatches = !from || call.eventTime >= from;
-      const toMatches = !to || call.eventTime < to;
+      const callEventTime = canonicalInstant(call.eventTime, `Fixture call ${call.callId}`);
+      const fromMatches = from === null || callEventTime >= from;
+      const toMatches = to === null || callEventTime < to;
 
       return (
         assetMatches &&
@@ -515,15 +597,9 @@ export class FixtureCallsProvider implements CallsProvider {
 
     const sort = query.sort ?? "eventTime";
     const order = query.order ?? "desc";
-    const sorted = [...filtered].sort((left, right) => {
-      const primary = left.call[sort].localeCompare(right.call[sort]);
-
-      if (primary !== 0) {
-        return order === "asc" ? primary : -primary;
-      }
-
-      return left.call.callId.localeCompare(right.call.callId);
-    });
+    const sorted = [...filtered].sort((left, right) =>
+      compareFixtureCallRecords(left.call, right.call, sort, order)
+    );
     const size = positiveInteger(query.size, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const totalPages = Math.ceil(sorted.length / size);
     const page = nonNegativeInteger(query.page, 0);

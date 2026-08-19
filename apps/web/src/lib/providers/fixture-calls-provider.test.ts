@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { FixtureCallsProvider } from "./fixture-calls-provider";
+import {
+  compareFixtureCallInstants,
+  compareFixtureCallRecords,
+  fixtureCallMatchesEventRange,
+  FixtureCallsProvider,
+} from "./fixture-calls-provider";
 
 describe("FixtureCallsProvider", () => {
   const provider = new FixtureCallsProvider();
@@ -53,6 +58,69 @@ describe("FixtureCallsProvider", () => {
     expect(empty.items).toEqual([]);
     expect(empty.page.totalElements).toBe(0);
     expect(empty.page.number).toBe(0);
+  });
+
+  it("orders and range-checks whole-second and fractional UTC instants precisely", () => {
+    expect(
+      compareFixtureCallInstants(
+        "2026-08-11T14:20:00Z",
+        "2026-08-11T14:20:00.000001Z",
+      ),
+    ).toBe(-1);
+    expect(
+      compareFixtureCallInstants(
+        "2026-08-11T14:20:00.1Z",
+        "2026-08-11T14:20:00.100000Z",
+      ),
+    ).toBe(0);
+    expect(
+      fixtureCallMatchesEventRange(
+        "2026-08-11T14:20:00.000001Z",
+        "2026-08-11T14:20:00Z",
+        "2026-08-11T14:20:00.000002Z",
+      ),
+    ).toBe(true);
+    expect(
+      fixtureCallMatchesEventRange(
+        "2026-08-11T14:20:00.000001Z",
+        undefined,
+        "2026-08-11T14:20:00.000001Z",
+      ),
+    ).toBe(false);
+    expect(
+      fixtureCallMatchesEventRange(
+        "2026-08-11T14:20:00Z",
+        "2026-08-11T15:20:00.000001+01:00",
+      ),
+    ).toBe(false);
+    expect(
+      fixtureCallMatchesEventRange(
+        "2026-08-11T14:20:00.000001Z",
+        "2026-08-11T15:20:00.000001+01:00",
+      ),
+    ).toBe(true);
+    expect(() => fixtureCallMatchesEventRange(
+      "2026-08-11T14:20:00Z",
+      "2026-08-11T15:20:00.0000001+01:00",
+    )).toThrow("Invalid from instant");
+  });
+
+  it("uses deterministic call ID ascending as the timestamp tie break", () => {
+    const common = {
+      eventTime: "2026-08-11T14:20:00.000001Z",
+      processingTime: "2026-08-11T14:20:01Z",
+      capturedAt: "2026-08-11T14:20:01Z",
+    };
+    const laterId = { ...common, callId: "demo-call-002" };
+    const earlierId = { ...common, callId: "demo-call-001" };
+
+    expect(compareFixtureCallRecords(laterId, earlierId, "eventTime", "desc"))
+      .toBeGreaterThan(0);
+    expect(compareFixtureCallRecords(earlierId, laterId, "eventTime", "asc"))
+      .toBeLessThan(0);
+    expect([laterId, earlierId].sort((left, right) =>
+      compareFixtureCallRecords(left, right, "eventTime", "desc")
+    ).map(({ callId }) => callId)).toEqual(["demo-call-001", "demo-call-002"]);
   });
 
   it("returns source evidence and the immutable point-in-time snapshot", async () => {
