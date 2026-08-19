@@ -4,13 +4,12 @@ Wall Street Receipts is a point-in-time financial research product that records
 public analyst calls, preserves the market context that was available when each
 call was made, and evaluates later outcomes with a reproducible methodology.
 
-The P0 foundation is complete and the repository is progressing through P1.
-The first P1 vertical slice provides a canonical analyst-call ledger, source
-evidence, immutable point-in-time snapshots, list/detail APIs, and responsive
-web routes. Append-only correction and cancellation events now preserve an
-auditable revision chain without rewriting the original call. Versioned,
-append-only outcome records now preserve methodology and input lineage without
-claiming P3 scoring results. Kafka, Redis,
+The P0 foundation and P1 domain/fixture phase are complete, and the repository
+is beginning P2 core UI work. P1 provides a canonical analyst-call ledger,
+source evidence, immutable point-in-time market and macro/event context,
+list/detail APIs, and responsive web routes. Append-only correction,
+cancellation, and outcome records preserve audit, methodology, and input
+lineage without claiming P3 scoring results. Kafka, Redis,
 ClickHouse, OpenSearch, object storage, and commercial data providers remain
 later-phase extension points rather than runtime dependencies.
 

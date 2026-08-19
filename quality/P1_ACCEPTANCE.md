@@ -1,9 +1,9 @@
 # P1 Acceptance Checks — Analyst Calls
 
-Current status: the analyst-call list/detail vertical slice, explicit
-correction/cancellation lineage, and versioned outcome contract/fixture slice
-are complete. The broader P1 phase remains open until its runtime gates and the
-remaining context models pass. Numeric scoring methodology is deferred to P3.
+Current status: complete. The analyst-call list/detail, explicit
+correction/cancellation lineage, versioned outcome boundary, nullable source
+evidence, and point-in-time macro/event context slices passed their recorded
+gates. Numeric scoring methodology remains deferred to P3.
 
 P1 is complete only when the analyst-call list/detail vertical slice satisfies
 every check below with deterministic DEMO data and no commercial provider or

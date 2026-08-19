@@ -10,6 +10,7 @@
     "build": "pnpm --filter @wall-street-receipts/web build",
     "lint": "pnpm --filter @wall-street-receipts/web lint",
     "test": "pnpm --filter @wall-street-receipts/web test",
+    "test:e2e": "pnpm --filter @wall-street-receipts/web test:e2e",
     "check": "pnpm lint && pnpm test && pnpm build"
   }
 }

@@ -256,3 +256,40 @@ Status: complete; this slice closes P1
 
 - P1 is complete. No mandatory P1 work remains.
 - PositioningSnapshot, MarketRegime, broader context dashboards and interactions, deterministic scoring calculations, realtime transport, and live providers remain explicitly deferred to their owning later phases.
+
+## P2 — Methodology registry
+
+Status: complete for this vertical slice; the broader P2 phase remains in progress
+
+### Scope
+
+- Add a fixture-backed, read-only methodology registry page using the canonical definitions already present in `fixtures/v1/call-outcomes.json`.
+- Preserve the exact two-version identity, definition hashes, model-only status, timestamps, DEMO mode, and provenance without introducing scoring or performance claims.
+- Keep the slice outside API, migration, persistence-write, provider-network, scheduler, ranking, and P3 calculation scope.
+
+### Contract and fixture decisions
+
+- `schemas/scoring-methodology.schema.json` remains the closed canonical record contract; the fixture is the only P2 registry data source.
+- Canonical registry order is `standard-call-outcome@1.0.0` followed by `standard-call-outcome@2.0.0`.
+- Both records remain `MODEL_ONLY`, and every existing DEMO outcome metric/result remains null with no `CALCULATED` outcome.
+- `quality/P2_ACCEPTANCE.md` defines the exact fixture, presentation, accessibility, regression, and deferred-scope gates.
+
+### Route
+
+- `GET /methodology` — server-rendered DEMO methodology identity and provenance registry.
+
+### Verification
+
+- Repository-contract checks parsed all canonical JSON files and the CI workflow, compiled every embedded Python gate, and verified the exact two-version methodology fixture, hashes, model-only state, provenance/time bounds, outcome linkage, and absence of calculated metrics.
+- Frozen pnpm installation passed with `@playwright/test` 1.62.1 pinned in the workspace lockfile.
+- ESLint passed with zero warnings; Vitest passed 7 files and 30 tests; the Next.js production build completed with `/methodology` statically rendered alongside the existing routes.
+- Playwright Chromium passed 9 tests across 1440, 1280, and 390 pixels. It verified exact DEMO/model-only evidence, desktop-local table scrolling, the 390 stacked registry, primary-navigation and registry keyboard focus with visible outlines, ArrowRight scrolling, no page-level overflow, and zero browser console warnings, errors, or page errors.
+- The responsive regression gate also found and fixed a pre-existing 390-pixel dashboard overflow caused by table min-content propagation through the dashboard grid; scoped grid-child containment preserves local table scrolling without widening the page.
+- Maven `verify` passed 109 tests with zero failures, errors, or skips, including all 4 PostgreSQL 17 Testcontainers tests.
+- Compose configuration and `git diff --check` passed. Independent review repeated the frozen install, lint, unit, build, responsive browser, and route checks and found no remaining blocker or high-severity issue.
+
+### Remaining P2 work
+
+- Replace the dashboard's display-ready hard-coded provider data with canonical fixture-backed read models and complete its map, event, and honest known-unavailable ranking previews.
+- Complete the S&P 500 history, institution and analyst leaderboard shells, screener shell, market board, and S&P 500 map shell without inventing P3 performance aggregates.
+- Extend the shared 1440/1280/390 Playwright gate as each P2 route lands. The next planned slice is the fixture-backed S&P 500 analyst-consensus map shell.
