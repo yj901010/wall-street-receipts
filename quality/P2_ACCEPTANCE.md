@@ -1,10 +1,10 @@
 # P2 Acceptance Checks — Core UI
 
 Current status: the methodology-registry, multiple market-map shell,
-sector/industry PRICE_CHANGE treemap, and dashboard evidence-composition
-vertical slices are complete. These checks close only delivered P2 slices;
-leaderboard, screener, full-universe map, and production market-mode work stays
-open.
+sector/industry PRICE_CHANGE treemap, dashboard evidence-composition, and
+institution identity directory vertical slices are complete. These checks
+close only delivered P2 slices; leaderboard, screener, full-universe map, and
+production market-mode work stays open.
 
 The methodology registry is a read-only, fixture-backed explanation surface. It
 publishes the immutable definition identities already present in
@@ -319,6 +319,99 @@ A future calendar slice requires a separately sourced global event catalog;
 call-bound context remains point-in-time call evidence. Institution and analyst
 leaderboards, the screener shell, S&P history, persistent dashboard read models,
 realtime refresh, and personalized layout remain open.
+
+## Institution identity directory slice boundary
+
+- The public web route is `GET /institutions`. It is a read-only identity and
+  provenance directory, not the P2 roadmap's institution leaderboard.
+- The sole data source is the existing tracked
+  `fixtures/v1/master-data.json`. A dedicated institution provider validates the
+  complete raw master-data envelope, projects only its root metadata,
+  provenance, and institution records, and never imports calls or outcomes.
+- `InstitutionDirectorySnapshot` has exactly `schemaVersion`, `fixtureVersion`,
+  `dataMode`, `generatedAt`, `provenance`, and `institutions`. There is no
+  dashboard/global as-of, calculated timestamp, metric, count, or disclaimer
+  field.
+- The raw fixture input remains closed over exactly nine envelope keys:
+  `schemaVersion`, `fixtureVersion`, `dataMode`, `generatedAt`, `provenance`,
+  `institutions`, `analysts`, `analystEmployments`, and `assets`. The latter
+  three collections remain arrays but are outside this projection.
+- Provenance preserves exactly `id`, `sourceType`, `sourcePaths`, `capturedAt`,
+  `synthetic`, and `licenseClass`, including source-path order. Institution rows
+  preserve exactly `institutionId`, `canonicalName`, `slug`, `country`,
+  `active`, `dataMode`, `effectiveAt`, `capturedAt`, and `provenanceId`.
+- Institutions sort by deterministic Unicode code-point `canonicalName`
+  ascending and then `institutionId` ascending. Runtime or host locale never
+  changes the order, and the source array is not mutated. The strict mapper is
+  append-safe: it accepts a valid empty collection or later valid identities;
+  repository CI, rather than generic runtime code, locks the current fixture's
+  exact two-record projection.
+- The current exact projection is Goldman Sachs (`inst-gs`) followed by
+  JPMorgan (`inst-jpm`). Both records are synthetic DEMO fixture identities;
+  `active` is fixture record state and is not a claim about a real institution's
+  present operating status.
+- `master-data.json` has no disclaimer field. The UI therefore supplies
+  explicit policy copy, clearly labelled as product policy rather than fixture
+  evidence, stating that the directory is synthetic DEMO identity data and not
+  real-world coverage, endorsement, activity, performance, or advice.
+- This slice adds no schema, fixture, manifest member, API endpoint, OpenAPI
+  path, database migration, persistence write, provider network call, analyst
+  employment view, call projection, holding, ranking, or scoring calculation.
+
+## Institution identity directory contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-I01 | Existing canonical source | The provider reads only `fixtures/v1/master-data.json`; no institution-specific fixture/schema is added and the manifest declares `master-data.json` exactly once. |
+| P2-I02 | Closed source shapes | Runtime and repository CI reject a missing or extra raw envelope, provenance, or institution field. Analysts, analyst employments, and assets must be arrays but are neither normalized nor exposed by the institution projection. |
+| P2-I03 | Exact directory shape | Output contains only the six locked snapshot keys, the six preserved provenance keys, and the nine preserved institution keys. No source value is renamed, defaulted, enriched, or copied from another fixture. |
+| P2-I04 | Exact current identities and append-safe order | Repository CI locks the current fixture to exactly two records projecting in code-point order: Goldman Sachs (`inst-gs`, `goldman-sachs`, `US`) then JPMorgan (`inst-jpm`, `jpmorgan`, `US`). IDs, canonical names, and slugs are each unique. The generic mapper does not hardcode that count or those values and deterministically accepts valid later appends. |
+| P2-I05 | DEMO and provenance parity | Envelope and every record are exactly DEMO; every record `provenanceId` equals `fixture-master-data-v1`; provenance remains exact synthetic `LOCAL_SPECIFICATION`/`INTERNAL_DEMO` evidence with the two ordered local-spec source paths. |
+| P2-I06 | Point-in-time identity evidence | All instants are canonical UTC with at most microsecond precision and preserve `effectiveAt <= record.capturedAt <= provenance.capturedAt <= generatedAt <= manifest.generatedAt`. The UI does not relabel generation, capture, or effective time as a live/current as-of. |
+| P2-I07 | Identifier and status semantics | Institution IDs and slugs use the same lowercase alphanumeric, single-hyphen-separated runtime grammar; country is a two-letter uppercase fixture code, and `active` is a boolean fixture field. None is inferred from display names or treated as verified current-world state. |
+| P2-I08 | No call or employment projection | Provider output has no analyst, employment, role, call row, call total, target, source-document, outcome, holding, or portfolio field. A link to `/calls?institutionId=...` is navigation into the existing call ledger, not evidence embedded in this directory. |
+| P2-I09 | No leaderboard claim | There is no rank, order-of-merit, accuracy, return, alpha, target-hit, score, confidence, sample count, winner, recommendation, or performance-derived sort. P3 retains all deterministic leaderboard aggregates. |
+| P2-I10 | Fail-closed and later-phase boundary | Malformed, duplicate, wrong-mode, time-invalid, or provenance-divergent input fails closed; accepted source row order is normalized deterministically without mutating the source array. Institution detail, aliases, histories, analysts/employment, holdings, scoring, live providers, and search remain deferred. |
+
+## Institution identity directory web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-IW01 | Route and navigation | `/institutions` is server rendered and the primary Institutions navigation target resolves to the list route with an unambiguous current-page state. No `/institutions/{slug}` detail destination is fabricated. |
+| P2-IW02 | Root evidence | Before the rows, the page exposes DEMO, fixture/schema version, fixture generation time, provenance ID/type/capture, synthetic status, license class, and the local specification paths with their exact semantics. It displays no global/live as-of. |
+| P2-IW03 | Exact identity rows | The page renders exactly Goldman Sachs then JPMorgan with ID, slug, country, fixture-active state, effective time, captured time, DEMO mode, and provenance. The order is never presented as a rank. |
+| P2-IW04 | Honest policy copy | Prominent static policy copy distinguishes product explanation from fixture fields and states that names/status are synthetic DEMO master evidence, not verified real-world coverage, endorsement, activity, performance, or investment advice. It does not fabricate a fixture disclaimer. |
+| P2-IW05 | Calls navigation boundary | Each row may link to `/calls?institutionId={institutionId}` with an explicit `Filter call ledger` label. It does not render a call count/preview, imply calls exist, or label that destination as institution detail or performance history. |
+| P2-IW06 | Loading, error, and empty behavior | Route boundaries provide an explicit loading state and recoverable error state. A valid empty institution collection maps and renders as an honest directory-empty state without placeholder identities; malformed or incomplete fixture evidence fails rather than becoming empty. |
+| P2-IW07 | Accessibility and responsive layout | Identity evidence uses semantic headings, lists/tables, and labels; source paths are exposed as a semantic list, while interactive navigation, table region, filter, and retry targets are keyboard reachable with visible focus. At 1440, 1280, and 390 pixels, dense evidence remains locally contained, the page has no horizontal overflow, and console warnings, errors, and page errors are zero. |
+| P2-IW08 | Regression boundary | Existing `/`, `/calls`, `/calls/{id}`, `/methodology`, both map modes/universes, and every API contract remain unchanged. No new API or database resource is implied by the fixture-backed directory. |
+
+## Institution identity directory required tests
+
+- Repository CI validates the closed raw/source projection, exact two records,
+  manifest membership, unique identities/slugs/names, code-point output order,
+  UTC/provenance bounds, DEMO parity, exact source paths, and focused semantic
+  negative mutations without relying on exact-fixture inequality alone.
+- Provider tests preserve every root/record value, prove deterministic
+  non-mutating order and append-safety for valid empty/later identities, and
+  reject extra/missing fields, malformed collections, duplicate identities,
+  invalid identifiers/times, mixed modes, and provenance divergence. They also
+  prove that calls, outcomes, analysts, employments, and assets do not enter the
+  output type.
+- Route/component tests cover both exact identities, all evidence fields,
+  static policy copy, explicit call-ledger filter links, no detail/performance
+  claims, loading/error/empty behavior, and absence of counts or rankings.
+- Responsive Playwright extends the shared 1440/1280/390 matrix across the
+  directory, primary navigation, keyboard focus, local/page overflow, policy
+  copy, both filter links, and zero console warnings, errors, or page errors.
+
+## Institution identity directory deferred work
+
+P3 retains institution/analyst leaderboard metrics and ordering. Institution
+detail, aliases/history, analyst employment views, and richer stock relations
+require their own canonical contracts. P5 retains live/verified providers and
+licensing review. Holdings/13F, search, pagination, saved filters, and persistent
+directory read models are not bootstrapped by this P2 identity surface.
 
 ## Local gate
 

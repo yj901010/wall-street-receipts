@@ -583,3 +583,96 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
 - Institution/analyst leaderboards, the screener shell, S&P history, realtime
   refresh, personalized dashboard layout, and persistent/materialized dashboard
   read models remain open.
+
+## P2 — Institution identity directory
+
+Status: complete for this vertical slice; the broader P2 phase remains in progress
+
+### Scope
+
+- Add a server-rendered `/institutions` DEMO identity directory backed only by
+  the existing canonical master-data fixture.
+- Preserve exact root provenance and point-in-time identity fields while
+  distinguishing fixture-active state from verified current-world status.
+- Provide navigation into the existing call ledger by institution ID without
+  projecting calls, totals, analysts, employment, outcomes, or performance.
+- Keep the P2 leaderboard goal and every deterministic aggregate deferred to P3.
+
+### Contract and fixture decisions
+
+- No schema, fixture, or manifest member is added. The strict adapter validates
+  the existing master document's exact nine-key envelope, exact six-key
+  provenance, and exact nine-key institution records at runtime.
+- `InstitutionDirectorySnapshot` projects only `schemaVersion`,
+  `fixtureVersion`, `dataMode`, `generatedAt`, `provenance`, and
+  `institutions`. Analysts, analyst employments, and assets remain required raw
+  arrays but are not exposed.
+- Institution output uses deterministic Unicode code-point canonical-name
+  ascending, institution-ID ascending tie order without mutating source data.
+  The current exact result is Goldman Sachs followed by JPMorgan. Repository CI
+  locks that current projection, while the generic mapper remains append-safe
+  for a valid empty collection or later valid identities.
+- Generation, provenance capture, record capture, and effective time remain
+  distinct. Every record must match the DEMO envelope and root provenance.
+- Because `master-data.json` has no disclaimer, the page uses clearly labelled
+  static product-policy copy; it does not invent or attribute a fixture
+  disclaimer.
+- No institution detail, call count/row, employment, holding, ranking, score,
+  accuracy, return, recommendation, provider call, API/OpenAPI surface, or
+  database migration is part of this slice.
+
+### Module structure
+
+- `apps/web/src/lib/providers/institution-directory-provider.ts` owns the
+  read-only port and snapshot types;
+  `fixture-institution-directory-provider.ts` owns strict master
+  envelope/provenance/record validation, the pure projection, deterministic
+  non-mutating order, and focused provider tests.
+- `apps/web/src/app/institutions/institution-directory.tsx` owns pure identity
+  evidence presentation, policy disclosure, empty state, and explicitly
+  labelled call-ledger filter links.
+- `apps/web/src/app/institutions/page.tsx`, `loading.tsx`, and `error.tsx` own
+  the server-rendered route and its loading/recoverable error boundaries;
+  `page.test.tsx` and `apps/web/e2e/institutions.spec.ts` own route and
+  responsive browser regression coverage.
+- `apps/web/src/components/site-header.tsx` and scoped global styles own the
+  primary navigation/focus/responsive integration without creating a detail
+  route.
+- Root P2 acceptance and the dedicated repository-contract CI block own the
+  exact source shape, current records, time/provenance, source isolation, and
+  no-leaderboard boundary.
+
+### Route
+
+- `GET /institutions` — server-rendered synthetic DEMO institution identity and
+  provenance directory. No institution detail route is added.
+
+### Verification
+
+- The CI-identical institution repository contract/source-isolation block
+  passed against the current two-record fixture and append-safe web adapter.
+  All eight workflow Python blocks compiled, the workflow parsed with
+  SnakeYAML, and `git diff --check` passed.
+- Web ESLint and `tsc --noEmit` passed. Vitest passed 16 files and 156 tests,
+  including closed-shape mapping, valid empty/later append behavior,
+  deterministic non-mutating order, evidence presentation, and route states.
+- The production Next.js build passed with `/institutions` included.
+- Targeted institution Playwright passed 6 of 6 tests. The full Playwright suite
+  passed 24 of 24 tests across 1440, 1280, and 390 pixels with zero captured
+  browser console warnings/errors or page errors on the supported flows.
+- An in-app browser desktop visual check passed for the exact evidence, policy,
+  and table presentation, locally contained horizontal scrolling, and visible
+  table-region focus.
+- Maven `verify` passed 109 tests with zero failures, errors, or skips;
+  PostgreSQL 17.10 Testcontainers executed all four migration tests. Compose
+  configuration validation passed quietly.
+- Independent final review found no blocker, high-severity issue, or known
+  false-positive in the institution provider, UI, contract, or tests.
+
+### Deferred boundary
+
+- P3 retains institution/analyst leaderboard calculations and ordering. Detail,
+  aliases/history, analyst employment, holdings, and verified provider data
+  require their own later contracts.
+- Screener, S&P history, realtime refresh, search, pagination, saved filters,
+  and persistent/materialized directory read models remain open.

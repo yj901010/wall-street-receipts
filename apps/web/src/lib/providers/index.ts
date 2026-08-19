@@ -7,6 +7,8 @@ import type { MarketMapProvider } from "./market-map-provider";
 import { FixtureMarketMapProvider } from "./fixture-market-map-provider";
 import type { MarketTreemapProvider } from "./market-treemap-provider";
 import { FixtureMarketTreemapProvider } from "./fixture-market-treemap-provider";
+import type { InstitutionDirectoryProvider } from "./institution-directory-provider";
+import { FixtureInstitutionDirectoryProvider } from "./fixture-institution-directory-provider";
 
 export { callsProvider, FixtureCallsProvider } from "./fixture-calls-provider";
 export type {
@@ -30,6 +32,13 @@ export type {
   SourceEvidence,
 } from "./calls-provider";
 export { FixtureMethodologyProvider } from "./fixture-methodology-provider";
+export { FixtureInstitutionDirectoryProvider } from "./fixture-institution-directory-provider";
+export type {
+  InstitutionDirectoryIdentity,
+  InstitutionDirectoryProvider,
+  InstitutionDirectoryProvenance,
+  InstitutionDirectorySnapshot,
+} from "./institution-directory-provider";
 export type {
   MethodologyCatalog,
   MethodologyProvider,
@@ -92,6 +101,16 @@ export function methodologyProvider(): MethodologyProvider {
   }
 
   return new FixtureMethodologyProvider();
+}
+
+export function institutionDirectoryProvider(): InstitutionDirectoryProvider {
+  const configuredProvider = process.env.INSTITUTION_DIRECTORY_PROVIDER?.toLowerCase() ?? "fixture";
+
+  if (configuredProvider !== "fixture") {
+    throw new Error(`Unsupported institution-directory provider: ${configuredProvider}`);
+  }
+
+  return new FixtureInstitutionDirectoryProvider();
 }
 
 export function marketMapProvider(): MarketMapProvider {
