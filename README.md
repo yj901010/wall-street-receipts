@@ -4,8 +4,8 @@ Wall Street Receipts is a point-in-time financial research product that records
 public analyst calls, preserves the market context that was available when each
 call was made, and evaluates later outcomes with a reproducible methodology.
 
-The P0 foundation and P1 domain/fixture phase are complete, and the repository
-is beginning P2 core UI work. P1 provides a canonical analyst-call ledger,
+The P0 foundation and P1 domain/fixture phase are complete, and P2 core UI work
+is in progress. P1 provides a canonical analyst-call ledger,
 source evidence, immutable point-in-time market and macro/event context,
 list/detail APIs, and responsive web routes. Append-only correction,
 cancellation, and outcome records preserve audit, methodology, and input
@@ -48,6 +48,11 @@ On macOS or Linux, use `cp .env.example .env` and
 - API: <http://localhost:8080>
 - PostgreSQL: `localhost:5432`
 - Analyst calls: <http://localhost:3000/calls>
+- Analyst identities: <http://localhost:3000/analysts>
+- Institution identities: <http://localhost:3000/institutions>
+- Methodology registry: <http://localhost:3000/methodology>
+- S&P map: <http://localhost:3000/maps/sp500>
+- Nasdaq map: <http://localhost:3000/maps/nasdaq100>
 - Analyst-call API: <http://localhost:8080/v1/calls>
 - Revision audit API: <http://localhost:8080/v1/calls/demo-call-002/revisions>
 - Outcome audit API: <http://localhost:8080/v1/calls/demo-call-001/outcomes>

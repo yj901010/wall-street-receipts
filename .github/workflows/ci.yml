@@ -767,7 +767,7 @@ jobs:
             ' "$file" >/dev/null
           done
 
-      - name: Validate institution identity directory source
+      - name: Validate master-data identity directory sources
         shell: bash
         run: |
           python <<'PYTHON'
@@ -793,11 +793,15 @@ jobs:
               "institutionId", "canonicalName", "slug", "country", "active", "dataMode",
               "effectiveAt", "capturedAt", "provenanceId",
           }
+          analyst_fields = {
+              "analystId", "canonicalName", "active", "dataMode", "effectiveAt",
+              "capturedAt", "provenanceId",
+          }
           expected_source_paths = [
               "docs/fixtures/institutions.json",
               "docs/docs/DOMAIN_MODEL.md",
           ]
-          expected_records = {
+          expected_institutions = {
               "inst-jpm": {
                   "institutionId": "inst-jpm",
                   "canonicalName": "JPMorgan",
@@ -814,6 +818,26 @@ jobs:
                   "canonicalName": "Goldman Sachs",
                   "slug": "goldman-sachs",
                   "country": "US",
+                  "active": True,
+                  "dataMode": "DEMO",
+                  "effectiveAt": "2026-08-10T00:00:00Z",
+                  "capturedAt": "2026-08-18T00:00:00Z",
+                  "provenanceId": "fixture-master-data-v1",
+              },
+          }
+          expected_analysts = {
+              "analyst-demo-a": {
+                  "analystId": "analyst-demo-a",
+                  "canonicalName": "Demo Analyst A",
+                  "active": True,
+                  "dataMode": "DEMO",
+                  "effectiveAt": "2026-08-10T00:00:00Z",
+                  "capturedAt": "2026-08-18T00:00:00Z",
+                  "provenanceId": "fixture-master-data-v1",
+              },
+              "analyst-demo-b": {
+                  "analystId": "analyst-demo-b",
+                  "canonicalName": "Demo Analyst B",
                   "active": True,
                   "dataMode": "DEMO",
                   "effectiveAt": "2026-08-10T00:00:00Z",
@@ -897,12 +921,35 @@ jobs:
                   require(effective_at <= captured_at <= provenance_captured_at,
                           "Institution chronology")
 
+              analyst_ids = set()
+              for record in document["analysts"]:
+                  require(isinstance(record, dict) and set(record) == analyst_fields,
+                          "Analyst fields")
+                  analyst_id = record["analystId"]
+                  canonical_name = record["canonicalName"]
+                  require(isinstance(analyst_id, str) and len(analyst_id) <= 128
+                          and identifier_pattern.fullmatch(analyst_id),
+                          "Analyst identifier")
+                  require(isinstance(canonical_name, str)
+                          and canonical_name.strip() == canonical_name
+                          and canonical_name, "Analyst canonical name")
+                  require(type(record["active"]) is bool, "Analyst active state")
+                  require(record["dataMode"] == document["dataMode"], "Analyst data mode")
+                  require(record["provenanceId"] == provenance["id"], "Analyst provenance")
+                  require(analyst_id not in analyst_ids, "Duplicate analyst ID")
+                  analyst_ids.add(analyst_id)
+
+                  effective_at = instant(record["effectiveAt"], f"Analyst {analyst_id} effectiveAt")
+                  captured_at = instant(record["capturedAt"], f"Analyst {analyst_id} capturedAt")
+                  require(effective_at <= captured_at <= provenance_captured_at,
+                          "Analyst chronology")
+
               if require_exact:
                   require(len(document["institutions"]) == 2, "Exact institution count")
                   actual_by_id = {
                       record["institutionId"]: record for record in document["institutions"]
                   }
-                  require(actual_by_id == expected_records, "Exact institution records")
+                  require(actual_by_id == expected_institutions, "Exact institution records")
                   projected = sorted(
                       document["institutions"],
                       key=lambda record: (
@@ -913,6 +960,23 @@ jobs:
                   require(
                       [record["institutionId"] for record in projected] == ["inst-gs", "inst-jpm"],
                       "Institution projection order",
+                  )
+                  require(len(document["analysts"]) == 2, "Exact analyst count")
+                  actual_analysts_by_id = {
+                      record["analystId"]: record for record in document["analysts"]
+                  }
+                  require(actual_analysts_by_id == expected_analysts, "Exact analyst records")
+                  projected_analysts = sorted(
+                      document["analysts"],
+                      key=lambda record: (
+                          code_point_key(record["canonicalName"]),
+                          code_point_key(record["analystId"]),
+                      ),
+                  )
+                  require(
+                      [record["analystId"] for record in projected_analysts]
+                      == ["analyst-demo-a", "analyst-demo-b"],
+                      "Analyst projection order",
                   )
 
               return generated_at
@@ -928,25 +992,45 @@ jobs:
           ]
           require(not institution_specific_contracts,
                   "Institution slice must not add a duplicate schema or fixture")
+          allowed_analyst_contract_paths = {
+              Path("schemas/analyst-call.schema.json"),
+              Path("schemas/analyst-call-revision.schema.json"),
+              fixture_dir / "analyst-calls.json",
+              fixture_dir / "analyst-call-revisions.json",
+          }
+          analyst_specific_contracts = [
+              path
+              for directory in (Path("schemas"), fixture_dir)
+              for path in directory.glob("*analyst*.json")
+              if path not in allowed_analyst_contract_paths
+          ]
+          require(not analyst_specific_contracts,
+                  "Analyst slice must not add a duplicate schema or fixture")
 
-          adapter_path = Path(
-              "apps/web/src/lib/providers/fixture-institution-directory-provider.ts"
-          )
-          require(adapter_path.is_file(), "Institution fixture provider exists")
-          adapter_source = adapter_path.read_text(encoding="utf-8")
-          fixture_imports = re.findall(r"fixtures/v1/[^\"']+\.json", adapter_source)
-          require(fixture_imports == ["fixtures/v1/master-data.json"],
-                  "Institution provider source isolation")
-          for forbidden_source in (
-              "analyst-calls.json",
-              "call-outcomes.json",
-              "analyst-call-revisions.json",
-              "calls-provider",
-              "callsProvider",
-              "CallsProvider",
-          ):
-              require(forbidden_source not in adapter_source,
-                      "Institution provider source isolation")
+          adapter_paths = {
+              "Institution": Path(
+                  "apps/web/src/lib/providers/fixture-institution-directory-provider.ts"
+              ),
+              "Analyst": Path(
+                  "apps/web/src/lib/providers/fixture-analyst-directory-provider.ts"
+              ),
+          }
+          for owner, adapter_path in adapter_paths.items():
+              require(adapter_path.is_file(), f"{owner} fixture provider exists")
+              adapter_source = adapter_path.read_text(encoding="utf-8")
+              fixture_imports = re.findall(r"fixtures/v1/[^\"']+\.json", adapter_source)
+              require(fixture_imports == ["fixtures/v1/master-data.json"],
+                      f"{owner} provider source isolation")
+              for forbidden_source in (
+                  "analyst-calls.json",
+                  "call-outcomes.json",
+                  "analyst-call-revisions.json",
+                  "calls-provider",
+                  "callsProvider",
+                  "CallsProvider",
+              ):
+                  require(forbidden_source not in adapter_source,
+                          f"{owner} provider source isolation")
 
           semantic_negative_cases = []
           missing_envelope = deepcopy(master)
@@ -1001,20 +1085,110 @@ jobs:
           bad_collection["analystEmployments"] = {}
           semantic_negative_cases.append(("non-array excluded collection", bad_collection, "Master analystEmployments collection"))
 
+          missing_analyst_field = deepcopy(master)
+          del missing_analyst_field["analysts"][0]["active"]
+          semantic_negative_cases.append(("missing analyst field", missing_analyst_field, "Analyst fields"))
+          extra_analyst_field = deepcopy(master)
+          extra_analyst_field["analysts"][0]["rank"] = None
+          semantic_negative_cases.append(("extra analyst field", extra_analyst_field, "Analyst fields"))
+          duplicate_analyst_id = deepcopy(master)
+          duplicate_analyst_id["analysts"][1]["analystId"] = "analyst-demo-a"
+          semantic_negative_cases.append(("duplicate analyst ID", duplicate_analyst_id, "Duplicate analyst ID"))
+          invalid_analyst_id = deepcopy(master)
+          invalid_analyst_id["analysts"][0]["analystId"] = "Analyst_Demo_A"
+          semantic_negative_cases.append(("invalid analyst ID", invalid_analyst_id, "Analyst identifier"))
+          padded_analyst_name = deepcopy(master)
+          padded_analyst_name["analysts"][0]["canonicalName"] = " Demo Analyst A"
+          semantic_negative_cases.append(("padded analyst name", padded_analyst_name, "Analyst canonical name"))
+          non_boolean_analyst_active = deepcopy(master)
+          non_boolean_analyst_active["analysts"][0]["active"] = "true"
+          semantic_negative_cases.append(("non-boolean analyst active", non_boolean_analyst_active, "Analyst active state"))
+          wrong_analyst_mode = deepcopy(master)
+          wrong_analyst_mode["analysts"][0]["dataMode"] = "REALTIME"
+          semantic_negative_cases.append(("mixed analyst data mode", wrong_analyst_mode, "Analyst data mode"))
+          wrong_analyst_provenance = deepcopy(master)
+          wrong_analyst_provenance["analysts"][0]["provenanceId"] = "fixture-other"
+          semantic_negative_cases.append(("analyst provenance divergence", wrong_analyst_provenance, "Analyst provenance"))
+          future_analyst_effective = deepcopy(master)
+          future_analyst_effective["analysts"][0]["effectiveAt"] = "2026-08-18T00:00:00.000001Z"
+          semantic_negative_cases.append(("analyst effective time after capture", future_analyst_effective, "Analyst chronology"))
+          analyst_capture_after_provenance = deepcopy(master)
+          analyst_capture_after_provenance["analysts"][0]["capturedAt"] = "2026-08-18T00:00:00.000001Z"
+          semantic_negative_cases.append(("analyst capture after provenance", analyst_capture_after_provenance, "Analyst chronology"))
+          analyst_excessive_precision = deepcopy(master)
+          analyst_excessive_precision["analysts"][0]["effectiveAt"] = "2026-08-10T00:00:00.0000001Z"
+          semantic_negative_cases.append(("analyst excessive UTC precision", analyst_excessive_precision, "Analyst analyst-demo-a effectiveAt UTC instant"))
+
           for label, candidate, expected_error in semantic_negative_cases:
               try:
                   validate(candidate, require_exact=False)
               except ValueError as error:
                   if expected_error not in str(error):
                       raise SystemExit(
-                          f"Institution semantic gate rejected {label} for the wrong invariant: {error}"
+                          f"Master identity semantic gate rejected {label} for the wrong invariant: {error}"
                       ) from error
                   continue
-              raise SystemExit(f"Institution semantic gate accepted {label}")
+              raise SystemExit(f"Master identity semantic gate accepted {label}")
+
+          empty_analysts = deepcopy(master)
+          empty_analysts["analysts"] = []
+          validate(empty_analysts, require_exact=False)
+
+          appended_analysts = deepcopy(master)
+          appended_analysts["analysts"].append({
+              "analystId": "analyst-demo-c",
+              "canonicalName": "Demo Analyst C",
+              "active": False,
+              "dataMode": "DEMO",
+              "effectiveAt": "2026-08-11T00:00:00Z",
+              "capturedAt": "2026-08-18T00:00:00Z",
+              "provenanceId": "fixture-master-data-v1",
+          })
+          appended_source_order = deepcopy(appended_analysts["analysts"])
+          validate(appended_analysts, require_exact=False)
+          appended_projection = sorted(
+              appended_analysts["analysts"],
+              key=lambda record: (
+                  code_point_key(record["canonicalName"]),
+                  code_point_key(record["analystId"]),
+              ),
+          )
+          require(
+              [record["analystId"] for record in appended_projection]
+              == ["analyst-demo-a", "analyst-demo-b", "analyst-demo-c"],
+              "Append-safe analyst projection order",
+          )
+          require(appended_analysts["analysts"] == appended_source_order,
+                  "Analyst source order mutation")
+
+          same_name_analysts = deepcopy(master)
+          same_name_analysts["analysts"].append({
+              "analystId": "analyst-demo-c",
+              "canonicalName": "Demo Analyst A",
+              "active": True,
+              "dataMode": "DEMO",
+              "effectiveAt": "2026-08-10T00:00:00Z",
+              "capturedAt": "2026-08-18T00:00:00Z",
+              "provenanceId": "fixture-master-data-v1",
+          })
+          validate(same_name_analysts, require_exact=False)
+          same_name_projection = sorted(
+              same_name_analysts["analysts"],
+              key=lambda record: (
+                  code_point_key(record["canonicalName"]),
+                  code_point_key(record["analystId"]),
+              ),
+          )
+          require(
+              [record["analystId"] for record in same_name_projection]
+              == ["analyst-demo-a", "analyst-demo-c", "analyst-demo-b"],
+              "Same-name analyst ID tie-break",
+          )
 
           print(
-              "Validated 2 closed DEMO institution identities in code-point order with "
-              "exact root provenance and no directory-specific schema or fixture"
+              "Validated 2 institution and 2 analyst DEMO identities with exact root "
+              "provenance, append-safe code-point projection, source isolation, and no "
+              "directory-specific schema or fixture"
           )
           PYTHON
 

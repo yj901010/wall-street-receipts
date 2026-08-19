@@ -2,9 +2,9 @@
 
 Current status: the methodology-registry, multiple market-map shell,
 sector/industry PRICE_CHANGE treemap, dashboard evidence-composition, and
-institution identity directory vertical slices are complete. These checks
-close only delivered P2 slices; leaderboard, screener, full-universe map, and
-production market-mode work stays open.
+institution and analyst identity directory vertical slices are complete. These
+checks close only delivered P2 slices; leaderboard, screener, full-universe
+map, and production market-mode work stays open.
 
 The methodology registry is a read-only, fixture-backed explanation surface. It
 publishes the immutable definition identities already present in
@@ -412,6 +412,92 @@ detail, aliases/history, analyst employment views, and richer stock relations
 require their own canonical contracts. P5 retains live/verified providers and
 licensing review. Holdings/13F, search, pagination, saved filters, and persistent
 directory read models are not bootstrapped by this P2 identity surface.
+
+## Analyst identity directory slice boundary
+
+- The public web route is `GET /analysts`. It is a read-only identity and
+  provenance directory, not the P2 roadmap's analyst leaderboard.
+- The sole data source is the existing tracked
+  `fixtures/v1/master-data.json`. A dedicated analyst provider validates the
+  complete raw master-data envelope and projects only root metadata,
+  provenance, and analyst identity records.
+- `AnalystDirectorySnapshot` has exactly `schemaVersion`, `fixtureVersion`,
+  `dataMode`, `generatedAt`, `provenance`, and `analysts`. There is no global
+  as-of, calculated timestamp, coverage/count, source alias, or disclaimer
+  field.
+- The raw input remains closed over the existing nine envelope keys. Provenance
+  preserves its exact six keys, including source-path order. Analyst rows
+  preserve exactly `analystId`, `canonicalName`, `active`, `dataMode`,
+  `effectiveAt`, `capturedAt`, and `provenanceId`.
+- Analysts sort by deterministic Unicode code-point `canonicalName` ascending
+  and then `analystId` ascending. Input order is not mutated. The generic mapper
+  accepts valid empty collections and later valid appends; repository CI alone
+  locks the current fixture's exact two records.
+- The current projection is Demo Analyst A (`analyst-demo-a`) followed by Demo
+  Analyst B (`analyst-demo-b`). Both are synthetic DEMO identities. `active` is
+  captured fixture state, not a claim of current employment or activity.
+- `master-data.json` has no disclaimer. The UI supplies clearly labelled
+  product-policy copy rather than inventing a fixture disclaimer or coverage
+  statement.
+- This slice adds no analyst employment or institution join, call row/preview
+  or count, metric, rank, detail route, schema, fixture, manifest member, API or
+  OpenAPI path, migration, persistence write, or provider network call. An
+  explicit `/calls?analystId=...` link is navigation into the existing ledger,
+  not call evidence projected into the directory.
+
+## Analyst identity directory contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-A01 | Existing canonical source | The provider reads only `fixtures/v1/master-data.json`; no analyst-directory schema/fixture is added and the manifest declares `master-data.json` exactly once. |
+| P2-A02 | Closed source shapes | Runtime and repository CI reject a missing or extra raw envelope, provenance, or analyst field. Institutions, analyst employments, and assets remain required arrays but are neither normalized nor exposed by the analyst projection. |
+| P2-A03 | Exact projection shape | Output has only the six snapshot keys, six preserved provenance keys, and seven preserved analyst keys. No source value is renamed, defaulted, enriched, or copied from another collection or fixture. |
+| P2-A04 | Current identities and append-safe order | Repository CI locks the current fixture to Demo Analyst A then Demo Analyst B in code-point order. Analyst IDs are unique; canonical names need not be because distinct people can share a name, so analyst ID is the deterministic tie-break. The generic mapper has no hard-coded count or values and accepts valid empty/later identities without mutating input. |
+| P2-A05 | DEMO and provenance parity | Envelope and every analyst are DEMO; every `provenanceId` equals `fixture-master-data-v1`; provenance remains exact synthetic `LOCAL_SPECIFICATION`/`INTERNAL_DEMO` evidence with its two ordered source paths. |
+| P2-A06 | Point-in-time identity evidence | Canonical UTC instants use at most microsecond precision and preserve `effectiveAt <= analyst.capturedAt <= provenance.capturedAt <= generatedAt <= manifest.generatedAt`. No time is relabelled as a live/current as-of. |
+| P2-A07 | Identifier and active-state semantics | Analyst IDs use the lowercase alphanumeric, single-hyphen-separated runtime grammar; canonical names are nonblank trimmed evidence and `active` is boolean fixture state. Neither is inferred or presented as verified present-world employment/activity. |
+| P2-A08 | No relationship or call projection | Output contains no institution, employment, role, call row/count, asset, source document, outcome, holding, or portfolio field. A row may expose only an explicit `Filter call ledger` link to `/calls?analystId=...`; it carries no preview, count, existence claim, or relationship evidence. |
+| P2-A09 | No leaderboard claim | There is no rank, accuracy, hit rate, return, alpha, target result, score, confidence, sample count, winner, recommendation, or performance-derived sort. P3 retains all leaderboard aggregation. |
+| P2-A10 | Fail-closed and later-phase boundary | Malformed, duplicate, wrong-mode, time-invalid, or provenance-divergent input fails closed; accepted source order is normalized without mutation. Detail, employment, scoring, live providers, search, and pagination remain deferred. |
+
+## Analyst identity directory web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-AW01 | Route and navigation | `/analysts` is server rendered and primary Analysts navigation resolves to the list route with an unambiguous current-page state. No `/analysts/{id}` destination is fabricated. |
+| P2-AW02 | Root evidence | Before the rows, the page exposes DEMO, fixture/schema version, generation time, provenance ID/type/capture, synthetic state, license class, and exact source paths. It displays no global/live as-of. |
+| P2-AW03 | Exact current rows | The page renders Demo Analyst A then Demo Analyst B with ID, recorded-active state, effective time, captured time, DEMO mode, and provenance. Alphabetic identity order is never labelled a rank. |
+| P2-AW04 | Honest policy copy | Prominent static product-policy copy says the identities and active markers are limited synthetic DEMO master evidence, not verified real-world coverage, employment, activity, endorsement, performance, or investment advice. It does not fabricate a fixture disclaimer. |
+| P2-AW05 | Relationship and calls boundary | No analyst row renders an employer, role, employment interval, call preview/count/existence claim, asset, outcome, score, or detail link. The only permitted row action is an explicitly labelled `Filter call ledger` link to `/calls?analystId={analystId}`; missing relationships do not become placeholders or inferred facts. |
+| P2-AW06 | Loading, error, and empty behavior | Route boundaries provide explicit loading and recoverable error states. A valid empty analyst collection renders an honest empty directory without placeholder identities; malformed/incomplete evidence fails rather than becoming empty. |
+| P2-AW07 | Accessibility and responsive layout | Identity evidence uses semantic headings, table/list structures, and labels; source paths are a semantic list, while navigation, table region, and retry targets are keyboard reachable with visible focus. At 1440, 1280, and 390 pixels dense evidence remains locally contained, page overflow is absent, and console warnings/errors/page errors are zero. |
+| P2-AW08 | Regression boundary | Existing dashboard, calls/detail, institution, methodology, map routes, and every API contract remain unchanged. No new backend resource is implied by the fixture-backed directory. |
+
+## Analyst identity directory required tests
+
+- Repository CI validates the shared closed master envelope/provenance once,
+  both identity collections' current exact records, analyst unique/order/time/
+  DEMO invariants, manifest membership, and focused semantic negative mutations
+  without relying on exact-fixture inequality.
+- Provider tests preserve every projected value, prove full Unicode code-point
+  order, valid empty/later append behavior and source non-mutation, and reject
+  malformed shapes, collections, identifiers, times, modes, provenance, and
+  duplicates. Output typing excludes institutions, employments, calls, counts,
+  metrics, and rankings.
+- Route/component tests cover exact identity/root evidence, static policy copy,
+  filter-only ledger navigation with no call claim, no relationships/
+  performance/detail, and loading/error/empty states.
+- Responsive Playwright covers `/analysts`, primary navigation, keyboard focus,
+  local/page overflow, policy/evidence, and zero console warnings, errors, or
+  page errors at 1440, 1280, and 390 pixels.
+
+## Analyst identity directory deferred work
+
+P3 retains analyst/institution leaderboard metrics and ordering. Analyst detail,
+aliases/history, employment relationships, institution joins, calls/counts,
+holdings, search, and pagination require later contracts. P5 retains verified
+providers and licensing review. No later capability is bootstrapped by this
+identity-only P2 route.
 
 ## Local gate
 
