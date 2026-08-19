@@ -4,6 +4,8 @@ import type { MethodologyProvider } from "./methodology-provider";
 import { FixtureMethodologyProvider } from "./fixture-methodology-provider";
 import type { MarketMapProvider } from "./market-map-provider";
 import { FixtureMarketMapProvider } from "./fixture-market-map-provider";
+import type { MarketTreemapProvider } from "./market-treemap-provider";
+import { FixtureMarketTreemapProvider } from "./fixture-market-treemap-provider";
 
 export { callsProvider, FixtureCallsProvider } from "./fixture-calls-provider";
 export type {
@@ -38,6 +40,22 @@ export {
   isMarketMapUniverse,
   MARKET_MAP_UNIVERSES,
 } from "./market-map-provider";
+export { FixtureMarketTreemapProvider } from "./fixture-market-treemap-provider";
+export {
+  isMarketTreemapUniverse,
+  MARKET_TREEMAP_UNIVERSES,
+} from "./market-treemap-provider";
+export type {
+  MarketTreemapCell,
+  MarketTreemapCoverage,
+  MarketTreemapGeometry,
+  MarketTreemapMetric,
+  MarketTreemapMode,
+  MarketTreemapProvider,
+  MarketTreemapProvenance,
+  MarketTreemapSnapshot,
+  MarketTreemapUniverse,
+} from "./market-treemap-provider";
 export type {
   MarketMapCell,
   MarketMapCoverage,
@@ -76,4 +94,14 @@ export function marketMapProvider(): MarketMapProvider {
   }
 
   return new FixtureMarketMapProvider();
+}
+
+export function marketTreemapProvider(): MarketTreemapProvider {
+  const configuredProvider = process.env.MARKET_TREEMAP_PROVIDER?.toLocaleLowerCase("en-US") ?? "fixture";
+
+  if (configuredProvider !== "fixture") {
+    throw new Error(`Unsupported market-treemap provider: ${configuredProvider}`);
+  }
+
+  return new FixtureMarketTreemapProvider();
 }

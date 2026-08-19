@@ -1,9 +1,9 @@
 # P2 Acceptance Checks — Core UI
 
 Current status: the methodology-registry and multiple market-map shell vertical
-slices are complete. These checks close only the delivered P2 slices;
-dashboard, leaderboard, screener, full-universe map, and derived market-mode
-work stays open.
+slices and the sector/industry PRICE_CHANGE treemap slice are complete. These
+checks close only delivered P2 slices; dashboard, leaderboard, screener,
+full-universe map, and production market-mode work stays open.
 
 The methodology registry is a read-only, fixture-backed explanation surface. It
 publishes the immutable definition identities already present in
@@ -142,10 +142,92 @@ P3 owns deterministic scoring, accuracy, target, return, alpha, sample-confidenc
 and leaderboard calculations. P6 owns stock search/detail, analyst history,
 sector benchmarks, timelines, and corporate-action handling, including the
 generic map-cell-to-stock-detail acceptance target. P7 owns complete and sourced
-S&P 500/Nasdaq 100 composition, official geometry inputs, price/target/revision/
-contrarian modes, filters, tooltips, and a persistent or materialized market-map
-read model. P5 owns real provider data. None of those facts or capabilities is
-implied by these P2 DEMO shells.
+S&P 500/Nasdaq 100 composition, official geometry inputs, observed/live price
+mode, target/revision/contrarian modes, filters, rich tooltips, and a persistent
+or materialized market-map read model. P5 owns real provider data. None of those
+facts or capabilities is implied by these P2 DEMO shells.
+
+## Sector and industry PRICE_CHANGE treemap slice boundary
+
+- `GET /maps/{universe}` and `?mode=price-change` select the fixture-backed
+  PRICE_CHANGE nested treemap by default. `?mode=analyst-consensus` preserves the
+  completed analyst-consensus read model. Mode controls are semantic links,
+  universe links preserve the active mode, and unknown or non-scalar mode input
+  fails closed with not-found behavior.
+- The new canonical sources are the independently appended
+  `fixtures/v1/market-treemap-sp500.json` and
+  `fixtures/v1/market-treemap-nasdaq100.json`, validated by the separately
+  versioned `schemas/market-treemap.schema.json` contract.
+- The existing `schemas/market-map.schema.json`, `market-map.json`, and
+  `market-map-nasdaq100.json` remain byte- and semantic-stable; PRICE_CHANGE is
+  not added to that analyst-consensus contract.
+- Both new fixtures reuse only the three existing master-backed equity
+  identities. They are illustrative cross-universe DEMO samples and make no
+  official index-membership, composition, classification, market-capitalization,
+  or observed-price claim.
+- The visual reference informs only the nested sector/industry/tile layout. No
+  value, classification, ticker set, instruction, or claim is copied from it.
+- This P2 read model adds no API endpoint, OpenAPI path, database migration,
+  provider network call, official market-cap feed, observed quote, or persistent
+  aggregation.
+
+## PRICE_CHANGE treemap contract and fixture gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-TM01 | Separately versioned closed contract | `market-treemap.schema.json` is a closed Draft 2020-12 document with ID `urn:wall-street-receipts:schema:market-treemap:1.0.0`. The legacy market-map schema and fixtures remain unchanged and still reject PRICE_CHANGE. |
+| P2-TM02 | Exact append-only catalog | The treemap registry contains exactly `market-treemap-sp500.json` followed by `market-treemap-nasdaq100.json`; each has a unique `(universe, mode, asOf)` and provenance ID. Both are appended in the manifest without renaming or overwriting either analyst-consensus fixture. |
+| P2-TM03 | Raw percent versus palette scale | Mode is exactly `PRICE_CHANGE`; metric is `priceChangePercent`, unit `percent`, palette saturation stops `[-5, 5]`, and missing display `NA`. Raw values are nullable finite JSON numbers in `[-100, 1_000_000]`, remain exact outside the palette range, and are never clamped or rewritten to a saturation stop. |
+| P2-TM04 | Explicit nested geometry | Geometry is exactly `NESTED_TREEMAP`, grouping is sector then industry, missing classification renders `Unclassified`, area field is `syntheticMarketCapProxy`, and area unit is `relative`. Every proxy is an integer from 1 through 1,000,000,000,000; at most 1,000 cells keep the aggregate inside JavaScript's safe-integer range. |
+| P2-TM05 | Honest incomplete coverage | Both documents carry exact coverage `{kind: SAMPLE, completeUniverse: false, cellCount: cells.length, weightBasis: SYNTHETIC_MARKET_CAP_PROXY}`. The proxy controls relative tile area only and is never labelled dollars, official market cap, index weight, or a provider observation. |
+| P2-TM06 | Classification semantics and limitation | `sector` and `industry` are required string-or-null fields; a null sector requires null industry, and null maps to the reserved `Unclassified` label. The locked fixture honestly demonstrates one `Technology` outer sector with three industries—Semiconductors, Software, and Consumer Electronics—and does not claim broader sector coverage merely because the engine supports it. |
+| P2-TM07 | Locked synthetic evidence | In canonical order the shared cells are NVDA `(Technology, Semiconductors, 144, 1.25)`, MSFT `(Technology, Software, 121, -0.75)`, and AAPL `(Technology, Consumer Electronics, 100, null)`. AAPL remains `NA`, never zero or neutral performance. |
+| P2-TM08 | Master and cross-universe consistency | Every cell resolves to the exact existing master asset ID/ticker and no master asset is added. At equal as-of time, a shared asset has identical ticker, classification, proxy, raw change, timestamp, and data mode across both universe fixtures; only universe-specific provenance differs. Cross-universe reuse does not assert official membership. |
+| P2-TM09 | Point-in-time provenance | Every cell preserves `timestamp <= asOf <= provenance.capturedAt <= generatedAt <= manifest.generatedAt`. Document and cells use DEMO; cell provenance equals its envelope; all map/treemap provenance and natural identities are globally unique; source paths are tracked. |
+| P2-TM10 | Deterministic hierarchy order | Sectors sort by aggregate proxy descending then label, industries within a sector by aggregate proxy descending then label, and cells within an industry by proxy descending then asset ID. Reordered, duplicate, orphaned, or divergent cells fail closed. |
+| P2-TM11 | Screenshot and claim boundary | Fixture and UI copy explicitly identify every grouping label, proxy, and non-null change as synthetic. They do not repeat screenshot values or imply actual S&P 500/Nasdaq 100 membership, official sector taxonomy, market capitalization, current quote, recommendation, or investment performance. |
+
+## PRICE_CHANGE treemap web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-TW01 | Exact route and mode behavior | `/maps/sp500` and `/maps/nasdaq100` default to PRICE_CHANGE. `?mode=price-change` is equivalent; `?mode=analyst-consensus` preserves the prior surface. Universe links preserve the active scalar mode and unsupported or repeated mode values produce not-found rather than fallback data. |
+| P2-TW02 | Evidence-first metadata | Before the plot, each route shows universe, PRICE_CHANGE, percent unit, raw-value semantics, `[-5%, +5%]` palette saturation, as-of, DEMO, provenance/source, SAMPLE/incomplete coverage, three fixture cells, and synthetic market-cap-proxy geometry. |
+| P2-TW03 | Nested hierarchy | The plot renders one labelled Technology sector container, three labelled industry groups, and the three ticker leaves from canonical fixture order. Copy states that this is a one-sector illustrative sample, not a broad or complete sector map. |
+| P2-TW04 | Proportional geometry | Leaf area is derived only from positive integer `syntheticMarketCapProxy`; group and leaf layout areas follow descendant proxy proportions within deterministic floating-point precision. No minimum visual area, equal-weight fallback, viewport rounding, or null metric changes the stored proxy or its proportional layout input. |
+| P2-TW05 | Raw display and saturated color | Positive, negative, zero, and null use accessible non-color text. Values beyond `[-5, 5]` retain their exact displayed percentage while color alone saturates at the nearest palette stop; for example `-7.25` renders `-7.25%`, never `-5%`. Null renders `NA` with neutral styling, never zero. |
+| P2-TW06 | Honest state | The fixture disclaimer and coverage copy make clear that membership, grouping, proxy, and price change are synthetic DEMO evidence. The UI does not use live/current/official market-cap, heatmap-performance, gain/loss recommendation, or full-index language. |
+| P2-TW07 | Accessibility and responsive layout | Mode/universe controls and the `Accessible evidence index` disclosure/scroll region are semantic and keyboard reachable with visible focus. Its table preserves asset ID, ticker, sector, industry, exact raw change or `NA`, synthetic proxy, timestamp, mode, and provenance for every canonical cell without color. A contract-extreme proportional leaf may become visually subpixel and is not required to expose a visible tile outline; the non-geometric index preserves inspection without changing or imposing a minimum area. At 1440, 1280, and 390 pixels, visible labels remain contained, local regions do not widen the page, and browser console warnings, errors, and page errors are zero. |
+| P2-TW08 | Loading, errors, and regression | Loading/error boundaries are mode-neutral. Unsupported input fails closed. Existing analyst-consensus mode, `/`, `/calls`, `/calls/{id}`, `/methodology`, and all API contracts remain unchanged. |
+| P2-TW09 | Interaction boundary | A leaf is non-interactive or uses an explicitly labelled call-ledger link; it does not fabricate stock detail, hover history, live tooltips, zoom claims, or P6/P7 functionality from the screenshot. |
+
+## PRICE_CHANGE treemap required tests
+
+- Repository-contract CI validates the exact schema and two-file projection,
+  legacy byte/semantic stability, manifest order, master resolution, shared-cell
+  equality, canonical hierarchy order, integer/safe-sum geometry, raw percent
+  bounds independent of palette stops, UTC/provenance, and focused negative
+  mutations without relying on exact-fixture inequality as a false positive.
+- Provider tests reject malformed, duplicate, unsafe, divergent, non-finite, or
+  unsupported fixture evidence; preserve raw percent/null values; and prove exact
+  lower/upper bounds plus an out-of-scale value such as `-7.25`.
+- Pure layout tests prove deterministic hierarchy, descendant sums, proportional
+  leaf inputs, non-mutating palette clamp, `Unclassified`, zero-sized viewport
+  safety, and no source-array mutation.
+- Route/component and Playwright tests cover both universes and both modes,
+  default/query/fail-closed routing, single-sector disclosure, exact evidence,
+  raw out-of-scale display, NA neutrality, the keyboard-openable evidence index
+  and all canonical rows (including a subpixel proxy), 1440/1280/390 containment,
+  and zero console warnings, errors, or page errors.
+
+## PRICE_CHANGE treemap deferred work
+
+P3 retains deterministic scoring and performance claims. P5 retains observed
+quotes and licensed market-cap providers. P6 retains stock detail and history.
+P7 retains sourced complete-universe membership/classification, official market
+capitalization or index-weight geometry, live/observed price mode, filters, rich
+tooltips, zoom/history, additional map modes, and persistent/materialized map
+read models. The P2 fixture does not bootstrap or imply those capabilities.
 
 ## Local gate
 

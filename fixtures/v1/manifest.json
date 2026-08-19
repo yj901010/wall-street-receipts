@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "fixtureVersion": "v1",
   "dataMode": "DEMO",
-  "generatedAt": "2026-08-19T00:10:00Z",
+  "generatedAt": "2026-08-19T01:10:00Z",
   "provenance": {
     "id": "fixture-manifest-v1",
     "sourceType": "LOCAL_SPECIFICATION",
@@ -12,7 +12,7 @@
       "docs/docs/DOMAIN_MODEL.md",
       "docs/docs/DATA_SOURCE_POLICY.md"
     ],
-    "capturedAt": "2026-08-19T00:00:00Z",
+    "capturedAt": "2026-08-19T01:00:00Z",
     "synthetic": true,
     "licenseClass": "INTERNAL_DEMO"
   },
@@ -53,6 +53,14 @@
     {
       "path": "market-map-nasdaq100.json",
       "description": "Known-empty Nasdaq 100 analyst-consensus DEMO SAMPLE map shell data"
+    },
+    {
+      "path": "market-treemap-sp500.json",
+      "description": "Limited S&P 500 PRICE_CHANGE nested-treemap DEMO SAMPLE data"
+    },
+    {
+      "path": "market-treemap-nasdaq100.json",
+      "description": "Limited Nasdaq 100 PRICE_CHANGE nested-treemap DEMO SAMPLE data"
     },
     {
       "path": "timeline-nvda.json",

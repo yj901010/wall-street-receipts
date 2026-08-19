@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureVersion": "v1",
+  "dataMode": "DEMO",
+  "generatedAt": "2026-08-19T01:00:00Z",
+  "provenance": {
+    "id": "fixture-market-treemap-sp500-v1",
+    "sourceType": "LOCAL_SPECIFICATION",
+    "sourcePaths": [
+      "schemas/market-treemap.schema.json",
+      "quality/P2_ACCEPTANCE.md"
+    ],
+    "capturedAt": "2026-08-19T01:00:00Z",
+    "synthetic": true,
+    "licenseClass": "INTERNAL_DEMO"
+  },
+  "universe": "sp500",
+  "mode": "PRICE_CHANGE",
+  "asOf": "2026-08-19T00:30:00Z",
+  "metric": {
+    "name": "priceChangePercent",
+    "unit": "percent",
+    "scaleMinimum": -5.0,
+    "scaleMaximum": 5.0,
+    "missingDisplay": "NA"
+  },
+  "geometry": {
+    "type": "NESTED_TREEMAP",
+    "groupBy": [
+      "sector",
+      "industry"
+    ],
+    "unclassifiedDisplay": "Unclassified",
+    "areaField": "syntheticMarketCapProxy",
+    "areaUnit": "relative"
+  },
+  "coverage": {
+    "kind": "SAMPLE",
+    "completeUniverse": false,
+    "cellCount": 3,
+    "weightBasis": "SYNTHETIC_MARKET_CAP_PROXY"
+  },
+  "cells": [
+    {
+      "assetId": "asset-nvda",
+      "ticker": "NVDA",
+      "sector": "Technology",
+      "industry": "Semiconductors",
+      "syntheticMarketCapProxy": 144,
+      "priceChangePercent": 1.25,
+      "timestamp": "2026-08-19T00:30:00Z",
+      "dataMode": "DEMO",
+      "provenanceId": "fixture-market-treemap-sp500-v1"
+    },
+    {
+      "assetId": "asset-msft",
+      "ticker": "MSFT",
+      "sector": "Technology",
+      "industry": "Software",
+      "syntheticMarketCapProxy": 121,
+      "priceChangePercent": -0.75,
+      "timestamp": "2026-08-19T00:30:00Z",
+      "dataMode": "DEMO",
+      "provenanceId": "fixture-market-treemap-sp500-v1"
+    },
+    {
+      "assetId": "asset-aapl",
+      "ticker": "AAPL",
+      "sector": "Technology",
+      "industry": "Consumer Electronics",
+      "syntheticMarketCapProxy": 100,
+      "priceChangePercent": null,
+      "timestamp": "2026-08-19T00:30:00Z",
+      "dataMode": "DEMO",
+      "provenanceId": "fixture-market-treemap-sp500-v1"
+    }
+  ],
+  "disclaimer": "Illustrative three-cell S&P 500 DEMO SAMPLE only; it does not assert official index membership, composition, sector or industry classification, market capitalization, or observed price change. Every grouping label, market-cap proxy, and non-null price-change value is synthetic; null remains NA."
+}
