@@ -1,11 +1,11 @@
 # P2 Acceptance Checks — Core UI
 
 Current status: the methodology-registry, multiple market-map shell,
-sector/industry PRICE_CHANGE treemap, dashboard evidence-composition, and
-institution and analyst identity directory, and known-unavailable market-board
-publication-state vertical slices are complete. These checks close only
-delivered P2 slices; leaderboard, screener, full-universe map, and production
-market-mode work stays open.
+sector/industry PRICE_CHANGE treemap, dashboard evidence-composition,
+institution and analyst identity directories, known-unavailable market-board
+publication state, and recorded S&P 500 forecast-call history vertical slices
+are complete. These checks close only delivered P2 slices. Leaderboard,
+screener, full-universe map, and production market-mode work stays open.
 
 The methodology registry is a read-only, fixture-backed explanation surface. It
 publishes the immutable definition identities already present in
@@ -235,7 +235,7 @@ read models. The P2 fixture does not bootstrap or imply those capabilities.
 
 - The public web route remains `GET /`. This slice replaces its display-ready
   hard-coded payload with a deterministic composition of the existing
-  `CallsProvider` and `MarketTreemapProvider` ports.
+  `CallsProvider`, `MarketTreemapProvider`, and `MarketBoardProvider` ports.
 - `DashboardSnapshot` contains only `dataMode`, `latestCalls`, `mapPreviews`,
   `marketBoard`, `eventCalendar`, and `ranking`. There is no dashboard-global
   `asOf` or source: the call ledger and each map document retain different,
@@ -256,7 +256,7 @@ read models. The P2 fixture does not bootstrap or imply those capabilities.
   calendar and is not projected into this section.
 - Ranking is exactly `{status: P3_DEFERRED, missingDisplay: NA}`. It has no
   metric, score, rank, row, sort order, winner, or performance claim.
-- The two provider ports are constructor-injected into the fixture composer.
+- The three provider ports are constructor-injected into the fixture composer.
   The composer does not import raw fixture JSON, reach through a provider, use
   the P0 Java fixture quote seam, or synthesize a common timestamp.
 - This composition adds no schema, fixture, manifest member, API endpoint,
@@ -267,7 +267,7 @@ read models. The P2 fixture does not bootstrap or imply those capabilities.
 
 | ID | Check | Expected result |
 | --- | --- | --- |
-| P2-D01 | Existing-provider composition | The dashboard fixture adapter receives only `CallsProvider` and `MarketTreemapProvider`. It does not duplicate canonical calls/maps in application source or add a dashboard fixture/schema. |
+| P2-D01 | Existing-provider composition | The dashboard fixture adapter receives only `CallsProvider`, `MarketTreemapProvider`, and `MarketBoardProvider`. It does not duplicate canonical calls/maps/board state in application source or add a dashboard fixture/schema. |
 | P2-D02 | No false global as-of | `DashboardSnapshot` has no global `asOf`, generated-at, or source field. Latest calls retain their canonical fixture `asOf`, source, and disclaimer; each map preview retains its own canonical `asOf`, generated-at evidence, provenance, and disclaimer. |
 | P2-D03 | Deterministic latest calls | The adapter requests page zero, size three, sort `eventTime`, order `desc`. Equal event times use the existing `callId` ascending tie break. Current output is exactly call 002, call 001, call 003, with canonical institution, analyst-nullability, asset, source, target-nullability, event/capture time, and DEMO mode unchanged. |
 | P2-D04 | Exact map previews | The adapter requests exactly `sp500` then `nasdaq100`, requires distinct universes and exact `PRICE_CHANGE` mode, and returns the complete canonical snapshots in that order. Both remain incomplete three-cell SAMPLE evidence with synthetic classifications, changes, and market-cap proxies. |
@@ -294,9 +294,10 @@ read models. The P2 fixture does not bootstrap or imply those capabilities.
 
 ## Dashboard evidence composition required tests
 
-- Provider tests inject the two ports and prove the exact query, call order,
-  complete canonical row preservation, exact two-preview order, DEMO parity,
-  section-local metadata, and the three closed unavailable/deferred states.
+- Provider tests inject the three ports and prove the exact query, call order,
+  complete canonical row preservation, exact two-preview order, board-state
+  mapping, DEMO parity, section-local metadata, and the three closed
+  unavailable/deferred states.
 - Negative provider tests reject mixed mode, wrong or duplicate universe,
   non-PRICE_CHANGE previews, reordered results, and provider failures without a
   hard-coded or cross-universe fallback.
@@ -318,8 +319,8 @@ P3 retains deterministic ranking and performance aggregates. P5 retains
 observed/licensed current market quotes and coherent market-board publication.
 A future calendar slice requires a separately sourced global event catalog;
 call-bound context remains point-in-time call evidence. Institution and analyst
-leaderboards, the screener shell, S&P history, persistent dashboard read models,
-realtime refresh, and personalized layout remain open.
+leaderboards, the screener shell, persistent dashboard read models, realtime
+refresh, and personalized layout remain open.
 
 ## Institution identity directory slice boundary
 
@@ -586,9 +587,108 @@ identity-only P2 route.
 P4 retains realtime tick ingestion, caching, SSE/reconnect, stale detection,
 and market-hours behavior. P5 retains vendor selection, licensing, canonical
 observed quote normalization, correction/freshness semantics, and the first
-coherent `PUBLISHED` board. P6 retains history and P8 retains operational data-
-quality monitoring. This P2 status document must not be used as a shortcut to
-any of those capabilities.
+coherent `PUBLISHED` board. P6 retains stock/equity history and P8 retains
+historical market bars plus operational data-quality monitoring. The recorded
+P2 forecast-call history slice does not shortcut any of those capabilities.
+
+## S&P 500 recorded forecast-call history slice boundary
+
+- The public web route is `GET /markets/sp500`. It is a history of canonical
+  analyst-call events whose exact asset is the synthetic DEMO S&P 500 identity,
+  not an S&P 500 price history, forecast consensus, market outlook, or
+  performance chart.
+- A dedicated `Sp500HistoryProvider` composes only the existing injected
+  `CallsProvider`. It calls `metadata()` and issues exactly
+  `list({assetId: "asset-spx", page: 0, size: 25, sort: "eventTime", order:
+  "desc"})`; it imports no raw fixture JSON.
+- `Sp500HistorySnapshot` has exactly `dataMode`, `asOf`, `source`,
+  `disclaimer`, `asset`, `items`, and `page`. `asset` is the existing complete
+  `AssetSummary`, every item is an existing complete `AnalystCallView`, and
+  `page` is the existing complete `PageMetadata`. No canonical field is
+  renamed, defaulted, enriched, or recalculated inside an item.
+- `asOf` is the analyst-call catalog generation time exposed by
+  `CallsMetadata`; it is labelled call-catalog evidence and is never presented
+  as a market price, current forecast, quote, freshness, or performance as-of.
+- The current exact projection contains one item, `demo-call-001`, for
+  `asset-spx` / `INDEX` / `S&P 500 Index` / `SPX`. It preserves the raw event,
+  institution, nullable analyst, target, rating, source document/reference,
+  capture, provenance, status, and DEMO fields and links to the existing call
+  detail.
+- `items` is only the fixed first page returned by the exact synthetic fixture
+  query; `page.totalElements` is the query total and may exceed the number of
+  displayed items. Neither value is a complete-universe, complete-provider,
+  all-analyst, real-world, or market-history coverage claim. A valid empty
+  result or future appended rows returned on that fixed first page remain
+  honest and deterministic.
+- This projection does not join `market-snapshots.json`, call outcomes,
+  revisions, contexts, maps/treemaps, the market board, or the P0 quote seam.
+  Snapshot context remains on call detail; outcome metrics remain null/P3-owned.
+- The primary header remains unchanged. `/market` exposes an explicit semantic
+  link to `/markets/sp500`, and the history route retains Market as its current
+  navigation section.
+- This slice adds no canonical schema, fixture, manifest member, API/OpenAPI
+  path, database migration, persistence write, network provider, calculation,
+  or scheduled job. Existing filtered call-list and call-detail contracts are
+  sufficient.
+
+## S&P 500 recorded forecast-call history contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-SH01 | Existing canonical sources | The history adapter receives only `CallsProvider`; no history-specific JSON/schema is added and no raw fixture is imported. Existing master identity, analyst-call/source evidence, and list metadata remain the sole projection inputs. |
+| P2-SH02 | Exact provider query | The adapter invokes `metadata()` and one list query with exactly `assetId=asset-spx`, page `0`, size `25`, sort `eventTime`, and order `desc`. It neither broadens the asset filter nor silently requests current quotes, outcomes, or contexts. |
+| P2-SH03 | Exact read-model shape | Output has only the seven locked root keys, complete existing four-field asset summary, complete existing call views, and complete existing page metadata. No snapshot, outcome, aggregate, coverage, calculated timestamp, or display-ready metric field is added. |
+| P2-SH04 | Current exact projection | Repository CI locks the current fixture query to one `demo-call-001` item and exact `asset-spx`/`INDEX`/`S&P 500 Index`/`SPX` identity. Runtime uniquely selects only `asset-spx` from metadata and preserves that four-field summary; it does not hard-code the current count, call ID, display name/type/ticker, target, institution, analyst, or source values. |
+| P2-SH05 | Deterministic and append-safe page | Accepted first-page items are unique by call ID and ordered by full UTC `eventTime` descending with call ID ascending as the tie-break, without mutating provider arrays. A valid empty result or future valid SPX rows returned on the fixed first page are preserved. `page.totalElements` remains the filtered query total and is not relabelled as the displayed item count or complete ledger. |
+| P2-SH06 | DEMO, time, and source semantics | Metadata, calls, source documents, and source references remain DEMO and retain their guarded provenance/capture values; the four-field asset summary is preserved exactly from metadata. Catalog `asOf`, event time, processing time, published time, and capture time stay distinct and are not relabelled as current market time. |
+| P2-SH07 | Null and evidence preservation | Row-projected nullable analyst, rating, targets/currency/date, and publisher remain null and render `NA`; no zero, placeholder, borrowed evidence, or inferred analyst identity is introduced. Nonprojected nullable URL/publication/provider-identity, fragment, extraction-confidence, and hash fields remain unchanged in the complete call view and are available through the exact call-detail `#source` boundary rather than being summarized as row facts. |
+| P2-SH08 | No result or leaderboard claim | The page contains no return, alpha, target hit/error, directional win, MFE/MAE, accuracy, score, rank, outcome/performance confidence, winner, recommendation, scoring sample count, or outcome ordering. Existing model-only/incomplete outcomes are not projected; fixed-query item and `totalElements` counts remain pagination evidence only. |
+| P2-SH09 | No market-history claim | The page contains no current/latest/delayed/EOD quote, OHLCV series, index performance, market session, chart interpolation, snapshot value, derived target gap/change, consensus, completeness, or forecast-quality claim. A detail link may expose the existing call-bound immutable snapshot in its original context. |
+| P2-SH10 | Fail closed | A provider failure, wrong fixed query/page contract, unresolved or divergent SPX asset join, mixed mode, non-SPX row, duplicate/reordered row, divergent guarded call/institution/analyst/source join or provenance, invalid guarded UTC chronology, or fixed page/item-count inconsistency fails rather than producing partial or fallback history. Canonical nested validation remains owned by `CallsProvider`. |
+| P2-SH11 | Backend and phase boundary | Existing `GET /v1/calls?assetId=asset-spx` and `GET /v1/calls/{id}` capabilities remain unchanged; no history endpoint or persistence model is implied. P3/P4/P5/P6/P8 capabilities remain deferred. |
+
+## S&P 500 recorded forecast-call history web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-SHW01 | Route and navigation | `/markets/sp500` is server rendered, `/market` exposes an explicit recorded-forecast-history link, and the route retains Market as current navigation. No extra primary-header item is added. |
+| P2-SHW02 | Honest scope | Page title and prominent copy say recorded synthetic DEMO forecast-call events and limited fixture evidence. They do not call the view price history, live/current consensus, every forecast, complete coverage, market performance, or investment advice. |
+| P2-SHW03 | Root evidence | Before the rows, the page exposes DEMO, call-catalog as-of, source/provenance ID, exact fixture disclaimer, canonical SPX asset ID/type/name/ticker, and fixed first-page metadata. Copy distinguishes displayed items from `totalElements` and makes no complete-ledger claim. |
+| P2-SHW04 | Exact current event | The current page renders exactly `demo-call-001` with event/processing/capture times, institution, analyst, direction, raw rating, previous/current target and currency, status, and summarized source title/publisher/verified evidence. Its exact `/calls/demo-call-001#source` link is the boundary for the complete source document/reference evidence; DEMO/provenance remain visible at the scoped root. |
+| P2-SHW05 | No calculation or chart | Raw previous and current targets are displayed separately; no target delta/gap, return, hit, accuracy, rank, chart line, current price, snapshot number, outcome, or causal claim is calculated or rendered. |
+| P2-SHW06 | Loading, error, and empty behavior | Route boundaries provide explicit loading and recoverable error states. A valid empty provider page renders an honest no-recorded-SPX-call state; malformed or failed evidence never falls back to hard-coded call, quote, snapshot, or chart values. |
+| P2-SHW07 | Accessibility and responsive layout | Evidence uses semantic headings, table/list structures, source links, and labels; navigation, history region, detail link, and retry are keyboard reachable with visible focus. At 1440, 1280, and 390 pixels dense evidence stays locally contained, page overflow is absent, and console warnings/errors/page errors are zero. |
+| P2-SHW08 | Regression boundary | Existing dashboard, `/market`, calls/detail/context, methodology, institutions, analysts, maps, and all API contracts remain unchanged. Dashboard market/calendar/ranking states and board publication semantics are not weakened. |
+
+## S&P 500 recorded forecast-call history required tests
+
+- Repository CI locks the current exact SPX asset/call projection, exact query
+  tokens, provider-only source boundary, absence of duplicated raw fixtures or
+  cross-semantic imports, and absence of a new schema/fixture/API contract
+  without duplicating the existing canonical schema gates.
+- Provider tests prove the exact calls query and metadata invocation, seven-key
+  mapping, complete field preservation, current one-row evidence, deterministic
+  UTC/tie order, source non-mutation, valid empty/future rows on the fixed first
+  page, and rejection of wrong guarded identity/query/page/mode/order/
+  provenance/join/chronology/provider states.
+- Route/component tests cover scoped catalog evidence, displayed-item versus
+  query-total copy, the exact current row, nullable rendering, raw targets,
+  summarized source fields, the exact call-detail `#source` navigation,
+  loading/error/empty behavior, and absence of price-history/performance/
+  ranking/completeness claims.
+- Responsive Playwright covers Market-to-history and history-to-call-detail
+  navigation, keyboard focus, dense local containment, page overflow, and zero
+  console warnings, errors, or page errors at 1440, 1280, and 390 pixels.
+
+## S&P 500 recorded forecast-call history deferred work
+
+P3 retains deterministic outcome/scoring metrics and aggregates. P4/P5 retain
+realtime/current market transport and licensed provider data. P6 retains stock
+and equity history, sector benchmarks, corporate-action-aware views, and richer
+asset surfaces. P8 retains historical bars, materialized screener features, and
+large-scale history. Pagination/search, consensus, a chart, snapshot joins,
+outcome joins, provider-completeness claims, and persistent/materialized history
+read models are not bootstrapped by this P2 fixed-page event history.
 
 ## Local gate
 

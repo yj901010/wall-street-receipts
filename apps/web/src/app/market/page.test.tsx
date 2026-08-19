@@ -15,6 +15,9 @@ describe("MarketPage", () => {
     expect(marketLink).toHaveAttribute("aria-current", "page");
     expect(marketLink).toHaveAttribute("href", "/market");
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", {
+      name: "Open recorded S&P 500 call-event history",
+    })).toHaveAttribute("href", "/markets/sp500");
 
     const provenance = screen.getByLabelText("Market board fixture provenance");
     expect(within(provenance).getByText("1.0.0", { exact: true })).toBeInTheDocument();
