@@ -2,9 +2,10 @@
 
 Current status: the methodology-registry, multiple market-map shell,
 sector/industry PRICE_CHANGE treemap, dashboard evidence-composition, and
-institution and analyst identity directory vertical slices are complete. These
-checks close only delivered P2 slices; leaderboard, screener, full-universe
-map, and production market-mode work stays open.
+institution and analyst identity directory, and known-unavailable market-board
+publication-state vertical slices are complete. These checks close only
+delivered P2 slices; leaderboard, screener, full-universe map, and production
+market-mode work stays open.
 
 The methodology registry is a read-only, fixture-backed explanation surface. It
 publishes the immutable definition identities already present in
@@ -498,6 +499,96 @@ aliases/history, employment relationships, institution joins, calls/counts,
 holdings, search, and pagination require later contracts. P5 retains verified
 providers and licensing review. No later capability is bootstrapped by this
 identity-only P2 route.
+
+## Market-board known-unavailable slice boundary
+
+- The public web route is `GET /market`. It is a server-rendered publication-
+  status and evidence surface, not a current, latest, delayed, end-of-day, or
+  session quote board.
+- The sole canonical source is the new append-only
+  `fixtures/v1/market-board.json`, validated by the closed Draft 2020-12
+  `schemas/market-board.schema.json` contract. P2 connects no external or paid
+  market provider.
+- The fixture root has exactly `schemaVersion`, `fixtureVersion`, `dataMode`,
+  `generatedAt`, `provenance`, `scope`, `publicationStatus`,
+  `publicationReasonCode`, `marketAsOf`, `missingDisplay`, `quotes`, and
+  `disclaimer`. Provenance has exactly `id`, `sourceType`, `sourcePaths`,
+  `capturedAt`, `synthetic`, and `licenseClass`.
+- Version 1 records only the known-unavailable state:
+  `scope=GLOBAL_MARKET_OVERVIEW`, `publicationStatus=NOT_PUBLISHED`,
+  `publicationReasonCode=NO_CANONICAL_GLOBAL_QUOTE_CATALOG`,
+  `marketAsOf=null`, `missingDisplay=NA`, and `quotes=[]`. The empty array is
+  canonical state, not a load failure or permission to supply fallback rows.
+- Fixture generation and provenance capture are policy/catalog metadata only.
+  They are not market as-of, freshness, latency, session, or quote timestamps.
+- The fixture disclaimer explicitly says no price, change, session status,
+  freshness, or coverage was observed, derived, inferred, or promoted from
+  immutable call-event snapshots, PRICE_CHANGE treemaps, or application
+  literals.
+- A dedicated `MarketBoardProvider` owns this canonical snapshot. The dashboard
+  composer injects that port and maps it to its existing exact public shape
+  `marketBoard={status: NOT_PUBLISHED, missingDisplay: NA}`. No field is added
+  to `DashboardSnapshot`; existing dashboard consumers remain compatible.
+- This slice adds no API/OpenAPI path, database migration, persistence write,
+  quote cache, stream, polling loop, freshness calculation, or provider network
+  call. The P0 Java `latestQuote` fixture seam is not a canonical source for
+  this surface.
+
+## Market-board known-unavailable contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-MB01 | Closed versioned document | `market-board.schema.json` is Draft 2020-12, has stable ID `urn:wall-street-receipts:schema:market-board:1.0.0`, closes the exact 12-field root and six-field provenance objects, and rejects every missing or extra field. |
+| P2-MB02 | Exact publication state | The fixture is exactly schema `1.0.0`, fixture `v1`, DEMO, global-market-overview scope, `NOT_PUBLISHED`, reason `NO_CANONICAL_GLOBAL_QUOTE_CATALOG`, `marketAsOf=null`, missing display `NA`, and the locked disclaimer. No field is inferred or defaulted. |
+| P2-MB03 | Structurally zero quotes | Version 1 constrains `quotes` to an empty array with `maxItems=0` and a false item schema. A symbol, price, change, currency, session, status, timestamp, freshness, delay, count, or coverage row cannot validate. |
+| P2-MB04 | Provenance and mode | Provenance is exactly `fixture-market-board-v1`, synthetic `LOCAL_SPECIFICATION`/`INTERNAL_DEMO` evidence and preserves the two ordered tracked source paths. It never masquerades as vendor, exchange, observed, or licensed market data. |
+| P2-MB05 | Point-in-time catalog bounds | Canonical UTC instants use `Z` and at most microsecond precision. They preserve fixture provenance capture `<=` fixture generation `<=` manifest provenance capture `<=` manifest generation. `marketAsOf` remains null and no catalog time is relabelled as market time. |
+| P2-MB06 | Append-only manifest | `market-board.json` occurs exactly once as the final appended manifest member; prior member order is preserved, all tracked fixture paths remain a duplicate-free exact set, and the manifest cannot predate a declared document. |
+| P2-MB07 | No cross-semantic promotion | The market-board adapter reads only `market-board.json`. It cannot read `market-snapshots.json`, call contexts/calls, map or treemap fixtures, P0 `MarketDataProvider.latestQuote`, or application quote literals as board evidence. |
+| P2-MB08 | Dashboard compatibility | The dashboard receives `MarketBoardProvider` by constructor injection, imports no raw board JSON, validates the canonical unavailable snapshot, and still emits exactly `{status: NOT_PUBLISHED, missingDisplay: NA}` with no dashboard-global as-of/source or new field. |
+| P2-MB09 | Fail closed | Missing, extra, wrong-mode, wrong-status, wrong-reason, non-null-as-of, nonempty-quote, weakened-disclaimer, provenance-divergent, time-invalid, offset, or finer-than-microsecond input fails. It never becomes an empty success synthesized by UI code. |
+| P2-MB10 | Backend defer | `contracts/openapi.yaml`, Spring controllers, repositories, and Flyway migrations remain unchanged. `/market` is fixture-backed SSR; it does not imply a `/v1/market` API or persisted quote catalog. |
+| P2-MB11 | Version boundary | A later observed/licensed published board must use a separately reviewed additive/versioned contract with quote identity, venue/session, as-of/freshness, licensing, and correction semantics. It may not widen the closed meaning of schema `1.0.0`. |
+
+## Market-board web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-MBW01 | Route and navigation | `/market` is server rendered and reachable through clear semantic navigation. It is titled and described as publication status, never “markets today,” “latest quotes,” or a live terminal. |
+| P2-MBW02 | Exact status evidence | The page shows DEMO, `NOT_PUBLISHED`, `NA`, the exact reason code, schema/fixture versions, global-overview scope, fixture generation, provenance ID/type/capture/synthetic/license/source paths, and the canonical disclaimer. |
+| P2-MBW03 | Honest time semantics | Market as-of renders `NA`. Fixture generation and capture are explicitly labelled evidence/catalog times and are not called market time, freshness, delay, current, live, close, or session time. |
+| P2-MBW04 | Zero-row presentation | `quotes=[]` renders a known-unavailable explanation, not a quote table, zero price/change, placeholder ticker, skeleton-success row, count/coverage claim, stale badge, or generic empty-search result. |
+| P2-MBW05 | Dashboard integration | The dashboard market-board section derives its existing two-field unavailable state from the injected canonical provider and may link to `/market`; its exact output and existing call/map/calendar/ranking behavior remain unchanged. |
+| P2-MBW06 | Loading and error boundaries | The route has explicit loading and recoverable error states. Provider or malformed-document failure does not fall back to call-event snapshots, treemap values, P0 fixture quotes, or hard-coded display data. |
+| P2-MBW07 | Accessibility and responsive layout | Status/evidence uses semantic headings, descriptions, and a source-path list; navigation and retry targets are keyboard reachable with visible focus. At 1440, 1280, and 390 pixels dense evidence remains locally contained, page overflow is absent, and console warnings/errors/page errors are zero. |
+| P2-MBW08 | Regression boundary | Dashboard, calls/detail/context, methodology, institutions, analysts, both map modes/universes, and all API contracts remain unchanged. No new backend resource is implied. |
+
+## Market-board known-unavailable required tests
+
+- Repository CI validates the schema, exact document/provenance fields and
+  values, structurally empty quote catalog, disclaimer, canonical times,
+  manifest membership/order/parity, tracked source paths, semantic negative
+  mutations with exact-fixture comparison disabled, provider isolation, and
+  API defer.
+- Provider tests preserve every fixture field and null, reject malformed
+  shapes/status/reason/provenance/times/nonempty quotes, and prove there is no
+  fallback or mutation. Dashboard composition tests inject the port and lock
+  the pre-existing two-field board output exactly.
+- Route/component tests cover all publication/provenance evidence, honest time
+  and no-quote copy, no quote rows/numbers/current claims, dashboard link/state,
+  and loading/error behavior.
+- Responsive Playwright covers `/market` and dashboard integration at 1440,
+  1280, and 390 pixels, including keyboard focus, local/page overflow, exact
+  known-unavailable evidence, and zero console warnings, errors, or page errors.
+
+## Market-board deferred work
+
+P4 retains realtime tick ingestion, caching, SSE/reconnect, stale detection,
+and market-hours behavior. P5 retains vendor selection, licensing, canonical
+observed quote normalization, correction/freshness semantics, and the first
+coherent `PUBLISHED` board. P6 retains history and P8 retains operational data-
+quality monitoring. This P2 status document must not be used as a shortcut to
+any of those capabilities.
 
 ## Local gate
 

@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:market-board:1.0.0",
+  "title": "Canonical Market Board Publication State",
+  "description": "A closed DEMO publication-state document that records the known absence of a canonical global quote catalog without promoting call-event or synthetic display data to market facts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "fixtureVersion",
+    "dataMode",
+    "generatedAt",
+    "provenance",
+    "scope",
+    "publicationStatus",
+    "publicationReasonCode",
+    "marketAsOf",
+    "missingDisplay",
+    "quotes",
+    "disclaimer"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "fixtureVersion": {
+      "type": "string",
+      "const": "v1"
+    },
+    "dataMode": {
+      "type": "string",
+      "const": "DEMO"
+    },
+    "generatedAt": {
+      "$ref": "#/$defs/utcInstant"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "scope": {
+      "type": "string",
+      "const": "GLOBAL_MARKET_OVERVIEW"
+    },
+    "publicationStatus": {
+      "type": "string",
+      "const": "NOT_PUBLISHED"
+    },
+    "publicationReasonCode": {
+      "type": "string",
+      "const": "NO_CANONICAL_GLOBAL_QUOTE_CATALOG"
+    },
+    "marketAsOf": {
+      "type": "null"
+    },
+    "missingDisplay": {
+      "type": "string",
+      "const": "NA"
+    },
+    "quotes": {
+      "type": "array",
+      "maxItems": 0,
+      "items": false
+    },
+    "disclaimer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 768
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "utcInstant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+      "description": "Canonical UTC instant with at most microsecond precision; fixture generation and provenance capture are publication-policy metadata, not market as-of or freshness."
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sourceType",
+        "sourcePaths",
+        "capturedAt",
+        "synthetic",
+        "licenseClass"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "sourceType": {
+          "type": "string",
+          "const": "LOCAL_SPECIFICATION"
+        },
+        "sourcePaths": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            {
+              "const": "schemas/market-board.schema.json"
+            },
+            {
+              "const": "quality/P2_ACCEPTANCE.md"
+            }
+          ],
+          "items": false
+        },
+        "capturedAt": {
+          "$ref": "#/$defs/utcInstant"
+        },
+        "synthetic": {
+          "type": "boolean",
+          "const": true
+        },
+        "licenseClass": {
+          "type": "string",
+          "const": "INTERNAL_DEMO"
+        }
+      }
+    }
+  }
+}
