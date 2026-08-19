@@ -1,0 +1,338 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:market-treemap:1.0.0",
+  "title": "Canonical Market Treemap Fixture",
+  "description": "A closed, point-in-time DEMO nested-treemap read model with explicit incomplete sample coverage and synthetic geometry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "fixtureVersion",
+    "dataMode",
+    "generatedAt",
+    "provenance",
+    "universe",
+    "mode",
+    "asOf",
+    "metric",
+    "geometry",
+    "coverage",
+    "cells",
+    "disclaimer"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "fixtureVersion": {
+      "type": "string",
+      "const": "v1"
+    },
+    "dataMode": {
+      "type": "string",
+      "const": "DEMO"
+    },
+    "generatedAt": {
+      "$ref": "#/$defs/utcInstant"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "universe": {
+      "type": "string",
+      "enum": [
+        "sp500",
+        "nasdaq100"
+      ]
+    },
+    "mode": {
+      "type": "string",
+      "const": "PRICE_CHANGE"
+    },
+    "asOf": {
+      "$ref": "#/$defs/utcInstant"
+    },
+    "metric": {
+      "$ref": "#/$defs/metricDefinition"
+    },
+    "geometry": {
+      "$ref": "#/$defs/geometry"
+    },
+    "coverage": {
+      "$ref": "#/$defs/coverage"
+    },
+    "cells": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "$ref": "#/$defs/cell"
+      }
+    },
+    "disclaimer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 768
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "utcInstant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+      "description": "Canonical UTC instant with at most microsecond precision; finer values are rejected rather than rounded."
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sourceType",
+        "sourcePaths",
+        "capturedAt",
+        "synthetic",
+        "licenseClass"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "sourceType": {
+          "type": "string",
+          "const": "LOCAL_SPECIFICATION"
+        },
+        "sourcePaths": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "capturedAt": {
+          "$ref": "#/$defs/utcInstant"
+        },
+        "synthetic": {
+          "type": "boolean",
+          "const": true
+        },
+        "licenseClass": {
+          "type": "string",
+          "const": "INTERNAL_DEMO"
+        }
+      }
+    },
+    "metricDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "unit",
+        "scaleMinimum",
+        "scaleMaximum",
+        "missingDisplay"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "priceChangePercent"
+        },
+        "unit": {
+          "type": "string",
+          "const": "percent"
+        },
+        "scaleMinimum": {
+          "type": "number",
+          "const": -5,
+          "description": "Negative palette-saturation stop; raw values below this remain unchanged and use the strongest negative tone."
+        },
+        "scaleMaximum": {
+          "type": "number",
+          "const": 5,
+          "description": "Positive palette-saturation stop; raw values above this remain unchanged and use the strongest positive tone."
+        },
+        "missingDisplay": {
+          "type": "string",
+          "const": "NA"
+        }
+      }
+    },
+    "geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "groupBy",
+        "unclassifiedDisplay",
+        "areaField",
+        "areaUnit"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "NESTED_TREEMAP"
+        },
+        "groupBy": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "string",
+              "const": "sector"
+            },
+            {
+              "type": "string",
+              "const": "industry"
+            }
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "unclassifiedDisplay": {
+          "type": "string",
+          "const": "Unclassified"
+        },
+        "areaField": {
+          "type": "string",
+          "const": "syntheticMarketCapProxy"
+        },
+        "areaUnit": {
+          "type": "string",
+          "const": "relative"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "completeUniverse",
+        "cellCount",
+        "weightBasis"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "SAMPLE"
+        },
+        "completeUniverse": {
+          "type": "boolean",
+          "const": false
+        },
+        "cellCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "weightBasis": {
+          "type": "string",
+          "const": "SYNTHETIC_MARKET_CAP_PROXY"
+        }
+      }
+    },
+    "classification": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "not": {
+            "const": "Unclassified"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assetId",
+        "ticker",
+        "sector",
+        "industry",
+        "syntheticMarketCapProxy",
+        "priceChangePercent",
+        "timestamp",
+        "dataMode",
+        "provenanceId"
+      ],
+      "properties": {
+        "assetId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "ticker": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24,
+          "pattern": "^[A-Z0-9][A-Z0-9.-]{0,23}$"
+        },
+        "sector": {
+          "$ref": "#/$defs/classification"
+        },
+        "industry": {
+          "$ref": "#/$defs/classification"
+        },
+        "syntheticMarketCapProxy": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000000000
+        },
+        "priceChangePercent": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": -100,
+              "maximum": 1000000,
+              "description": "Raw percentage change. It is never clamped or coerced to the palette-saturation stops."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timestamp": {
+          "$ref": "#/$defs/utcInstant"
+        },
+        "dataMode": {
+          "type": "string",
+          "const": "DEMO"
+        },
+        "provenanceId": {
+          "$ref": "#/$defs/identifier"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "sector": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "sector"
+            ]
+          },
+          "then": {
+            "properties": {
+              "industry": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

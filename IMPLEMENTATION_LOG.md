@@ -381,3 +381,106 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
   sourced index composition, official geometry inputs, additional map modes,
   filters, tooltips, and persistent/materialized read models. P5 retains real
   providers.
+
+## P2 — Sector and industry PRICE_CHANGE treemap
+
+Status: complete for this vertical slice; the broader P2 phase remains in progress
+
+### Scope
+
+- Add a screenshot-inspired nested sector/industry/leaf layout without copying
+  the reference's values, labels, instructions, or market claims.
+- Append separate S&P 500 and Nasdaq 100 PRICE_CHANGE read-model fixtures while
+  preserving the completed analyst-consensus schema and fixtures unchanged.
+- Size leaves with positive synthetic market-cap proxy units and color them with
+  nullable raw synthetic price-change percentages. Never present either value as
+  official market capitalization, observed price, index weight, or performance.
+- Reuse only existing master-backed equity identities so this root-only slice
+  does not expand API fixture imports or database persistence.
+
+### Contract and fixture decisions
+
+- `schemas/market-treemap.schema.json` is a separate closed Draft 2020-12
+  contract. It owns PRICE_CHANGE, nested sector/industry geometry, raw percent
+  values, and synthetic proxy units without widening `market-map.schema.json`.
+- Both fixtures carry exact incomplete SAMPLE coverage with
+  `SYNTHETIC_MARKET_CAP_PROXY`, three cells, and explicit DEMO provenance. Proxy
+  values are integers from 1 through 1,000,000,000,000 and the contract permits
+  at most 1,000 cells, keeping aggregate geometry inputs inside JavaScript's
+  safe-integer range.
+- Metric `scaleMinimum: -5` and `scaleMaximum: 5` are palette saturation stops,
+  not stored-value bounds. Raw percentages remain nullable and exact in
+  `[-100, 1_000_000]`; an out-of-scale value such as `-7.25` must display
+  `-7.25%` while using the strongest negative tone.
+- Both equal-as-of fixtures intentionally share NVDA `(144, 1.25)`, MSFT
+  `(121, -0.75)`, and AAPL `(100, null)` with identical classification,
+  timestamp, and data mode. Only universe-specific provenance differs.
+- The current evidence demonstrates one Technology outer sector and three
+  industries. The engine may support multiple sectors, but neither fixture nor
+  UI may claim broader sector or index coverage.
+- `quality/P2_ACCEPTANCE.md` closes route/query behavior, legacy replay,
+  hierarchy ordering, point-in-time/provenance, raw-value/palette separation,
+  accessibility, responsive layout, and later-phase deferrals.
+
+### Module structure
+
+- `apps/web/src/lib/providers/market-treemap-provider.ts` defines the read-only
+  port; `fixture-market-treemap-provider.ts` is the strict, cross-universe
+  consistent two-document adapter with focused boundary tests.
+- `apps/web/src/lib/market-treemap-engine.ts` owns deterministic hierarchy,
+  display, and palette presentation; `treemap-layout.ts` owns pure proportional
+  rectangle layout. Both have focused unit suites.
+- `apps/web/src/components/market-treemap.tsx` owns the nested geometry and the
+  keyboard-openable non-geometric `Accessible evidence index` table, which keeps
+  every stored cell inspectable without adding a minimum tile area.
+- `apps/web/src/app/maps/[universe]` owns scalar mode parsing, default/query SSR,
+  fail-closed not-found behavior, loading/error boundaries, and route tests;
+  `apps/web/e2e/market-maps.spec.ts` owns responsive mode/navigation/geometry
+  browser coverage.
+- `schemas/market-treemap.schema.json`, the two appended fixture documents,
+  manifest entries, and the dedicated repository-contract CI block own the
+  canonical root contract and exact evidence projection.
+
+### Routes
+
+- `GET /maps/{universe}` and `?mode=price-change` — default server-rendered
+  PRICE_CHANGE nested treemap.
+- `GET /maps/{universe}?mode=analyst-consensus` — preserved completed
+  analyst-consensus surface.
+- Unknown or non-scalar mode input fails closed with not-found behavior;
+  universe links preserve the active scalar mode.
+
+### Verification
+
+- The CI-identical Draft 2020-12 legacy-map and treemap gates passed against
+  jsonschema 4.23.0. They verified legacy byte hashes, separate-schema closure,
+  the exact two-file projection, unique manifest paths/order, master and
+  equal-as-of cross-universe consistency, canonical hierarchy order, safe
+  integer proxy math, raw percent bounds independent of palette stops,
+  UTC/provenance, nullable classifications, and case-specific semantic negative
+  mutations with `require_exact=False`.
+- Root validation parsed 12 fixture JSON documents and 13 schema JSON documents,
+  verified 11-file manifest parity, parsed the CI YAML, compiled all six embedded
+  CI Python blocks, and passed `git diff --check`.
+- Web ESLint and TypeScript checks passed; Vitest passed 13 files and 107 tests;
+  the Next.js production build passed with `/maps/[universe]` remaining dynamic
+  SSR for the default PRICE_CHANGE and preserved analyst-consensus route modes.
+- Targeted market-map Playwright passed 9 of 9 tests. The full Playwright suite
+  passed 18 of 18 tests across 1440, 1280, and 390 pixels, covering default and
+  query modes, fail-closed input, mode-preserving navigation, proportional
+  hierarchy, exact raw/NA presentation, the keyboard-openable evidence index and
+  subpixel fallback, local/page overflow, and supported-route console warnings,
+  console errors, and page errors at zero.
+- Maven `verify` passed 109 tests with zero failures, errors, or skips.
+  PostgreSQL 17 Testcontainers executed all four tests with zero skips, confirming
+  no API or persistence regression from the fixture-only web read model.
+- Compose configuration passed with no output or errors and PostgreSQL remained
+  the only stateful runtime.
+
+### Deferred boundary
+
+- P3 retains scoring/performance calculations; P5 retains observed quotes and
+  licensed market-cap providers; P6 retains stock detail/history; P7 retains
+  sourced complete-universe membership/classification, official geometry,
+  live/observed price mode, filters, rich tooltips, zoom/history, additional map
+  modes, and persistent/materialized read models.
