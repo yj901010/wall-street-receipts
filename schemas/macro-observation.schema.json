@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:macro-observation:1.0.0",
+  "title": "Canonical Macro Observation",
+  "description": "One synthetic or provider-backed macro observation with point-in-time release, processing, capture, vintage, source, and missing-value evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "macroObservationId",
+    "series",
+    "value",
+    "unit",
+    "observationDate",
+    "releasedAt",
+    "processingTime",
+    "vintageStart",
+    "vintageEnd",
+    "sourceReferenceId",
+    "dataMode",
+    "capturedAt",
+    "provenanceId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "macroObservationId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "series": {
+      "type": "string",
+      "enum": [
+        "FED_FUNDS_LOWER",
+        "FED_FUNDS_UPPER",
+        "CPI_YOY",
+        "CORE_CPI_YOY",
+        "PPI_YOY",
+        "UNEMPLOYMENT_RATE"
+      ]
+    },
+    "value": {
+      "oneOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": -100000000000000000000000000,
+          "exclusiveMaximum": 100000000000000000000000000
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Exact decimal value with at most 12 fractional digits. Null means the referenced release did not provide a usable value; it never means zero."
+    },
+    "unit": {
+      "type": "string",
+      "enum": [
+        "PERCENT",
+        "PERCENTAGE_POINTS",
+        "INDEX"
+      ]
+    },
+    "observationDate": {
+      "$ref": "#/$defs/calendarDate",
+      "description": "The date or period anchor to which the observation applies."
+    },
+    "releasedAt": {
+      "$ref": "#/$defs/utcInstant",
+      "description": "When this vintage became available from its source."
+    },
+    "processingTime": {
+      "$ref": "#/$defs/utcInstant",
+      "description": "When the platform accepted this exact observation vintage."
+    },
+    "vintageStart": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/calendarDate"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Inclusive first UTC calendar date for which this vintage is active; null means no lower bound was supplied."
+    },
+    "vintageEnd": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/calendarDate"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Inclusive last UTC calendar date for which this vintage is active; null means the vintage remains open-ended."
+    },
+    "sourceReferenceId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "dataMode": {
+      "$ref": "#/$defs/dataMode"
+    },
+    "capturedAt": {
+      "$ref": "#/$defs/utcInstant",
+      "description": "When this exact observation was persisted as evidence."
+    },
+    "provenanceId": {
+      "$ref": "#/$defs/identifier"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "calendarDate": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "utcInstant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+      "description": "Canonical UTC instant with at most microsecond precision; finer values are rejected rather than rounded."
+    },
+    "dataMode": {
+      "type": "string",
+      "enum": [
+        "REALTIME",
+        "DELAYED",
+        "EOD",
+        "DEMO"
+      ]
+    }
+  }
+}

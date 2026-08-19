@@ -592,6 +592,27 @@ button:hover,
   margin: var(--space-4);
 }
 
+.context-sections {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.context-table {
+  min-width: 1580px;
+}
+
+.context-note {
+  padding: var(--space-4);
+}
+
+.context-empty {
+  padding-block: 32px;
+}
+
+.schedule-grid > div:last-child {
+  border-right: 0;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

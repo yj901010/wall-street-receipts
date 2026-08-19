@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:macro-snapshot:1.0.0",
+  "title": "Canonical Macro Snapshot",
+  "description": "Immutable macro observations selected only from vintages available at an analyst call's event time.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "macroSnapshotId",
+    "callId",
+    "eventTime",
+    "processingTime",
+    "observations",
+    "immutable",
+    "dataMode",
+    "capturedAt",
+    "provenanceId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "macroSnapshotId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "callId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "eventTime": {
+      "$ref": "#/$defs/utcInstant",
+      "description": "The analyst-call event time used as the point-in-time eligibility cutoff."
+    },
+    "processingTime": {
+      "$ref": "#/$defs/utcInstant",
+      "description": "When the platform reconstructed this snapshot."
+    },
+    "observations": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "$ref": "urn:wall-street-receipts:schema:macro-observation:1.0.0"
+      },
+      "description": "Exactly one observation per supported series, ordered FED_FUNDS_LOWER, FED_FUNDS_UPPER, CPI_YOY, CORE_CPI_YOY, PPI_YOY, UNEMPLOYMENT_RATE. Missing numeric values remain explicit nulls."
+    },
+    "immutable": {
+      "type": "boolean",
+      "const": true
+    },
+    "dataMode": {
+      "$ref": "#/$defs/dataMode"
+    },
+    "capturedAt": {
+      "$ref": "#/$defs/utcInstant",
+      "description": "When the reconstructed snapshot was persisted as evidence."
+    },
+    "provenanceId": {
+      "$ref": "#/$defs/identifier"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "utcInstant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+      "description": "Canonical UTC instant with at most microsecond precision; finer values are rejected rather than rounded."
+    },
+    "dataMode": {
+      "type": "string",
+      "enum": [
+        "REALTIME",
+        "DELAYED",
+        "EOD",
+        "DEMO"
+      ]
+    }
+  }
+}

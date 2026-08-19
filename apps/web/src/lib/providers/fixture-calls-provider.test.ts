@@ -87,6 +87,62 @@ describe("FixtureCallsProvider", () => {
     });
   });
 
+  it("materializes ordered point-in-time context with its source lineage", async () => {
+    const context = await provider.findContextByCallId("demo-call-001");
+
+    expect(context?.macroSnapshot).toMatchObject({
+      schemaVersion: "1.0.0",
+      macroSnapshotId: "macro-snapshot-demo-001",
+      callId: "demo-call-001",
+      immutable: true,
+      dataMode: "DEMO",
+      provenanceId: "fixture-call-contexts-v1",
+    });
+    expect(context?.macroSnapshot).not.toHaveProperty("observationIds");
+    expect(context?.macroSnapshot?.observations.map(({ series }) => series)).toEqual([
+      "FED_FUNDS_LOWER",
+      "FED_FUNDS_UPPER",
+      "CPI_YOY",
+      "CORE_CPI_YOY",
+      "PPI_YOY",
+      "UNEMPLOYMENT_RATE",
+    ]);
+    expect(context?.macroSnapshot?.observations.find(({ series }) => series === "CPI_YOY")).toMatchObject({
+      schemaVersion: "1.0.0",
+      macroObservationId: "macro-observation-demo-cpi-original-001",
+      value: 3.1,
+      sourceReferenceId: "source-ref-demo-macro-inflation-original-001",
+      dataMode: "DEMO",
+      provenanceId: "fixture-call-contexts-v1",
+    });
+    expect(context?.macroSnapshot?.observations.find(({ series }) => series === "PPI_YOY")?.value).toBeNull();
+    expect(context?.macroSnapshot?.observations.map(({ macroObservationId }) => macroObservationId)).not.toContain(
+      "macro-observation-demo-cpi-revision-001",
+    );
+    expect(context?.eventContext).toMatchObject({
+      schemaVersion: "1.0.0",
+      eventContextId: "event-context-demo-001",
+      earningsAt: null,
+      nextCpiAt: "2026-08-12T12:30:00Z",
+      sourceReferenceId: "source-ref-demo-event-calendar-001",
+      immutable: true,
+      dataMode: "DEMO",
+      provenanceId: "fixture-call-contexts-v1",
+    });
+    expect(await provider.findById("demo-call-001")).not.toHaveProperty("macroSnapshot");
+  });
+
+  it("returns the exact nullable response for a known-empty call", async () => {
+    const knownEmptyContext = {
+      macroSnapshot: null,
+      eventContext: null,
+    };
+
+    await expect(provider.findContextByCallId("demo-call-002")).resolves.toEqual(knownEmptyContext);
+    await expect(provider.findContextByCallId("demo-call-003")).resolves.toEqual(knownEmptyContext);
+    await expect(provider.findContextByCallId("unknown-call")).resolves.toBeNull();
+  });
+
   it("echoes an out-of-range page and rejects invalid exclusive time ranges", async () => {
     const result = await provider.list({ page: 99, size: 25 });
 

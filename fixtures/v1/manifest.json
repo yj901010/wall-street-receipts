@@ -39,6 +39,10 @@
       "description": "Versioned scoring methodology models and append-only call-outcome audit fixtures"
     },
     {
+      "path": "call-contexts.json",
+      "description": "Immutable DEMO macro snapshots, observed event schedules, evidence, and stored macro vintages"
+    },
+    {
       "path": "market-snapshots.json",
       "description": "Immutable point-in-time market context for calls"
     },

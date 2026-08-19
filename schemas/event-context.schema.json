@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:event-context:1.0.0",
+  "title": "Canonical Event Context",
+  "description": "Immutable observed schedule timestamps known for an analyst call. It contains no computed proximity, flags, or inferred causal claims.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "eventContextId",
+    "callId",
+    "eventTime",
+    "processingTime",
+    "earningsAt",
+    "nextCpiAt",
+    "nextFomcAt",
+    "nextNfpAt",
+    "optionsExpirationAt",
+    "sourceReferenceId",
+    "immutable",
+    "dataMode",
+    "capturedAt",
+    "provenanceId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "eventContextId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "callId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "eventTime": {
+      "$ref": "#/$defs/utcInstant",
+      "description": "The analyst-call event time whose known schedule state is preserved."
+    },
+    "processingTime": {
+      "$ref": "#/$defs/utcInstant"
+    },
+    "earningsAt": {
+      "$ref": "#/$defs/nullableUtcInstant",
+      "description": "Observed earnings schedule timestamp when available. It may precede or follow eventTime."
+    },
+    "nextCpiAt": {
+      "$ref": "#/$defs/nullableUtcInstant"
+    },
+    "nextFomcAt": {
+      "$ref": "#/$defs/nullableUtcInstant"
+    },
+    "nextNfpAt": {
+      "$ref": "#/$defs/nullableUtcInstant"
+    },
+    "optionsExpirationAt": {
+      "$ref": "#/$defs/nullableUtcInstant"
+    },
+    "sourceReferenceId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "immutable": {
+      "type": "boolean",
+      "const": true
+    },
+    "dataMode": {
+      "$ref": "#/$defs/dataMode"
+    },
+    "capturedAt": {
+      "$ref": "#/$defs/utcInstant"
+    },
+    "provenanceId": {
+      "$ref": "#/$defs/identifier"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "utcInstant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+      "description": "Canonical UTC instant with at most microsecond precision; finer values are rejected rather than rounded."
+    },
+    "nullableUtcInstant": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/utcInstant"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dataMode": {
+      "type": "string",
+      "enum": [
+        "REALTIME",
+        "DELAYED",
+        "EOD",
+        "DEMO"
+      ]
+    }
+  }
+}

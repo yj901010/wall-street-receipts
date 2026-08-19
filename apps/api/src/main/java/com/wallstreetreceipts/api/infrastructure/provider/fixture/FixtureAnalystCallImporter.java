@@ -10,6 +10,7 @@ import com.wallstreetreceipts.api.application.port.out.AnalystCallProvider;
 import com.wallstreetreceipts.api.application.port.out.AnalystCallRepository;
 import com.wallstreetreceipts.api.application.port.out.AnalystCallRevisionRepository;
 import com.wallstreetreceipts.api.application.port.out.CallOutcomeRepository;
+import com.wallstreetreceipts.api.application.port.out.CallContextRepository;
 import com.wallstreetreceipts.api.application.port.out.ScoringMethodologyRepository;
 
 @Component
@@ -21,18 +22,21 @@ class FixtureAnalystCallImporter implements ApplicationRunner {
     private final AnalystCallRevisionRepository revisionRepository;
     private final ScoringMethodologyRepository methodologyRepository;
     private final CallOutcomeRepository outcomeRepository;
+    private final CallContextRepository contextRepository;
 
     FixtureAnalystCallImporter(
             AnalystCallProvider provider,
             AnalystCallRepository repository,
             AnalystCallRevisionRepository revisionRepository,
             ScoringMethodologyRepository methodologyRepository,
-            CallOutcomeRepository outcomeRepository) {
+            CallOutcomeRepository outcomeRepository,
+            CallContextRepository contextRepository) {
         this.provider = provider;
         this.repository = repository;
         this.revisionRepository = revisionRepository;
         this.methodologyRepository = methodologyRepository;
         this.outcomeRepository = outcomeRepository;
+        this.contextRepository = contextRepository;
     }
 
     @Override
@@ -40,6 +44,7 @@ class FixtureAnalystCallImporter implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         var dataSet = provider.load();
         repository.importDataSet(dataSet);
+        contextRepository.importDataSet(dataSet.contexts());
         revisionRepository.importAll(dataSet.revisions());
         methodologyRepository.importAll(dataSet.methodologies());
         outcomeRepository.importAll(dataSet.outcomes());

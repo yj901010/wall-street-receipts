@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { formatMoney } from "@/lib/format-money";
 import { callsProvider, type AnalystCallDetail } from "@/lib/providers";
+import { CallContextSections } from "./call-context-sections";
 
 const utcFormatter = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
@@ -68,7 +69,11 @@ function sourceLocation(page: number | null, startMs: number | null, endMs: numb
 
 export default async function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = await callsProvider().findById(id);
+  const provider = callsProvider();
+  const [detail, context] = await Promise.all([
+    provider.findById(id),
+    provider.findContextByCallId(id),
+  ]);
 
   if (!detail) {
     notFound();
@@ -228,6 +233,8 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
             </div>
           )}
         </section>
+
+        <CallContextSections call={call} context={context} />
 
         <section className="detail-section outcome-section" aria-labelledby="outcome-title">
           <div className="section-heading">

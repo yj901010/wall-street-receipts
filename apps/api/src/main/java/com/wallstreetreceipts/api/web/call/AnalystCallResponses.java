@@ -8,6 +8,8 @@ import java.util.List;
 import com.wallstreetreceipts.api.domain.call.AnalystCallRevisionType;
 import com.wallstreetreceipts.api.domain.call.CallDirection;
 import com.wallstreetreceipts.api.domain.call.CallStatus;
+import com.wallstreetreceipts.api.domain.context.MacroSeries;
+import com.wallstreetreceipts.api.domain.context.MacroUnit;
 import com.wallstreetreceipts.api.domain.market.DataMode;
 import com.wallstreetreceipts.api.domain.master.AssetType;
 import com.wallstreetreceipts.api.domain.outcome.OutcomeEvaluationStatus;
@@ -185,6 +187,61 @@ public final class AnalystCallResponses {
             DataMode dataMode,
             Instant capturedAt,
             String provenanceId) {
+    }
+
+    public record MacroObservation(
+            String schemaVersion,
+            String macroObservationId,
+            MacroSeries series,
+            BigDecimal value,
+            MacroUnit unit,
+            LocalDate observationDate,
+            Instant releasedAt,
+            Instant processingTime,
+            LocalDate vintageStart,
+            LocalDate vintageEnd,
+            String sourceReferenceId,
+            DataMode dataMode,
+            Instant capturedAt,
+            String provenanceId) {
+    }
+
+    public record MacroSnapshot(
+            String schemaVersion,
+            String macroSnapshotId,
+            String callId,
+            Instant eventTime,
+            Instant processingTime,
+            List<MacroObservation> observations,
+            boolean immutable,
+            DataMode dataMode,
+            Instant capturedAt,
+            String provenanceId) {
+
+        public MacroSnapshot {
+            observations = List.copyOf(observations);
+        }
+    }
+
+    public record EventContext(
+            String schemaVersion,
+            String eventContextId,
+            String callId,
+            Instant eventTime,
+            Instant processingTime,
+            Instant earningsAt,
+            Instant nextCpiAt,
+            Instant nextFomcAt,
+            Instant nextNfpAt,
+            Instant optionsExpirationAt,
+            String sourceReferenceId,
+            boolean immutable,
+            DataMode dataMode,
+            Instant capturedAt,
+            String provenanceId) {
+    }
+
+    public record Context(MacroSnapshot macroSnapshot, EventContext eventContext) {
     }
 
     public record Sort(String field, String order) {

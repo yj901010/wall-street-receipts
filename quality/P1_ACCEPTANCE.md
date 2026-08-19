@@ -47,6 +47,23 @@ growth-phase runtime dependency.
 | P1-D08 | Correction or cancellation | The original call is not overwritten; lifecycle/revision behavior remains auditable. |
 | P1-D09 | Nullable source-document metadata | The append-only `demo-call-003` → `source-ref-demo-003` → `source-demo-article-003` DEMO chain carries JSON null for `publisher`, `canonicalUrl`, `publishedAt`, `externalId`, and `contentHash`; fixture validation, provider mapping, PostgreSQL fresh/upgrade persistence and read, and `GET /v1/calls/{id}` preserve those nulls. Existing call/source rows are not rewritten, and `source-demo-video-002` retains the populated source path as the positive case. |
 
+## Point-in-time context gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P1-X01 | Closed canonical contracts | `MacroObservation`, `MacroSnapshot`, `EventContext`, and `CallContext` are versioned Draft 2020-12 schemas with `additionalProperties: false`. `CallContext` is exactly `{macroSnapshot, eventContext}` and both required values are nullable. |
+| P1-X02 | Additive read surface | `GET /v1/calls/{id}/context` is the only context-prefix operation and exposes exactly 200, 400, 404, and 500 responses. It reuses the closed Problem contract and no context mutation endpoint exists. |
+| P1-X03 | Populated and known-empty behavior | `demo-call-001` returns `macro-snapshot-demo-001` and `event-context-demo-001`. Known `demo-call-002` and `demo-call-003` each return HTTP 200 with exactly `{macroSnapshot: null, eventContext: null}`; an invalid ID returns 400 and an unknown valid ID returns 404. |
+| P1-X04 | Snapshot event-time and capture order | Each snapshot/context belongs to one call, has the same `eventTime` as that call, and preserves `eventTime <= processingTime <= capturedAt`. Data mode and provenance remain explicit, and immutable records expose no update/delete API or repository operation. |
+| P1-X05 | Observation point-in-time eligibility | Every selected observation preserves `releasedAt <= processingTime <= capturedAt`; `releasedAt <= snapshot.eventTime`; observation processing/capture are no later than snapshot processing/capture; and nullable vintage bounds contain the snapshot's UTC event date using inclusive start/end semantics. |
+| P1-X06 | Deterministic series and missing values | The populated snapshot contains exactly one observation in this order: `FED_FUNDS_LOWER`, `FED_FUNDS_UPPER`, `CPI_YOY`, `CORE_CPI_YOY`, `PPI_YOY`, `UNEMPLOYMENT_RATE`. Values are decimal-safe or JSON null; the DEMO PPI value is null and never becomes zero. |
+| P1-X07 | Macro vintage preservation | `macro-observation-demo-cpi-original-001` is selected for the call-001 snapshot. The later `macro-observation-demo-cpi-revision-001` remains stored and source-traceable but is not referenced, because it was released and processed after the call event/snapshot. Re-import never overwrites the original vintage or snapshot. |
+| P1-X08 | Observed schedule only | Event context stores only nullable `earningsAt`, `nextCpiAt`, `nextFomcAt`, `nextNfpAt`, and `optionsExpirationAt` timestamps. Non-null `next*` and options-expiration timestamps are not earlier than `eventTime`; `earningsAt` may be on either side. No proximity score, boolean flag, regime, or causal inference is present. |
+| P1-X09 | Evidence traceability | Every macro observation and event context references a canonical source reference whose document metadata, license class, capture time, data mode, and provenance remain readable. Full source content is not stored. |
+| P1-X10 | Fixture and persistence boundary | The DEMO fixture contains five context evidence documents/references, seven standalone observations, one six-observation snapshot, one event context, and explicit call-002/call-003 known-empty markers. Import is transactional and idempotent; identity or payload conflicts are rejected rather than mutated. |
+| P1-X11 | Backward and phase compatibility | The exact `/v1/calls` and `/v1/calls/{id}` shapes and existing revision/outcome resources do not change. Positioning snapshots, market-regime classification, computed event proximity, scoring, live providers, and growth-phase infrastructure remain deferred. |
+| P1-X12 | Minimal evidence-first web read | The existing call-detail UI renders populated call-001 macro/event context with `DEMO`, as-of/capture times, source evidence, and the null PPI value as `NA`. Known-empty call-002/call-003 render an explicit unavailable state. No proximity label, event flag, regime, score, or causal claim is rendered; broader context dashboards, leaderboards, and interactions remain P2. |
+
 ## Revision-lineage gate
 
 | ID | Check | Expected result |
