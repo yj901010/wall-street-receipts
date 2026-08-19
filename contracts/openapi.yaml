@@ -2,7 +2,7 @@ openapi: 3.1.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: Wall Street Receipts API
-  version: 0.3.0
+  version: 0.4.0
   summary: Point-in-time analyst-call read API
   description: |
     P1 read contract for canonical analyst-call events. All timestamps are UTC
@@ -146,6 +146,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CallOutcomeList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/calls/{id}/context:
+    get:
+      tags:
+        - Analyst Calls
+      operationId: getAnalystCallContext
+      summary: Get immutable point-in-time context for one analyst call
+      description: |
+        Returns the macro snapshot and observed event schedule captured for the
+        canonical call. A known call with no corresponding record returns both
+        fields as JSON null. The endpoint does not calculate proximity, regime,
+        scoring, or current-state projections, and it never substitutes a later
+        macro vintage for one available at the call's event time.
+      parameters:
+        - $ref: '#/components/parameters/CallId'
+      responses:
+        '200':
+          description: Nullable immutable macro and event context
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallContext'
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -426,6 +457,18 @@ components:
 
     MarketSnapshot:
       $ref: ../schemas/market-snapshot.schema.json
+
+    MacroObservation:
+      $ref: ../schemas/macro-observation.schema.json
+
+    MacroSnapshot:
+      $ref: ../schemas/macro-snapshot.schema.json
+
+    EventContext:
+      $ref: ../schemas/event-context.schema.json
+
+    CallContext:
+      $ref: ../schemas/call-context.schema.json
 
     InstitutionSummary:
       type: object

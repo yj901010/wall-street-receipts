@@ -7,6 +7,8 @@ import com.wallstreetreceipts.api.application.call.AnalystCallPage;
 import com.wallstreetreceipts.api.domain.call.AnalystCall;
 import com.wallstreetreceipts.api.domain.call.AnalystCallRevision;
 import com.wallstreetreceipts.api.domain.call.CorrectedCallTerms;
+import com.wallstreetreceipts.api.domain.context.CallContext;
+import com.wallstreetreceipts.api.domain.context.MacroObservation;
 import com.wallstreetreceipts.api.domain.market.MarketSnapshot;
 import com.wallstreetreceipts.api.domain.outcome.CallOutcome;
 import com.wallstreetreceipts.api.domain.source.SourceDocument;
@@ -40,6 +42,35 @@ final class AnalystCallResponseMapper {
 
     static List<AnalystCallResponses.Outcome> toOutcomes(List<CallOutcome> outcomes) {
         return outcomes.stream().map(AnalystCallResponseMapper::toOutcome).toList();
+    }
+
+    static AnalystCallResponses.Context toContext(CallContext context) {
+        return new AnalystCallResponses.Context(
+                context.macroSnapshot() == null ? null : new AnalystCallResponses.MacroSnapshot(
+                        context.macroSnapshot().schemaVersion(), context.macroSnapshot().macroSnapshotId(),
+                        context.macroSnapshot().callId(), context.macroSnapshot().eventTime(),
+                        context.macroSnapshot().processingTime(), context.macroSnapshot().observations().stream()
+                                .map(AnalystCallResponseMapper::toMacroObservation)
+                                .toList(),
+                        true, context.macroSnapshot().dataMode(), context.macroSnapshot().capturedAt(),
+                        context.macroSnapshot().provenanceId()),
+                context.eventContext() == null ? null : new AnalystCallResponses.EventContext(
+                        context.eventContext().schemaVersion(), context.eventContext().eventContextId(),
+                        context.eventContext().callId(), context.eventContext().eventTime(),
+                        context.eventContext().processingTime(), context.eventContext().earningsAt(),
+                        context.eventContext().nextCpiAt(), context.eventContext().nextFomcAt(),
+                        context.eventContext().nextNfpAt(), context.eventContext().optionsExpirationAt(),
+                        context.eventContext().sourceReferenceId(), true, context.eventContext().dataMode(),
+                        context.eventContext().capturedAt(), context.eventContext().provenanceId()));
+    }
+
+    private static AnalystCallResponses.MacroObservation toMacroObservation(MacroObservation observation) {
+        return new AnalystCallResponses.MacroObservation(
+                observation.schemaVersion(), observation.macroObservationId(), observation.series(),
+                observation.value(), observation.unit(), observation.observationDate(), observation.releasedAt(),
+                observation.processingTime(), observation.vintageStart(), observation.vintageEnd(),
+                observation.sourceReferenceId(), observation.dataMode(), observation.capturedAt(),
+                observation.provenanceId());
     }
 
     private static AnalystCallResponses.Outcome toOutcome(CallOutcome outcome) {

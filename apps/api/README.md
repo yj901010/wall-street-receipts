@@ -22,7 +22,7 @@ Java 21과 Spring Boot 3.5.16 기반의 초기 API 애플리케이션이다. 기
 
 ## Analyst call fixtures
 
-Maven은 루트 `fixtures/v1`의 master data, analyst calls, analyst call revisions, market snapshots, scoring methodologies, call outcomes를 `fixtures/v1` classpath resource로 패키징한다. Fixture adapter가 provider DTO를 읽어 canonical model로 변환하고, `(provider, provider_event_id)` 기준으로 원본 call과 revision을 멱등 적재한다.
+Maven은 루트 `fixtures/v1`의 master data, analyst calls, analyst call revisions, market snapshots, scoring methodologies, call outcomes, call contexts를 `fixtures/v1` classpath resource로 패키징한다. Fixture adapter가 provider DTO를 읽어 canonical model로 변환하고, `(provider, provider_event_id)` 기준으로 원본 call과 revision을 멱등 적재한다.
 
 Correction과 cancellation은 `analyst_call_revisions`에 순서대로 append하며 원본 `analyst_calls` row를 갱신하지 않는다. 각 revision은 최신 revision만 supersede할 수 있고 cancellation은 terminal event다. Revision과 원 call은 공용 provider-event identity registry를 원자적으로 claim하므로 동시 적재에서도 같은 identity를 다른 event kind로 저장할 수 없다. Read-only lineage는 `GET /v1/calls/{id}/revisions`에서 sequence 오름차순으로 제공하며 revision mutation HTTP API는 없다.
 
@@ -39,3 +39,11 @@ Outcome은 methodology version/hash, input fingerprint, correction basis, cancel
 Read-only history는 `GET /v1/calls/{id}/outcomes`에서 제공한다. 알려진 call에 outcome이 없으면 `[]`, 알 수 없는 call은 기존 closed 404 Problem을 반환한다. Outcome을 생성하거나 수정·삭제하는 HTTP endpoint는 없다.
 
 애플리케이션 persistence port도 insert-if-absent와 read만 노출한다. Privileged direct SQL은 기존 revision/snapshot과 같은 관리 trust boundary이며, 외부 writer에 DB 접근을 허용하기 전에는 insert/select-only role 또는 PostgreSQL update/delete guard가 필요하다. H2는 단일 프로세스 compatibility test profile이고 운영 동시성 보장은 PostgreSQL 17을 기준으로 한다.
+
+## Point-in-time call context
+
+P1 context archive는 macro observation을 standalone vintage evidence로 먼저 저장한 뒤, call event 시점에 release·processing·capture·inclusive vintage gate를 통과한 고정 6개 series만 ordinal link로 immutable macro snapshot에 묶는다. 따라서 fixture의 2026-08-15 CPI revision은 archive에는 남지만 2026-08-10 call snapshot과 응답에는 포함되지 않으며, 제공되지 않은 PPI 값은 `null`을 유지한다. Event context도 call의 event time과 정확히 결합하고 event 시점까지 확보된 source evidence만 허용한다.
+
+`GET /v1/calls/{id}/context`는 기존 call list/detail shape를 바꾸지 않는 read-only endpoint다. `demo-call-001`에는 embedded macro snapshot과 event context를 반환하고, 명시적으로 known-empty인 `demo-call-002`와 `demo-call-003`에는 두 required key를 모두 `null`로 반환한다. 알 수 없는 call은 closed 404 Problem이며 context 생성·수정·삭제 endpoint는 없다.
+
+Context persistence port는 source evidence, standalone observations, call당 최대 한 snapshot/event context를 insert-if-absent와 canonical reread로 적재한다. PostgreSQL은 exact replay와 동일 call 경합을 `ON CONFLICT` 및 reread로 판정하고, UTC event date·release/vintage·series ordinal·128자 source ID 경계를 raw constraint로 검증한다. H2는 migration/domain/repository compatibility와 단일 프로세스 검증용이며 운영 동시성 보장은 PostgreSQL 17 Testcontainers 결과를 기준으로 한다. Privileged direct SQL은 관리 trust boundary이므로 외부 writer를 허용하기 전 insert/select-only role 또는 update/delete guard가 필요하다.

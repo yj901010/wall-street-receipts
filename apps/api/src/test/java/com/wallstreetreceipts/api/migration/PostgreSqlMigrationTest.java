@@ -7,6 +7,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -24,6 +26,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wallstreetreceipts.api.application.port.out.AnalystCallDataSet;
+import com.wallstreetreceipts.api.application.port.out.CallContextDataSet;
+import com.wallstreetreceipts.api.domain.context.EventContext;
 import com.wallstreetreceipts.api.domain.call.AnalystCall;
 import com.wallstreetreceipts.api.domain.call.AnalystCallRevision;
 import com.wallstreetreceipts.api.domain.market.DataMode;
@@ -33,10 +37,14 @@ import com.wallstreetreceipts.api.domain.outcome.OutcomeEvaluationStatus;
 import com.wallstreetreceipts.api.domain.outcome.OutcomeHorizon;
 import com.wallstreetreceipts.api.domain.outcome.OutcomeReasonCode;
 import com.wallstreetreceipts.api.infrastructure.persistence.JdbcCallOutcomeRepository;
+import com.wallstreetreceipts.api.infrastructure.persistence.JdbcCallContextRepository;
 import com.wallstreetreceipts.api.infrastructure.persistence.JdbcAnalystCallRepository;
 import com.wallstreetreceipts.api.infrastructure.persistence.JdbcAnalystCallRevisionRepository;
 import com.wallstreetreceipts.api.infrastructure.persistence.JdbcScoringMethodologyRepository;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallProvider;
+import com.wallstreetreceipts.api.domain.source.SourceDocument;
+import com.wallstreetreceipts.api.domain.source.SourceReference;
+import com.wallstreetreceipts.api.domain.source.SourceType;
 
 @Testcontainers(disabledWithoutDocker = true)
 class PostgreSqlMigrationTest {
@@ -54,7 +62,7 @@ class PostgreSqlMigrationTest {
 
         flyway.migrate();
 
-        assertThat(flyway.info().applied()).hasSize(4);
+        assertThat(flyway.info().applied()).hasSize(5);
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
@@ -63,6 +71,7 @@ class PostgreSqlMigrationTest {
         JdbcAnalystCallRevisionRepository revisionRepository = new JdbcAnalystCallRevisionRepository(jdbc);
         JdbcScoringMethodologyRepository methodologyRepository = new JdbcScoringMethodologyRepository(jdbc);
         JdbcCallOutcomeRepository outcomeRepository = new JdbcCallOutcomeRepository(jdbc, methodologyRepository);
+        JdbcCallContextRepository contextRepository = new JdbcCallContextRepository(jdbc);
         FixtureAnalystCallProvider provider = new FixtureAnalystCallProvider(new ObjectMapper());
         DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
         TransactionTemplate transactions = new TransactionTemplate(transactionManager);
@@ -74,11 +83,13 @@ class PostgreSqlMigrationTest {
                 dataSet.calls().stream().filter(call -> priorCallIds.contains(call.id())).toList(),
                 List.of(),
                 dataSet.snapshots().stream().filter(snapshot -> priorCallIds.contains(snapshot.callId())).toList(),
-                List.of(), List.of());
+                List.of(), List.of(), CallContextDataSet.empty());
         Integer importedPriorCalls = transactions.execute(status -> repository.importDataSet(priorDataSet));
         var callOneBeforeAppend = repository.findById("demo-call-001").orElseThrow();
         Integer appendedCalls = transactions.execute(status -> repository.importDataSet(dataSet));
         var callOneAfterAppend = repository.findById("demo-call-001").orElseThrow();
+        Integer importedContexts = transactions.execute(
+                status -> contextRepository.importDataSet(dataSet.contexts()));
         Integer importedRevisions = transactions.execute(status -> revisionRepository.importAll(dataSet.revisions()));
         Integer importedMethodologies = transactions.execute(
                 status -> methodologyRepository.importAll(dataSet.methodologies()));
@@ -88,20 +99,33 @@ class PostgreSqlMigrationTest {
         Integer duplicateMethodologies = transactions.execute(
                 status -> methodologyRepository.importAll(dataSet.methodologies()));
         Integer duplicateOutcomes = transactions.execute(status -> outcomeRepository.importAll(dataSet.outcomes()));
+        Integer duplicateContexts = transactions.execute(
+                status -> contextRepository.importDataSet(dataSet.contexts()));
         assertThat(importedPriorCalls).isEqualTo(2);
         assertThat(appendedCalls).isEqualTo(1);
         assertThat(callOneAfterAppend).isEqualTo(callOneBeforeAppend);
         assertThat(importedRevisions).isEqualTo(2);
         assertThat(importedMethodologies).isEqualTo(2);
         assertThat(importedOutcomes).isEqualTo(4);
+        assertThat(importedContexts).isEqualTo(9);
         assertThat(duplicateCalls).isZero();
         assertThat(duplicateRevisions).isZero();
         assertThat(duplicateMethodologies).isZero();
         assertThat(duplicateOutcomes).isZero();
+        assertThat(duplicateContexts).isZero();
         assertThat(repository.count()).isEqualTo(3);
         assertThat(revisionRepository.count()).isEqualTo(2);
         assertThat(methodologyRepository.count()).isEqualTo(2);
         assertThat(outcomeRepository.count()).isEqualTo(4);
+        assertThat(contextRepository.observationCount()).isEqualTo(7);
+        assertThat(contextRepository.macroSnapshotCount()).isEqualTo(1);
+        assertThat(contextRepository.eventContextCount()).isEqualTo(1);
+        assertThat(contextRepository.findMacroSnapshotByCallId("demo-call-001").orElseThrow().observations())
+                .hasSize(6)
+                .noneMatch(observation -> observation.macroObservationId()
+                        .equals("macro-observation-demo-cpi-revision-001"));
+        assertThat(contextRepository.findObservationById("macro-observation-demo-cpi-revision-001"))
+                .isPresent();
         assertThat(revisionRepository.findByCallId("demo-call-002"))
                 .extracting(revision -> revision.sequenceNumber())
                 .containsExactly(1, 2);
@@ -232,6 +256,85 @@ class PostgreSqlMigrationTest {
         Boolean boundaryCallInserted = transactions.execute(
                 status -> repository.saveIfAbsent(boundaryCall, boundarySnapshot));
         assertThat(boundaryCallInserted).isTrue();
+
+        String boundaryDocumentId = "d".repeat(128);
+        String boundaryReferenceId = "r".repeat(128);
+        String boundaryContextId = "e".repeat(128);
+        Instant boundaryEvidenceTime = boundaryCall.eventTime().minusSeconds(1);
+        SourceDocument boundaryDocument = new SourceDocument(
+                boundaryDocumentId, SourceType.ARTICLE, "PostgreSQL boundary publisher",
+                "PostgreSQL 128-character context evidence", URI.create("https://example.invalid/context-boundary"),
+                boundaryEvidenceTime, "postgres-context-test", boundaryDocumentId, null,
+                "INTERNAL_DEMO", DataMode.DEMO, boundaryEvidenceTime, "postgres-context-test");
+        SourceReference boundaryReference = new SourceReference(
+                boundaryReferenceId, boundaryDocument, null, null, null, null, null, false,
+                DataMode.DEMO, boundaryEvidenceTime, "postgres-context-test");
+        EventContext boundaryContext = new EventContext(
+                "1.0.0", boundaryContextId, boundaryCall.id(), boundaryCall.eventTime(),
+                boundaryCall.processingTime(), null, null, null, null, null, boundaryReferenceId,
+                DataMode.DEMO, boundaryCall.capturedAt(), "postgres-context-test");
+        Integer boundaryContextInserted = transactions.execute(status -> contextRepository.importDataSet(
+                new CallContextDataSet(
+                        List.of(boundaryDocument), List.of(boundaryReference), List.of(), List.of(),
+                        List.of(boundaryContext), List.of())));
+        assertThat(boundaryContextInserted).isEqualTo(1);
+        assertThat(contextRepository.findEventContextByCallId(boundaryCall.id()).orElseThrow().sourceReferenceId())
+                .hasSize(128);
+
+        AnalystCall callTwo = repository.findById("demo-call-002").orElseThrow().call();
+        EventContext concurrentContext = new EventContext(
+                "1.0.0", "event-context-concurrent-replay-002", callTwo.id(), callTwo.eventTime(),
+                callTwo.processingTime(), null, null, null, null, null,
+                "source-ref-demo-event-calendar-001", DataMode.DEMO, callTwo.capturedAt(),
+                "postgres-context-test");
+        CallContextDataSet concurrentDataSet = new CallContextDataSet(
+                List.of(), List.of(), List.of(), List.of(), List.of(concurrentContext), List.of());
+        var contextReady = new CountDownLatch(2);
+        var contextStart = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var firstContext = executor.submit(() -> concurrentContextImport(
+                    contextRepository, transactionManager, concurrentDataSet, contextReady, contextStart));
+            var secondContext = executor.submit(() -> concurrentContextImport(
+                    contextRepository, transactionManager, concurrentDataSet, contextReady, contextStart));
+            assertThat(contextReady.await(10, TimeUnit.SECONDS)).isTrue();
+            contextStart.countDown();
+            assertThat(List.of(
+                    firstContext.get(10, TimeUnit.SECONDS), secondContext.get(10, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder("imported:1", "imported:0");
+        }
+
+        AnalystCall callThree = repository.findById("demo-call-003").orElseThrow().call();
+        EventContext competingContextOne = new EventContext(
+                "1.0.0", "event-context-concurrent-a-003", callThree.id(), callThree.eventTime(),
+                callThree.processingTime(), null, null, null, null, null,
+                "source-ref-demo-event-calendar-001", DataMode.DEMO, callThree.capturedAt(),
+                "postgres-context-test");
+        EventContext competingContextTwo = new EventContext(
+                "1.0.0", "event-context-concurrent-b-003", callThree.id(), callThree.eventTime(),
+                callThree.processingTime(), null, null, null, null, null,
+                "source-ref-demo-event-calendar-001", DataMode.DEMO, callThree.capturedAt(),
+                "postgres-context-test");
+        var competingReady = new CountDownLatch(2);
+        var competingStart = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var firstContext = executor.submit(() -> concurrentContextImport(
+                    contextRepository, transactionManager,
+                    new CallContextDataSet(
+                            List.of(), List.of(), List.of(), List.of(), List.of(competingContextOne), List.of()),
+                    competingReady, competingStart));
+            var secondContext = executor.submit(() -> concurrentContextImport(
+                    contextRepository, transactionManager,
+                    new CallContextDataSet(
+                            List.of(), List.of(), List.of(), List.of(), List.of(competingContextTwo), List.of()),
+                    competingReady, competingStart));
+            assertThat(competingReady.await(10, TimeUnit.SECONDS)).isTrue();
+            competingStart.countDown();
+            assertThat(List.of(
+                    firstContext.get(10, TimeUnit.SECONDS), secondContext.get(10, TimeUnit.SECONDS)))
+                    .anyMatch("imported:1"::equals)
+                    .anyMatch(result -> result.startsWith("conflict:conflicting callId"));
+        }
+
         CallOutcome boundaryOutcome = pendingOutcome(
                 dataSet.outcomes().getFirst(), "postgres-boundary-outcome", boundaryCallId,
                 boundarySnapshotId, null, "a".repeat(64), OutcomeHorizon.Y1);
@@ -247,6 +350,16 @@ class PostgreSqlMigrationTest {
         assertThat(excludedOutcomeInserted).isTrue();
 
         try (Connection connection = POSTGRES.createConnection("")) {
+            assertSqlRejected(connection, """
+                    INSERT INTO macro_snapshots (
+                        macro_snapshot_id, schema_version, call_id, event_time, event_date,
+                        processing_time, immutable, data_mode, captured_at, provenance_id
+                    ) VALUES (
+                        'raw-fake-utc-date', '1.0.0', '%s', '2026-08-10T12:00:00Z', '2026-08-11',
+                        '2026-08-10T12:03:00Z', TRUE, 'DEMO', '2026-08-10T12:03:00Z', 'raw-test'
+                    )
+                    """.formatted(boundaryCallId));
+            assertPointInTimeObservationRejected(connection, boundaryCallId);
             assertThat(query(connection, """
                     SELECT COUNT(*)::text FROM provider_event_identities
                     WHERE provider_event_id IN (
@@ -807,7 +920,7 @@ class PostgreSqlMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
         latest.migrate();
-        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("4");
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("5");
 
         try (Connection connection = POSTGRES.createConnection("");
                 Statement statement = connection.createStatement()) {
@@ -886,6 +999,92 @@ class PostgreSqlMigrationTest {
         }
     }
 
+    @Test
+    void v5UpgradesPopulatedV4ThenImportsAndReplaysContextArchive() {
+        String schema = "context_upgrade_path";
+        Flyway v4 = Flyway.configure()
+                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .schemas(schema)
+                .defaultSchema(schema)
+                .target("4")
+                .locations("classpath:db/migration")
+                .load();
+        v4.migrate();
+
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        String scopedUrl = POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema;
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(
+                scopedUrl, POSTGRES.getUsername(), POSTGRES.getPassword());
+        NamedParameterJdbcTemplate jdbc = new NamedParameterJdbcTemplate(dataSource);
+        JdbcAnalystCallRepository callRepository = new JdbcAnalystCallRepository(jdbc);
+        JdbcAnalystCallRevisionRepository revisionRepository = new JdbcAnalystCallRevisionRepository(jdbc);
+        JdbcScoringMethodologyRepository methodologyRepository = new JdbcScoringMethodologyRepository(jdbc);
+        JdbcCallOutcomeRepository outcomeRepository = new JdbcCallOutcomeRepository(jdbc, methodologyRepository);
+        FixtureAnalystCallProvider provider = new FixtureAnalystCallProvider(new ObjectMapper());
+        DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+        TransactionTemplate transactions = new TransactionTemplate(transactionManager);
+        var dataSet = provider.load();
+
+        Integer callsImported = transactions.execute(status -> callRepository.importDataSet(dataSet));
+        assertThat(callsImported).isEqualTo(3);
+        Integer revisionsImported = transactions.execute(
+                status -> revisionRepository.importAll(dataSet.revisions()));
+        Integer methodologiesImported = transactions.execute(
+                status -> methodologyRepository.importAll(dataSet.methodologies()));
+        Integer outcomesImported = transactions.execute(
+                status -> outcomeRepository.importAll(dataSet.outcomes()));
+        assertThat(revisionsImported).isEqualTo(2);
+        assertThat(methodologiesImported).isEqualTo(2);
+        assertThat(outcomesImported).isEqualTo(4);
+        var callBeforeMigration = callRepository.findById("demo-call-001").orElseThrow();
+        var nullableCallBeforeMigration = callRepository.findById("demo-call-003").orElseThrow();
+        var revisionsBeforeMigration = revisionRepository.findByCallId("demo-call-002");
+        var outcomesBeforeMigration = outcomeRepository.findByCallId("demo-call-001");
+
+        Flyway latest = Flyway.configure()
+                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .load();
+        latest.migrate();
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("5");
+
+        JdbcCallContextRepository contextRepository = new JdbcCallContextRepository(jdbc);
+        Integer contextsImported = transactions.execute(
+                status -> contextRepository.importDataSet(dataSet.contexts()));
+        assertThat(contextsImported).isEqualTo(9);
+        assertThat(callRepository.findById("demo-call-001").orElseThrow()).isEqualTo(callBeforeMigration);
+        assertThat(callRepository.findById("demo-call-003").orElseThrow())
+                .isEqualTo(nullableCallBeforeMigration);
+        assertThat(callRepository.findById("demo-call-003").orElseThrow().call().sourceReference().document())
+                .satisfies(document -> {
+                    assertThat(document.publisher()).isNull();
+                    assertThat(document.canonicalUrl()).isNull();
+                    assertThat(document.publishedAt()).isNull();
+                    assertThat(document.externalId()).isNull();
+                    assertThat(document.contentHash()).isNull();
+                });
+        assertThat(revisionRepository.findByCallId("demo-call-002"))
+                .isEqualTo(revisionsBeforeMigration);
+        assertThat(outcomeRepository.findByCallId("demo-call-001"))
+                .isEqualTo(outcomesBeforeMigration);
+        assertThat(revisionRepository.count()).isEqualTo(2);
+        assertThat(methodologyRepository.count()).isEqualTo(2);
+        assertThat(outcomeRepository.count()).isEqualTo(4);
+        Integer contextReplay = transactions.execute(
+                status -> contextRepository.importDataSet(dataSet.contexts()));
+        assertThat(contextReplay).isZero();
+        assertThat(contextRepository.observationCount()).isEqualTo(7);
+        assertThat(contextRepository.macroSnapshotCount()).isEqualTo(1);
+        assertThat(contextRepository.eventContextCount()).isEqualTo(1);
+        assertThat(contextRepository.findObservationById("macro-observation-demo-cpi-revision-001"))
+                .isPresent();
+        assertThat(contextRepository.findMacroSnapshotByCallId("demo-call-001").orElseThrow().observations())
+                .extracting(observation -> observation.macroObservationId())
+                .doesNotContain("macro-observation-demo-cpi-revision-001");
+    }
+
     private static AnalystCall copyCall(AnalystCall source, String callId, String providerEventId) {
         return new AnalystCall(
                 callId, source.provider(), providerEventId, source.institution(), source.analyst(), source.asset(),
@@ -906,6 +1105,23 @@ class PostgreSqlMigrationTest {
             Boolean inserted = new TransactionTemplate(transactionManager).execute(
                     status -> repository.saveIfAbsent(outcome));
             return "inserted:" + inserted;
+        } catch (IllegalArgumentException exception) {
+            return "conflict:" + exception.getMessage();
+        }
+    }
+
+    private static String concurrentContextImport(
+            JdbcCallContextRepository repository,
+            DataSourceTransactionManager transactionManager,
+            CallContextDataSet dataSet,
+            CountDownLatch ready,
+            CountDownLatch start) throws InterruptedException {
+        ready.countDown();
+        start.await();
+        try {
+            Integer imported = new TransactionTemplate(transactionManager).execute(
+                    status -> repository.importDataSet(dataSet));
+            return "imported:" + imported;
         } catch (IllegalArgumentException exception) {
             return "conflict:" + exception.getMessage();
         }
@@ -1113,6 +1329,42 @@ class PostgreSqlMigrationTest {
         connection.setAutoCommit(false);
         try (Statement statement = connection.createStatement()) {
             assertThatThrownBy(() -> statement.executeUpdate(sql))
+                    .isInstanceOf(SQLException.class);
+        } finally {
+            connection.rollback();
+            connection.setAutoCommit(autoCommit);
+        }
+    }
+
+    private static void assertPointInTimeObservationRejected(Connection connection, String callId) throws Exception {
+        boolean autoCommit = connection.getAutoCommit();
+        connection.setAutoCommit(false);
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("""
+                    INSERT INTO macro_snapshots (
+                        macro_snapshot_id, schema_version, call_id, event_time, event_date,
+                        processing_time, immutable, data_mode, captured_at, provenance_id
+                    ) VALUES (
+                        'raw-point-in-time-snapshot', '1.0.0', '%s', '2026-08-10T12:00:00Z', '2026-08-10',
+                        '2026-08-10T12:03:00Z', TRUE, 'DEMO', '2026-08-10T12:03:00Z', 'raw-test'
+                    )
+                    """.formatted(callId));
+            assertThatThrownBy(() -> statement.executeUpdate("""
+                    INSERT INTO macro_snapshot_observations (
+                        macro_snapshot_id, ordinal, macro_observation_id, series,
+                        snapshot_event_time, snapshot_event_date, snapshot_processing_time,
+                        snapshot_captured_at, observation_released_at, observation_processing_time,
+                        observation_captured_at, vintage_start_key, vintage_end_key, data_mode
+                    )
+                    SELECT ms.macro_snapshot_id, 2, mo.macro_observation_id, mo.series,
+                           ms.event_time, ms.event_date, ms.processing_time, ms.captured_at,
+                           mo.released_at, mo.processing_time, mo.captured_at,
+                           mo.vintage_start_key, mo.vintage_end_key, ms.data_mode
+                    FROM macro_snapshots ms
+                    CROSS JOIN macro_observations mo
+                    WHERE ms.macro_snapshot_id = 'raw-point-in-time-snapshot'
+                      AND mo.macro_observation_id = 'macro-observation-demo-cpi-revision-001'
+                    """))
                     .isInstanceOf(SQLException.class);
         } finally {
             connection.rollback();

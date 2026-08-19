@@ -137,6 +137,71 @@ export type MarketSnapshot = {
   provenanceId: string;
 };
 
+export const MACRO_SERIES = [
+  "FED_FUNDS_LOWER",
+  "FED_FUNDS_UPPER",
+  "CPI_YOY",
+  "CORE_CPI_YOY",
+  "PPI_YOY",
+  "UNEMPLOYMENT_RATE",
+] as const;
+
+export type MacroSeries = (typeof MACRO_SERIES)[number];
+export type MacroUnit = "PERCENT" | "PERCENTAGE_POINTS" | "INDEX";
+
+export type MacroObservation = {
+  schemaVersion: "1.0.0";
+  macroObservationId: string;
+  series: MacroSeries;
+  value: number | null;
+  unit: MacroUnit;
+  observationDate: string;
+  releasedAt: string;
+  processingTime: string;
+  vintageStart: string | null;
+  vintageEnd: string | null;
+  sourceReferenceId: string;
+  dataMode: DataMode;
+  capturedAt: string;
+  provenanceId: string;
+};
+
+export type MacroSnapshot = {
+  schemaVersion: "1.0.0";
+  macroSnapshotId: string;
+  callId: string;
+  eventTime: string;
+  processingTime: string;
+  observations: MacroObservation[];
+  immutable: true;
+  dataMode: DataMode;
+  capturedAt: string;
+  provenanceId: string;
+};
+
+export type EventContext = {
+  schemaVersion: "1.0.0";
+  eventContextId: string;
+  callId: string;
+  eventTime: string;
+  processingTime: string;
+  earningsAt: string | null;
+  nextCpiAt: string | null;
+  nextFomcAt: string | null;
+  nextNfpAt: string | null;
+  optionsExpirationAt: string | null;
+  sourceReferenceId: string;
+  immutable: true;
+  dataMode: DataMode;
+  capturedAt: string;
+  provenanceId: string;
+};
+
+export type CallContext = {
+  macroSnapshot: MacroSnapshot | null;
+  eventContext: EventContext | null;
+};
+
 export type AnalystCallView = {
   call: AnalystCall;
   institution: InstitutionSummary;
@@ -182,4 +247,5 @@ export interface CallsProvider {
   list(query?: CallsQuery): Promise<AnalystCallPage>;
   metadata(): Promise<CallsMetadata>;
   findById(id: string): Promise<AnalystCallDetail | null>;
+  findContextByCallId(id: string): Promise<CallContext | null>;
 }

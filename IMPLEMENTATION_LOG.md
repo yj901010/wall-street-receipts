@@ -99,10 +99,9 @@ Status: complete for this vertical slice; the broader P1 phase remains in progre
 - Maven `verify`: 48 tests passed with zero failures, errors, or skips, including PostgreSQL 17 Testcontainers, both Flyway migrations, provider-event idempotency, nullable analyst/snapshot behavior, strict filters, source traceability, and snapshot invariants.
 - Runtime smoke: the packaged Spring Boot API started against Compose PostgreSQL 17, migrated the existing schema from V1 to V2, and returned HTTP 200 from `/actuator/health`, `/v1/calls?page=0&size=1`, and `/v1/calls/demo-call-002` with the expected request ID, canonical call, source, and snapshot.
 
-### Remaining P1 work
+### Follow-up status
 
-- Add the remaining macro/context snapshot domain needed by the full P1 model.
-- Exercise nullable source-document metadata through a full persistence and HTTP round trip.
+- The remaining macro/context snapshot domain was completed by the point-in-time context slice below.
 
 ## P1 — Analyst Call Revision lineage
 
@@ -141,10 +140,9 @@ Status: complete for this vertical slice; the broader P1 phase remains in progre
 - PostgreSQL 17 Testcontainers applied Flyway V1–V3 from a fresh schema, upgraded a populated V2 schema with provider-identity backfill, and verified the shared provider-event registry, two-call/two-revision idempotent fixture import, failed-batch rollback, same-call contiguous supersession, terminal cancellation, ISO-shaped currency, source provenance, base-call and snapshot preservation, and raw-SQL constraint rejection.
 - MockMvc verified ordered canonical revision fields, a known empty lineage, the closed 404 Problem, request-ID propagation, the exact GET-only mapping surface, and 405 responses for POST, PUT, PATCH, and DELETE.
 
-### Remaining P1 work
+### Follow-up status
 
-- Add the remaining macro/context snapshot domain needed by the full P1 model.
-- Exercise nullable source-document metadata through a full persistence and HTTP round trip.
+- The remaining macro/context snapshot domain was completed by the point-in-time context slice below.
 
 ## P1 — Call Outcome audit lineage
 
@@ -183,10 +181,9 @@ Status: complete for this vertical slice; the broader P1 phase remains in progre
 - Existing web regression remained green: ESLint passed with zero warnings, Vitest passed 5 files and 11 tests, and the Next.js production build completed for `/`, `/calls`, and `/calls/[id]`.
 - Compose configuration passed with PostgreSQL as the only stateful runtime.
 
-### Remaining P1 work
+### Follow-up status
 
-- Add the remaining macro/context snapshot domain needed by the full P1 model.
-- Exercise nullable source-document metadata through a full persistence and HTTP round trip.
+- The remaining macro/context snapshot domain was completed by the point-in-time context slice below.
 
 ## P1 — Nullable source-document evidence
 
@@ -216,6 +213,46 @@ Status: complete for this vertical slice; the broader P1 phase remains in progre
 - The fixture-backed call-003 detail renders each unavailable value as `NA`, omits the canonical-source anchor when its URL is null, and preserves the populated call-002 link as a positive control.
 - No production code, database migration, or API schema change was required because the existing nullable boundary behaved as designed.
 
-### Remaining P1 work
+### Follow-up status
 
-- Add the remaining macro/context snapshot domain needed by the full P1 model.
+- The remaining macro/context snapshot domain was completed by the point-in-time context slice below.
+
+## P1 — Point-in-time macro and event context
+
+Status: complete; this slice closes P1
+
+### Scope
+
+- Add closed, versioned `MacroObservation`, `MacroSnapshot`, `EventContext`, and `CallContext` contracts.
+- Preserve original and later macro vintages in a standalone fixture pool while selecting only event-time-eligible observations into an immutable call snapshot.
+- Store observed schedule timestamps without calculated proximity, flags, regimes, or causal inference.
+- Expose a read-only additive context subresource while preserving every existing call, revision, and outcome response shape.
+- Add a minimal evidence-first DEMO context read to the existing call-detail UI without expanding into P2 dashboard or interaction scope.
+
+### Contract and fixture decisions
+
+- `CallContext` is exactly `{macroSnapshot, eventContext}` with both keys required and nullable.
+- Canonical macro snapshots embed six observations in a fixed series order; the fixture DTO carries ordered observation IDs so archived revisions remain independently readable.
+- Vintage start/end dates are inclusive. Selection uses the call event time, never later processing time or the latest revised value.
+- `call-contexts.json` contains only synthetic DEMO values and schedules, canonical source metadata/references, one populated call-001 context, and explicit call-002/call-003 known-empty markers.
+- ADR-005 records the point-in-time rules and explicitly defers PositioningSnapshot, MarketRegime, computed proximity, scoring, realtime transport, and live providers.
+- The existing call-detail route owns a minimal DEMO/as-of/source/`NA` context read; broader context dashboards, leaderboards, and interactions remain P2 work.
+
+### Route
+
+- `GET /v1/calls/{id}/context` — returns nullable macro/event context for a known call; invalid and unknown IDs reuse the closed Problem contract. No context mutation operation exists.
+
+### Verification
+
+- OpenAPI 3.1 parsing, exact GET-only context routing, unchanged call-detail shape, four closed Draft 2020-12 context schemas, nine canonical fixture documents, and manifest parity passed.
+- The repository-contract gate verified five context evidence documents/references, seven standalone observations, the ordered six-series call-001 snapshot, the call-001 event context, and explicit call-002/call-003 known-empty coverage. It also proved that the later CPI revision remains archived but is excluded from the earlier event-time snapshot.
+- Maven `verify`: 109 tests passed with zero failures, errors, or skips. PostgreSQL 17 Testcontainers executed 4 tests with no skips, covering fresh V1-V5 migration, a fully populated V4-to-V5 upgrade, immutable replay, concurrent same-call imports, 128-character evidence IDs, and raw point-in-time constraint rejection.
+- MockMvc verified the exact populated and known-empty responses, closed 400/404/500 Problems, request-ID propagation, and the GET-only mutation surface.
+- ESLint passed with zero warnings; Vitest passed 5 files and 17 tests; the Next.js production build completed for `/`, `/calls`, and `/calls/[id]`.
+- Browser QA at 1280 px verified the populated call-001 context, both call-002 known-empty sections, keyboard-focusable table containment, no page-level horizontal overflow, and no console warnings or errors. The formal 390 px cross-browser layout matrix remains an owning P2 gate.
+- Compose configuration and `git diff --check` passed. An independent review repeated the API verification and found no blocker or high-severity issue.
+
+### Phase status
+
+- P1 is complete. No mandatory P1 work remains.
+- PositioningSnapshot, MarketRegime, broader context dashboards and interactions, deterministic scoring calculations, realtime transport, and live providers remain explicitly deferred to their owning later phases.

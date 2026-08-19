@@ -38,6 +38,23 @@ final class FixtureAnalystCallDocuments {
             List<CallOutcomeDto> outcomes) {
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record CallContextsDocument(
+            String schemaVersion,
+            String dataMode,
+            FixtureProvenanceDto provenance,
+            List<SourceDocumentDto> sourceDocuments,
+            List<SourceReferenceDto> sourceReferences,
+            List<MacroObservationDto> macroObservations,
+            List<MacroSnapshotDto> macroSnapshots,
+            List<EventContextDto> eventContexts,
+            List<String> knownEmptyCallIds) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record FixtureProvenanceDto(String id, String capturedAt) {
+    }
+
     record InstitutionDto(
             String institutionId,
             String canonicalName,
@@ -219,6 +236,51 @@ final class FixtureAnalystCallDocuments {
             Boolean directionalWin,
             BigDecimal targetError,
             boolean dataComplete,
+            String dataMode,
+            String capturedAt,
+            String provenanceId) {
+    }
+
+    record MacroObservationDto(
+            String macroObservationId,
+            String series,
+            BigDecimal value,
+            String unit,
+            String observationDate,
+            String releasedAt,
+            String processingTime,
+            String vintageStart,
+            String vintageEnd,
+            String sourceReferenceId,
+            String dataMode,
+            String capturedAt,
+            String provenanceId) {
+    }
+
+    record MacroSnapshotDto(
+            String macroSnapshotId,
+            String callId,
+            String eventTime,
+            String processingTime,
+            List<String> observationIds,
+            boolean immutable,
+            String dataMode,
+            String capturedAt,
+            String provenanceId) {
+    }
+
+    record EventContextDto(
+            String eventContextId,
+            String callId,
+            String eventTime,
+            String processingTime,
+            String earningsAt,
+            String nextCpiAt,
+            String nextFomcAt,
+            String nextNfpAt,
+            String optionsExpirationAt,
+            String sourceReferenceId,
+            boolean immutable,
             String dataMode,
             String capturedAt,
             String provenanceId) {

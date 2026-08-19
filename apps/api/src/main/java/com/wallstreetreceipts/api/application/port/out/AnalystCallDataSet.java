@@ -19,7 +19,8 @@ public record AnalystCallDataSet(
         List<AnalystCallRevision> revisions,
         List<MarketSnapshot> snapshots,
         List<ScoringMethodology> methodologies,
-        List<CallOutcome> outcomes) {
+        List<CallOutcome> outcomes,
+        CallContextDataSet contexts) {
 
     public AnalystCallDataSet {
         institutions = List.copyOf(institutions);
@@ -30,5 +31,6 @@ public record AnalystCallDataSet(
         snapshots = List.copyOf(snapshots);
         methodologies = List.copyOf(methodologies);
         outcomes = List.copyOf(outcomes);
+        contexts = contexts == null ? CallContextDataSet.empty() : contexts;
     }
 }
