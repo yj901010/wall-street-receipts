@@ -58,7 +58,7 @@ class AnalystCallApiTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(header().string("X-Request-Id", REQUEST_ID))
-                .andExpect(jsonPath("$.items.length()").value(2))
+                .andExpect(jsonPath("$.items.length()").value(3))
                 .andExpect(jsonPath("$.items[0].call.schemaVersion").value("1.0.0"))
                 .andExpect(jsonPath("$.items[0].call.callId").value("demo-call-002"))
                 .andExpect(jsonPath("$.items[0].call.provider").value("fixture"))
@@ -72,7 +72,7 @@ class AnalystCallApiTest {
                 .andExpect(jsonPath("$.items[0].snapshot").doesNotExist())
                 .andExpect(jsonPath("$.page.number").value(0))
                 .andExpect(jsonPath("$.page.size").value(25))
-                .andExpect(jsonPath("$.page.totalElements").value(2))
+                .andExpect(jsonPath("$.page.totalElements").value(3))
                 .andExpect(jsonPath("$.page.totalPages").value(1))
                 .andExpect(jsonPath("$.page.first").value(true))
                 .andExpect(jsonPath("$.page.last").value(true))
@@ -96,10 +96,10 @@ class AnalystCallApiTest {
                 .andExpect(jsonPath("$.items[0].call.callId").value("demo-call-001"))
                 .andExpect(jsonPath("$.page.number").value(1))
                 .andExpect(jsonPath("$.page.size").value(1))
-                .andExpect(jsonPath("$.page.totalElements").value(2))
-                .andExpect(jsonPath("$.page.totalPages").value(2))
+                .andExpect(jsonPath("$.page.totalElements").value(3))
+                .andExpect(jsonPath("$.page.totalPages").value(3))
                 .andExpect(jsonPath("$.page.first").value(false))
-                .andExpect(jsonPath("$.page.last").value(true))
+                .andExpect(jsonPath("$.page.last").value(false))
                 .andExpect(jsonPath("$.page.sort.field").value("processingTime"))
                 .andExpect(jsonPath("$.page.sort.order").value("desc"));
     }
@@ -112,7 +112,7 @@ class AnalystCallApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items").isEmpty())
                 .andExpect(jsonPath("$.page.number").value(Integer.MAX_VALUE))
-                .andExpect(jsonPath("$.page.totalElements").value(2))
+                .andExpect(jsonPath("$.page.totalElements").value(3))
                 .andExpect(jsonPath("$.page.last").value(true));
     }
 
@@ -146,10 +146,10 @@ class AnalystCallApiTest {
                 Arguments.of("institutionId", "inst-jpm", 1, "demo-call-001"),
                 Arguments.of("analystId", "analyst-demo-b", 1, "demo-call-002"),
                 Arguments.of("direction", "BULLISH", 2, "demo-call-002"),
-                Arguments.of("status", "ACTIVE", 2, "demo-call-002"),
-                Arguments.of("dataMode", "DEMO", 2, "demo-call-002"),
+                Arguments.of("status", "ACTIVE", 3, "demo-call-002"),
+                Arguments.of("dataMode", "DEMO", 3, "demo-call-002"),
                 Arguments.of("from", "2026-08-11T00:00:00Z", 1, "demo-call-002"),
-                Arguments.of("to", "2026-08-11T00:00:00Z", 1, "demo-call-001"));
+                Arguments.of("to", "2026-08-11T00:00:00Z", 2, "demo-call-001"));
     }
 
     @Test
@@ -168,6 +168,53 @@ class AnalystCallApiTest {
                 .andExpect(jsonPath("$.snapshot.assetPrice").value(183.42))
                 .andExpect(jsonPath("$.snapshot.immutable").value(true))
                 .andExpect(jsonPath("$.snapshot.dataMode").value("DEMO"));
+    }
+
+    @Test
+    void detailReturnsExplicitNullSourceMetadataAndRetainsRequiredEvidence() throws Exception {
+        MvcResult result = mockMvc.perform(get("/v1/calls/demo-call-003"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.call.callId").value("demo-call-003"))
+                .andExpect(jsonPath("$.source.document.sourceDocumentId")
+                        .value("source-demo-article-003"))
+                .andExpect(jsonPath("$.source.document.sourceType").value("ARTICLE"))
+                .andExpect(jsonPath("$.source.document.publisher")
+                        .value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.source.document.title")
+                        .value("DEMO unattributed neutral outlook"))
+                .andExpect(jsonPath("$.source.document.canonicalUrl")
+                        .value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.source.document.publishedAt")
+                        .value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.source.document.provider").value("fixture"))
+                .andExpect(jsonPath("$.source.document.externalId")
+                        .value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.source.document.contentHash")
+                        .value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.source.document.licenseClass").value("INTERNAL_DEMO"))
+                .andExpect(jsonPath("$.source.document.dataMode").value("DEMO"))
+                .andExpect(jsonPath("$.source.document.capturedAt").value("2026-08-10T10:02:00Z"))
+                .andExpect(jsonPath("$.source.document.provenanceId")
+                        .value("fixture-analyst-calls-v1"))
+                .andExpect(jsonPath("$.source.reference.sourceReferenceId")
+                        .value("source-ref-demo-003"))
+                .andExpect(jsonPath("$.source.reference.sourceDocumentId")
+                        .value("source-demo-article-003"))
+                .andExpect(jsonPath("$.source.reference.verified").value(false))
+                .andExpect(jsonPath("$.source.reference.dataMode").value("DEMO"))
+                .andExpect(jsonPath("$.source.reference.capturedAt").value("2026-08-10T10:02:00Z"))
+                .andExpect(jsonPath("$.source.reference.provenanceId")
+                        .value("fixture-analyst-calls-v1"))
+                .andReturn();
+
+        JsonNode document = objectMapper.readTree(result.getResponse().getContentAsByteArray())
+                .path("source")
+                .path("document");
+        assertThat(fieldNames(document)).containsExactlyInAnyOrder(
+                "schemaVersion", "sourceDocumentId", "sourceType", "publisher", "title",
+                "canonicalUrl", "publishedAt", "provider", "externalId", "contentHash",
+                "licenseClass", "dataMode", "capturedAt", "provenanceId");
     }
 
     @Test

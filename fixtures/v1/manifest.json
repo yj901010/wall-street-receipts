@@ -28,7 +28,7 @@
     },
     {
       "path": "analyst-calls.json",
-      "description": "Analyst call events with source documents and references"
+      "description": "Append-only analyst call events with populated and upgrade-safe nullable source-document evidence"
     },
     {
       "path": "analyst-call-revisions.json",

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Modifier;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 
@@ -20,7 +21,11 @@ import com.wallstreetreceipts.api.application.port.out.AnalystCallDataSet;
 import com.wallstreetreceipts.api.application.port.out.AnalystCallProvider;
 import com.wallstreetreceipts.api.application.port.out.AnalystCallRepository;
 import com.wallstreetreceipts.api.domain.call.AnalystCall;
+import com.wallstreetreceipts.api.domain.market.DataMode;
 import com.wallstreetreceipts.api.domain.market.MarketSnapshot;
+import com.wallstreetreceipts.api.domain.source.SourceDocument;
+import com.wallstreetreceipts.api.domain.source.SourceReference;
+import com.wallstreetreceipts.api.domain.source.SourceType;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -47,10 +52,39 @@ class AnalystCallPersistenceTest {
         assertThat(dataSet.institutions()).hasSize(2);
         assertThat(dataSet.analysts()).hasSize(2);
         assertThat(dataSet.assets()).hasSize(4);
-        assertThat(dataSet.calls()).hasSize(2);
+        assertThat(dataSet.calls()).hasSize(3);
         assertThat(dataSet.revisions()).hasSize(2);
         assertThat(dataSet.snapshots()).hasSize(2);
         assertThat(dataSet.calls()).allMatch(call -> call.target() == null || call.target().scale() >= 1);
+    }
+
+    @Test
+    void packagedFixtureMapsMissingSourceMetadataToCanonicalNullsWithoutLosingEvidence() {
+        AnalystCall call = provider.load().calls().stream()
+                .filter(candidate -> candidate.id().equals("demo-call-003"))
+                .findFirst()
+                .orElseThrow();
+        SourceReference reference = call.sourceReference();
+        SourceDocument document = reference.document();
+
+        assertThat(document.publisher()).isNull();
+        assertThat(document.canonicalUrl()).isNull();
+        assertThat(document.publishedAt()).isNull();
+        assertThat(document.externalId()).isNull();
+        assertThat(document.contentHash()).isNull();
+        assertThat(document.id()).isEqualTo("source-demo-article-003");
+        assertThat(document.type()).isEqualTo(SourceType.ARTICLE);
+        assertThat(document.title()).isEqualTo("DEMO unattributed neutral outlook");
+        assertThat(document.provider()).isEqualTo("fixture");
+        assertThat(document.licenseClass()).isEqualTo("INTERNAL_DEMO");
+        assertThat(document.dataMode()).isEqualTo(DataMode.DEMO);
+        assertThat(document.capturedAt()).isEqualTo(Instant.parse("2026-08-10T10:02:00Z"));
+        assertThat(document.provenanceId()).isEqualTo("fixture-analyst-calls-v1");
+        assertThat(reference.id()).isEqualTo("source-ref-demo-003");
+        assertThat(reference.document()).isSameAs(document);
+        assertThat(reference.dataMode()).isEqualTo(DataMode.DEMO);
+        assertThat(reference.capturedAt()).isEqualTo(Instant.parse("2026-08-10T10:02:00Z"));
+        assertThat(reference.provenanceId()).isEqualTo("fixture-analyst-calls-v1");
     }
 
     @Test
@@ -73,6 +107,31 @@ class AnalystCallPersistenceTest {
         assertThat(call.sourceReference().document().canonicalUrl().toString())
                 .isEqualTo("https://example.invalid/demo-call-002");
         assertThat(call.sourceReference().provenanceId()).isEqualTo("fixture-analyst-calls-v1");
+    }
+
+    @Test
+    void repositoryRoundTripPreservesMissingSourceMetadataAsNull() {
+        AnalystCall call = repository.findById("demo-call-003").orElseThrow().call();
+        SourceReference reference = call.sourceReference();
+        SourceDocument document = reference.document();
+
+        assertThat(document.publisher()).isNull();
+        assertThat(document.canonicalUrl()).isNull();
+        assertThat(document.publishedAt()).isNull();
+        assertThat(document.externalId()).isNull();
+        assertThat(document.contentHash()).isNull();
+        assertThat(document.id()).isEqualTo("source-demo-article-003");
+        assertThat(document.title()).isEqualTo("DEMO unattributed neutral outlook");
+        assertThat(document.provider()).isEqualTo("fixture");
+        assertThat(document.licenseClass()).isEqualTo("INTERNAL_DEMO");
+        assertThat(document.dataMode()).isEqualTo(DataMode.DEMO);
+        assertThat(document.capturedAt()).isEqualTo(Instant.parse("2026-08-10T10:02:00Z"));
+        assertThat(document.provenanceId()).isEqualTo("fixture-analyst-calls-v1");
+        assertThat(reference.id()).isEqualTo("source-ref-demo-003");
+        assertThat(reference.document().id()).isEqualTo(document.id());
+        assertThat(reference.dataMode()).isEqualTo(DataMode.DEMO);
+        assertThat(reference.capturedAt()).isEqualTo(Instant.parse("2026-08-10T10:02:00Z"));
+        assertThat(reference.provenanceId()).isEqualTo("fixture-analyst-calls-v1");
     }
 
     @Test

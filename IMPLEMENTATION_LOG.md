@@ -187,3 +187,35 @@ Status: complete for this vertical slice; the broader P1 phase remains in progre
 
 - Add the remaining macro/context snapshot domain needed by the full P1 model.
 - Exercise nullable source-document metadata through a full persistence and HTTP round trip.
+
+## P1 — Nullable source-document evidence
+
+Status: complete for this vertical slice; the broader P1 phase remains in progress
+
+### Scope
+
+- Make the optional source-document metadata boundary observable with a deterministic DEMO record rather than relying only on schema nullability.
+- Preserve every existing fixture identity and payload, then append a new call/source/reference chain so populated databases receive the evidence safely on upgrade.
+- Preserve the existing populated source records as positive controls.
+- Require the fixture, provider adapter, PostgreSQL repository, and call-detail HTTP response to preserve missing metadata as null without inventing fallback values.
+
+### Fixture and contract evidence
+
+- `demo-call-003` → `source-ref-demo-003` → `source-demo-article-003` is an append-only fixture chain whose document explicitly sets `publisher`, `canonicalUrl`, `publishedAt`, `externalId`, and `contentHash` to JSON null.
+- `source-demo-article-001`, referenced by `demo-call-001`, retains its original populated metadata so an existing insert-only database is never left with a stale payload.
+- `source-demo-video-002`, referenced by `demo-call-002`, retains its populated publisher, URL, publication time, and external ID.
+- The repository-contract CI script requires the new nullable chain and both preserved positive cases; the P1 acceptance gate names the fresh/upgrade persistence and HTTP round trip.
+
+### Verification
+
+- Eight fixture JSON files parsed successfully, fixture manifest parity passed, and the repository-contract gate verified the append-only explicit-null chain plus the preserved populated controls.
+- Compose configuration passed with PostgreSQL as the only stateful runtime.
+- Maven `verify`: 94 tests passed with zero failures, errors, or skips. PostgreSQL 17 Testcontainers verified the nullable document through fixture import and repository read with 3 migration tests executed and no skips.
+- MockMvc verified that all five optional metadata fields remain present as explicit JSON null while required evidence and provenance remain populated.
+- ESLint passed with zero warnings; Vitest passed 5 files and 13 tests; the Next.js production build completed for `/`, `/calls`, and `/calls/[id]`.
+- The fixture-backed call-003 detail renders each unavailable value as `NA`, omits the canonical-source anchor when its URL is null, and preserves the populated call-002 link as a positive control.
+- No production code, database migration, or API schema change was required because the existing nullable boundary behaved as designed.
+
+### Remaining P1 work
+
+- Add the remaining macro/context snapshot domain needed by the full P1 model.

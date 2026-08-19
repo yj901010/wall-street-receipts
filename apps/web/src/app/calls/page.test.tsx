@@ -12,9 +12,13 @@ describe("CallsPage", () => {
     expect(screen.getAllByText("DEMO").length).toBeGreaterThan(0);
 
     const table = screen.getByRole("table", { name: "Filtered analyst call events" });
-    expect(within(table).getByText("Goldman Sachs")).toBeInTheDocument();
-    expect(within(table).getByText("NVDA")).toBeInTheDocument();
-    expect(within(table).getByRole("link", { name: "DEMO equity interview" })).toHaveAttribute(
+    const sourceLink = within(table).getByRole("link", { name: "DEMO equity interview" });
+    const callRow = sourceLink.closest("tr");
+
+    expect(callRow).not.toBeNull();
+    expect(within(callRow!).getByText("Goldman Sachs")).toBeInTheDocument();
+    expect(within(callRow!).getByText("NVDA")).toBeInTheDocument();
+    expect(sourceLink).toHaveAttribute(
       "href",
       "/calls/demo-call-002#source",
     );
@@ -23,7 +27,7 @@ describe("CallsPage", () => {
   it("renders zero-based provider pagination as human page numbers", async () => {
     render(await CallsPage({ searchParams: Promise.resolve({ size: "1", page: "0" }) }));
 
-    expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument();
+    expect(screen.getByText(/Page 1 of 3/)).toBeInTheDocument();
     const pagination = screen.getByRole("navigation", { name: "Calls pages" });
     expect(within(pagination).getByText("Previous")).toHaveAttribute("aria-disabled", "true");
     expect(within(pagination).getByRole("link", { name: "Next" })).toHaveAttribute(
