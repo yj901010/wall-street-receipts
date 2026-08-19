@@ -290,8 +290,8 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
 
 ### Remaining P2 work
 
-- Complete the screener shell without inventing observed market facts or P3
-  performance aggregates.
+- Keep actual historical screening filters, queries, features, and results in
+  P8; the P2 application-owned known-deferred shell is complete.
 - Keep institution/analyst leaderboard metrics and order in P3, and keep a
   coherent observed/licensed `PUBLISHED` market board in P5.
 - Continue the shared 1440/1280/390 Playwright gate as each remaining P2 route lands.
@@ -968,3 +968,114 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
 - Pagination/search, current consensus, charts, snapshot/outcome joins,
   completeness claims, and persistent/materialized history read models remain
   open.
+
+## P2 — Screener known-deferred shell
+
+Status: complete for this vertical slice; the broader P2 phase remains in progress
+
+### Scope
+
+- Add a server-rendered `/screener` capability-state shell without presenting a
+  stock screen, query execution, result collection, metric, or observed fact.
+- Publish the exact application-owned DEMO/P8-deferred state and distinguish it
+  from canonical fixture evidence, provider availability, and an empty
+  successful search.
+- Reject every request containing a search-parameter key through the custom
+  noindex unsupported-request boundary; do not ignore, normalize, or echo input
+  as a filter.
+- Add Screener to primary navigation after Maps and before Methodology while
+  preserving existing destinations, current-page semantics, keyboard focus,
+  and narrow local containment.
+- Add no schema, fixture, manifest member, OpenAPI/API path, Flyway migration,
+  persistence model, provider network call, scheduler, calculation, saved
+  filter, or materialized feature catalog.
+
+### Contract and phase decisions
+
+- `ScreenerShellState` has exactly `dataMode`, `scope`, `status`, `reasonCode`,
+  and `missingDisplay`, in order, with the sole values `DEMO`,
+  `HISTORICAL_EQUITY_SCREENING`, `P8_DEFERRED`,
+  `NO_CANONICAL_HISTORICAL_SCREENING_FEATURE_CATALOG`, and `NA`.
+- This is typed application phase policy, labelled `Product availability policy
+  · not fixture evidence`. It intentionally has no version, timestamp, source,
+  provenance, license, disclaimer, filter, result, row, count, pagination,
+  sort, feature, metric, universe, or symbol field.
+- `NA` means the screening capability is not published. It does not mean zero
+  matches, a zero numeric value, completeness, or a successful empty query.
+- Any `searchParams` key, including unknown, recognized-looking, empty-value,
+  or repeated input, invokes Next `notFound()` before the supported state is
+  rendered. Browser acceptance owns the custom body and noindex metadata, not
+  a raw status assertion under streamed response semantics.
+- Calls, outcomes, event-time snapshots/contexts, master assets, maps/treemaps,
+  and market-board state remain in their own semantics and are never screening
+  features, candidates, matches, or proxy metrics.
+- P8 owns an eventual versioned historical feature/query read model; P3 owns
+  deterministic outcome/ranking calculations; P5 owns licensed observed
+  providers and rights review. This P2 route does not accelerate those phases.
+
+### Module structure
+
+- `apps/web/src/lib/screener-shell-state.ts` owns the pure typed, frozen five-
+  key application capability value without a fixture adapter, provider,
+  network call, raw JSON import, or canonical-document parser; its focused unit
+  test owns exact shape/value and absence checks.
+- `apps/web/src/app/screener/page.tsx` owns the query-free server route and
+  connects every nonempty search-parameter key directly to Next `notFound()`.
+  `screener-shell.tsx` owns the pure policy presentation, while `loading.tsx`,
+  `error.tsx`, `not-found.tsx`, and `page.test.tsx` own explicit route states,
+  mode-neutral unsupported requests, noindex behavior, and regression tests.
+- `apps/web/src/components/site-header.tsx` and scoped global styles own the
+  additive Screener position/current state, visible keyboard focus, and narrow
+  local-navigation containment.
+- `apps/web/e2e/screener.spec.ts` owns supported/unsupported requests,
+  navigation order/current state, exact evidence and absence gates, focus,
+  overflow, responsive, and runtime-error browser coverage.
+- Root P2 acceptance, implementation log, and the focused repository CI gate
+  own the no-schema/fixture/manifest/OpenAPI/API/Flyway and append-safe
+  production-source boundaries.
+
+### Route
+
+- `GET /screener` — server-rendered application-owned DEMO capability state;
+  no screening query, controls, results, or metrics are published.
+
+### Verification
+
+- Web ESLint and `tsc --noEmit` passed. Vitest passed 24 files and 255 tests;
+  the Next.js production build passed with `/screener` included.
+- Targeted Screener Playwright passed 9 of 9 tests. The full suite passed 51 of
+  51 tests across 1440, 1280, and 390 pixels. The production `next-env.d.ts`
+  import was restored, generated reports and test results were removed, ports
+  3000 and 3011 were idle, and the `apps/web` diff check passed.
+- Maven `verify` passed 109 of 109 tests with zero failures, errors, or skips.
+  PostgreSQL 17.10 Testcontainers executed all four migration tests with zero
+  skips, and Compose configuration validation passed.
+- The focused CI-identical Screener source/no-contract gate and all 11 embedded
+  workflow Python blocks passed syntax and execution. Repository validation
+  parsed 14 schemas and 32 fixture records; SnakeYAML parsing and
+  `git diff --check` passed.
+- In-app Browser QA against the production route confirmed clean visual and
+  semantic output, the exact eight-link primary navigation, and navigation
+  containment (`744 / 744`) inside the `1265`-pixel viewport. The policy region
+  exposed a visible `2px solid` keyboard focus outline, with zero form, input,
+  select, button, table, row, canvas, SVG, time, or metric elements.
+- The unsupported-query route rendered its mode-neutral body without capability
+  state leakage. The current Next 16.2.11 runtime emitted two identical
+  framework-owned noindex tags; no custom metadata was configured. The browser
+  tab and server were closed, port 3122 was idle, and generated artifacts were
+  absent.
+- Independent final review reported blocker `0`, HIGH `0`, and known false-
+  positive `0`; contracts, application state, query rejection, mode-neutral
+  unsupported behavior, phase boundaries, navigation, CI gates, and tests were
+  aligned, while generated/status state and ports were clean.
+
+### Deferred boundary
+
+- P8 retains historical bars, point-in-time screening facts/features, query
+  execution, pagination/sorting, saved screens, materialization, and regime
+  analytics. Any populated `/v1/screener` requires its own reviewed contract.
+- P3 retains outcome and leaderboard metrics; P5 retains observed provider
+  integration, licensing flags, and current display/redistribution rights.
+- Broader P2 remains open only for its still-undelivered surfaces; leaderboard
+  computation stays P3-owned, actual historical screening stays P8-owned, and
+  live/provider-backed publication stays P5-owned.

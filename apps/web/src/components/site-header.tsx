@@ -8,6 +8,7 @@ type SiteHeaderProps = {
     | "institutions"
     | "analysts"
     | "maps"
+    | "screener"
     | "methodology";
   dataMode: string;
 };
@@ -39,6 +40,9 @@ export function SiteHeader({ current, dataMode }: SiteHeaderProps) {
         </Link>
         <Link aria-current={current === "maps" ? "page" : undefined} href="/maps/sp500">
           Maps
+        </Link>
+        <Link aria-current={current === "screener" ? "page" : undefined} href="/screener">
+          Screener
         </Link>
         <Link aria-current={current === "methodology" ? "page" : undefined} href="/methodology">
           Methodology

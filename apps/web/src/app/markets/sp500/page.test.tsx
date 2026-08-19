@@ -23,7 +23,7 @@ describe("Sp500HistoryPage", () => {
       name: "Recorded S&P 500 forecast-call events.",
     })).toBeInTheDocument();
     const navigation = screen.getByRole("navigation", { name: "Primary navigation" });
-    expect(within(navigation).getAllByRole("link")).toHaveLength(7);
+    expect(within(navigation).getAllByRole("link")).toHaveLength(8);
     expect(within(navigation).getByRole("link", { name: "Market" })).toHaveAttribute(
       "aria-current",
       "page",
