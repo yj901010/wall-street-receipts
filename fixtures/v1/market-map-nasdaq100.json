@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureVersion": "v1",
+  "dataMode": "DEMO",
+  "generatedAt": "2026-08-19T00:00:00Z",
+  "provenance": {
+    "id": "fixture-market-map-nasdaq100-v1",
+    "sourceType": "LOCAL_SPECIFICATION",
+    "sourcePaths": [
+      "schemas/market-map.schema.json",
+      "quality/P2_ACCEPTANCE.md"
+    ],
+    "capturedAt": "2026-08-19T00:00:00Z",
+    "synthetic": true,
+    "licenseClass": "INTERNAL_DEMO"
+  },
+  "universe": "nasdaq100",
+  "mode": "ANALYST_CONSENSUS",
+  "asOf": "2026-08-19T00:00:00Z",
+  "metric": {
+    "name": "analystConsensus",
+    "unit": "score",
+    "minimum": -1.0,
+    "maximum": 1.0,
+    "missingDisplay": "NA"
+  },
+  "coverage": {
+    "kind": "SAMPLE",
+    "completeUniverse": false,
+    "cellCount": 0,
+    "weightBasis": "SYNTHETIC_RELATIVE"
+  },
+  "cells": [],
+  "disclaimer": "Known-empty Nasdaq 100 DEMO SAMPLE only; no full-index composition, official weight, analyst-consensus metric, or call count was observed, derived, or inferred."
+}

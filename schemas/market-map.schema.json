@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wall-street-receipts:schema:market-map:1.0.0",
+  "title": "Canonical Market Map Fixture",
+  "description": "A closed, point-in-time DEMO market-map shell with explicit incomplete sample coverage.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "fixtureVersion",
+    "dataMode",
+    "generatedAt",
+    "provenance",
+    "universe",
+    "mode",
+    "asOf",
+    "metric",
+    "coverage",
+    "cells",
+    "disclaimer"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "fixtureVersion": {
+      "type": "string",
+      "const": "v1"
+    },
+    "dataMode": {
+      "type": "string",
+      "const": "DEMO"
+    },
+    "generatedAt": {
+      "$ref": "#/$defs/utcInstant"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "universe": {
+      "type": "string",
+      "enum": [
+        "sp500",
+        "nasdaq100"
+      ]
+    },
+    "mode": {
+      "type": "string",
+      "const": "ANALYST_CONSENSUS"
+    },
+    "asOf": {
+      "$ref": "#/$defs/utcInstant"
+    },
+    "metric": {
+      "$ref": "#/$defs/metricDefinition"
+    },
+    "coverage": {
+      "$ref": "#/$defs/coverage"
+    },
+    "cells": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cell"
+      }
+    },
+    "disclaimer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "utcInstant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+      "description": "Canonical UTC instant with at most microsecond precision; finer values are rejected rather than rounded."
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sourceType",
+        "sourcePaths",
+        "capturedAt",
+        "synthetic",
+        "licenseClass"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "sourceType": {
+          "type": "string",
+          "const": "LOCAL_SPECIFICATION"
+        },
+        "sourcePaths": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "capturedAt": {
+          "$ref": "#/$defs/utcInstant"
+        },
+        "synthetic": {
+          "type": "boolean",
+          "const": true
+        },
+        "licenseClass": {
+          "type": "string",
+          "const": "INTERNAL_DEMO"
+        }
+      }
+    },
+    "metricDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "unit",
+        "minimum",
+        "maximum",
+        "missingDisplay"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "analystConsensus"
+        },
+        "unit": {
+          "type": "string",
+          "const": "score"
+        },
+        "minimum": {
+          "type": "number",
+          "const": -1
+        },
+        "maximum": {
+          "type": "number",
+          "const": 1
+        },
+        "missingDisplay": {
+          "type": "string",
+          "const": "NA"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "completeUniverse",
+        "cellCount",
+        "weightBasis"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "SAMPLE"
+        },
+        "completeUniverse": {
+          "type": "boolean",
+          "const": false
+        },
+        "cellCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "weightBasis": {
+          "type": "string",
+          "const": "SYNTHETIC_RELATIVE"
+        }
+      }
+    },
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assetId",
+        "ticker",
+        "sector",
+        "weight",
+        "metric",
+        "callCount",
+        "timestamp",
+        "dataMode",
+        "provenanceId"
+      ],
+      "properties": {
+        "assetId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "ticker": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24,
+          "pattern": "^[A-Z0-9][A-Z0-9.-]{0,23}$"
+        },
+        "sector": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "weight": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100
+        },
+        "metric": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": -1,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "callCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timestamp": {
+          "$ref": "#/$defs/utcInstant"
+        },
+        "dataMode": {
+          "type": "string",
+          "const": "DEMO"
+        },
+        "provenanceId": {
+          "$ref": "#/$defs/identifier"
+        }
+      }
+    }
+  }
+}

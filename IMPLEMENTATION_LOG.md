@@ -291,5 +291,93 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
 ### Remaining P2 work
 
 - Replace the dashboard's display-ready hard-coded provider data with canonical fixture-backed read models and complete its map, event, and honest known-unavailable ranking previews.
-- Complete the S&P 500 history, institution and analyst leaderboard shells, screener shell, market board, and S&P 500 map shell without inventing P3 performance aggregates.
-- Extend the shared 1440/1280/390 Playwright gate as each P2 route lands. The next planned slice is the fixture-backed S&P 500 analyst-consensus map shell.
+- Complete the S&P 500 history, institution and analyst leaderboard shells, screener shell, and market board without inventing P3 performance aggregates.
+- Continue the shared 1440/1280/390 Playwright gate as each remaining P2 route lands.
+
+## P2 — Multiple market-map shells
+
+Status: complete for this vertical slice; the broader P2 phase remains in progress
+
+### Scope
+
+- Add independent fixture-backed S&P 500 and Nasdaq 100 analyst-consensus map
+  shells while keeping P2 data explicitly synthetic, incomplete, and DEMO.
+- Preserve the existing S&P cell order and numeric payload, then add closed
+  coverage metadata and honest copy that rejects full-index, official-weight,
+  observed-consensus, and canonical-call-derived interpretations.
+- Append a separate canonical Nasdaq 100 known-empty fixture rather than copying
+  S&P cells or inventing index membership, weights, metrics, or call counts.
+- Keep the slice outside API, OpenAPI, database migration, persistence write,
+  provider network, calculation, and materialized map-backend scope.
+
+### Contract and fixture decisions
+
+- `schemas/market-map.schema.json` is the closed Draft 2020-12 whole-document
+  contract for exactly `sp500` and `nasdaq100` in P2 `ANALYST_CONSENSUS` mode.
+- Both fixtures require exact coverage
+  `{kind: SAMPLE, completeUniverse: false, cellCount: cells.length,
+  weightBasis: SYNTHETIC_RELATIVE}`. Synthetic relative fixture weights are map
+  geometry inputs, not official index weights.
+- The S&P fixture remains the exact NVDA/MSFT/AAPL three-cell numeric projection;
+  AAPL's missing metric remains JSON null and must render as `NA`.
+- `market-map-nasdaq100.json` has zero cells and an explicit known-empty
+  disclaimer. It adds no unsupported NDX identity to master data and never falls
+  back to the populated S&P fixture.
+- Map provenance now references the tracked canonical schema and P2 acceptance
+  contract and records the 2026-08-19 recapture time so a clean clone can
+  reproduce the evidence boundary without the ignored planning-doc tree. The
+  manifest advances after both catalog members while cell event timestamps stay
+  unchanged.
+- `quality/P2_ACCEPTANCE.md` owns the exact contract, point-in-time, provenance,
+  responsive, accessibility, interaction, regression, and later-phase deferral
+  gates for both routes.
+
+### Module structure
+
+- `apps/web/src/lib/providers/market-map-provider.ts` defines the read-only port;
+  `fixture-market-map-provider.ts` is the strict two-document fixture adapter
+  with focused provider tests.
+- `apps/web/src/lib/market-map-engine.ts` keeps deterministic presentation logic
+  pure; `apps/web/src/components/market-map.tsx` is the shared evidence-first map
+  surface.
+- `apps/web/src/app/maps/[universe]` owns the dynamic server route plus loading,
+  error, not-found, and unit-test boundaries; `apps/web/e2e/market-maps.spec.ts`
+  owns the responsive browser regression matrix.
+- `schemas/market-map.schema.json`, the S&P and Nasdaq fixture documents, and the
+  dedicated repository-contract CI gate own the canonical root contract and
+  exact evidence projection.
+
+### Routes
+
+- `GET /maps/sp500` — server-rendered limited three-cell DEMO SAMPLE.
+- `GET /maps/nasdaq100` — server-rendered canonical known-empty DEMO SAMPLE.
+
+### Verification
+
+- The CI-identical Draft 2020-12 market-map gate passed against jsonschema
+  4.23.0. It validated the exact two-file catalog, manifest order, closed schema,
+  locked S&P numeric projection, Nasdaq empty state, master-data resolution,
+  coverage/count equality, metric/null policy, UTC bounds, provenance
+  consistency, deterministic order, and negative mutations.
+- Root validation parsed 10 fixture JSON documents and 12 schema JSON documents,
+  verified nine-file manifest parity, parsed the CI YAML, compiled all five
+  embedded CI Python blocks, and passed `git diff --check`.
+- Web ESLint passed with zero warnings; Vitest passed 10 files and 55 tests; the
+  Next.js production build passed with `/maps/sp500` and `/maps/nasdaq100`
+  statically rendered alongside the existing routes.
+- Playwright Chromium passed 18 of 18 tests across 1440, 1280, and 390 pixels,
+  including exact SAMPLE/DEMO evidence, canonical Nasdaq known-empty behavior,
+  keyboard focus, page/local overflow containment, and zero console warnings,
+  console errors, or page errors.
+- Maven `verify` passed 109 of 109 tests. PostgreSQL 17 Testcontainers executed
+  all four tests with zero skips, confirming that the fixture-only web slice did
+  not regress the API or persistence boundary.
+- Compose configuration passed with PostgreSQL as the only stateful runtime.
+
+### Deferred boundary
+
+- P3 retains deterministic scoring and performance calculations. P6 retains
+  stock search/detail and its generic map-cell drill-down. P7 retains complete
+  sourced index composition, official geometry inputs, additional map modes,
+  filters, tooltips, and persistent/materialized read models. P5 retains real
+  providers.

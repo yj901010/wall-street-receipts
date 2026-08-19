@@ -2,15 +2,15 @@
   "schemaVersion": "1.0.0",
   "fixtureVersion": "v1",
   "dataMode": "DEMO",
-  "generatedAt": "2026-08-18T00:00:00Z",
+  "generatedAt": "2026-08-19T00:00:00Z",
   "provenance": {
     "id": "fixture-market-map-v1",
     "sourceType": "LOCAL_SPECIFICATION",
     "sourcePaths": [
-      "docs/fixtures/map-sp500.json",
-      "docs/schemas/map-cell.schema.json"
+      "schemas/market-map.schema.json",
+      "quality/P2_ACCEPTANCE.md"
     ],
-    "capturedAt": "2026-08-18T00:00:00Z",
+    "capturedAt": "2026-08-19T00:00:00Z",
     "synthetic": true,
     "licenseClass": "INTERNAL_DEMO"
   },
@@ -23,6 +23,12 @@
     "minimum": -1.0,
     "maximum": 1.0,
     "missingDisplay": "NA"
+  },
+  "coverage": {
+    "kind": "SAMPLE",
+    "completeUniverse": false,
+    "cellCount": 3,
+    "weightBasis": "SYNTHETIC_RELATIVE"
   },
   "cells": [
     {
@@ -59,5 +65,5 @@
       "provenanceId": "fixture-market-map-v1"
     }
   ],
-  "disclaimer": "Synthetic DEMO metric values only; a null metric must render as NA, not zero or bearish."
+  "disclaimer": "Limited three-cell DEMO SAMPLE only; it is not the full S&P 500 composition. Sector labels, weights, analyst-consensus metrics, and call counts are synthetic fixture values. Weights are not official index weights, and no metric or call count was observed or derived from canonical calls. A null metric must render as NA, not zero or bearish."
 }
