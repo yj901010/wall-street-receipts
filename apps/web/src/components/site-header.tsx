@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 type SiteHeaderProps = {
-  current: "dashboard" | "calls" | "institutions" | "maps" | "methodology";
+  current: "dashboard" | "calls" | "institutions" | "analysts" | "maps" | "methodology";
   dataMode: string;
 };
 
@@ -23,6 +23,9 @@ export function SiteHeader({ current, dataMode }: SiteHeaderProps) {
           href="/institutions"
         >
           Institutions
+        </Link>
+        <Link aria-current={current === "analysts" ? "page" : undefined} href="/analysts">
+          Analysts
         </Link>
         <Link aria-current={current === "maps" ? "page" : undefined} href="/maps/sp500">
           Maps

@@ -934,21 +934,25 @@ button:hover,
   color: var(--color-warning);
 }
 
-.institution-directory {
+.institution-directory,
+.analyst-directory {
   margin-top: var(--space-5);
 }
 
-.institution-directory-heading {
+.institution-directory-heading,
+.analyst-directory-heading {
   align-items: end;
 }
 
-.institution-directory-heading > span {
+.institution-directory-heading > span,
+.analyst-directory-heading > span {
   color: var(--color-text-muted);
   font-family: var(--font-mono);
   font-size: 11px;
 }
 
-.institution-directory-policy {
+.institution-directory-policy,
+.analyst-directory-policy {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
@@ -957,13 +961,15 @@ button:hover,
   background: var(--color-surface-muted);
 }
 
-.institution-directory-policy p {
+.institution-directory-policy p,
+.analyst-directory-policy p {
   margin: 0;
   color: var(--color-text-muted);
   font-size: 12px;
 }
 
-.institution-directory-policy .institution-policy-label {
+.institution-directory-policy .institution-policy-label,
+.analyst-directory-policy .analyst-policy-label {
   grid-column: 1 / -1;
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--color-line);
@@ -975,11 +981,13 @@ button:hover,
   text-transform: uppercase;
 }
 
-.institution-directory-policy strong {
+.institution-directory-policy strong,
+.analyst-directory-policy strong {
   color: var(--color-text);
 }
 
-.institution-source-evidence {
+.institution-source-evidence,
+.analyst-source-evidence {
   display: grid;
   grid-template-columns: repeat(3, minmax(130px, 0.5fr)) minmax(280px, 1.5fr);
   gap: var(--space-4);
@@ -987,16 +995,20 @@ button:hover,
   border-bottom: 1px solid var(--color-line);
 }
 
-.institution-source-evidence > div {
+.institution-source-evidence > div,
+.analyst-source-evidence > div {
   min-width: 0;
 }
 
 .institution-source-evidence span,
-.institution-source-evidence strong {
+.institution-source-evidence strong,
+.analyst-source-evidence span,
+.analyst-source-evidence strong {
   display: block;
 }
 
-.institution-source-evidence span {
+.institution-source-evidence span,
+.analyst-source-evidence span {
   margin-bottom: 3px;
   color: var(--color-text-muted);
   font-size: 10px;
@@ -1005,19 +1017,22 @@ button:hover,
   text-transform: uppercase;
 }
 
-.institution-source-evidence strong {
+.institution-source-evidence strong,
+.analyst-source-evidence strong {
   font-family: var(--font-mono);
   font-size: 11px;
   overflow-wrap: anywhere;
 }
 
-.institution-source-paths ul {
+.institution-source-paths ul,
+.analyst-source-paths ul {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.institution-source-paths li {
+.institution-source-paths li,
+.analyst-source-paths li {
   overflow-wrap: anywhere;
   color: var(--color-text);
   font-size: 11px;
@@ -1027,11 +1042,17 @@ button:hover,
   min-width: 1480px;
 }
 
-.institution-table td {
+.analyst-table {
+  min-width: 1220px;
+}
+
+.institution-table td,
+.analyst-table td {
   vertical-align: top;
 }
 
-.institution-table .institution-recorded-state {
+.institution-table .institution-recorded-state,
+.analyst-table .analyst-recorded-state {
   color: var(--color-warning);
 }
 
@@ -1677,7 +1698,9 @@ button:hover,
   }
 
   .institution-directory-policy,
-  .institution-source-evidence {
+  .institution-source-evidence,
+  .analyst-directory-policy,
+  .analyst-source-evidence {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -1772,7 +1795,9 @@ button:hover,
   }
 
   .institution-directory-policy,
-  .institution-source-evidence {
+  .institution-source-evidence,
+  .analyst-directory-policy,
+  .analyst-source-evidence {
     grid-template-columns: 1fr;
   }
 
@@ -1919,7 +1944,8 @@ button:hover,
   }
 
   .calls-table-scroll,
-  .institution-table-scroll {
+  .institution-table-scroll,
+  .analyst-table-scroll {
     overflow: visible;
   }
 

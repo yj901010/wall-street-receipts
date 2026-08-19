@@ -676,3 +676,92 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
   require their own later contracts.
 - Screener, S&P history, realtime refresh, search, pagination, saved filters,
   and persistent/materialized directory read models remain open.
+
+## P2 — Analyst identity directory
+
+Status: complete for this vertical slice; the broader P2 phase remains in progress
+
+### Scope
+
+- Add a server-rendered `/analysts` DEMO identity directory backed only by the
+  existing canonical master-data fixture.
+- Preserve exact root provenance and point-in-time analyst identity fields while
+  distinguishing captured fixture-active state from verified current-world
+  employment or activity.
+- Publish no employment, institution relationship, call preview/count/
+  existence claim, metric, ranking, performance, or detail projection. Permit
+  only explicitly labelled filter navigation into the existing call ledger.
+- Keep every leaderboard aggregate and ordering decision in P3.
+
+### Contract and fixture decisions
+
+- No schema, fixture, manifest member, API/OpenAPI surface, migration,
+  persistence write, or network provider is added.
+- `AnalystDirectorySnapshot` projects only `schemaVersion`, `fixtureVersion`,
+  `dataMode`, `generatedAt`, exact root `provenance`, and seven-field analyst
+  identities from `master-data.json`.
+- The generic strict mapper remains valid-empty and append-safe, sorts by full
+  Unicode code point using canonical name then analyst ID, and never mutates
+  source order. Repository CI locks the current Demo Analyst A then Demo Analyst
+  B projection without moving those literals into production code.
+- Raw institutions, analyst employments, and assets remain required arrays for
+  closed envelope validation but do not enter the output.
+- Since the master fixture has no disclaimer, presentation uses clearly
+  labelled product-policy copy without attributing it to fixture evidence.
+
+### Module structure
+
+- `apps/web/src/lib/providers/analyst-directory-provider.ts` owns the read-only
+  port and snapshot types; `fixture-analyst-directory-provider.ts` and its
+  focused test own strict master mapping, validation, deterministic order, and
+  malformed/empty/append/same-name regressions.
+- `apps/web/src/app/analysts/analyst-directory.tsx` owns pure identity evidence,
+  product-policy copy, empty presentation, and the filter-only ledger action.
+  `page.tsx`, `loading.tsx`, `error.tsx`, and `page.test.tsx` own the SSR route,
+  route states, exact current evidence, and relationship/performance boundary.
+- `apps/web/src/components/site-header.tsx` and scoped global styles own primary
+  navigation, visible focus, dense-table containment, and responsive layout.
+- `apps/web/e2e/analysts.spec.ts` owns responsive, focus, overflow, evidence,
+  state, and runtime-error browser coverage.
+- Root P2 acceptance and the shared master-data identity CI gate own current
+  fixture exactness, source isolation, semantic negatives, and the no-
+  relationship/no-leaderboard boundary.
+
+### Route
+
+- `GET /analysts` — server-rendered synthetic DEMO analyst identity and root
+  provenance directory. No analyst detail route is added.
+
+### Verification
+
+- The CI-identical shared master-data identity/source-isolation gate passed for
+  both directory adapters, current exact records, semantic negatives, valid
+  empty/later appends, source non-mutation, and same-name analyst ID tie-break.
+  All eight workflow Python blocks compiled, the workflow parsed with
+  SnakeYAML, and `git diff --check` passed.
+- Web ESLint and `tsc --noEmit` passed. Vitest passed 18 files and 183 tests,
+  including closed projection, malformed evidence, valid empty/later append,
+  full Unicode order, same-name identity, and route-state coverage.
+- The production Next.js build passed with `/analysts` included.
+- Targeted analyst Playwright passed 6 of 6 tests. The full Playwright suite
+  passed 30 of 30 tests across 1440, 1280, and 390 pixels with zero captured
+  browser console warnings/errors or page errors on supported flows.
+- An in-app browser desktop production-build check rendered exact provenance,
+  policy, and analyst-table evidence with zero page overflow. The table kept
+  its 1201/1220 horizontal extent local, exposed a visible 2 px solid keyboard
+  focus outline, and the Demo Analyst A filter navigated to
+  `/calls?analystId=analyst-demo-a` with the Analyst select value and `Analyst
+  calls` heading intact.
+- Maven `verify` passed 109 of 109 tests with zero failures, errors, or skips;
+  PostgreSQL 17.10 Testcontainers executed all four migration tests with zero
+  skips. Compose configuration validation passed.
+- Independent final review found zero blockers, high-severity findings, or
+  known false-positive gates; repeated checks and generated/temp audit were
+  clean.
+
+### Deferred boundary
+
+- P3 retains analyst/institution leaderboard calculations, metrics, and order.
+- Analyst detail, aliases/history, employment/institution relationships, call
+  projections/counts, holdings, search, pagination, live providers, and
+  persistent directory read models remain open.
