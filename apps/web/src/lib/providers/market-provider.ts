@@ -1,29 +1,32 @@
 import type { DataMode } from "@/lib/data-mode";
+import type { AnalystCallView } from "./calls-provider";
+import type { MarketTreemapSnapshot } from "./market-treemap-provider";
 
-export type MarketInstrument = {
-  symbol: string;
-  name: string;
-  price: string | null;
-  changePercent: string | null;
-};
-
-export type AnalystCallSummary = {
-  id: string;
-  eventTime: string;
-  institution: string;
-  asset: string;
-  direction: "BULLISH" | "NEUTRAL" | "BEARISH";
-  previousTarget: string | null;
-  target: string | null;
-  sourceTitle: string;
-};
-
-export type DashboardSnapshot = {
+export type DashboardLatestCalls = {
+  items: readonly AnalystCallView[];
   asOf: string;
   dataMode: DataMode;
   source: string;
-  instruments: MarketInstrument[];
-  calls: AnalystCallSummary[];
+  disclaimer: string;
+};
+
+export type DashboardUnavailableSection = {
+  status: "NOT_PUBLISHED";
+  missingDisplay: "NA";
+};
+
+export type DashboardDeferredSection = {
+  status: "P3_DEFERRED";
+  missingDisplay: "NA";
+};
+
+export type DashboardSnapshot = {
+  dataMode: DataMode;
+  latestCalls: DashboardLatestCalls;
+  mapPreviews: readonly [MarketTreemapSnapshot, MarketTreemapSnapshot];
+  marketBoard: DashboardUnavailableSection;
+  eventCalendar: DashboardUnavailableSection;
+  ranking: DashboardDeferredSection;
 };
 
 export interface MarketProvider {

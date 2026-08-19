@@ -1,5 +1,6 @@
 import type { MarketProvider } from "./market-provider";
 import { FixtureMarketProvider } from "./fixture-market-provider";
+import { callsProvider as createCallsProvider } from "./fixture-calls-provider";
 import type { MethodologyProvider } from "./methodology-provider";
 import { FixtureMethodologyProvider } from "./fixture-methodology-provider";
 import type { MarketMapProvider } from "./market-map-provider";
@@ -40,6 +41,13 @@ export {
   isMarketMapUniverse,
   MARKET_MAP_UNIVERSES,
 } from "./market-map-provider";
+export type {
+  DashboardDeferredSection,
+  DashboardLatestCalls,
+  DashboardSnapshot,
+  DashboardUnavailableSection,
+  MarketProvider,
+} from "./market-provider";
 export { FixtureMarketTreemapProvider } from "./fixture-market-treemap-provider";
 export {
   isMarketTreemapUniverse,
@@ -73,7 +81,7 @@ export function marketProvider(): MarketProvider {
     throw new Error(`Unsupported market provider: ${configuredProvider}`);
   }
 
-  return new FixtureMarketProvider();
+  return new FixtureMarketProvider(createCallsProvider(), marketTreemapProvider());
 }
 
 export function methodologyProvider(): MethodologyProvider {

@@ -484,3 +484,102 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
   sourced complete-universe membership/classification, official geometry,
   live/observed price mode, filters, rich tooltips, zoom/history, additional map
   modes, and persistent/materialized read models.
+
+## P2 — Dashboard evidence composition
+
+Status: complete for this vertical slice; the broader P2 phase remains in progress
+
+### Scope
+
+- Replace the `/` dashboard's display-ready hard-coded market and call payload
+  with a deterministic composition of the existing calls and PRICE_CHANGE
+  treemap provider ports.
+- Populate only the latest canonical call ledger and the S&P 500/Nasdaq 100
+  PRICE_CHANGE previews. Preserve each section's own timestamp, source,
+  provenance, coverage, disclaimer, data mode, and null semantics.
+- Publish no market board or global event calendar from call-event snapshots or
+  call-bound context. Keep ranking explicitly deferred until P3 provides
+  deterministic aggregates.
+- Preserve all existing canonical fixtures, schemas, API responses, database
+  migrations, and completed routes.
+
+### Contract decisions
+
+- `DashboardSnapshot` has no global as-of/source. It contains DEMO mode,
+  section-local latest-call metadata, two complete canonical map previews, and
+  three closed state objects: market board `NOT_PUBLISHED`, event calendar
+  `NOT_PUBLISHED`, and ranking `P3_DEFERRED`, each with `NA` missing display.
+- Latest calls use the existing page-zero, size-three, event-time-descending
+  query with call-ID ascending tie order. The current fixture projects call 002,
+  call 001, then call 003 without duplicating their fields in dashboard source.
+- Map previews are exactly S&P 500 followed by Nasdaq 100 in PRICE_CHANGE mode.
+  They remain incomplete, synthetic three-cell DEMO samples and retain their
+  independent as-of/provenance evidence.
+- Immutable market snapshots remain evidence frozen at individual call event
+  times; they are not a current/global quote board. EventContext schedules stay
+  bound to their owning call and are not a global upcoming calendar.
+- No ranking row, metric, order, winner, call-count proxy, or outcome placeholder
+  is published. P3 remains the sole owner of performance aggregation.
+- The shared calls adapter now parses canonical UTC instants into integer
+  microseconds and normalizes offset query bounds before comparing them. Latest
+  call sorting and inclusive-`from`/exclusive-`to` range filtering therefore do
+  not rely on lexicographic timestamp order or JavaScript's millisecond-only
+  `Date` precision; whole-second, fractional, equivalent-fraction, and offset
+  boundary regressions are covered explicitly.
+- `quality/P2_ACCEPTANCE.md` owns the exact projection, claim, null, state,
+  accessibility, responsive, regression, and later-phase boundaries. No new
+  dashboard fixture/schema, API/OpenAPI surface, or Flyway migration is added.
+
+### Module structure
+
+- `apps/web/src/lib/providers/market-provider.ts` owns the dashboard projection
+  port; `fixture-market-provider.ts` composes injected `CallsProvider` and
+  `MarketTreemapProvider` instances without importing raw fixtures.
+- `apps/web/src/lib/providers/fixture-calls-provider.ts` owns lossless UTC
+  microsecond ordering and range comparison for the shared call projection;
+  its focused tests lock whole-second/fractional and offset-bound behavior.
+- `apps/web/src/components/dashboard-view.tsx` owns pure evidence-first
+  presentation and the three unavailable/deferred states.
+- `apps/web/src/app/page.tsx` remains the server-rendered route boundary;
+  route-level loading/error files and focused component/provider tests own the
+  fail-closed states.
+- `apps/web/e2e/dashboard.spec.ts` owns keyboard, navigation, state, responsive,
+  overflow, and runtime-error browser coverage for the composed route.
+- Root P2 acceptance and the focused repository source-boundary check own the
+  no-hardcoded-display, no-raw-fixture-import, and no-cross-semantic-promotion
+  gates without duplicating existing fixture schema validation.
+
+### Route
+
+- `GET /` — server-rendered DEMO evidence composition with latest calls, both
+  PRICE_CHANGE previews, and honest market/calendar/ranking states.
+
+### Verification
+
+- The focused dashboard repository source-boundary check passed, confirming the
+  injected calls/treemap composition and absence of raw dashboard fixture
+  imports, call-bound snapshot/context promotion, duplicated call literals, and
+  the obsolete hard-coded market display values.
+- CI YAML parsing passed, all seven embedded Python blocks compiled, and
+  `git diff --check` passed.
+- Web ESLint and TypeScript checks passed. Vitest passed 14 files and 127 tests,
+  including provider composition, malformed/mixed evidence rejection, exact
+  unavailable/deferred states, UTC microsecond call ordering/ranges, and route
+  presentation. The production Next.js build passed.
+- The full Playwright suite passed 18 of 18 tests across 1440, 1280, and 390
+  pixels, covering the dashboard alongside the existing responsive routes.
+- Independent final review found no blocker, high-severity issue, or known
+  false-positive in the dashboard provider, presentation, or test gates.
+- Maven `verify` passed 109 of 109 tests with zero failures, errors, or skips.
+  PostgreSQL 17 Testcontainers executed all four migration tests with zero
+  skips.
+- Compose configuration passed with no output or errors.
+
+### Deferred boundary
+
+- P3 retains ranking/performance calculations; P5 retains observed/licensed
+  current market quotes and a coherent published market board. A future global
+  calendar requires its own sourced catalog rather than call-bound context.
+- Institution/analyst leaderboards, the screener shell, S&P history, realtime
+  refresh, personalized dashboard layout, and persistent/materialized dashboard
+  read models remain open.
