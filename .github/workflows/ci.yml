@@ -875,6 +875,7 @@ jobs:
         run: |
           python <<'PYTHON'
           import json
+          import re
           from collections import defaultdict
           from datetime import datetime
           from pathlib import Path
@@ -977,8 +978,37 @@ jobs:
               raise SystemExit("call-outcomes fixture version mismatch")
           if fixture["dataMode"] != "DEMO":
               raise SystemExit("call-outcomes fixture must use DEMO mode")
-          provenance_id = fixture["provenance"]["id"]
+          expected_disclaimer = (
+              "Synthetic DEMO model records only; no outcome metric has been calculated or invented."
+          )
+          if fixture["disclaimer"] != expected_disclaimer:
+              raise SystemExit("Methodology registry must retain the no-calculation disclaimer")
+
+          provenance = fixture["provenance"]
+          provenance_fields = {
+              "id", "sourceType", "sourcePaths", "capturedAt", "synthetic", "licenseClass",
+          }
+          if set(provenance) != provenance_fields:
+              raise SystemExit("Methodology registry provenance envelope is not exact")
+          if (
+              provenance["id"] != "fixture-call-outcomes-v1"
+              or provenance["sourceType"] != "LOCAL_SPECIFICATION"
+              or provenance["synthetic"] is not True
+              or provenance["licenseClass"] != "INTERNAL_DEMO"
+          ):
+              raise SystemExit("Methodology registry must retain synthetic DEMO provenance")
+          required_source_paths = {
+              "schemas/scoring-methodology.schema.json",
+              "schemas/call-outcome.schema.json",
+          }
+          if not required_source_paths.issubset(set(provenance["sourcePaths"])):
+              raise SystemExit("Methodology registry provenance omits its canonical schemas")
+
+          provenance_id = provenance["id"]
           fixture_generated_at = instant(fixture["generatedAt"])
+          provenance_captured_at = instant(provenance["capturedAt"])
+          if provenance_captured_at > fixture_generated_at:
+              raise SystemExit("Methodology registry provenance is later than fixture generation")
 
           manifest = load_json(fixture_dir / "manifest.json")
           declared = {entry["path"] for entry in manifest["files"]}
@@ -996,6 +1026,35 @@ jobs:
           outcomes = fixture["outcomes"]
           if len(methodologies) != 2 or len(outcomes) != 4:
               raise SystemExit("DEMO fixture must contain exactly 2 methodologies and 4 outcomes")
+
+          expected_methodology_evidence = [
+              {
+                  "methodologyId": "standard-call-outcome",
+                  "methodologyVersion": "1.0.0",
+                  "schemaVersion": "1.0.0",
+                  "definitionHash": "03af803fd61c21b86e1897d006e6cf4f92f28ce627b06eda13b319ebfa8a07e2",
+                  "status": "MODEL_ONLY",
+                  "effectiveAt": "2026-08-10T00:00:00Z",
+                  "dataMode": "DEMO",
+                  "capturedAt": "2026-08-10T00:00:00Z",
+                  "provenanceId": "fixture-call-outcomes-v1",
+              },
+              {
+                  "methodologyId": "standard-call-outcome",
+                  "methodologyVersion": "2.0.0",
+                  "schemaVersion": "1.0.0",
+                  "definitionHash": "256056d7cb2b292a1ec0bd7b905f856134bb38851a65b8a2fceaca41489db3e8",
+                  "status": "MODEL_ONLY",
+                  "effectiveAt": "2026-08-18T00:00:00Z",
+                  "dataMode": "DEMO",
+                  "capturedAt": "2026-08-18T00:00:00Z",
+                  "provenanceId": "fixture-call-outcomes-v1",
+              },
+          ]
+          if methodologies != expected_methodology_evidence:
+              raise SystemExit(
+                  "Methodology registry evidence or deterministic 1.0.0 -> 2.0.0 order changed"
+              )
 
           def require_schema_rejection(candidate, label):
               try:
@@ -1029,9 +1088,13 @@ jobs:
               if item["schemaVersion"] != "1.0.0" or item["dataMode"] != "DEMO":
                   raise SystemExit("Methodology schema version or data mode mismatch")
               if item["provenanceId"] != provenance_id or item["status"] != "MODEL_ONLY":
-                  raise SystemExit("P1 methodology must retain DEMO model-only provenance")
+                  raise SystemExit("Methodology must retain DEMO model-only provenance")
+              if re.fullmatch(r"[0-9a-f]{64}", item["definitionHash"]) is None:
+                  raise SystemExit("Methodology definition hash must be lowercase SHA-256")
               if instant(item["effectiveAt"]) > instant(item["capturedAt"]):
                   raise SystemExit("Methodology capture precedes its effective time")
+              if instant(item["capturedAt"]) > provenance_captured_at:
+                  raise SystemExit("Methodology capture is later than provenance capture")
               if instant(item["capturedAt"]) > fixture_generated_at:
                   raise SystemExit("Methodology capture is later than fixture generation")
               key = (item["methodologyId"], item["methodologyVersion"])
@@ -1068,6 +1131,7 @@ jobs:
           natural_inputs = set()
           by_lineage = defaultdict(list)
           fixture_statuses = set()
+          referenced_methodology_keys = set()
 
           for item in outcomes:
               outcome_validator.validate(item)
@@ -1133,6 +1197,7 @@ jobs:
               methodology = methodology_by_key.get(methodology_key)
               if methodology is None:
                   raise SystemExit(f"Outcome references an unknown methodology: {outcome_id}")
+              referenced_methodology_keys.add(methodology_key)
               if item["methodologyDefinitionHash"] != methodology["definitionHash"]:
                   raise SystemExit(f"Outcome methodology hash mismatch: {outcome_id}")
               if instant(methodology["effectiveAt"]) > outcome_processing_time:
@@ -1175,7 +1240,9 @@ jobs:
               by_lineage[lineage_key].append(item)
 
           if fixture_statuses != {"PENDING", "INCOMPLETE"}:
-              raise SystemExit("P1 model fixtures must exercise only PENDING and INCOMPLETE outcomes")
+              raise SystemExit("DEMO model fixtures must exercise only PENDING and INCOMPLETE outcomes")
+          if referenced_methodology_keys != set(methodology_by_key):
+              raise SystemExit("Every methodology registry version must retain outcome hash evidence")
           foreign_ids = set(calls) | set(snapshots) | set(revisions) | methodology_ids
           if outcome_ids & foreign_ids:
               raise SystemExit("Outcome identity collides with another canonical identity kind")
@@ -1234,6 +1301,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Chromium and system dependencies
+        run: pnpm --dir apps/web exec playwright install --with-deps chromium
+
       - name: Lint
         run: pnpm --dir apps/web lint
 
@@ -1245,6 +1315,12 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
           NEXT_PUBLIC_DATA_MODE: DEMO
         run: pnpm --dir apps/web build
+
+      - name: End-to-end test
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+          NEXT_PUBLIC_DATA_MODE: DEMO
+        run: pnpm --dir apps/web test:e2e
 
   api:
     name: API

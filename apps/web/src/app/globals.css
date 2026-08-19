@@ -120,7 +120,7 @@ p {
 h1 {
   max-width: 720px;
   margin-bottom: 0;
-  font-size: clamp(26px, 3vw, 38px);
+  font-size: clamp(26px, 3vw, 32px);
   line-height: 1.12;
   letter-spacing: -0.03em;
 }
@@ -203,6 +203,10 @@ dd {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(250px, 1fr);
   gap: var(--space-5);
+}
+
+.content-grid > * {
+  min-width: 0;
 }
 
 .data-section,
@@ -302,12 +306,17 @@ tbody tr:hover {
 }
 
 .calls-shell,
-.call-detail-shell {
+.call-detail-shell,
+.methodology-shell {
   display: grid;
   gap: var(--space-5);
 }
 
 .calls-heading {
+  align-items: start;
+}
+
+.methodology-heading {
   align-items: start;
 }
 
@@ -613,6 +622,36 @@ button:hover,
   border-right: 0;
 }
 
+.methodology-registry {
+  min-width: 0;
+}
+
+.methodology-guide {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.methodology-table {
+  min-width: 1500px;
+}
+
+.methodology-status {
+  color: var(--color-warning);
+}
+
+.definition-hash {
+  min-width: 520px;
+}
+
+.methodology-note {
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-line);
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -677,12 +716,35 @@ button:hover,
 
 @media (max-width: 900px) {
   .site-header {
+    grid-template-areas:
+      "wordmark mode"
+      "navigation navigation";
     grid-template-columns: 1fr auto;
+    grid-template-rows: 52px 40px;
+    min-height: 92px;
     padding: 0 24px;
   }
 
+  .wordmark {
+    grid-area: wordmark;
+  }
+
+  .mode-badge {
+    grid-area: mode;
+  }
+
   .site-header nav {
-    display: none;
+    grid-area: navigation;
+    display: flex;
+    max-width: calc(100vw - 48px);
+    overflow-x: auto;
+    border-top: 1px solid var(--color-line);
+  }
+
+  .site-header nav a {
+    min-width: auto;
+    padding: 0 var(--space-4);
+    white-space: nowrap;
   }
 
   .page-heading,
@@ -721,8 +783,12 @@ button:hover,
 
 @media (max-width: 520px) {
   .site-header {
-    min-height: 52px;
+    min-height: 92px;
     padding: 0 16px;
+  }
+
+  .site-header nav {
+    max-width: calc(100vw - 32px);
   }
 
   .page-shell {
@@ -854,6 +920,12 @@ button:hover,
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
+  }
+
+  .methodology-table .definition-hash {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-all;
   }
 
   .state-page {

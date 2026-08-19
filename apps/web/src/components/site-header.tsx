@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 type SiteHeaderProps = {
-  current: "dashboard" | "calls";
+  current: "dashboard" | "calls" | "methodology";
   dataMode: string;
 };
 
@@ -18,7 +18,9 @@ export function SiteHeader({ current, dataMode }: SiteHeaderProps) {
         <Link aria-current={current === "calls" ? "page" : undefined} href="/calls">
           Calls
         </Link>
-        <Link href="/#methodology">Methodology</Link>
+        <Link aria-current={current === "methodology" ? "page" : undefined} href="/methodology">
+          Methodology
+        </Link>
       </nav>
       <span className="mode-badge">{dataMode}</span>
     </header>
