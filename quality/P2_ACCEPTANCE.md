@@ -3,9 +3,10 @@
 Current status: the methodology-registry, multiple market-map shell,
 sector/industry PRICE_CHANGE treemap, dashboard evidence-composition,
 institution and analyst identity directories, known-unavailable market-board
-publication state, and recorded S&P 500 forecast-call history vertical slices
-are complete. These checks close only delivered P2 slices. Leaderboard,
-screener, full-universe map, and production market-mode work stays open.
+publication state, recorded S&P 500 forecast-call history, and application-
+owned screener known-deferred shell vertical slices are complete. These checks
+close only delivered P2 slices. Leaderboard, full-universe map, and production
+market-mode work stays open; actual historical screening remains P8 work.
 
 The methodology registry is a read-only, fixture-backed explanation surface. It
 publishes the immutable definition identities already present in
@@ -689,6 +690,96 @@ asset surfaces. P8 retains historical bars, materialized screener features, and
 large-scale history. Pagination/search, consensus, a chart, snapshot joins,
 outcome joins, provider-completeness claims, and persistent/materialized history
 read models are not bootstrapped by this P2 fixed-page event history.
+
+## Screener known-deferred shell boundary
+
+- The public web route is `GET /screener`. It publishes application capability
+  state only; it is not a stock screen, historical query, search result, ranked
+  list, or canonical data document.
+- `ScreenerShellState` has exactly `dataMode`, `scope`, `status`, `reasonCode`,
+  and `missingDisplay`, in that order. Its one supported value is exactly
+  `{dataMode: DEMO, scope: HISTORICAL_EQUITY_SCREENING, status: P8_DEFERRED,
+  reasonCode: NO_CANONICAL_HISTORICAL_SCREENING_FEATURE_CATALOG,
+  missingDisplay: NA}`.
+- This five-key value is an application-owned phase policy, explicitly labelled
+  `Product availability policy · not fixture evidence`. It is not assigned a
+  schema version, fixture version, generation/as-of/capture time, source,
+  provenance, license, or fixture disclaimer.
+- The state has no filter, query, result, row, count, pagination, sort, metric,
+  feature, universe, symbol, price, target, outcome, or ranking field. The page
+  does not add disabled controls or a zero-result success that could imply a
+  screen was executed.
+- `/screener` is query-free. If `searchParams` contains any key, including an
+  unknown or repeated key, the page calls Next `notFound()` before rendering
+  the supported state. The custom mode-neutral unsupported-request body is
+  `noindex` and contains no filter/result fallback. No raw HTTP status is
+  asserted because streamed Next responses may determine it before the body.
+- No canonical master identity, analyst call, outcome, market snapshot, map,
+  treemap, market-board state, call context, or application literal is promoted
+  into screening evidence. Links to `/calls` and `/methodology`, if present,
+  are explicitly adjacent existing evidence and never screen output.
+- The primary navigation adds `Screener` after Maps and before Methodology. It
+  exposes an exact `/screener` target and current-page state while preserving
+  locally contained keyboard navigation on narrow viewports.
+- This slice adds no canonical schema, fixture, manifest member, OpenAPI path,
+  Spring API/controller, Flyway migration, persistence model, provider network
+  call, scheduler, saved search, or materialized feature store.
+
+## Screener known-deferred shell contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-SC01 | Exact application state | `ScreenerShellState` contains only the five ordered keys and exact `DEMO` / `HISTORICAL_EQUITY_SCREENING` / `P8_DEFERRED` / `NO_CANONICAL_HISTORICAL_SCREENING_FEATURE_CATALOG` / `NA` values. No value is inferred from another provider. |
+| P2-SC02 | Not fixture evidence | The state is owned by typed application code and the UI labels it product availability policy. It has no schema/fixture version, timestamp, source, provenance, license, disclaimer, or claim that manifest absence is a point-in-time provider fact. No screener JSON or schema is added. |
+| P2-SC03 | Structurally no screen | State and rendered output contain no filter/query definition, result/row collection, count, pagination, sort, feature, metric, or calculation field. `NA` means the capability is not published; it never becomes zero matches, zero value, an empty successful screen, or completeness. |
+| P2-SC04 | Query-free fail closed | The supported request has no search-parameter keys. Any key, including unknown or repeated input, invokes Next `notFound()` and the custom noindex unsupported-request body; no input is ignored, normalized, executed, or echoed as a filter. Raw response status is not an acceptance assertion. |
+| P2-SC05 | No cross-semantic promotion | Master assets, calls, call-event snapshots/contexts, incomplete outcomes, market maps/treemaps, and market-board state are not imported, joined, counted, or relabelled as screener rows or features. Existing links do not claim a screen or match exists. |
+| P2-SC06 | No numeric or ranking claim | There is no current/historical price, return, alpha, target, hit, accuracy, score, rank, market cap, valuation, volatility, regime, technical/fundamental feature, recommendation, confidence, sample count, winner, or ordering claim. |
+| P2-SC07 | Honest phase boundary | `P8_DEFERRED` means P8 owns historical bars, feature/fact materialization, screening queries, and analytics. P3 still owns deterministic outcomes/ranking, and P5 still owns licensed observed providers and rights review. The P2 shell does not imply any of those capabilities. |
+| P2-SC08 | No backend expansion | `contracts/openapi.yaml`, Spring controllers/repositories, Flyway, and persisted data remain unchanged. No `/v1/screener` endpoint, provider transport, network call, refresh process, export, or saved-filter operation is implied. |
+| P2-SC09 | Future publication boundary | A future populated screener requires a separately reviewed versioned feature/query contract with universe identity, point-in-time inputs, null semantics, licensing, correction/replay rules, deterministic calculations, and pagination/sort behavior. It must not widen this application-only status into fake data. |
+
+## Screener known-deferred shell web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-SCW01 | Route and navigation | `/screener` is server rendered. Primary navigation places Screener after Maps and before Methodology, uses `/screener`, and exposes its unambiguous current-page state without breaking existing destinations. |
+| P2-SCW02 | Exact visible state | The page shows DEMO, `HISTORICAL_EQUITY_SCREENING`, `P8_DEFERRED`, `NO_CANONICAL_HISTORICAL_SCREENING_FEATURE_CATALOG`, and `NA` exactly, with a prominent product-policy/not-fixture-evidence label. |
+| P2-SCW03 | No fabricated evidence | The page displays no fixture/schema version, generation/as-of/capture time, source/provenance/license/disclaimer, symbol/universe list, filter value, result, count, sort, metric, table, chart, badge suggesting freshness, or disabled faux screening control. |
+| P2-SCW04 | Honest explanation | Copy explains that no historical screening feature catalog is published and that `NA` is capability state, not zero matches. It does not describe the shell as live, current, delayed, EOD, complete, searchable, calculated, backtested, or investment advice. |
+| P2-SCW05 | Query rejection | A request with any search-parameter key renders the custom mode-neutral unsupported-request boundary, is `noindex`, and exposes no accepted filter, result fallback, state leakage, or invented row. Browser tests assert the body and metadata, not a raw streamed HTTP status. |
+| P2-SCW06 | Loading and error boundaries | The route has explicit DEMO loading and recoverable error states. Neither state falls back to a call, asset, outcome, snapshot, map cell, metric, filter, result, or application numeric literal; known deferred is data, not an error or empty search. |
+| P2-SCW07 | Accessibility and responsive layout | Availability evidence uses semantic headings/descriptions and status text independent of color. Navigation, policy links, and retry are keyboard reachable with visible focus. At 1440, 1280, and 390 pixels, navigation stays locally contained, page overflow is absent, and console warnings/errors/page errors are zero. |
+| P2-SCW08 | Regression boundary | Dashboard, market/history, calls/detail/context, institutions, analysts, methodology, both map modes/universes, existing navigation targets, and every API contract remain unchanged apart from the additive Screener navigation item. |
+
+## Screener known-deferred shell required tests
+
+- Unit tests lock the five-key state and exact values and prove there is no
+  filter/result/count/sort/metric field or fixture/provider dependency.
+- Page/component tests cover the exact visible capability state, product-policy
+  semantics, absence of controls/rows/numerics/evidence claims, loading/error,
+  and adjacent links without treating them as screen output.
+- Search-parameter tests cover unknown, recognized-looking, empty-value, and
+  repeated keys; every nonempty key set invokes `notFound()` before state
+  rendering. The custom unsupported-request body and noindex metadata are
+  asserted without requiring a raw streamed response status.
+- Repository CI locks the absence of a screener schema/fixture/manifest/API/
+  migration expansion, the application source boundary, the required route
+  files, and the append-safe non-test production-file scan without duplicating
+  canonical fixture validation.
+- Responsive Playwright covers supported and unsupported `/screener` requests,
+  primary-navigation order/current state, keyboard focus and narrow local-nav
+  containment, page overflow, and zero console warnings, errors, or page errors
+  at 1440, 1280, and 390 pixels.
+
+## Screener known-deferred shell deferred work
+
+P8 retains historical bars, point-in-time call/outcome facts, materialized
+screening features, query execution, pagination/sorting, saved screens, and
+regime analytics. P3 retains reproducible outcome and leaderboard metrics. P5
+retains licensed observed market/analyst providers, provider health, licensing
+flags, and current rights review. No future API, feature catalog, calculation,
+or provider capability is bootstrapped by this application-owned P2 status.
 
 ## Local gate
 

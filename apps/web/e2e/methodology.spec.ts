@@ -77,7 +77,7 @@ test.describe("methodology registry", () => {
     await expect(methodologyLink).toBeVisible();
     await expect(methodologyLink).toHaveAttribute("aria-current", "page");
 
-    for (let attempt = 0; attempt < 8; attempt += 1) {
+    for (let attempt = 0; attempt < 9; attempt += 1) {
       await page.keyboard.press("Tab");
       if (await methodologyLink.evaluate((element) => element === document.activeElement)) {
         break;

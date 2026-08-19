@@ -13,6 +13,7 @@ const primaryNavigationHrefs = [
   "/institutions",
   "/analysts",
   "/maps/sp500",
+  "/screener",
   "/methodology",
 ];
 
