@@ -290,8 +290,10 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
 
 ### Remaining P2 work
 
-- Replace the dashboard's display-ready hard-coded provider data with canonical fixture-backed read models and complete its map, event, and honest known-unavailable ranking previews.
-- Complete the S&P 500 history, institution and analyst leaderboard shells, screener shell, and market board without inventing P3 performance aggregates.
+- Complete the S&P 500 history and screener shell without inventing observed
+  market facts or P3 performance aggregates.
+- Keep institution/analyst leaderboard metrics and order in P3, and keep a
+  coherent observed/licensed `PUBLISHED` market board in P5.
 - Continue the shared 1440/1280/390 Playwright gate as each remaining P2 route lands.
 
 ## P2 — Multiple market-map shells
@@ -765,3 +767,96 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
 - Analyst detail, aliases/history, employment/institution relationships, call
   projections/counts, holdings, search, pagination, live providers, and
   persistent directory read models remain open.
+
+## P2 — Market-board known-unavailable publication state
+
+Status: complete for this vertical slice; the broader P2 phase remains in progress
+
+### Scope
+
+- Add a server-rendered `/market` publication-status surface backed by a new
+  closed canonical DEMO document whose only valid v1 state is honestly
+  `NOT_PUBLISHED` with zero quote rows.
+- Keep call-event snapshots, PRICE_CHANGE treemaps, P0 fixture quote literals,
+  and application display values out of the global market-board evidence
+  boundary.
+- Inject the dedicated board provider into dashboard composition while
+  preserving the dashboard's existing exact two-field board output.
+- Add no external provider, API/OpenAPI path, migration, persistence write,
+  cache, stream, polling, quote calculation, or market-session inference.
+
+### Contract and fixture decisions
+
+- `schemas/market-board.schema.json` owns a closed Draft 2020-12 v1 contract;
+  `fixtures/v1/market-board.json` owns the append-only known-unavailable DEMO
+  state, exact provenance, null market as-of, zero quotes, and the no-promotion
+  disclaimer.
+- Fixture generation/provenance capture are publication-policy/catalog
+  evidence, not a market timestamp or freshness claim. The manifest is
+  recataloged after the new member and retains every prior file in order.
+- A future observed/licensed `PUBLISHED` quote board requires a separately
+  reviewed additive/versioned contract; it cannot widen the closed v1 state.
+- Root P2 acceptance and focused repository CI own exact projection,
+  schema/semantic negatives, manifest/time/source traceability, provider
+  isolation, dashboard compatibility, and backend defer.
+
+### Module structure
+
+- `apps/web/src/lib/providers/market-board-provider.ts` owns the read-only port
+  and canonical snapshot types; `fixture-market-board-provider.ts` owns the
+  sole raw fixture import, strict validation, and focused adapter tests.
+- `apps/web/src/app/market/market-board.tsx` owns the pure evidence-first
+  known-unavailable presentation. `page.tsx`, `loading.tsx`, `error.tsx`, and
+  `page.test.tsx` own the SSR route, state boundaries, and exact evidence/no-
+  quote assertions; `apps/web/e2e/market.spec.ts` owns responsive route and
+  transition coverage.
+- `fixture-market-provider.ts` consumes the injected board port and maps its
+  validated state to the unchanged dashboard `marketBoard` projection;
+  dashboard provider/unit/E2E regressions lock that compatibility.
+- `apps/web/src/components/site-header.tsx` and scoped global styles own the
+  semantic Dashboard/Market navigation, visible focus, and dense responsive
+  containment.
+- The new root schema, fixture, appended manifest entry, P2 acceptance, and CI
+  gate own the canonical and source-isolation boundary; the API remains
+  untouched.
+
+### Route
+
+- `GET /market` — server-rendered synthetic DEMO global market-board
+  publication status with exact provenance and no quote facts.
+
+### Verification
+
+- The CI-identical repository workflow passed all nine embedded Python blocks,
+  parsing 14 closed schemas and validating 32 canonical fixture records. The
+  focused board gate passed exact schema/fixture/provenance, structural zero-
+  quote, manifest/time, semantic-negative, source-isolation, dashboard-
+  injection, and API-defer checks. Root JSON/schema validation, SnakeYAML
+  parsing, and `git diff --check` passed.
+- Web ESLint and `tsc --noEmit` passed. Vitest passed 20 files and 213 tests,
+  including exact runtime provenance/disclaimer/source paths, malformed-state
+  rejection, fixture immutability, and dashboard two-field compatibility.
+- The Next.js production build passed with the static `/market` route.
+- Targeted market Playwright passed 6 of 6 tests. The keyboard-transition
+  sequence passed 18 of 18 checks across three serial repetitions, and the full
+  Playwright suite passed 36 of 36 tests across 1440, 1280, and 390 pixels.
+- An in-app Browser production-build check passed with no page overflow, exact
+  publication status/provenance/policy evidence, visible keyboard focus, and
+  working dashboard-to-market and market-to-dashboard navigation.
+- Maven `verify` completed with `BUILD SUCCESS`: 109 of 109 tests passed with
+  zero failures, errors, or skips, and PostgreSQL 17.10 Testcontainers executed
+  all four migration tests with zero skips. Compose configuration validation
+  passed.
+- Independent final review found zero blockers, high-severity findings, or
+  known false-positive gates. The reviewer independently repeated ESLint,
+  TypeScript, Vitest 20/213, targeted Playwright 6/6, and full Playwright 36/36;
+  generated files, temporary artifacts, and development ports were clean.
+
+### Deferred boundary
+
+- P4 retains realtime ingestion/cache/SSE/reconnect/stale/session behavior; P5
+  retains licensed providers and canonical observed quote publication; P6
+  retains history and P8 retains operational data-quality monitoring.
+- A published board, quote rows, coverage/counts, instruments beyond an
+  independently sourced catalog, alerts, watchlists, and persistent/materialized
+  market read models remain open.

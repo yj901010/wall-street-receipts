@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0.0",
+  "fixtureVersion": "v1",
+  "dataMode": "DEMO",
+  "generatedAt": "2026-08-19T02:00:00Z",
+  "provenance": {
+    "id": "fixture-market-board-v1",
+    "sourceType": "LOCAL_SPECIFICATION",
+    "sourcePaths": [
+      "schemas/market-board.schema.json",
+      "quality/P2_ACCEPTANCE.md"
+    ],
+    "capturedAt": "2026-08-19T02:00:00Z",
+    "synthetic": true,
+    "licenseClass": "INTERNAL_DEMO"
+  },
+  "scope": "GLOBAL_MARKET_OVERVIEW",
+  "publicationStatus": "NOT_PUBLISHED",
+  "publicationReasonCode": "NO_CANONICAL_GLOBAL_QUOTE_CATALOG",
+  "marketAsOf": null,
+  "missingDisplay": "NA",
+  "quotes": [],
+  "disclaimer": "Known-unavailable DEMO publication state only; no canonical global quote catalog or current, latest, delayed, or end-of-day market board is published. No price, change, session status, freshness, or coverage was observed, derived, inferred, or promoted from call-event snapshots, treemaps, or application literals. Not investment advice."
+}

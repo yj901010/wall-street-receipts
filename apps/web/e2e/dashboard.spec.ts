@@ -25,7 +25,9 @@ test.describe("dashboard responsive regression", () => {
       page.getByRole("heading", { name: "Market evidence, without inferred gaps." }),
     ).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Primary navigation" })
-      .getByRole("link", { name: "Market" })).toHaveAttribute("aria-current", "page");
+      .getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("navigation", { name: "Primary navigation" })
+      .getByRole("link", { name: "Market" })).toHaveAttribute("href", "/market");
     await expect(page.getByText(/does not synthesize one global as-of time or source/i))
       .toBeVisible();
 

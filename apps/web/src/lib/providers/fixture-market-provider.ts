@@ -1,4 +1,8 @@
 import type { CallsProvider } from "./calls-provider";
+import type {
+  MarketBoardProvider,
+  MarketBoardSnapshot,
+} from "./market-board-provider";
 import type { DashboardSnapshot, MarketProvider } from "./market-provider";
 import type {
   MarketTreemapProvider,
@@ -125,18 +129,42 @@ function assertPreview(
   });
 }
 
+function dashboardMarketBoard(
+  snapshot: MarketBoardSnapshot,
+  dataMode: DashboardSnapshot["dataMode"],
+) {
+  if (
+    snapshot.dataMode !== dataMode ||
+    snapshot.scope !== "GLOBAL_MARKET_OVERVIEW" ||
+    snapshot.publicationStatus !== "NOT_PUBLISHED" ||
+    snapshot.publicationReasonCode !== "NO_CANONICAL_GLOBAL_QUOTE_CATALOG" ||
+    snapshot.marketAsOf !== null ||
+    snapshot.missingDisplay !== "NA" ||
+    snapshot.quotes.length !== 0
+  ) {
+    throw new Error("Dashboard market board is not the supported known-unavailable state.");
+  }
+
+  return {
+    status: snapshot.publicationStatus,
+    missingDisplay: snapshot.missingDisplay,
+  } as const;
+}
+
 export class FixtureMarketProvider implements MarketProvider {
   constructor(
     private readonly calls: CallsProvider,
     private readonly treemaps: MarketTreemapProvider,
+    private readonly marketBoard: MarketBoardProvider,
   ) {}
 
   async dashboard(): Promise<DashboardSnapshot> {
-    const [callPage, callMetadata, sp500, nasdaq100] = await Promise.all([
+    const [callPage, callMetadata, sp500, nasdaq100, marketBoard] = await Promise.all([
       this.calls.list({ page: 0, size: 3, sort: "eventTime", order: "desc" }),
       this.calls.metadata(),
       this.treemaps.findByUniverse(previewUniverses[0]),
       this.treemaps.findByUniverse(previewUniverses[1]),
+      this.marketBoard.snapshot(),
     ]);
 
     if (callMetadata.dataMode !== "DEMO") {
@@ -152,6 +180,8 @@ export class FixtureMarketProvider implements MarketProvider {
       throw new Error("Dashboard map previews must retain distinct provenance.");
     }
 
+    const marketBoardState = dashboardMarketBoard(marketBoard, callMetadata.dataMode);
+
     return {
       dataMode: callMetadata.dataMode,
       latestCalls: {
@@ -162,7 +192,7 @@ export class FixtureMarketProvider implements MarketProvider {
         disclaimer: callMetadata.disclaimer,
       },
       mapPreviews: [sp500, nasdaq100],
-      marketBoard: { status: "NOT_PUBLISHED", missingDisplay: "NA" },
+      marketBoard: marketBoardState,
       eventCalendar: { status: "NOT_PUBLISHED", missingDisplay: "NA" },
       ranking: { status: "P3_DEFERRED", missingDisplay: "NA" },
     };

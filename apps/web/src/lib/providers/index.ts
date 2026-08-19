@@ -1,5 +1,7 @@
 import type { MarketProvider } from "./market-provider";
 import { FixtureMarketProvider } from "./fixture-market-provider";
+import type { MarketBoardProvider } from "./market-board-provider";
+import { FixtureMarketBoardProvider } from "./fixture-market-board-provider";
 import { callsProvider as createCallsProvider } from "./fixture-calls-provider";
 import type { MethodologyProvider } from "./methodology-provider";
 import { FixtureMethodologyProvider } from "./fixture-methodology-provider";
@@ -55,6 +57,12 @@ export type {
   ScoringMethodology,
 } from "./methodology-provider";
 export { FixtureMarketMapProvider } from "./fixture-market-map-provider";
+export { FixtureMarketBoardProvider } from "./fixture-market-board-provider";
+export type {
+  MarketBoardProvider,
+  MarketBoardProvenance,
+  MarketBoardSnapshot,
+} from "./market-board-provider";
 export {
   isMarketMapUniverse,
   MARKET_MAP_UNIVERSES,
@@ -99,7 +107,21 @@ export function marketProvider(): MarketProvider {
     throw new Error(`Unsupported market provider: ${configuredProvider}`);
   }
 
-  return new FixtureMarketProvider(createCallsProvider(), marketTreemapProvider());
+  return new FixtureMarketProvider(
+    createCallsProvider(),
+    marketTreemapProvider(),
+    marketBoardProvider(),
+  );
+}
+
+export function marketBoardProvider(): MarketBoardProvider {
+  const configuredProvider = process.env.MARKET_BOARD_PROVIDER?.toLowerCase() ?? "fixture";
+
+  if (configuredProvider !== "fixture") {
+    throw new Error(`Unsupported market-board provider: ${configuredProvider}`);
+  }
+
+  return new FixtureMarketBoardProvider();
 }
 
 export function methodologyProvider(): MethodologyProvider {

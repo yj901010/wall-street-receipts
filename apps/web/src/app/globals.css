@@ -311,6 +311,171 @@ tbody tr:hover {
   gap: var(--space-5);
 }
 
+.market-board-shell {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.market-board-heading {
+  align-items: start;
+}
+
+.market-board-heading .page-summary {
+  max-width: 760px;
+}
+
+.market-board-publication {
+  min-width: 0;
+}
+
+.market-board-publication-heading > span {
+  color: var(--color-warning);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.market-board-policy {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface-muted);
+}
+
+.market-board-policy p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.market-board-policy strong {
+  color: var(--color-text);
+}
+
+.market-board-policy .market-board-policy-label {
+  grid-column: 1 / -1;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-warning);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.market-board-state-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.market-board-availability,
+.market-board-policy-metadata {
+  min-width: 0;
+  padding: var(--space-5);
+}
+
+.market-board-availability {
+  border-right: 1px solid var(--color-line);
+}
+
+.market-board-availability dl,
+.market-board-policy-metadata dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--color-line);
+}
+
+.market-board-availability dl > div,
+.market-board-policy-metadata dl > div {
+  min-width: 0;
+  padding: 10px 12px;
+  border-right: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.market-board-availability dl > div:nth-child(2n),
+.market-board-policy-metadata dl > div:nth-child(2n) {
+  border-right: 0;
+}
+
+.market-board-availability dl > div:nth-last-child(-n + 2),
+.market-board-policy-metadata dl > div:last-child {
+  border-bottom: 0;
+}
+
+.market-board-availability dd,
+.market-board-policy-metadata dd {
+  overflow-wrap: anywhere;
+}
+
+.market-board-policy-metadata h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 14px;
+}
+
+.market-board-policy-metadata > p {
+  margin-bottom: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.market-board-policy-metadata dl {
+  grid-template-columns: 1fr;
+}
+
+.market-board-policy-metadata dl > div,
+.market-board-policy-metadata dl > div:nth-child(2n) {
+  border-right: 0;
+}
+
+.market-board-policy-metadata dl > div:last-child {
+  border-bottom: 0;
+}
+
+.market-board-source-paths {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.3fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: 12px var(--space-5);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.market-board-source-paths > span {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.market-board-source-paths ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.market-board-source-paths li {
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+
+.market-board-disclaimer {
+  padding: var(--space-4) var(--space-5) 0;
+}
+
+.market-board-actions {
+  padding: var(--space-3) var(--space-5) var(--space-5);
+}
+
 .dashboard-heading {
   align-items: start;
 }
@@ -1693,8 +1858,14 @@ button:hover,
 
   .dashboard-unavailable-body,
   .dashboard-map-grid,
-  .dashboard-deferred-grid {
+  .dashboard-deferred-grid,
+  .market-board-state-grid {
     grid-template-columns: 1fr;
+  }
+
+  .market-board-availability {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-line);
   }
 
   .institution-directory-policy,
@@ -1797,8 +1968,20 @@ button:hover,
   .institution-directory-policy,
   .institution-source-evidence,
   .analyst-directory-policy,
-  .analyst-source-evidence {
+  .analyst-source-evidence,
+  .market-board-policy,
+  .market-board-source-paths,
+  .market-board-availability dl {
     grid-template-columns: 1fr;
+  }
+
+  .market-board-availability dl > div,
+  .market-board-availability dl > div:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .market-board-availability dl > div:nth-last-child(2) {
+    border-bottom: 1px solid var(--color-line);
   }
 
   .dashboard-unavailable-body dl > div + div,

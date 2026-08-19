@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import type { CallsProvider } from "./calls-provider";
 import { FixtureCallsProvider } from "./fixture-calls-provider";
+import { FixtureMarketBoardProvider } from "./fixture-market-board-provider";
 import { FixtureMarketProvider } from "./fixture-market-provider";
 import { FixtureMarketTreemapProvider } from "./fixture-market-treemap-provider";
+import type {
+  MarketBoardProvider,
+  MarketBoardSnapshot,
+} from "./market-board-provider";
 import type {
   MarketTreemapProvider,
   MarketTreemapSnapshot,
@@ -35,12 +40,38 @@ function treemapPort(
   };
 }
 
+function marketBoardPort(
+  mutate?: (snapshot: MarketBoardSnapshot) => void,
+): MarketBoardProvider {
+  const delegate = new FixtureMarketBoardProvider();
+
+  return {
+    async snapshot() {
+      const snapshot = structuredClone(await delegate.snapshot());
+      mutate?.(snapshot);
+      return snapshot;
+    },
+  };
+}
+
+function dashboardProvider(
+  calls: CallsProvider = callsPort(),
+  treemaps: MarketTreemapProvider = treemapPort(),
+  marketBoard: MarketBoardProvider = marketBoardPort(),
+) {
+  return new FixtureMarketProvider(calls, treemaps, marketBoard);
+}
+
 describe("FixtureMarketProvider dashboard composition", () => {
   it("composes canonical calls and both independently sourced PRICE_CHANGE previews", async () => {
     const delegate = new FixtureCallsProvider();
     const treemapDelegate = new FixtureMarketTreemapProvider();
+    const marketBoardDelegate = new FixtureMarketBoardProvider();
     const list = vi.fn((query) => delegate.list(query));
-    const provider = new FixtureMarketProvider(callsPort({ list }), treemapPort());
+    const boardSnapshot = vi.fn(() => marketBoardDelegate.snapshot());
+    const provider = dashboardProvider(callsPort({ list }), treemapPort(), {
+      snapshot: boardSnapshot,
+    });
     const snapshot = await provider.dashboard();
 
     expect(list).toHaveBeenCalledWith({
@@ -49,6 +80,7 @@ describe("FixtureMarketProvider dashboard composition", () => {
       sort: "eventTime",
       order: "desc",
     });
+    expect(boardSnapshot).toHaveBeenCalledOnce();
     expect(Object.keys(snapshot)).toEqual([
       "dataMode",
       "latestCalls",
@@ -97,6 +129,7 @@ describe("FixtureMarketProvider dashboard composition", () => {
       treemapDelegate.findByUniverse("nasdaq100"),
     ]));
     expect(snapshot.marketBoard).toEqual({ status: "NOT_PUBLISHED", missingDisplay: "NA" });
+    expect(Object.keys(snapshot.marketBoard)).toEqual(["status", "missingDisplay"]);
     expect(snapshot.eventCalendar).toEqual({ status: "NOT_PUBLISHED", missingDisplay: "NA" });
     expect(snapshot.ranking).toEqual({ status: "P3_DEFERRED", missingDisplay: "NA" });
     expect(Object.keys(snapshot.ranking)).toEqual(["status", "missingDisplay"]);
@@ -110,7 +143,7 @@ describe("FixtureMarketProvider dashboard composition", () => {
       },
     });
 
-    await expect(new FixtureMarketProvider(calls, treemapPort()).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(calls, treemapPort()).dashboard()).rejects.toThrow(
       /requires DEMO data mode/i,
     );
   });
@@ -135,7 +168,7 @@ describe("FixtureMarketProvider dashboard composition", () => {
       },
     });
 
-    await expect(new FixtureMarketProvider(calls, treemapPort()).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(calls, treemapPort()).dashboard()).rejects.toThrow(
       /calls have inconsistent data mode/i,
     );
   });
@@ -149,7 +182,7 @@ describe("FixtureMarketProvider dashboard composition", () => {
       },
     });
 
-    await expect(new FixtureMarketProvider(calls, treemapPort()).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(calls, treemapPort()).dashboard()).rejects.toThrow(
       /requested page contract/i,
     );
   });
@@ -169,10 +202,10 @@ describe("FixtureMarketProvider dashboard composition", () => {
       },
     });
 
-    await expect(new FixtureMarketProvider(reordered, treemapPort()).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(reordered, treemapPort()).dashboard()).rejects.toThrow(
       /not ordered/i,
     );
-    await expect(new FixtureMarketProvider(duplicated, treemapPort()).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(duplicated, treemapPort()).dashboard()).rejects.toThrow(
       /duplicate call/i,
     );
   });
@@ -188,7 +221,7 @@ describe("FixtureMarketProvider dashboard composition", () => {
       },
     });
 
-    await expect(new FixtureMarketProvider(calls, treemapPort()).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(calls, treemapPort()).dashboard()).rejects.toThrow(
       /not ordered/i,
     );
   });
@@ -214,10 +247,10 @@ describe("FixtureMarketProvider dashboard composition", () => {
     });
 
     await expect(
-      new FixtureMarketProvider(descendingIds, treemapPort()).dashboard(),
+      dashboardProvider(descendingIds, treemapPort()).dashboard(),
     ).rejects.toThrow(/not ordered/i);
     await expect(
-      new FixtureMarketProvider(ascendingIds, treemapPort()).dashboard(),
+      dashboardProvider(ascendingIds, treemapPort()).dashboard(),
     ).resolves.toMatchObject({ dataMode: "DEMO" });
   });
 
@@ -232,10 +265,10 @@ describe("FixtureMarketProvider dashboard composition", () => {
       if (universe === "nasdaq100") snapshot.coverage.cellCount += 1;
     });
 
-    await expect(new FixtureMarketProvider(callsPort(), empty).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(callsPort(), empty).dashboard()).rejects.toThrow(
       /invalid populated SAMPLE coverage/i,
     );
-    await expect(new FixtureMarketProvider(callsPort(), mismatched).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(callsPort(), mismatched).dashboard()).rejects.toThrow(
       /invalid populated SAMPLE coverage/i,
     );
   });
@@ -253,13 +286,13 @@ describe("FixtureMarketProvider dashboard composition", () => {
       if (universe === "nasdaq100") snapshot.cells[0].dataMode = "EOD";
     });
 
-    await expect(new FixtureMarketProvider(callsPort(), wrongMode).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(callsPort(), wrongMode).dashboard()).rejects.toThrow(
       /not PRICE_CHANGE evidence/i,
     );
-    await expect(new FixtureMarketProvider(callsPort(), envelopeMode).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(callsPort(), envelopeMode).dashboard()).rejects.toThrow(
       /inconsistent data mode/i,
     );
-    await expect(new FixtureMarketProvider(callsPort(), cellMode).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(callsPort(), cellMode).dashboard()).rejects.toThrow(
       /inconsistent data mode/i,
     );
   });
@@ -277,11 +310,11 @@ describe("FixtureMarketProvider dashboard composition", () => {
       }
     });
 
-    await expect(new FixtureMarketProvider(callsPort(), wrongUniverse).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(callsPort(), wrongUniverse).dashboard()).rejects.toThrow(
       /returned sp500 for nasdaq100/i,
     );
     await expect(
-      new FixtureMarketProvider(callsPort(), duplicateProvenance).dashboard(),
+      dashboardProvider(callsPort(), duplicateProvenance).dashboard(),
     ).rejects.toThrow(/distinct provenance/i);
   });
 
@@ -293,10 +326,10 @@ describe("FixtureMarketProvider dashboard composition", () => {
       if (universe === "sp500") snapshot.provenance.capturedAt = "2026-08-19T02:00:00Z";
     });
 
-    await expect(new FixtureMarketProvider(callsPort(), provenance).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(callsPort(), provenance).dashboard()).rejects.toThrow(
       /inconsistent cell provenance/i,
     );
-    await expect(new FixtureMarketProvider(callsPort(), chronology).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(callsPort(), chronology).dashboard()).rejects.toThrow(
       /invalid evidence chronology/i,
     );
   });
@@ -309,9 +342,30 @@ describe("FixtureMarketProvider dashboard composition", () => {
       }
     });
 
-    await expect(new FixtureMarketProvider(callsPort(), treemaps).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(callsPort(), treemaps).dashboard()).rejects.toThrow(
       /evidence after its as-of time/i,
     );
+  });
+
+  it.each([
+    ["mode", (snapshot: MarketBoardSnapshot) => {
+      (snapshot as unknown as { dataMode: string }).dataMode = "EOD";
+    }],
+    ["publication status", (snapshot: MarketBoardSnapshot) => {
+      (snapshot as unknown as { publicationStatus: string }).publicationStatus = "PUBLISHED";
+    }],
+    ["market as-of", (snapshot: MarketBoardSnapshot) => {
+      (snapshot as unknown as { marketAsOf: string | null }).marketAsOf =
+        "2026-08-19T02:00:00Z";
+    }],
+    ["quote rows", (snapshot: MarketBoardSnapshot) => {
+      (snapshot.quotes as unknown[]).push({ symbol: "SPX", price: 5278.52 });
+    }],
+  ])("rejects a dashboard market board with unsupported %s", async (_label, mutate) => {
+    const marketBoard = marketBoardPort(mutate);
+
+    await expect(dashboardProvider(callsPort(), treemapPort(), marketBoard).dashboard())
+      .rejects.toThrow(/supported known-unavailable state/i);
   });
 
   it("propagates injected provider failures without returning partial fallback data", async () => {
@@ -325,12 +379,20 @@ describe("FixtureMarketProvider dashboard composition", () => {
         throw new Error("treemap provider unavailable");
       },
     };
+    const marketBoard: MarketBoardProvider = {
+      async snapshot() {
+        throw new Error("market board provider unavailable");
+      },
+    };
 
-    await expect(new FixtureMarketProvider(calls, treemapPort()).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(calls, treemapPort()).dashboard()).rejects.toThrow(
       "call provider unavailable",
     );
-    await expect(new FixtureMarketProvider(callsPort(), treemaps).dashboard()).rejects.toThrow(
+    await expect(dashboardProvider(callsPort(), treemaps).dashboard()).rejects.toThrow(
       "treemap provider unavailable",
     );
+    await expect(
+      dashboardProvider(callsPort(), treemapPort(), marketBoard).dashboard(),
+    ).rejects.toThrow("market board provider unavailable");
   });
 });

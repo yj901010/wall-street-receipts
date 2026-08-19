@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "fixtureVersion": "v1",
   "dataMode": "DEMO",
-  "generatedAt": "2026-08-19T01:10:00Z",
+  "generatedAt": "2026-08-19T02:10:00Z",
   "provenance": {
     "id": "fixture-manifest-v1",
     "sourceType": "LOCAL_SPECIFICATION",
@@ -12,7 +12,7 @@
       "docs/docs/DOMAIN_MODEL.md",
       "docs/docs/DATA_SOURCE_POLICY.md"
     ],
-    "capturedAt": "2026-08-19T01:00:00Z",
+    "capturedAt": "2026-08-19T02:00:00Z",
     "synthetic": true,
     "licenseClass": "INTERNAL_DEMO"
   },
@@ -65,6 +65,10 @@
     {
       "path": "timeline-nvda.json",
       "description": "Evidence-linked NVDA timeline events"
+    },
+    {
+      "path": "market-board.json",
+      "description": "Known-unavailable DEMO global market-board publication state with no quote rows"
     }
   ],
   "disclaimer": "All records are synthetic DEMO data and do not describe actual analyst statements or investment performance."
