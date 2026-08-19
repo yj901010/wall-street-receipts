@@ -104,6 +104,9 @@ export function MarketBoard({ snapshot }: { snapshot: MarketBoardSnapshot }) {
 
       <div className="market-board-actions">
         <Link className="text-action" href="/">Return to dashboard evidence</Link>
+        <Link className="text-action" href="/markets/sp500">
+          Open recorded S&amp;P 500 call-event history
+        </Link>
       </div>
     </section>
   );

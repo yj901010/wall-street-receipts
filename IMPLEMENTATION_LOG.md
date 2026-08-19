@@ -290,8 +290,8 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
 
 ### Remaining P2 work
 
-- Complete the S&P 500 history and screener shell without inventing observed
-  market facts or P3 performance aggregates.
+- Complete the screener shell without inventing observed market facts or P3
+  performance aggregates.
 - Keep institution/analyst leaderboard metrics and order in P3, and keep a
   coherent observed/licensed `PUBLISHED` market board in P5.
 - Continue the shared 1440/1280/390 Playwright gate as each remaining P2 route lands.
@@ -582,9 +582,9 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
 - P3 retains ranking/performance calculations; P5 retains observed/licensed
   current market quotes and a coherent published market board. A future global
   calendar requires its own sourced catalog rather than call-bound context.
-- Institution/analyst leaderboards, the screener shell, S&P history, realtime
-  refresh, personalized dashboard layout, and persistent/materialized dashboard
-  read models remain open.
+- Institution/analyst leaderboards, the screener shell, realtime refresh,
+  personalized dashboard layout, and persistent/materialized dashboard read
+  models remain open.
 
 ## P2 — Institution identity directory
 
@@ -676,8 +676,9 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
 - P3 retains institution/analyst leaderboard calculations and ordering. Detail,
   aliases/history, analyst employment, holdings, and verified provider data
   require their own later contracts.
-- Screener, S&P history, realtime refresh, search, pagination, saved filters,
-  and persistent/materialized directory read models remain open.
+- Screener, realtime refresh, search, pagination, saved filters, and
+  persistent/materialized directory read models remain open; the recorded S&P
+  forecast-call history is handled by its own P2 slice below.
 
 ## P2 — Analyst identity directory
 
@@ -856,7 +857,114 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
 
 - P4 retains realtime ingestion/cache/SSE/reconnect/stale/session behavior; P5
   retains licensed providers and canonical observed quote publication; P6
-  retains history and P8 retains operational data-quality monitoring.
+  retains stock/equity history and P8 retains historical market bars plus
+  operational data-quality monitoring.
 - A published board, quote rows, coverage/counts, instruments beyond an
   independently sourced catalog, alerts, watchlists, and persistent/materialized
   market read models remain open.
+
+## P2 — S&P 500 recorded forecast-call history
+
+Status: complete for this vertical slice; the broader P2 phase remains in progress
+
+### Scope
+
+- Add a server-rendered `/markets/sp500` history of canonical recorded analyst-
+  call events filtered to the synthetic DEMO S&P 500 identity.
+- Preserve exact call, normalized identity, source evidence, nullable target,
+  catalog timestamp, provenance, pagination, and data-mode semantics.
+- Present the current one-row fixed-page fixture result as limited DEMO
+  evidence, not a complete ledger, analyst coverage, price history, consensus,
+  current market state, or forecast performance. Keep displayed items distinct
+  from the filtered query `totalElements`.
+- Add no calculation, chart, snapshot/outcome/context join, raw fixture import,
+  external provider, schema, fixture, manifest member, API/OpenAPI path,
+  migration, persistence write, or scheduler.
+
+### Contract and projection decisions
+
+- `Sp500HistorySnapshot` has exactly `dataMode`, `asOf`, `source`,
+  `disclaimer`, `asset`, `items`, and `page`; nested values reuse the complete
+  existing `AssetSummary`, `AnalystCallView`, and `PageMetadata` contracts.
+- The dedicated adapter composes an injected `CallsProvider`, invokes
+  `metadata()`, and issues exactly one page-zero, size-25, `asset-spx`, event-
+  time-descending query. It does not import or reach through raw fixture JSON.
+- The current exact projection is the `asset-spx` index identity and
+  `demo-call-001`. Runtime uniquely selects only the `asset-spx` metadata entry
+  and preserves its four fields rather than hard-coding its current display
+  values. Generic mapping remains valid-empty/future-row safe on the fixed
+  first page, deterministic by event time plus call ID, and non-mutating.
+- Metadata `asOf` is call-catalog generation evidence only. Event, processing,
+  publication, and capture times remain distinct; none becomes a current market
+  or performance timestamp.
+- Raw previous/current targets remain separate source fields. No delta, gap,
+  return, alpha, hit, accuracy, score, rank, consensus, snapshot number, or
+  coverage metric is derived.
+- The table exposes summarized source title/publisher/verified evidence. Its
+  exact call-detail `#source` link owns access to complete source document and
+  reference evidence; the history page does not claim to reproduce it all.
+- Root P2 acceptance and focused CI own the exact current projection, injected-
+  provider/source boundary, no-new-contract gate, claim boundary, and later-
+  phase defer without duplicating existing analyst-call schema validation.
+
+### Module structure
+
+- `apps/web/src/lib/providers/sp500-history-provider.ts` owns the read-only
+  projection types and port; `fixture-sp500-history-provider.ts` owns injected
+  calls composition, strict validation/order, and focused unit tests without a
+  raw fixture import.
+- `apps/web/src/app/markets/sp500/sp500-call-history.tsx` owns pure event-
+  history evidence and honest empty presentation. Its route `page.tsx`,
+  `loading.tsx`, `error.tsx`, and `page.test.tsx` own SSR and route states.
+- `apps/web/src/app/markets/sp500/keyboard-scroll-region.tsx` is the scoped
+  client island. Only self-focused, unmodified ArrowLeft/ArrowRight input moves
+  the local region, clamped between zero and its scroll maximum; no-overflow and
+  already-at-edge input is left untouched as a no-op.
+- `/market`, the existing site header/current-section contract, and scoped
+  global styles own semantic route discovery, keyboard focus, and responsive
+  containment without adding a primary navigation item.
+- `apps/web/e2e/sp500-history.spec.ts` owns Market-to-history/detail navigation,
+  evidence, focus, overflow, responsive, and runtime-error browser coverage.
+- Root acceptance, implementation log, and the focused repository source-
+  boundary/current-projection gate own the no-schema/fixture/API boundary.
+
+### Route
+
+- `GET /markets/sp500` — server-rendered limited synthetic DEMO history of
+  recorded S&P 500 analyst-call events with source evidence.
+
+### Verification
+
+- Web ESLint and `tsc --noEmit` passed. Vitest passed 22 files and 250 tests;
+  the Next.js production build passed with 11 routes and statically rendered
+  `/markets/sp500`.
+- Targeted S&P history Playwright passed 6 of 6 tests. The full suite passed 42
+  of 42 tests across 1440, 1280, and 390 pixels. The production `next-env.d.ts`
+  import was restored with no diff, ports 3000 and 3011 were idle, and the
+  `apps/web` diff check passed.
+- Maven `verify` passed 109 of 109 tests with zero failures, errors, or skips.
+  PostgreSQL 17.10 Testcontainers executed all four migration tests with zero
+  skips, and Compose configuration validation passed.
+- The focused CI-identical SPX projection/source-isolation gate and all 10
+  embedded workflow Python blocks passed. Repository validation parsed 14
+  schemas and 32 fixture records; SnakeYAML parsing and `git diff --check`
+  passed.
+- In-app Browser QA against the desktop production route confirmed the visual
+  evidence layout and semantic DOM. The history region contained its wide
+  content locally (`1520 > 1201`), ArrowRight changed `scrollLeft` from `0` to
+  `300`, and the `/calls/demo-call-001#source` link reached the call detail's
+  Source provenance. The browser tab and server were closed and port 3120 was
+  idle afterward.
+- Independent final review reported blocker `0`, HIGH `0`, and known false-
+  positive `0`; the latest tree, log truth, generated-file state, and ports
+  were clean.
+
+### Deferred boundary
+
+- P3 retains deterministic performance scoring/aggregation; P4/P5 retain
+  realtime and licensed observed market data; P6 retains stock/equity history,
+  sector benchmarks, and corporate-action-aware views; P8 retains historical
+  bars and materialized analytics/screener features.
+- Pagination/search, current consensus, charts, snapshot/outcome joins,
+  completeness claims, and persistent/materialized history read models remain
+  open.

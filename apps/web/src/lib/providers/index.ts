@@ -1,5 +1,7 @@
 import type { MarketProvider } from "./market-provider";
 import { FixtureMarketProvider } from "./fixture-market-provider";
+import type { Sp500HistoryProvider } from "./sp500-history-provider";
+import { FixtureSp500HistoryProvider } from "./fixture-sp500-history-provider";
 import type { MarketBoardProvider } from "./market-board-provider";
 import { FixtureMarketBoardProvider } from "./fixture-market-board-provider";
 import { callsProvider as createCallsProvider } from "./fixture-calls-provider";
@@ -15,6 +17,11 @@ import type { AnalystDirectoryProvider } from "./analyst-directory-provider";
 import { FixtureAnalystDirectoryProvider } from "./fixture-analyst-directory-provider";
 
 export { callsProvider, FixtureCallsProvider } from "./fixture-calls-provider";
+export { FixtureSp500HistoryProvider } from "./fixture-sp500-history-provider";
+export type {
+  Sp500HistoryProvider,
+  Sp500HistorySnapshot,
+} from "./sp500-history-provider";
 export type {
   AnalystCall,
   AnalystCallDetail,
@@ -112,6 +119,16 @@ export function marketProvider(): MarketProvider {
     marketTreemapProvider(),
     marketBoardProvider(),
   );
+}
+
+export function sp500HistoryProvider(): Sp500HistoryProvider {
+  const configuredProvider = process.env.SP500_HISTORY_PROVIDER?.toLowerCase() ?? "fixture";
+
+  if (configuredProvider !== "fixture") {
+    throw new Error(`Unsupported S&P 500 history provider: ${configuredProvider}`);
+  }
+
+  return new FixtureSp500HistoryProvider(createCallsProvider());
 }
 
 export function marketBoardProvider(): MarketBoardProvider {
