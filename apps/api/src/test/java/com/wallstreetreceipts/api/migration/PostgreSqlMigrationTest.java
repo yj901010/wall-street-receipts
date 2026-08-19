@@ -23,6 +23,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wallstreetreceipts.api.application.port.out.AnalystCallDataSet;
 import com.wallstreetreceipts.api.domain.call.AnalystCall;
 import com.wallstreetreceipts.api.domain.call.AnalystCallRevision;
 import com.wallstreetreceipts.api.domain.market.DataMode;
@@ -67,7 +68,17 @@ class PostgreSqlMigrationTest {
         TransactionTemplate transactions = new TransactionTemplate(transactionManager);
         var dataSet = provider.load();
 
-        Integer importedCalls = transactions.execute(status -> repository.importDataSet(dataSet));
+        var priorCallIds = List.of("demo-call-001", "demo-call-002");
+        var priorDataSet = new AnalystCallDataSet(
+                dataSet.institutions(), dataSet.analysts(), dataSet.assets(),
+                dataSet.calls().stream().filter(call -> priorCallIds.contains(call.id())).toList(),
+                List.of(),
+                dataSet.snapshots().stream().filter(snapshot -> priorCallIds.contains(snapshot.callId())).toList(),
+                List.of(), List.of());
+        Integer importedPriorCalls = transactions.execute(status -> repository.importDataSet(priorDataSet));
+        var callOneBeforeAppend = repository.findById("demo-call-001").orElseThrow();
+        Integer appendedCalls = transactions.execute(status -> repository.importDataSet(dataSet));
+        var callOneAfterAppend = repository.findById("demo-call-001").orElseThrow();
         Integer importedRevisions = transactions.execute(status -> revisionRepository.importAll(dataSet.revisions()));
         Integer importedMethodologies = transactions.execute(
                 status -> methodologyRepository.importAll(dataSet.methodologies()));
@@ -77,7 +88,9 @@ class PostgreSqlMigrationTest {
         Integer duplicateMethodologies = transactions.execute(
                 status -> methodologyRepository.importAll(dataSet.methodologies()));
         Integer duplicateOutcomes = transactions.execute(status -> outcomeRepository.importAll(dataSet.outcomes()));
-        assertThat(importedCalls).isEqualTo(2);
+        assertThat(importedPriorCalls).isEqualTo(2);
+        assertThat(appendedCalls).isEqualTo(1);
+        assertThat(callOneAfterAppend).isEqualTo(callOneBeforeAppend);
         assertThat(importedRevisions).isEqualTo(2);
         assertThat(importedMethodologies).isEqualTo(2);
         assertThat(importedOutcomes).isEqualTo(4);
@@ -85,7 +98,7 @@ class PostgreSqlMigrationTest {
         assertThat(duplicateRevisions).isZero();
         assertThat(duplicateMethodologies).isZero();
         assertThat(duplicateOutcomes).isZero();
-        assertThat(repository.count()).isEqualTo(2);
+        assertThat(repository.count()).isEqualTo(3);
         assertThat(revisionRepository.count()).isEqualTo(2);
         assertThat(methodologyRepository.count()).isEqualTo(2);
         assertThat(outcomeRepository.count()).isEqualTo(4);
@@ -99,6 +112,30 @@ class PostgreSqlMigrationTest {
                         "outcome-demo-call-001-d1-v1-002",
                         "outcome-demo-call-001-d1-v2-001",
                         "outcome-demo-call-001-m1-v1-001");
+
+        var nullableSourceReference = repository.findById("demo-call-003")
+                .orElseThrow()
+                .call()
+                .sourceReference();
+        var nullableSourceDocument = nullableSourceReference.document();
+        assertThat(nullableSourceDocument.publisher()).isNull();
+        assertThat(nullableSourceDocument.canonicalUrl()).isNull();
+        assertThat(nullableSourceDocument.publishedAt()).isNull();
+        assertThat(nullableSourceDocument.externalId()).isNull();
+        assertThat(nullableSourceDocument.contentHash()).isNull();
+        assertThat(nullableSourceDocument.id()).isEqualTo("source-demo-article-003");
+        assertThat(nullableSourceDocument.title()).isEqualTo("DEMO unattributed neutral outlook");
+        assertThat(nullableSourceDocument.provider()).isEqualTo("fixture");
+        assertThat(nullableSourceDocument.licenseClass()).isEqualTo("INTERNAL_DEMO");
+        assertThat(nullableSourceDocument.dataMode()).isEqualTo(DataMode.DEMO);
+        assertThat(nullableSourceDocument.capturedAt())
+                .isEqualTo(java.time.Instant.parse("2026-08-10T10:02:00Z"));
+        assertThat(nullableSourceDocument.provenanceId()).isEqualTo("fixture-analyst-calls-v1");
+        assertThat(nullableSourceReference.id()).isEqualTo("source-ref-demo-003");
+        assertThat(nullableSourceReference.dataMode()).isEqualTo(DataMode.DEMO);
+        assertThat(nullableSourceReference.capturedAt())
+                .isEqualTo(java.time.Instant.parse("2026-08-10T10:02:00Z"));
+        assertThat(nullableSourceReference.provenanceId()).isEqualTo("fixture-analyst-calls-v1");
 
         AnalystCallRevision template = dataSet.revisions().getFirst();
         AnalystCallRevision first = new AnalystCallRevision(
@@ -277,7 +314,7 @@ class PostgreSqlMigrationTest {
                     SELECT status FROM analyst_calls WHERE call_id = 'demo-call-002'
                     """)).isEqualTo("ACTIVE");
             assertThat(query(connection, "SELECT COUNT(*)::text FROM provider_event_identities"))
-                    .isEqualTo("5");
+                    .isEqualTo("6");
             assertThat(query(connection, """
                     SELECT COUNT(*)::text
                     FROM information_schema.table_constraints

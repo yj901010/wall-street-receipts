@@ -49,9 +49,9 @@ class AnalystCallRevisionPersistenceTest {
                 .findFirst()
                 .orElseThrow();
 
-        assertThat(dataSet.calls()).hasSize(2);
+        assertThat(dataSet.calls()).hasSize(3);
         assertThat(dataSet.revisions()).hasSize(2);
-        assertThat(callRepository.count()).isEqualTo(2);
+        assertThat(callRepository.count()).isEqualTo(3);
         assertThat(revisionRepository.count()).isEqualTo(2);
         assertThat(callRepository.findById("demo-call-002").orElseThrow().call())
                 .usingRecursiveComparison()

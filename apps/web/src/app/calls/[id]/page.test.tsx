@@ -31,6 +31,22 @@ describe("CallDetailPage", () => {
     );
   });
 
+  it("renders unavailable source metadata as NA without a canonical source link", async () => {
+    render(await CallDetailPage({ params: Promise.resolve({ id: "demo-call-003" }) }));
+
+    const sourceSection = screen.getByRole("heading", { name: "Source provenance" }).closest("section");
+    expect(sourceSection).not.toBeNull();
+
+    for (const label of ["Publisher", "External ID", "Published", "Content hash"]) {
+      const term = within(sourceSection!).getByText(label);
+
+      expect(term.nextElementSibling).toHaveTextContent(/^NA$/);
+    }
+
+    expect(within(sourceSection!).queryByRole("link", { name: "Open canonical source" })).not.toBeInTheDocument();
+    expect(within(sourceSection!).getByText("Canonical source URL: NA")).toBeInTheDocument();
+  });
+
   it("labels the snapshot immutable and renders unavailable values as NA", async () => {
     render(await CallDetailPage({ params: Promise.resolve({ id: "demo-call-002" }) }));
 

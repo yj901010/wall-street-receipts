@@ -26,8 +26,8 @@ describe("FixtureCallsProvider", () => {
     expect(result.page).toEqual({
       number: 0,
       size: 1,
-      totalElements: 2,
-      totalPages: 2,
+      totalElements: 3,
+      totalPages: 3,
       first: true,
       last: false,
       sort: { field: "eventTime", order: "desc" },
@@ -72,6 +72,19 @@ describe("FixtureCallsProvider", () => {
       vix: null,
     });
     expect(await provider.findById("unknown-call")).toBeNull();
+  });
+
+  it("preserves nullable source document metadata instead of inventing values", async () => {
+    const detail = await provider.findById("demo-call-003");
+
+    expect(detail?.source.document).toMatchObject({
+      sourceDocumentId: "source-demo-article-003",
+      publisher: null,
+      canonicalUrl: null,
+      publishedAt: null,
+      externalId: null,
+      contentHash: null,
+    });
   });
 
   it("echoes an out-of-range page and rejects invalid exclusive time ranges", async () => {

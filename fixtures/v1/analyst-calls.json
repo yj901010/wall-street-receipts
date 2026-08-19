@@ -45,6 +45,21 @@
       "dataMode": "DEMO",
       "capturedAt": "2026-08-11T14:22:00Z",
       "provenanceId": "fixture-analyst-calls-v1"
+    },
+    {
+      "sourceDocumentId": "source-demo-article-003",
+      "sourceType": "ARTICLE",
+      "publisher": null,
+      "title": "DEMO unattributed neutral outlook",
+      "canonicalUrl": null,
+      "publishedAt": null,
+      "provider": "fixture",
+      "externalId": null,
+      "contentHash": null,
+      "licenseClass": "INTERNAL_DEMO",
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-10T10:02:00Z",
+      "provenanceId": "fixture-analyst-calls-v1"
     }
   ],
   "sourceReferences": [
@@ -72,6 +87,19 @@
       "verified": false,
       "dataMode": "DEMO",
       "capturedAt": "2026-08-11T14:22:00Z",
+      "provenanceId": "fixture-analyst-calls-v1"
+    },
+    {
+      "sourceReferenceId": "source-ref-demo-003",
+      "sourceDocumentId": "source-demo-article-003",
+      "page": null,
+      "startMs": null,
+      "endMs": null,
+      "extractedFragment": null,
+      "extractionConfidence": null,
+      "verified": false,
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-10T10:02:00Z",
       "provenanceId": "fixture-analyst-calls-v1"
     }
   ],
@@ -116,6 +144,27 @@
       "status": "ACTIVE",
       "dataMode": "DEMO",
       "capturedAt": "2026-08-11T14:22:00Z",
+      "provenanceId": "fixture-analyst-calls-v1"
+    },
+    {
+      "callId": "demo-call-003",
+      "provider": "fixture",
+      "providerEventId": "fixture-call-003",
+      "institutionId": "inst-gs",
+      "analystId": null,
+      "assetId": "asset-msft",
+      "eventTime": "2026-08-10T10:00:00Z",
+      "processingTime": "2026-08-10T10:02:00Z",
+      "direction": "NEUTRAL",
+      "originalRating": null,
+      "previousTarget": null,
+      "target": null,
+      "currency": null,
+      "targetDate": null,
+      "sourceReferenceId": "source-ref-demo-003",
+      "status": "ACTIVE",
+      "dataMode": "DEMO",
+      "capturedAt": "2026-08-10T10:02:00Z",
       "provenanceId": "fixture-analyst-calls-v1"
     }
   ],

@@ -241,6 +241,107 @@ jobs:
           call_document = json.loads(
               (fixture_dir / "analyst-calls.json").read_text(encoding="utf-8")
           )
+          source_documents = {
+              item["sourceDocumentId"]: item
+              for item in call_document["sourceDocuments"]
+          }
+          preserved_source = source_documents.get("source-demo-article-001")
+          expected_preserved_source = {
+              "publisher": "DEMO Publisher",
+              "canonicalUrl": "https://example.invalid/demo-call-001",
+              "publishedAt": "2026-08-10T12:00:00Z",
+              "externalId": "demo-source-001",
+          }
+          if preserved_source is None or any(
+              preserved_source.get(field) != value
+              for field, value in expected_preserved_source.items()
+          ):
+              raise SystemExit(
+                  "source-demo-article-001 must retain its pre-existing populated metadata"
+              )
+
+          nullable_source = source_documents.get("source-demo-article-003")
+          expected_nullable_source = {
+              "sourceType": "ARTICLE",
+              "title": "DEMO unattributed neutral outlook",
+              "provider": "fixture",
+              "licenseClass": "INTERNAL_DEMO",
+              "dataMode": "DEMO",
+              "capturedAt": "2026-08-10T10:02:00Z",
+              "provenanceId": "fixture-analyst-calls-v1",
+          }
+          nullable_source_fields = {
+              "publisher", "canonicalUrl", "publishedAt", "externalId", "contentHash",
+          }
+          if (nullable_source is None
+                  or any(
+                      nullable_source.get(field) != value
+                      for field, value in expected_nullable_source.items()
+                  )
+                  or any(
+                      field not in nullable_source or nullable_source[field] is not None
+                      for field in nullable_source_fields
+                  )):
+              raise SystemExit(
+                  "source-demo-article-003 must explicitly null every optional source-document field"
+              )
+
+          source_references = {
+              item["sourceReferenceId"]: item
+              for item in call_document["sourceReferences"]
+          }
+          nullable_reference = source_references.get("source-ref-demo-003")
+          if (nullable_reference is None
+                  or nullable_reference.get("sourceDocumentId") != "source-demo-article-003"):
+              raise SystemExit(
+                  "source-ref-demo-003 must reference the append-only nullable document"
+              )
+
+          calls = {item["callId"]: item for item in call_document["calls"]}
+          nullable_call = calls.get("demo-call-003")
+          expected_nullable_call = {
+              "provider": "fixture",
+              "providerEventId": "fixture-call-003",
+              "institutionId": "inst-gs",
+              "analystId": None,
+              "assetId": "asset-msft",
+              "eventTime": "2026-08-10T10:00:00Z",
+              "processingTime": "2026-08-10T10:02:00Z",
+              "direction": "NEUTRAL",
+              "originalRating": None,
+              "previousTarget": None,
+              "target": None,
+              "currency": None,
+              "targetDate": None,
+              "sourceReferenceId": "source-ref-demo-003",
+              "status": "ACTIVE",
+              "dataMode": "DEMO",
+              "capturedAt": "2026-08-10T10:02:00Z",
+              "provenanceId": "fixture-analyst-calls-v1",
+          }
+          if nullable_call is None or any(
+              nullable_call.get(field) != value
+              for field, value in expected_nullable_call.items()
+          ):
+              raise SystemExit(
+                  "demo-call-003 must retain the exact upgrade-safe nullable evidence linkage"
+              )
+
+          positive_source = source_documents.get("source-demo-video-002")
+          expected_positive_source = {
+              "publisher": "DEMO Channel",
+              "canonicalUrl": "https://example.invalid/demo-call-002",
+              "publishedAt": "2026-08-11T14:20:00Z",
+              "externalId": "demo-source-002",
+          }
+          if positive_source is None or any(
+              positive_source.get(field) != value
+              for field, value in expected_positive_source.items()
+          ):
+              raise SystemExit(
+                  "source-demo-video-002 must preserve the populated source-document path"
+              )
+
           snapshot_document = json.loads(
               (fixture_dir / "market-snapshots.json").read_text(encoding="utf-8")
           )

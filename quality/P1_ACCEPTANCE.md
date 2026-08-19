@@ -45,6 +45,7 @@ growth-phase runtime dependency.
 | P1-D06 | Market snapshot does not exist | `snapshot` is JSON null; the server does not synthesize context. |
 | P1-D07 | Duplicate provider event | Re-ingesting the same `(provider, providerEventId)` produces one canonical call. |
 | P1-D08 | Correction or cancellation | The original call is not overwritten; lifecycle/revision behavior remains auditable. |
+| P1-D09 | Nullable source-document metadata | The append-only `demo-call-003` → `source-ref-demo-003` → `source-demo-article-003` DEMO chain carries JSON null for `publisher`, `canonicalUrl`, `publishedAt`, `externalId`, and `contentHash`; fixture validation, provider mapping, PostgreSQL fresh/upgrade persistence and read, and `GET /v1/calls/{id}` preserve those nulls. Existing call/source rows are not rewritten, and `source-demo-video-002` retains the populated source path as the positive case. |
 
 ## Revision-lineage gate
 
