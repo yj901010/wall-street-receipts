@@ -1160,3 +1160,85 @@ P3 scoring work remains open
   outcome completeness, scheduling, persistence orchestration, and leaderboard
   aggregates remain later P3 slices. Historical bars and licensed providers
   remain in their owning later phases.
+
+## P3 — Explicit-anchor session-offset resolver
+
+Status: complete; schedule mechanics only, with no named horizon, market
+observation, calculated outcome, persistence, API, or web publication, while
+broader P3 scoring remains open
+
+### Scope
+
+- Add a pure resolver over a caller-supplied anchor session, positive subsequent
+  session count, explicit ordered open/close catalog, and evaluation as-of.
+- Return schedule-only ready, pending, or incomplete evidence without inferring
+  a date, venue, timezone, holiday, session, price, bar, or completeness state.
+- Exercise all mechanics with source-local Java golden schedules while leaving
+  canonical methodologies, all-null outcomes, fixtures, and product surfaces
+  unchanged.
+
+### Contract and phase decisions
+
+- `ADR-007` and `quality/P3_ACCEPTANCE.md` own
+  `EXPLICIT_ANCHOR_SESSION_COUNT_V1`: anchor excluded, next N sessions included,
+  Nth subsequent session as endpoint, and close-at-or-before as-of as ready.
+- The caller owns anchor correctness. `SessionOffsetRequest` has no call,
+  analyst-call revision, event time, `OutcomeHorizon`, market observation, provenance,
+  catalog capture time, provider, or `Clock`.
+- An existing future endpoint is pending with `ENDPOINT_NOT_REACHED`; a missing
+  anchor or endpoint is incomplete with `ANCHOR_SESSION_MISSING` or
+  `ENDPOINT_SESSION_MISSING`. Ready remains schedule evidence only.
+- Results preserve exact request identity in nested
+  `ResolutionContext(policyVersion, calendarId, catalogRevision,
+  anchorSessionId, sessionCount, evaluationAsOf)`. A resolved window adds the
+  anchor, immutable selected sessions, and endpoint; an incomplete result keeps
+  context but invents no session.
+- The code enum and ADR version only this isolated mechanic. Existing
+  methodology hashes remain `MODEL_ONLY`; canonical methodology hashing and
+  input fingerprinting wait for the named-horizon and evidence contract.
+
+### Module structure
+
+- `apps/api/src/main/java/.../domain/outcome/horizon` owns exactly
+  `SessionOffsetPolicyVersion.java`, `TradingSession.java`,
+  `TradingSessionCatalog.java`, `SessionOffsetRequest.java`,
+  `SessionOffsetResolution.java`, and `SessionOffsetResolver.java`.
+- `SessionOffsetResolverGoldenTest.java` in the matching test package owns
+  offset/window, readiness, coverage, explicit irregular-session, immutability,
+  precision, invalid-catalog, and source-boundary regressions.
+- `ADR-007`, the P3 acceptance contract, and focused repository CI own the
+  code-only version and no-inference/no-publication boundary.
+
+### Routes
+
+- None. Existing outcome audit reads remain unchanged and do not call this
+  resolver.
+
+### Verification
+
+- Focused `SessionOffsetResolverGoldenTest`: PASS, 41/41 tests.
+- Full API Maven verification: PASS, 181/181 tests with zero failures, errors,
+  or skips. PostgreSQL 17 migration coverage executed 4/4 Testcontainers tests
+  with zero skips.
+- `docker compose --env-file .env.example config --quiet`: PASS.
+- Focused session-offset repository gate: PASS. It proves the exact recursive
+  six-file leaf and golden test, reverse production isolation, explicit
+  count-five/Saturday/omitted-date and Locale/TimeZone replay evidence,
+  unchanged model-only/all-null outcomes, and no named-horizon, schema,
+  fixture, manifest, OpenAPI, Flyway, persistence, provider, or web-source
+  expansion.
+- All embedded workflow Python blocks passed syntax and execution, 13/13;
+  canonical validation covered 14 schemas and 32 fixture records.
+- SnakeYAML parsing and `git diff --check`: PASS. Generated and unexpected-file
+  audit was clean.
+- Independent correctness review: blocker 0, HIGH 0, known false-positive 0.
+
+### Deferred boundary
+
+- Named horizon counts, event/correction anchoring, calendar source/revision
+  evidence, price/bar/window rules, retry/grace, corporate actions, currency,
+  methodology definition serialization/hash, and input fingerprints remain
+  later P3 contracts.
+- Market providers, historical bars, schedulers, persistence orchestration,
+  calculated outcomes, aggregate rankings, API expansion, and UI publication
+  remain outside this slice.
