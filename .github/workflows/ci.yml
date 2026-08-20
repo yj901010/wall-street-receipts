@@ -2797,6 +2797,331 @@ jobs:
           )
           PYTHON
 
+      - name: Guard pure target-hit calculation boundary
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import json
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          calculation_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/calculation"
+          )
+          test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/calculation"
+          )
+          expected_production_files = {
+              "TargetHitSide.java",
+              "TargetHitInput.java",
+              "TargetHitResult.java",
+              "TargetHitCalculator.java",
+          }
+          expected_test_files = {"TargetHitCalculatorGoldenTest.java"}
+          production_paths = sorted(
+              path for path in calculation_dir.rglob("*.java") if path.is_file()
+          )
+          test_paths = sorted(path for path in test_dir.rglob("*.java") if path.is_file())
+          actual_production_files = {
+              path.relative_to(calculation_dir).as_posix() for path in production_paths
+          }
+          actual_test_files = {
+              path.relative_to(test_dir).as_posix() for path in test_paths
+          }
+          require(
+              actual_production_files == expected_production_files,
+              f"Unexpected target-hit production files: {sorted(actual_production_files)}",
+          )
+          require(
+              actual_test_files == expected_test_files,
+              f"Unexpected target-hit test files: {sorted(actual_test_files)}",
+          )
+
+          production_sources = {
+              path.relative_to(calculation_dir).as_posix(): path.read_text(encoding="utf-8")
+              for path in production_paths
+          }
+          input_source = production_sources["TargetHitInput.java"]
+          side_source = production_sources["TargetHitSide.java"]
+          result_source = production_sources["TargetHitResult.java"]
+          calculator_source = production_sources["TargetHitCalculator.java"]
+          compact_input = re.sub(r"\s+", "", input_source)
+          require(
+              "publicrecordTargetHitInput(TargetHitSideside,BigDecimaltarget,"
+              "BigDecimalfavorableExtreme)" in compact_input,
+              "TargetHitInput must contain only side, target, and favorableExtreme",
+          )
+          require(
+              re.search(r"enum\s+TargetHitSide\s*\{\s*BULLISH\s*,\s*BEARISH\s*\}", side_source)
+              is not None,
+              "TargetHitSide must contain exactly BULLISH then BEARISH",
+          )
+          require(
+              "permits TargetHitResult.Available, TargetHitResult.Unavailable" in result_source,
+              "TargetHitResult must be a closed Available/Unavailable result",
+          )
+          reason_match = re.search(
+              r"enum\s+UnavailableReason\s*\{(?P<body>.*?)\}",
+              result_source,
+              flags=re.DOTALL,
+          )
+          require(reason_match is not None, "Missing target-hit unavailable reasons")
+          reasons = re.findall(r"\b[A-Z][A-Z_]+\b", reason_match.group("body"))
+          require(
+              reasons
+              == [
+                  "TARGET_MISSING",
+                  "FAVORABLE_EXTREME_MISSING",
+                  "TARGET_AND_FAVORABLE_EXTREME_MISSING",
+              ],
+              f"Unexpected target-hit unavailable reasons: {reasons}",
+          )
+          require(
+              "record Available(boolean targetHit)" in result_source
+              and "record Unavailable(UnavailableReason reason)" in result_source,
+              "TargetHitResult payloads must be exact",
+          )
+          require(
+              "case BULLISH -> comparison >= 0;" in calculator_source
+              and "case BEARISH -> comparison <= 0;" in calculator_source
+              and "favorableExtreme.compareTo(input.target())" in calculator_source,
+              "Target-hit comparison must be inclusive and use the preselected extreme",
+          )
+          calculator_forbidden = (
+              ".add(",
+              ".subtract(",
+              ".multiply(",
+              ".divide(",
+              ".pow(",
+              ".round(",
+              ".setScale(",
+              ".doubleValue(",
+              ".floatValue(",
+              "MathContext",
+              "new BigDecimal",
+              "BigDecimal.valueOf",
+              ".parse",
+          )
+          require(
+              not any(marker in calculator_source for marker in calculator_forbidden),
+              "Target-hit calculator must not hide arithmetic, rounding, conversion, or parsing",
+          )
+          require(
+              "setScale(STORAGE_SCALE, RoundingMode.UNNECESSARY)" in input_source
+              and "STORAGE_SCALE = 12" in input_source
+              and "STORAGE_PRECISION = 38" in input_source,
+              "Target-hit input must prove exact NUMERIC(38,12) representability",
+          )
+
+          allowed_internal_prefix = (
+              "com.wallstreetreceipts.api.domain.outcome.calculation."
+          )
+          forbidden_words = re.compile(
+              r"\b(?:CallOutcome|AnalystCall|Clock|Instant|Provider|Repository|"
+              r"ObjectMapper|JdbcTemplate|Random|ThreadLocalRandom|double|float)\b"
+          )
+          for source_name, source in production_sources.items():
+              imports = re.findall(r"^import\s+([^;]+);", source, flags=re.MULTILINE)
+              require(
+                  all(
+                      imported.startswith("java.")
+                      or imported.startswith(allowed_internal_prefix)
+                      for imported in imports
+                  ),
+                  f"Target-hit source crosses the pure domain boundary: {source_name} {imports}",
+              )
+              require(
+                  "org.springframework" not in source
+                  and forbidden_words.search(source) is None
+                  and "@Component" not in source
+                  and "@Service" not in source,
+                  f"Target-hit source contains a forbidden runtime dependency: {source_name}",
+              )
+
+          api_main_dir = Path("apps/api/src/main/java")
+          target_hit_markers = tuple(
+              path.removesuffix(".java") for path in expected_production_files
+          )
+          for other_path in api_main_dir.rglob("*.java"):
+              if calculation_dir in other_path.parents:
+                  continue
+              other_source = other_path.read_text(encoding="utf-8")
+              require(
+                  "domain.outcome.calculation" not in other_source
+                  and not any(marker in other_source for marker in target_hit_markers),
+                  f"Target-hit core must not be wired into production yet: {other_path}",
+              )
+
+          golden_path = test_dir / "TargetHitCalculatorGoldenTest.java"
+          golden_source = golden_path.read_text(encoding="utf-8")
+          require(
+              golden_source.count('@MethodSource("') >= 3
+              and '"T1 bullish window high crosses target"' in golden_source
+              and 'input(TargetHitSide.BULLISH, "110", "112")' in golden_source
+              and 'input(TargetHitSide.BULLISH, "120", "103")' in golden_source
+              and 'input(TargetHitSide.BEARISH, "170", "168")' in golden_source,
+              "Target-hit documented source-local golden vectors are missing",
+          )
+          for reason in reasons:
+              require(
+                  f"UnavailableReason.{reason}" in golden_source,
+                  f"Target-hit golden tests do not cover {reason}",
+              )
+          require(
+              "bullish equality is inclusive" in golden_source
+              and "bearish equality is inclusive" in golden_source
+              and "MAX_NUMERIC_38_12" in golden_source
+              and "exceeds storage scale" in golden_source
+              and "exceeds storage precision" in golden_source
+              and "TargetHitCalculator.calculate(null)" in golden_source,
+              "Target-hit boundary and negative golden coverage is incomplete",
+          )
+          require(
+              "ObjectMapper" not in golden_source
+              and "ClassPathResource" not in golden_source,
+              "Target-hit goldens must remain source-local test vectors",
+          )
+          for resource_path in Path("apps/api/src/test/resources").rglob("*.json"):
+              resource_source = resource_path.read_text(encoding="utf-8")
+              require(
+                  "TargetHit" not in resource_source
+                  and "targetHit" not in resource_source
+                  and "target-hit" not in resource_source.lower(),
+                  f"Target-hit must not add a JSON golden resource: {resource_path}",
+              )
+
+          expected_schemas = {
+              "analyst-call-revision.schema.json",
+              "analyst-call.schema.json",
+              "call-context.schema.json",
+              "call-outcome.schema.json",
+              "event-context.schema.json",
+              "macro-observation.schema.json",
+              "macro-snapshot.schema.json",
+              "market-board.schema.json",
+              "market-map.schema.json",
+              "market-snapshot.schema.json",
+              "market-treemap.schema.json",
+              "scoring-methodology.schema.json",
+              "source-document.schema.json",
+              "source-reference.schema.json",
+          }
+          actual_schemas = {path.name for path in Path("schemas").glob("*.json")}
+          require(actual_schemas == expected_schemas, "P3 target-hit must not expand schemas")
+
+          expected_fixture_files = {
+              "analyst-call-revisions.json",
+              "analyst-calls.json",
+              "call-contexts.json",
+              "call-outcomes.json",
+              "manifest.json",
+              "market-board.json",
+              "market-map-nasdaq100.json",
+              "market-map.json",
+              "market-snapshots.json",
+              "market-treemap-nasdaq100.json",
+              "market-treemap-sp500.json",
+              "master-data.json",
+              "timeline-nvda.json",
+          }
+          fixture_dir = Path("fixtures/v1")
+          actual_fixture_files = {path.name for path in fixture_dir.glob("*.json")}
+          require(
+              actual_fixture_files == expected_fixture_files,
+              "P3 target-hit must not add a canonical fixture or golden JSON",
+          )
+          manifest = json.loads((fixture_dir / "manifest.json").read_text(encoding="utf-8"))
+          expected_manifest_paths = [
+              "master-data.json",
+              "analyst-calls.json",
+              "analyst-call-revisions.json",
+              "call-outcomes.json",
+              "call-contexts.json",
+              "market-snapshots.json",
+              "market-map.json",
+              "market-map-nasdaq100.json",
+              "market-treemap-sp500.json",
+              "market-treemap-nasdaq100.json",
+              "timeline-nvda.json",
+              "market-board.json",
+          ]
+          require(
+              [entry["path"] for entry in manifest["files"]] == expected_manifest_paths,
+              "P3 target-hit must not change fixture manifest membership/order",
+          )
+
+          outcome_document = json.loads(
+              (fixture_dir / "call-outcomes.json").read_text(encoding="utf-8")
+          )
+          methodologies = outcome_document["methodologies"]
+          outcomes = outcome_document["outcomes"]
+          metric_fields = (
+              "assetReturn", "benchmarkReturn", "sectorReturn", "alpha", "sectorAlpha",
+              "mfe", "mae", "targetHit", "directionalWin", "targetError",
+          )
+          require(
+              len(methodologies) == 2
+              and all(item["status"] == "MODEL_ONLY" for item in methodologies),
+              "P3 target-hit must not activate or append a methodology",
+          )
+          require(
+              len(outcomes) == 4
+              and {item["evaluationStatus"] for item in outcomes} == {"PENDING", "INCOMPLETE"}
+              and all(not item["dataComplete"] for item in outcomes)
+              and all(item[field] is None for item in outcomes for field in metric_fields),
+              "P3 target-hit must not publish or persist a calculated fixture outcome",
+          )
+
+          openapi_source = Path("contracts/openapi.yaml").read_text(encoding="utf-8")
+          openapi_paths = set(
+              re.findall(r"^  (/[^\n]+):\s*$", openapi_source, flags=re.MULTILINE)
+          )
+          require(
+              openapi_paths
+              == {
+                  "/v1/calls",
+                  "/v1/calls/{id}",
+                  "/v1/calls/{id}/revisions",
+                  "/v1/calls/{id}/outcomes",
+                  "/v1/calls/{id}/context",
+              },
+              f"P3 target-hit must not change OpenAPI paths: {sorted(openapi_paths)}",
+          )
+          migration_names = {
+              path.name
+              for path in Path("apps/api/src/main/resources/db/migration").glob("*.sql")
+          }
+          require(
+              migration_names
+              == {
+                  "V1__baseline.sql",
+                  "V2__analyst_calls.sql",
+                  "V3__analyst_call_revisions.sql",
+                  "V4__call_outcomes.sql",
+                  "V5__call_contexts.sql",
+              },
+              f"P3 target-hit must not add a Flyway migration: {sorted(migration_names)}",
+          )
+          web_markers = tuple(expected_production_files) + tuple(reasons)
+          for web_path in Path("apps/web/src").rglob("*"):
+              if web_path.is_file() and web_path.suffix in {".ts", ".tsx", ".js", ".jsx"}:
+                  web_source = web_path.read_text(encoding="utf-8")
+                  require(
+                      not any(marker.removesuffix(".java") in web_source for marker in web_markers),
+                      f"P3 target-hit must not expand the web surface: {web_path}",
+                  )
+
+          print(
+              "Validated the pure one-extreme target-hit core, source-local golden vectors, "
+              "unchanged 2 MODEL_ONLY methodologies/4 all-null outcomes, and no contract, "
+              "fixture, API, Flyway, persistence, or web expansion"
+          )
+          PYTHON
+
       - name: Validate analyst-call revision lineage
         shell: bash
         run: |

@@ -1079,3 +1079,84 @@ Status: complete for this vertical slice; the broader P2 phase remains in progre
 - Broader P2 remains open only for its still-undelivered surfaces; leaderboard
   computation stays P3-owned, actual historical screening stays P8-owned, and
   live/provider-backed publication stays P5-owned.
+
+## P3 — Pure target-hit comparison core
+
+Status: complete; no calculation result is published or persisted, and broader
+P3 scoring work remains open
+
+### Scope
+
+- Add the smallest deterministic scoring primitive supported by the existing
+  written specification: an inclusive bullish/bearish target-hit comparison
+  over a target and one preselected favorable window extreme.
+- Preserve missing target/extreme inputs as one explicit unavailable reason
+  rather than Boolean misses, zeroes, or incomplete canonical facts.
+- Exercise the primitive with source-local parameterized golden vectors while
+  leaving every canonical model-only methodology and outcome record unchanged.
+- Add no horizon/calendar/window selection, call-direction mapping, numeric
+  return calculation, provider, scheduler, schema, fixture, manifest member,
+  OpenAPI/API path, Flyway migration, persistence write, or web surface.
+
+### Contract and phase decisions
+
+- `ADR-006` and `quality/P3_ACCEPTANCE.md` own the exact input, comparison,
+  decimal, unavailable, purity, and later-integration boundaries.
+- `TargetHitInput` accepts an interpreted `BULLISH` or `BEARISH` side, nullable
+  positive `BigDecimal` target, and one nullable positive favorable extreme.
+  Bullish interprets it as the caller-selected window high and compares `>=`;
+  bearish interprets it as the caller-selected window low and compares `<=`;
+  equality is a hit.
+- `TargetHitResult` is sealed `Available(boolean)` or
+  `Unavailable(UnavailableReason)` with exactly `TARGET_MISSING`,
+  `FAVORABLE_EXTREME_MISSING`, or
+  `TARGET_AND_FAVORABLE_EXTREME_MISSING`.
+- Every present decimal is exactly `NUMERIC(38,12)` representable. Validation
+  may probe exact scale/precision without mutating inputs; comparison performs
+  no rounding or output normalization. Side interpretation is mandatory and
+  fail-closed.
+- Neither existing `standard-call-outcome` definition hash is attached to this
+  primitive. Both methodologies stay `MODEL_ONLY`; no `CALCULATED` outcome or
+  input fingerprint is produced.
+
+### Module structure
+
+- `apps/api/src/main/java/.../domain/outcome/calculation` owns exactly
+  `TargetHitSide.java`, `TargetHitInput.java`, `TargetHitResult.java`, and
+  `TargetHitCalculator.java` without Spring or infrastructure dependencies.
+- `TargetHitCalculatorGoldenTest.java` under the matching API test package owns the
+  documented golden vectors, equality and near-boundary cases, explicit missing
+  states, invalid values, determinism, and dependency-isolation regression.
+- `decisions/ADR-006-pure-target-hit-core.md`, this P3 acceptance contract, and
+  a focused repository CI source scan own the no-publication/no-expansion gate.
+
+### Routes
+
+- None. `GET /v1/calls/{id}/outcomes` remains the unchanged read-only P1 audit
+  endpoint and does not trigger this primitive.
+
+### Verification
+
+- Focused `TargetHitCalculatorGoldenTest`: PASS, 31/31 tests.
+- Full API Maven verification: PASS, 140/140 tests with zero failures, errors,
+  or skips. PostgreSQL 17.10 Testcontainers migration coverage executed 4/4
+  tests with zero skips.
+- `docker compose --env-file .env.example config --quiet`: PASS.
+- Focused target-hit repository gate: PASS. It proves the exact calculation
+  leaf and source-local golden file, no reverse production wiring, unchanged
+  model-only/all-null outcome evidence, and no schema, fixture, manifest,
+  OpenAPI, Flyway, persistence, or web-source expansion.
+- All embedded workflow Python blocks passed syntax and execution, 12/12;
+  canonical validation covered 14 schemas and 32 fixture records.
+- SnakeYAML parsing and `git diff --check`: PASS.
+- Independent final review: blocker 0, HIGH 0, known false-positive 0.
+
+### Deferred boundary
+
+- A versioned horizon/session/window policy and a reproducible methodology
+  definition must exist before the primitive receives runtime inputs or creates
+  an outcome.
+- Target error, return/directional calculations, MFE/MAE, alpha/sector alpha,
+  outcome completeness, scheduling, persistence orchestration, and leaderboard
+  aggregates remain later P3 slices. Historical bars and licensed providers
+  remain in their owning later phases.
