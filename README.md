@@ -6,7 +6,8 @@ call was made, and evaluates later outcomes with a reproducible methodology.
 
 The P0 foundation and P1 domain/fixture phase are complete, P2 core UI work
 remains in progress, and the first isolated P3 calculation-core slice is
-complete. Delivered P2 routes include the evidence directories, maps,
+complete together with the schedule-only session-offset mechanics slice.
+Delivered P2 routes include the evidence directories, maps,
 market publication state, recorded S&P call history, and the honest known-
 deferred Screener shell; actual screening remains P8 work. P1 provides a
 canonical analyst-call ledger,
@@ -101,6 +102,11 @@ The completed first P3 slice is a pure target-hit comparison core over explicit
 test inputs. It is not connected to canonical fixtures, stored outcomes, APIs,
 or a runtime scoring schedule, and it does not reinterpret either model-only
 methodology as an implemented formula.
+
+The completed P3 session-offset slice accepts only a caller-selected anchor,
+positive count, explicit ordered test-session catalog, and evaluation as-of.
+It does not define D1/W1/M1/M3/M6/Y1, infer calendars, fetch observations, or
+publish an outcome, schema, fixture, API, database, provider, or web surface.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider

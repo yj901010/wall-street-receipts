@@ -1,8 +1,9 @@
 # P3 Acceptance Checks — Deterministic Scoring
 
-Current status: the pure target-hit comparison core vertical slice is complete.
-It proves one closed deterministic primitive only; it does not publish a
-calculated outcome or complete the broader P3 scoring phase, which remains open.
+Current status: the pure target-hit comparison core and explicit-anchor
+session-offset mechanics vertical slices are complete. Neither publishes a
+calculated outcome or completes the broader P3 scoring phase, which remains
+open.
 
 ## Pure target-hit slice boundary
 
@@ -67,10 +68,59 @@ calculated outcome or complete the broader P3 scoring phase, which remains open.
   two `MODEL_ONLY` methodologies and four PENDING/INCOMPLETE, all-null outcomes;
   the exact read-only outcome API and PostgreSQL migration suite remain intact.
 
+## Explicit-anchor session-offset slice boundary
+
+- The caller supplies one anchor session ID, one positive session count, one
+  evaluation as-of instant, and an explicit ordered open/close session catalog.
+  The resolver does not receive or derive a call event time or named horizon.
+- Count `N` selects the next exactly `N` catalog entries after the anchor. The
+  anchor is excluded, the selected entries and endpoint are included, and the
+  Nth subsequent entry is the endpoint.
+- The catalog is schedule input only. Its identity and revision do not claim a
+  licensed source, provenance, point-in-time capture, observed market session,
+  or complete exchange calendar.
+- `Ready` means only that the endpoint close is at or before the explicit
+  evaluation as-of. It never means that a price/bar exists or that any outcome
+  metric is calculated or complete.
+
+## Explicit-anchor session-offset contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-SO01 | Exact request | `SessionOffsetRequest` contains only `policyVersion`, `anchorSessionId`, positive `sessionCount`, `evaluationAsOf`, and `catalog`. It has no call, analyst-call revision, event time, outcome horizon, observation, price, provider, provenance, capture time, or clock. |
+| P3-SO02 | Exact policy version | The code-only policy enum contains exactly `EXPLICIT_ANCHOR_SESSION_COUNT_V1`. It is not a scoring-methodology version and carries no invented definition hash. |
+| P3-SO03 | Explicit catalog | A session contains exactly ID/open/close, and a catalog contains exactly calendar ID/revision/ordered sessions. Identities are non-blank; opens precede closes; UTC instants have at most microsecond precision; IDs are unique; entries are ordered and non-overlapping; construction and resolution do not mutate caller collections. |
+| P3-SO04 | Count/window semantics | Count `N > 0` selects list positions `anchor + 1` through `anchor + N` inclusive. The anchor is excluded, exactly N sessions are returned in source order, and the last is the endpoint. Endpoint lookup cannot overflow. |
+| P3-SO04A | Exact result | `SessionOffsetResolution` nests `ResolutionContext(policyVersion, calendarId, catalogRevision, anchorSessionId, sessionCount, evaluationAsOf)` and `ResolvedSessionWindow(context, anchorSession, immutable sessions, endpointSession)`. Variants are exactly `Ready(window)`, `Pending(window, ENDPOINT_NOT_REACHED)`, or `Incomplete(context, ANCHOR_SESSION_MISSING|ENDPOINT_SESSION_MISSING)`. |
+| P3-SO05 | No calendar inference | The resolver never sorts, inserts, drops, or derives a session and uses no local date, zone, weekday, weekend, holiday, DST, duration, month, or year arithmetic. Explicit irregular gaps and weekend sessions count; omitted dates remain absent. |
+| P3-SO06 | Ready boundary | An existing endpoint is `Ready` exactly when `endpoint.closesAt <= evaluationAsOf`; equality is ready. Ready exposes schedule evidence only and is not `CALCULATED`, `dataComplete`, or proof of an observed close/bar. |
+| P3-SO07 | Pending boundary | An existing endpoint strictly after `evaluationAsOf` is `Pending` with exact reason `ENDPOINT_NOT_REACHED`, preserving the resolved window without consulting a clock. |
+| P3-SO08 | Incomplete coverage | An absent anchor returns only `ANCHOR_SESSION_MISSING`; insufficient subsequent catalog entries return only `ENDPOINT_SESSION_MISSING`. Neither is silently changed to pending, ready, zero, a guessed date, or canonical `HORIZON_DATA_MISSING`. |
+| P3-SO09 | Invalid input | Nulls, blank identities, non-positive counts, duplicate session IDs, invalid open/close bounds, non-increasing or overlapping entries, and finer-than-microsecond instants fail closed rather than returning a schedule result. |
+| P3-SO10 | Pure source boundary | Production resolver code imports no call/outcome aggregate, `OutcomeHorizon`, target calculator, provider, repository, fixture, framework, controller, persistence, network, JSON, scheduler, `Clock`, locale, timezone, or floating-point dependency. No other production class wires the leaf. |
+| P3-SO11 | No publication | Source-local schedules are golden inputs only. No schema, canonical fixture, manifest member, OpenAPI path, Flyway migration, database row, API behavior, provider, or web source is added or changed. Existing methodologies remain exactly `MODEL_ONLY` and all four outcome metrics remain null. |
+| P3-SO12 | Later named-horizon boundary | D1/W1/M1/M3/M6/Y1 mappings, event/correction anchoring, calendar sourcing, observation completeness, retry/grace, price/window rules, methodology serialization/hash, and input fingerprinting require a later reviewed contract before runtime use. |
+
+## Required session-offset golden and negative tests
+
+- Count one and count five prove anchor-excluded, endpoint-included window size,
+  source order, and endpoint identity without mutating the input list.
+- Evaluation immediately before, exactly at, and after endpoint close proves the
+  pending/ready boundary and exact `ENDPOINT_NOT_REACHED` reason.
+- Empty/unknown anchor catalogs and insufficient endpoint coverage prove the two
+  exact incomplete reasons; a maximum integer count remains overflow-safe.
+- Explicit Saturday/irregular/early-close entries are counted, while an omitted
+  weekday is never inserted. JVM timezone and locale changes do not alter the
+  result.
+- Nulls, blanks, count zero/negative, duplicate IDs, reversed or equal
+  open/close, out-of-order/overlapping entries, and sub-microsecond instants
+  fail closed. Golden schedules remain source-local Java values, not JSON.
+
 ## Deferred work and implementation order
 
-1. Define a versioned trading-calendar/session and horizon-window policy before
-   selecting any runtime target-hit input.
+1. With the explicit-anchor session-offset mechanics complete, define the
+   versioned event-to-anchor and named-horizon policy before selecting any
+   runtime target-hit input.
 2. Add endpoint-price/asset-return support, then target error after the exact
    `actual` observation, positivity, output scale, and rounding policy are
    versioned. Target error precedes window metrics because it needs one resolved
