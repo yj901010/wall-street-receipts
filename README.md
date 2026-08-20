@@ -4,8 +4,9 @@ Wall Street Receipts is a point-in-time financial research product that records
 public analyst calls, preserves the market context that was available when each
 call was made, and evaluates later outcomes with a reproducible methodology.
 
-The P0 foundation and P1 domain/fixture phase are complete, and P2 core UI work
-is in progress. Delivered P2 routes include the evidence directories, maps,
+The P0 foundation and P1 domain/fixture phase are complete, P2 core UI work
+remains in progress, and the first isolated P3 calculation-core slice is
+complete. Delivered P2 routes include the evidence directories, maps,
 market publication state, recorded S&P call history, and the honest known-
 deferred Screener shell; actual screening remains P8 work. P1 provides a
 canonical analyst-call ledger,
@@ -95,6 +96,11 @@ as `NA` and must never coerce them to zero or invent a value.
 The P1 outcome fixtures are model-only audit records. Their financial metrics
 and result booleans are deliberately `null`; deterministic return, alpha,
 target, and MFE/MAE calculations belong to P3 and require golden tests.
+
+The completed first P3 slice is a pure target-hit comparison core over explicit
+test inputs. It is not connected to canonical fixtures, stored outcomes, APIs,
+or a runtime scoring schedule, and it does not reinterpret either model-only
+methodology as an implemented formula.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
