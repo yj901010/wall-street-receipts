@@ -5,9 +5,10 @@ public analyst calls, preserves the market context that was available when each
 call was made, and evaluates later outcomes with a reproducible methodology.
 
 The P0 foundation and P1 domain/fixture phase are complete, P2 core UI work
-remains in progress, and the first isolated P3 calculation-core slice is
-complete together with the schedule-only session-offset mechanics slice.
-Delivered P2 routes include the evidence directories, maps,
+remains in progress, and the first three isolated P3 slices are complete: the
+target-hit comparison core, schedule-only session-offset mechanics, and the
+policy-neutral event/session relation classifier. Delivered P2 routes
+include the evidence directories, maps,
 market publication state, recorded S&P call history, and the honest known-
 deferred Screener shell; actual screening remains P8 work. P1 provides a
 canonical analyst-call ledger,
@@ -107,6 +108,11 @@ The completed P3 session-offset slice accepts only a caller-selected anchor,
 positive count, explicit ordered test-session catalog, and evaluation as-of.
 It does not define D1/W1/M1/M3/M6/Y1, infer calendars, fetch observations, or
 publish an outcome, schema, fixture, API, database, provider, or web surface.
+
+The completed P3 relation slice classifies one caller-supplied event instant
+against an explicit test-session catalog. It preserves open, interior, close,
+gap, touching-boundary, and coverage states without choosing an anchor, call or
+correction basis, horizon, observation, or product surface.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider

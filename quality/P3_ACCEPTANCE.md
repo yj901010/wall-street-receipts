@@ -1,9 +1,9 @@
 # P3 Acceptance Checks — Deterministic Scoring
 
-Current status: the pure target-hit comparison core and explicit-anchor
-session-offset mechanics vertical slices are complete. Neither publishes a
-calculated outcome or completes the broader P3 scoring phase, which remains
-open.
+Current status: the pure target-hit comparison core, explicit-anchor
+session-offset mechanics, and policy-neutral event/session relation classifier
+vertical slices are complete. None publishes a calculated outcome or completes
+the broader P3 scoring phase, which remains open.
 
 ## Pure target-hit slice boundary
 
@@ -116,11 +116,56 @@ open.
   open/close, out-of-order/overlapping entries, and sub-microsecond instants
   fail closed. Golden schedules remain source-local Java values, not JSON.
 
+## Event/session relation slice boundary
+
+- The caller supplies one event time and the existing explicit ordered session
+  catalog. The classifier describes their temporal relation only and never
+  chooses an anchor or call/revision basis.
+- Exact opens, strict interiors, exact closes, strict gaps, touching close/open
+  boundaries, empty catalogs, and before/after coverage remain distinct.
+- A gap is not named as pre-market, after-hours, weekend, or holiday. Those are
+  later calendar/methodology interpretations that the supplied intervals alone
+  cannot prove.
+
+## Event/session relation contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-ER01 | Exact request | `EventSessionRelationRequest` contains only `policyVersion`, `eventTime`, and `catalog`. It has no call, analyst-call revision, basis selector, anchor, horizon, session count, evaluation as-of, observation, price, provenance, capture time, provider, or clock. |
+| P3-ER02 | Exact policy version | The code-only enum contains exactly `EXPLICIT_SESSION_BOUNDARY_RELATION_V1`; it is not a scoring-methodology version and has no invented definition hash. |
+| P3-ER03 | Exact context | Every result preserves exactly `RelationContext(policyVersion, calendarId, catalogRevision, eventTime)` from the supplied request/catalog without adding source or point-in-time claims. |
+| P3-ER04 | Closed relations | Variants are exactly `EmptyCatalog(context)`, `BeforeCatalog(context, firstSession)`, `AtOpen(context, session)`, `InsideSession(context, session)`, `AtClose(context, session)`, `AtTouchingBoundary(context, closingSession, openingSession)`, `BetweenSessions(context, previousSession, nextSession)`, and `AfterCatalog(context, lastSession)`. |
+| P3-ER05 | Exact interval boundaries | Before means event < first open; open and close equality have explicit variants; inside is open < event < close; between is previous close < event < next open; after is event > last close. No epsilon or rounding is used. |
+| P3-ER06 | Touching sessions | When previous close == next open == event time, only `AtTouchingBoundary` is returned with both sessions. Neither open nor close silently wins. |
+| P3-ER06A | Classifier-owned catalog relation | Public relation-record constructors enforce only locally decidable null, identity, and temporal-inequality constraints. Catalog membership, first/last position, adjacency, and touching precedence are guaranteed only by `EventSessionRelationClassifier`; direct construction attests neither catalog provenance nor runtime eligibility. |
+| P3-ER07 | No calendar inference | Source order/intervals are used unchanged. The classifier never sorts, inserts, drops, or derives a session and uses no local date, zone, weekday, weekend, holiday, DST, month/year, or duration arithmetic. |
+| P3-ER08 | No anchor policy | No output contains an anchor, session count, endpoint, ready/pending state, or recommendation. Original-call versus correction event selection and every relation-to-anchor mapping remain caller/later-methodology responsibilities. |
+| P3-ER09 | Time/input safety | Null request/policy/event/catalog and finer-than-microsecond event time fail closed. Empty catalog is valid evidence and returns `EmptyCatalog`; caller/catalog collections remain immutable and unmodified. |
+| P3-ER10 | Pure source boundary | Production relation code imports no call/revision/outcome aggregate, `OutcomeHorizon`, target calculator, session-offset resolver/request/result, provider, repository, fixture, JSON, Spring, persistence, network, scheduler, `Clock`, locale, timezone, or floating-point dependency. No product runtime class wires it. |
+| P3-ER11 | No PIT claim | Calendar ID/revision are echoed labels only. No relation claims the catalog was known at event or evaluation time, observed, licensed, complete, or source-traceable. |
+| P3-ER12 | No publication | No schema, canonical fixture, manifest member, OpenAPI path, Flyway migration, database row, API behavior, provider, or web source changes. Existing methodologies remain `MODEL_ONLY` and all four outcomes retain null metrics. |
+
+## Required event/session relation golden and negative tests
+
+- Empty, one-session, and multi-session catalogs cover before first, exact open,
+  one microsecond after open, strict interior, one microsecond before close,
+  exact close, one microsecond after close, exact next open, and after last.
+- A Friday-to-Monday gap remains `BetweenSessions`; an explicit Saturday event
+  can be `InsideSession`; irregular early closes are classified exactly as
+  supplied without inserting an omitted date.
+- A valid touching boundary returns both closing and opening sessions and never
+  changes with list replay, locale, or default timezone. The classifier test
+  proves touching precedence over the individually valid open/close records.
+- Reflection or equivalent contract tests lock every record component and the
+  exact eight permitted result variants. Constructor negatives cover only
+  locally decidable contradictions; null/sub-microsecond input fails closed,
+  and source lists/catalogs are not mutated.
+
 ## Deferred work and implementation order
 
-1. With the explicit-anchor session-offset mechanics complete, define the
-   versioned event-to-anchor and named-horizon policy before selecting any
-   runtime target-hit input.
+1. Define the versioned relation-to-anchor, original/correction-basis, and
+   named-horizon policy before selecting any runtime target-hit input; the
+   policy-neutral event/session classification prerequisite is complete.
 2. Add endpoint-price/asset-return support, then target error after the exact
    `actual` observation, positivity, output scale, and rounding policy are
    versioned. Target error precedes window metrics because it needs one resolved

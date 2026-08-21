@@ -1242,3 +1242,81 @@ broader P3 scoring remains open
 - Market providers, historical bars, schedulers, persistence orchestration,
   calculated outcomes, aggregate rankings, API expansion, and UI publication
   remain outside this slice.
+
+## P3 — Policy-neutral event/session relation
+
+Status: complete for this vertical slice; the broader P3 scoring phase remains
+open, with no anchor selection, named horizon, market observation, outcome,
+persistence, API, or web publication
+
+### Scope
+
+- Classify one caller-supplied event time against the existing explicit ordered
+  open/close catalog while preserving exact boundaries, gaps, and coverage.
+- Return no anchor, session offset, horizon endpoint, readiness, recommendation,
+  observation, or calculated state.
+- Use source-local Java golden schedules only; canonical methodologies,
+  outcomes, fixtures, and product surfaces remain unchanged.
+
+### Contract and phase decisions
+
+- `ADR-008` and `quality/P3_ACCEPTANCE.md` own
+  `EXPLICIT_SESSION_BOUNDARY_RELATION_V1` and the exact eight-result union.
+- `EventSessionRelationRequest` contains only policy version, event time, and
+  catalog. The caller owns whether the instant represents an original call,
+  correction, or another reviewed basis.
+- Relation context echoes policy, calendar label/revision, and event time only.
+  It makes no claim that the catalog was point-in-time available, observed,
+  complete, licensed, or source-traceable.
+- Touching close/open instants preserve both sessions; gaps are not labelled as
+  pre-market, after-hours, weekend, or holiday. No relation selects an anchor.
+- Relation-record constructors enforce only their local component inequalities;
+  the classifier alone guarantees catalog membership, first/last position,
+  adjacency, and touching precedence. Direct construction proves neither
+  catalog provenance nor runtime eligibility.
+- The code-only version/ADR do not reinterpret either existing `MODEL_ONLY`
+  methodology hash or create an input fingerprint.
+
+### Module structure
+
+- The existing API horizon package additively owns
+  `EventSessionRelationPolicyVersion.java`,
+  `EventSessionRelationRequest.java`, `EventSessionRelation.java`, and
+  `EventSessionRelationClassifier.java`; the completed six session-offset files
+  remain unchanged and separately guarded.
+- `EventSessionRelationClassifierGoldenTest.java` in the matching test package
+  owns boundary, gap, touching-session, explicit irregular-session, precision,
+  immutability, closed-shape, and locale/timezone regressions.
+- `ADR-008`, the P3 acceptance contract, and focused additive CI own the
+  no-anchor/no-publication boundary.
+
+### Routes
+
+- None. Existing call/outcome routes remain unchanged and never invoke this
+  classifier.
+
+### Verification
+
+- Focused `EventSessionRelationClassifierGoldenTest`: PASS, 42/42 tests.
+- Full API `mvnw -B -ntp verify`: BUILD SUCCESS, 223/223 tests with zero
+  failures, errors, or skips; PostgreSQL 17.10 Testcontainers migration tests
+  executed 4/4 with zero skips.
+- `docker compose --env-file .env.example config --quiet`: PASS.
+- Preserved session-offset plus additive relation focused CI: 2/2 PASS. All
+  embedded workflow Python blocks passed syntax and execution 14/14, validating
+  14 schemas and 32 canonical fixture records.
+- SnakeYAML workflow parsing, `git diff --check`, and root temporary-artifact
+  audit: PASS/clean.
+- No web verification was required: this slice changes no web source or route,
+  and the focused source-boundary gate rejects web expansion.
+- Independent final review: blocker 0, HIGH 0, known false-positive 0.
+
+### Deferred boundary
+
+- Relation-to-anchor rules, original-versus-correction selection, calendar
+  revision point-in-time evidence, emergency closures, named horizon mapping,
+  bar/window rules, retry/grace, methodology serialization/hash, and input
+  fingerprinting remain later P3 contracts.
+- Providers, historical observations, schedulers, persistence orchestration,
+  calculated outcomes, aggregates, API changes, and UI publication remain
+  outside this slice.
