@@ -1919,3 +1919,98 @@ persistence, API, or product publication
   freshness/health, credentials, and non-DEMO publication remain P5 work. This
   disconnected slice requires no API key, account, paid plan, domain, license,
   or network access.
+
+## P3 — Call-direction polarity policy
+
+Status: complete for this disconnected direction-reduction policy slice;
+broader P3 scoring remains open, with no calculator invocation, calculated
+outcome, provider, persistence, API, or product publication
+
+### Scope
+
+- Lock the product-owner-approved canonical mapping exactly:
+  `STRONG_BULLISH→BULLISH`, `BULLISH→BULLISH`,
+  `NEUTRAL→NON_DIRECTIONAL`, `BEARISH→BEARISH`, and
+  `STRONG_BEARISH→BEARISH`.
+- Preserve the original five-value `CallDirection` in every resolution context
+  while returning only common directional `BULLISH`/`BEARISH` or explicit
+  `NonDirectional(NEUTRAL_DIRECTION)`.
+- Treat neutral as a complete non-directional classification, never a false
+  Boolean, loss, miss, bearish side, unavailable input, excluded/incomplete
+  outcome, null, or default.
+- Add a disconnected resolver and source-local Java goldens only. Add no
+  horizon, calendar, price, return, target, calculator adapter, observation,
+  provider/account/key, scheduler, schema, fixture, manifest member, OpenAPI
+  path, Flyway migration, database row, API behavior, or web source.
+
+### Locked contract decisions
+
+- ADR-011 and `quality/P3_ACCEPTANCE.md` own the exact request, mapping, result,
+  constructor consistency, canonical-definition, purity, and deferred-
+  integration contracts.
+- `COLLAPSE_STRONG_DIRECTIONS_NEUTRAL_NON_DIRECTIONAL_V1` uses an exhaustive
+  enum switch over `CallDirection`; no ordinal, enum-name string, alias, case
+  normalization, default, or fallback can infer a polarity.
+- Results are sealed as only `Directional(context,side)` or
+  `NonDirectional(context,reason)`. Directional side is exactly
+  `BULLISH|BEARISH`; non-directional reason is exactly `NEUTRAL_DIRECTION`.
+- Public result constructors validate the source-direction/result compatibility
+  available from their own context and fail closed for a wrong side, neutral/
+  directional mismatch, wrong hash, or null component.
+- The exact single-line canonical definition is 489 ASCII/UTF-8 bytes with
+  fixed lowercase SHA-256
+  `d83eccc92fedd7ba025745be2c8e78245bc308d0ff479467fa61afe543dc8a50`.
+  Definition bytes are defensively returned and every resolution context echoes
+  the digest. This identity is neither the strict-close policy digest nor either
+  existing model-only scoring-methodology hash.
+
+### Module and file boundary
+
+- The isolated API package
+  `com.wallstreetreceipts.api.domain.outcome.direction` contains exactly
+  `CallDirectionPolarityPolicyVersion.java`,
+  `CallDirectionPolarityRequest.java`,
+  `CallDirectionPolarityResolution.java`, and
+  `CallDirectionPolarityResolver.java` only.
+- `CallDirectionPolarityResolverGoldenTest.java` owns source-local exhaustive
+  mapping, neutral semantics, invalid request/result, constructor consistency,
+  canonical bytes/hash, defensive-copy, exact-shape, and default-environment
+  replay coverage.
+- ADR-011, the P3 acceptance contract, README, this log, and a mutation-sensitive
+  repository CI extension own exact-shape, reverse-wiring, unchanged-canonical-
+  surface, and no-provider boundaries.
+
+### Routes
+
+- None. The policy is not invoked by a calculator, controller, application
+  service, repository, fixture adapter, API response, scheduler, or web route.
+
+### Verification
+
+- Focused `CallDirectionPolarityResolverGoldenTest`: PASS, 30/30 tests.
+- Full API Maven verification: PASS, 21 Surefire suites and 328/328 tests with
+  zero failures, errors, or skips; the application JAR was packaged.
+- PostgreSQL Testcontainers migration coverage executed 4/4 tests. Compose
+  environment-file validation also passed.
+- Repository-local embedded workflow Python blocks 1–19 executed 19/19,
+  including 14 schema/32 fixture-record validation, both protected P2 consumer
+  baselines, every pre-existing P3 guard, and the new polarity guard. All 20
+  embedded Python blocks compiled.
+- Block 20 is the cross-stack log verifier and was intentionally not run because
+  this disconnected leaf launched no Spring or Next service and changed no
+  runtime surface; no cross-stack result is claimed.
+- SnakeYAML 2.5 parsed the workflow, and `git diff --check` passed. Final
+  production/test/CI review reported zero blocker and zero high-severity
+  findings.
+- No web, browser, or cross-stack test is reported as executed for this slice.
+
+### Deferred boundary
+
+- Calculator-side enum adaptation, target eligibility, horizon observations and
+  returns, cancellation eligibility, methodology activation, point-in-time
+  input identity, fingerprinting, persistence, calculated outcomes, aggregates,
+  and UI publication remain later reviewed P3 work.
+- Real calendar and market providers, display/storage/derived-data rights,
+  freshness/health, credentials, and non-DEMO publication remain P5 work. This
+  disconnected policy requires no API key, account, paid plan, domain, license,
+  or network access.

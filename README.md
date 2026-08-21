@@ -5,11 +5,13 @@ public analyst calls, preserves the market context that was available when each
 call was made, and evaluates later outcomes with a reproducible methodology.
 
 The P0 foundation and P1 domain/fixture phase are complete, broader P2 work
-remains open, and the first five isolated P3 slices are complete: the target-hit
+remains open, and the first six isolated P3 slices are complete: the target-hit
 comparison core, schedule-only session-offset mechanics, the policy-neutral
 event/session relation classifier, and the pure directional-win comparison
 core, plus the strict session-close named-horizon and independent
-original/correction schedule-lineage policy. Delivered P2 work includes
+original/correction schedule-lineage policy and the approved five-direction
+polarity reduction that preserves neutral as non-directional rather than a
+loss. Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
 maps, market publication state, recorded S&P call history, and the honest
 known-deferred Screener shell; broader P2 remains open and actual screening
@@ -177,6 +179,15 @@ is preserved. Its exact 633-byte policy definition and SHA-256 are versioned;
 the result identifies a schedule endpoint only and does not claim a licensed
 calendar, observed price, calculated return, complete outcome, or methodology
 activation. It requires no provider credential or network access.
+
+The completed sixth P3 slice maps the canonical five call directions through
+one versioned policy: strong and ordinary bullish directions become directional
+`BULLISH`, strong and ordinary bearish directions become directional `BEARISH`,
+and `NEUTRAL` becomes explicit `NonDirectional(NEUTRAL_DIRECTION)`. The original
+source direction remains in the policy context. Neutral is not false, a loss,
+missing evidence, or an excluded outcome. This disconnected leaf invokes no
+calculator or runtime surface and requires no provider credential or network
+access.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
