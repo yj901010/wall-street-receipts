@@ -119,7 +119,7 @@ test.describe("institution identity directory", () => {
     await page.keyboard.press("Enter");
 
     await expect(page).toHaveURL(/\/calls\?institutionId=inst-gs$/);
-    await expect(page.getByLabel("기관")).toHaveValue("inst-gs");
+    await expect(page.getByLabel("기관 ID (대소문자 정확히 일치)")).toHaveValue("inst-gs");
     await expect(page.getByRole("heading", { name: "애널리스트 콜" }))
       .toBeVisible();
     await expectNoPageOverflow(page);

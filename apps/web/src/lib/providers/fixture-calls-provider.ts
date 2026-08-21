@@ -97,7 +97,8 @@ const masterDataFixture = masterDataFixtureJson as MasterDataFixture;
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 const utcInstantPattern = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?Z$/;
-const offsetInstantPattern = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?([+-])(\d{2}):(\d{2})$/;
+const queryUtcInstantPattern = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?Z$/;
+const offsetInstantPattern = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?([+-])(\d{2}):(\d{2})$/;
 
 function normalized(value: string | undefined) {
   return value?.trim().toLocaleLowerCase("en-US") ?? "";
@@ -131,8 +132,8 @@ function canonicalInstant(value: string, owner: string) {
     throw new Error(`${owner} has an invalid UTC instant: ${value}.`);
   }
 
-  const microseconds = (match[2] ?? "").padEnd(6, "0");
-  return BigInt(parsed) * 1_000n + BigInt(microseconds || "0");
+  const nanoseconds = (match[2] ?? "").padEnd(9, "0");
+  return BigInt(parsed) * 1_000_000n + BigInt(nanoseconds || "0");
 }
 
 function instant(value: string | undefined, field: "from" | "to") {
@@ -140,9 +141,14 @@ function instant(value: string | undefined, field: "from" | "to") {
     return null;
   }
 
-  const canonicalMatch = utcInstantPattern.exec(value);
+  const canonicalMatch = queryUtcInstantPattern.exec(value);
   if (canonicalMatch) {
-    return canonicalInstant(value, `${field} query`);
+    const parsed = Date.parse(`${canonicalMatch[1]}Z`);
+    if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== `${canonicalMatch[1]}.000Z`) {
+      throw new Error(`Invalid ${field} instant: ${value}`);
+    }
+    const nanoseconds = (canonicalMatch[2] ?? "").padEnd(9, "0");
+    return BigInt(parsed) * 1_000_000n + BigInt(nanoseconds || "0");
   }
 
   const offsetMatch = offsetInstantPattern.exec(value);
@@ -156,8 +162,9 @@ function instant(value: string | undefined, field: "from" | "to") {
   if (
     !Number.isFinite(localSecond) ||
     new Date(localSecond).toISOString() !== `${offsetMatch[1]}.000Z` ||
-    offsetHours > 23 ||
-    offsetMinutes > 59
+    offsetHours > 18 ||
+    offsetMinutes > 59 ||
+    (offsetHours === 18 && offsetMinutes !== 0)
   ) {
     throw new Error(`Invalid ${field} instant: ${value}`);
   }
@@ -169,8 +176,8 @@ function instant(value: string | undefined, field: "from" | "to") {
     throw new Error(`Invalid ${field} instant: ${value}`);
   }
 
-  const microseconds = (offsetMatch[2] ?? "").padEnd(6, "0");
-  return BigInt(utcSecond) * 1_000n + BigInt(microseconds || "0");
+  const nanoseconds = (offsetMatch[2] ?? "").padEnd(9, "0");
+  return BigInt(utcSecond) * 1_000_000n + BigInt(nanoseconds || "0");
 }
 
 export function compareFixtureCallInstants(left: string, right: string) {
@@ -557,10 +564,10 @@ const metadata: CallsMetadata = {
 
 export class FixtureCallsProvider implements CallsProvider {
   async list(query: CallsQuery = {}): Promise<AnalystCallPage> {
-    const assetId = normalized(query.assetId);
+    const assetId = query.assetId ?? "";
     const ticker = normalized(query.ticker);
-    const institutionId = normalized(query.institutionId);
-    const analystId = normalized(query.analystId);
+    const institutionId = query.institutionId ?? "";
+    const analystId = query.analystId ?? "";
     const from = instant(query.from, "from");
     const to = instant(query.to, "to");
 
@@ -569,12 +576,12 @@ export class FixtureCallsProvider implements CallsProvider {
     }
 
     const filtered = allCalls.filter(({ call, institution, analyst, asset }) => {
-      const assetMatches = !assetId || asset.assetId.toLocaleLowerCase("en-US") === assetId;
+      const assetMatches = !assetId || asset.assetId === assetId;
       const tickerMatches = !ticker || asset.ticker?.toLocaleLowerCase("en-US") === ticker;
       const institutionMatches =
-        !institutionId || institution.institutionId.toLocaleLowerCase("en-US") === institutionId;
+        !institutionId || institution.institutionId === institutionId;
       const analystMatches =
-        !analystId || analyst?.analystId.toLocaleLowerCase("en-US") === analystId;
+        !analystId || analyst?.analystId === analystId;
       const directionMatches = !query.direction || call.direction === query.direction;
       const statusMatches = !query.status || call.status === query.status;
       const dataModeMatches = !query.dataMode || call.dataMode === query.dataMode;

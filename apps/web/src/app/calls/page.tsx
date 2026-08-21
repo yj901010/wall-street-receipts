@@ -1,75 +1,25 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
-import { DATA_MODES, type DataMode } from "@/lib/data-mode";
 import { formatMoney } from "@/lib/format-money";
 import { getLocale } from "@/lib/i18n/server";
-import { callsProvider } from "@/lib/providers";
+import { callListProvider } from "@/lib/providers/call-list-provider.server";
+import {
+  parseCallListSearchParams,
+  type CallListFilterValues,
+  type CallListSearchParams,
+} from "@/lib/providers/call-list-query";
 import {
   CALL_DIRECTIONS,
-  CALL_SORT_FIELDS,
   CALL_STATUSES,
   type CallDirection,
-  type CallStatus,
-  type CallsQuery,
 } from "@/lib/providers/calls-provider";
 import { getCallsMessages } from "./messages";
-
-type SearchValue = string | string[] | undefined;
-type CallsSearchParams = Record<string, SearchValue>;
 
 const utcFormatter = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
   timeStyle: "short",
   timeZone: "UTC",
 });
-
-function first(value: SearchValue) {
-  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
-}
-
-function nonNegativeNumber(value: string) {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
-}
-
-function positiveNumber(value: string) {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-function direction(value: string): CallDirection | undefined {
-  return CALL_DIRECTIONS.find((candidate) => candidate === value);
-}
-
-function dataMode(value: string): DataMode | undefined {
-  return DATA_MODES.find((candidate) => candidate === value);
-}
-
-function sort(value: string): CallsQuery["sort"] {
-  return CALL_SORT_FIELDS.find((candidate) => candidate === value);
-}
-
-function order(value: string): CallsQuery["order"] {
-  return value === "asc" || value === "desc" ? value : undefined;
-}
-
-function status(value: string): CallStatus | undefined {
-  return CALL_STATUSES.find((candidate) => candidate === value);
-}
-
-function startOfDate(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00.000Z` : undefined;
-}
-
-function dayAfter(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return undefined;
-  }
-
-  const date = new Date(`${value}T00:00:00.000Z`);
-  date.setUTCDate(date.getUTCDate() + 1);
-  return date.toISOString();
-}
 
 function utc(value: string) {
   return `${utcFormatter.format(new Date(value))} UTC`;
@@ -79,7 +29,7 @@ function directionLabel(value: CallDirection) {
   return value.replaceAll("_", " ");
 }
 
-function pageHref(values: Record<string, string>, page: number) {
+function pageHref(values: CallListFilterValues, page: number) {
   const params = new URLSearchParams();
 
   Object.entries(values).forEach(([key, value]) => {
@@ -95,45 +45,17 @@ function pageHref(values: Record<string, string>, page: number) {
 export default async function CallsPage({
   searchParams,
 }: {
-  searchParams: Promise<CallsSearchParams>;
+  searchParams: Promise<CallListSearchParams>;
 }) {
   const [raw, locale] = await Promise.all([searchParams, getLocale()]);
   const messages = getCallsMessages(locale).list;
-  const values = {
-    assetId: first(raw.assetId),
-    ticker: first(raw.ticker),
-    institutionId: first(raw.institutionId),
-    analystId: first(raw.analystId),
-    direction: first(raw.direction),
-    status: first(raw.status),
-    dataMode: first(raw.dataMode),
-    from: first(raw.from),
-    to: first(raw.to),
-    size: first(raw.size),
-    sort: first(raw.sort),
-    order: first(raw.order),
-  };
-  const provider = callsProvider();
-  const query: CallsQuery = {
-    assetId: values.assetId || undefined,
-    ticker: values.ticker || undefined,
-    institutionId: values.institutionId || undefined,
-    analystId: values.analystId || undefined,
-    direction: direction(values.direction),
-    status: status(values.status),
-    dataMode: dataMode(values.dataMode),
-    from: startOfDate(values.from),
-    to: dayAfter(values.to),
-    page: nonNegativeNumber(first(raw.page)),
-    size: positiveNumber(values.size),
-    sort: sort(values.sort),
-    order: order(values.order),
-  };
-  const [result, metadata] = await Promise.all([provider.list(query), provider.metadata()]);
+  const { query, values } = parseCallListSearchParams(raw);
+  const result = await callListProvider().list(query);
+  const isOutOfRangePage = result.items.length === 0 && result.page.totalElements > 0;
 
   return (
     <main>
-      <SiteHeader current="calls" dataMode={metadata.dataMode} />
+      <SiteHeader current="calls" dataMode={result.dataMode} />
       <div className="page-shell calls-shell">
         <section className="page-heading calls-heading" aria-labelledby="calls-page-title">
           <div>
@@ -141,65 +63,79 @@ export default async function CallsPage({
             <h1 id="calls-page-title">{messages.title}</h1>
             <p className="page-summary">{messages.summary}</p>
           </div>
-          <dl className="provenance-strip" aria-label={messages.provenanceLabel}>
+          <dl className="provenance-strip" aria-label={messages.returnedPageEvidenceLabel}>
             <div>
-              <dt>{messages.asOf}</dt>
-              <dd>{utc(metadata.asOf)}</dd>
+              <dt>{messages.latestReturnedCapture}</dt>
+              <dd>{result.returnedPageEvidence.latestCallCapturedAt
+                ? utc(result.returnedPageEvidence.latestCallCapturedAt)
+                : "NA"}</dd>
             </div>
             <div>
-              <dt>{messages.source}</dt>
-              <dd>{metadata.source}</dd>
+              <dt>{messages.returnedCallProvenance}</dt>
+              <dd>{result.returnedPageEvidence.callProvenanceIds.join(", ") || "NA"}</dd>
             </div>
             <div>
               <dt>{messages.mode}</dt>
-              <dd>{metadata.dataMode}</dd>
+              <dd>{result.dataMode}</dd>
             </div>
           </dl>
+          <p className="section-note">{messages.returnedPageEvidenceNote}</p>
+        </section>
+
+        <section className="data-section calls-dataset-evidence" aria-label={messages.provenanceLabel}>
+          <dl className="provenance-strip">
+            <div>
+              <dt>{messages.asOf}</dt>
+              <dd>{result.datasetEvidence.availability === "AVAILABLE"
+                ? utc(result.datasetEvidence.asOf)
+                : "NA"}</dd>
+            </div>
+            <div>
+              <dt>{messages.source}</dt>
+              <dd>{result.datasetEvidence.availability === "AVAILABLE"
+                ? result.datasetEvidence.source
+                : "NA"}</dd>
+            </div>
+            <div>
+              <dt>{messages.datasetMetadata}</dt>
+              <dd>{result.datasetEvidence.availability === "AVAILABLE"
+                ? messages.available
+                : messages.notExposed}</dd>
+            </div>
+          </dl>
+          <p className="dataset-disclaimer">
+            {result.datasetEvidence.availability === "AVAILABLE"
+              ? result.datasetEvidence.disclaimer
+              : messages.datasetNotExposed(result.datasetEvidence.reason)}
+          </p>
         </section>
 
         <form className="calls-filters" action="/calls" method="get" aria-label={messages.filterLabel}>
           <label>
-            <span>{messages.ticker}</span>
+            <span>{messages.tickerFilter}</span>
             <input name="ticker" defaultValue={values.ticker} placeholder={messages.tickerPlaceholder} />
           </label>
           <label>
-            <span>{messages.asset}</span>
-            <select name="assetId" defaultValue={values.assetId}>
-              <option value="">{messages.allAssets}</option>
-              {metadata.facets.assets.map((asset) => (
-                <option key={asset.assetId} value={asset.assetId}>
-                  {asset.ticker ?? "NA"} — {asset.canonicalName}
-                </option>
-              ))}
-            </select>
+            <span>{messages.assetIdFilter}</span>
+            <input name="assetId" defaultValue={values.assetId} placeholder={messages.assetIdPlaceholder} />
           </label>
           <label>
-            <span>{messages.institution}</span>
-            <select name="institutionId" defaultValue={values.institutionId}>
-              <option value="">{messages.allInstitutions}</option>
-              {metadata.facets.institutions.map((institution) => (
-                <option key={institution.institutionId} value={institution.institutionId}>
-                  {institution.canonicalName}
-                </option>
-              ))}
-            </select>
+            <span>{messages.institutionIdFilter}</span>
+            <input
+              name="institutionId"
+              defaultValue={values.institutionId}
+              placeholder={messages.institutionIdPlaceholder}
+            />
           </label>
           <label>
-            <span>{messages.analyst}</span>
-            <select name="analystId" defaultValue={values.analystId}>
-              <option value="">{messages.allAnalysts}</option>
-              {metadata.facets.analysts.map((analyst) => (
-                <option key={analyst.analystId} value={analyst.analystId}>
-                  {analyst.canonicalName}
-                </option>
-              ))}
-            </select>
+            <span>{messages.analystIdFilter}</span>
+            <input name="analystId" defaultValue={values.analystId} placeholder={messages.analystIdPlaceholder} />
           </label>
           <label>
             <span>{messages.direction}</span>
             <select name="direction" defaultValue={values.direction}>
               <option value="">{messages.allDirections}</option>
-              {metadata.facets.directions.map((candidate) => (
+              {CALL_DIRECTIONS.map((candidate) => (
                 <option key={candidate} value={candidate}>
                   {directionLabel(candidate)}
                 </option>
@@ -210,7 +146,7 @@ export default async function CallsPage({
             <span>{messages.status}</span>
             <select name="status" defaultValue={values.status}>
               <option value="">{messages.allStatuses}</option>
-              {metadata.facets.statuses.map((candidate) => (
+              {CALL_STATUSES.map((candidate) => (
                 <option key={candidate} value={candidate}>{candidate}</option>
               ))}
             </select>
@@ -223,13 +159,6 @@ export default async function CallsPage({
             <span>{messages.throughDate}</span>
             <input type="date" name="to" defaultValue={values.to} />
             <small>{messages.throughDateNote}</small>
-          </label>
-          <label>
-            <span>{messages.dataMode}</span>
-            <select name="dataMode" defaultValue={values.dataMode}>
-              <option value="">{messages.allModes}</option>
-              <option value="DEMO">DEMO</option>
-            </select>
           </label>
           <label>
             <span>{messages.sortBy}</span>
@@ -248,11 +177,7 @@ export default async function CallsPage({
           </label>
           <label>
             <span>{messages.rows}</span>
-            <select name="size" defaultValue={values.size || "25"}>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
+            <input name="size" type="number" min="1" max="100" defaultValue={values.size || "25"} />
           </label>
           <div className="filter-actions">
             <button type="submit">{messages.applyFilters}</button>
@@ -267,8 +192,8 @@ export default async function CallsPage({
               <h2 id="results-title">{messages.eventCount(result.page.totalElements)}</h2>
             </div>
             <span>{messages.pageStatus(
-              result.page.number + 1,
-              Math.max(result.page.totalPages, 1),
+              result.page.number,
+              result.page.totalPages,
               result.page.sort.field,
               result.page.sort.order,
             )}</span>
@@ -276,9 +201,15 @@ export default async function CallsPage({
 
           {result.items.length === 0 ? (
             <div className="empty-state" role="status">
-              <p className="eyebrow">{messages.emptyEyebrow}</p>
-              <h3>{messages.emptyTitle}</h3>
-              <p>{messages.emptyDescription}</p>
+              <p className="eyebrow">
+                {isOutOfRangePage ? messages.outOfRangeEyebrow : messages.emptyEyebrow}
+              </p>
+              <h3>{isOutOfRangePage ? messages.outOfRangeTitle : messages.emptyTitle}</h3>
+              <p>
+                {isOutOfRangePage
+                  ? messages.outOfRangeDescription(result.page.totalElements)
+                  : messages.emptyDescription}
+              </p>
               <Link className="text-action" href="/calls">{messages.clearAll}</Link>
             </div>
           ) : (
@@ -347,7 +278,6 @@ export default async function CallsPage({
           ) : null}
         </section>
 
-        <p className="dataset-disclaimer">{metadata.disclaimer}</p>
       </div>
     </main>
   );

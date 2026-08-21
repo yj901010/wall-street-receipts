@@ -209,6 +209,29 @@ dd {
   font-size: 12px;
 }
 
+.calls-heading .provenance-strip div,
+.calls-dataset-evidence .provenance-strip div,
+.calls-heading .provenance-strip dd,
+.calls-dataset-evidence .provenance-strip dd {
+  min-width: 0;
+}
+
+.calls-heading .provenance-strip dd,
+.calls-dataset-evidence .provenance-strip dd {
+  overflow-wrap: anywhere;
+}
+
+.calls-heading > .provenance-strip {
+  width: min(52vw, 620px);
+  max-width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.calls-heading > .section-note {
+  grid-column: 1 / -1;
+}
+
 .market-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -2213,6 +2236,10 @@ button:hover,
   .page-heading,
   .content-grid {
     grid-template-columns: 1fr;
+  }
+
+  .calls-heading > .provenance-strip {
+    width: 100%;
   }
 
   .dashboard-unavailable-body,

@@ -6,18 +6,33 @@ export type CallsMessages = {
     title: string;
     summary: string;
     provenanceLabel: string;
+    returnedPageEvidenceLabel: string;
+    latestReturnedCapture: string;
+    returnedCallProvenance: string;
+    returnedPageEvidenceNote: string;
     asOf: string;
     source: string;
     mode: string;
+    datasetMetadata: string;
+    available: string;
+    notExposed: string;
+    datasetNotExposed: (reason: string) => string;
     filterLabel: string;
     ticker: string;
+    tickerFilter: string;
     tickerPlaceholder: string;
     asset: string;
+    assetIdFilter: string;
     allAssets: string;
+    assetIdPlaceholder: string;
     institution: string;
+    institutionIdFilter: string;
     allInstitutions: string;
+    institutionIdPlaceholder: string;
     analyst: string;
+    analystIdFilter: string;
     allAnalysts: string;
+    analystIdPlaceholder: string;
     direction: string;
     allDirections: string;
     status: string;
@@ -43,6 +58,9 @@ export type CallsMessages = {
     emptyEyebrow: string;
     emptyTitle: string;
     emptyDescription: string;
+    outOfRangeEyebrow: string;
+    outOfRangeTitle: string;
+    outOfRangeDescription: (count: number) => string;
     clearAll: string;
     resultsRegionLabel: string;
     tableCaption: string;
@@ -236,18 +254,33 @@ const ko = {
     title: "애널리스트 콜",
     summary: "정규 식별자와 출처 증거를 함께 보존한 시점 기준 콜 이벤트를 검색합니다.",
     provenanceLabel: "콜 데이터셋 출처 정보",
+    returnedPageEvidenceLabel: "반환된 페이지 범위의 콜 증거",
+    latestReturnedCapture: "반환된 콜의 최신 수집 시각",
+    returnedCallProvenance: "반환된 콜 출처 계보",
+    returnedPageEvidenceNote: "이 값은 현재 응답 페이지에 반환된 콜만 요약하며 데이터셋 기준 시각, 최신성 또는 범위를 뜻하지 않습니다.",
     asOf: "기준 시각",
     source: "출처",
     mode: "모드",
+    datasetMetadata: "데이터셋 메타데이터",
+    available: "제공됨",
+    notExposed: "NOT_EXPOSED",
+    datasetNotExposed: (reason) => `목록 API는 데이터셋 기준 시각, 전체 출처, 전체 범위 또는 원문 고지문을 제공하지 않습니다. 현재 페이지에서 이를 추론하지 않습니다. 사유: ${reason}`,
     filterLabel: "애널리스트 콜 필터",
     ticker: "티커",
+    tickerFilter: "티커 (대소문자 구분 없음)",
     tickerPlaceholder: "예: NVDA",
     asset: "자산",
+    assetIdFilter: "자산 ID (대소문자 정확히 일치)",
     allAssets: "모든 자산",
+    assetIdPlaceholder: "예: asset-nvda",
     institution: "기관",
+    institutionIdFilter: "기관 ID (대소문자 정확히 일치)",
     allInstitutions: "모든 기관",
+    institutionIdPlaceholder: "예: inst-gs",
     analyst: "애널리스트",
+    analystIdFilter: "애널리스트 ID (대소문자 정확히 일치)",
     allAnalysts: "모든 애널리스트",
+    analystIdPlaceholder: "예: analyst-demo-b",
     direction: "방향",
     allDirections: "모든 방향",
     status: "상태",
@@ -269,11 +302,17 @@ const ko = {
     clear: "초기화",
     results: "결과",
     eventCount: (count) => `이벤트 ${count}건`,
-    pageStatus: (page, totalPages, field, order) =>
-      `${page}/${totalPages}페이지 · ${field},${order}`,
+    pageStatus: (page, totalPages, field, order) => totalPages === 0
+      ? `결과 페이지 0개 · 요청 페이지 ${page + 1} · ${field},${order}`
+      : page >= totalPages
+        ? `요청 페이지 ${page + 1} · 전체 ${totalPages}페이지 · ${field},${order}`
+        : `${page + 1}/${totalPages}페이지 · ${field},${order}`,
     emptyEyebrow: "일치하는 이벤트 없음",
-    emptyTitle: "이 필터와 일치하는 항목이 없습니다.",
-    emptyDescription: "필터를 하나 이상 해제하세요. 누락된 기록을 합성 값으로 대체하지 않습니다.",
+    emptyTitle: "이 응답에는 필터와 일치하는 항목이 없습니다.",
+    emptyDescription: "현재 응답의 빈 행을 다른 기록이나 합성 값으로 대체하지 않았으며 데이터셋 완전성을 주장하지 않습니다.",
+    outOfRangeEyebrow: "요청 페이지 범위 초과",
+    outOfRangeTitle: "요청한 응답 페이지에는 항목이 없습니다.",
+    outOfRangeDescription: (count) => `필터와 일치하는 이벤트는 ${count}건이지만 요청한 페이지는 응답 범위를 벗어났습니다. 대체 행을 표시하지 않았습니다.`,
     clearAll: "모든 필터 초기화",
     resultsRegionLabel: "스크롤 가능한 애널리스트 콜 결과",
     tableCaption: "필터링된 애널리스트 콜 이벤트",
@@ -467,18 +506,33 @@ const en = {
     title: "Analyst calls",
     summary: "Search point-in-time call events with their canonical identities and source evidence.",
     provenanceLabel: "Call dataset provenance",
+    returnedPageEvidenceLabel: "Returned-page call evidence",
+    latestReturnedCapture: "Latest returned call capture",
+    returnedCallProvenance: "Returned call provenance",
+    returnedPageEvidenceNote: "These values summarize only calls in the returned response page. They are not dataset as-of, freshness, or coverage claims.",
     asOf: "As of",
     source: "Source",
     mode: "Mode",
+    datasetMetadata: "Dataset metadata",
+    available: "AVAILABLE",
+    notExposed: "NOT_EXPOSED",
+    datasetNotExposed: (reason) => `The list API does not expose dataset-wide as-of, full provenance, coverage, or a source-supplied disclaimer. This page does not infer them from returned rows. Reason: ${reason}`,
     filterLabel: "Filter analyst calls",
     ticker: "Ticker",
+    tickerFilter: "Ticker (case-insensitive)",
     tickerPlaceholder: "e.g. NVDA",
     asset: "Asset",
+    assetIdFilter: "Asset ID (exact case)",
     allAssets: "All assets",
+    assetIdPlaceholder: "e.g. asset-nvda",
     institution: "Institution",
+    institutionIdFilter: "Institution ID (exact case)",
     allInstitutions: "All institutions",
+    institutionIdPlaceholder: "e.g. inst-gs",
     analyst: "Analyst",
+    analystIdFilter: "Analyst ID (exact case)",
     allAnalysts: "All analysts",
+    analystIdPlaceholder: "e.g. analyst-demo-b",
     direction: "Direction",
     allDirections: "All directions",
     status: "Status",
@@ -500,11 +554,17 @@ const en = {
     clear: "Clear",
     results: "Results",
     eventCount: (count) => `${count} ${count === 1 ? "event" : "events"}`,
-    pageStatus: (page, totalPages, field, order) =>
-      `Page ${page} of ${totalPages} · ${field},${order}`,
+    pageStatus: (page, totalPages, field, order) => totalPages === 0
+      ? `0 result pages · requested page ${page + 1} · ${field},${order}`
+      : page >= totalPages
+        ? `Requested page ${page + 1} · ${totalPages} total pages · ${field},${order}`
+        : `Page ${page + 1} of ${totalPages} · ${field},${order}`,
     emptyEyebrow: "No matching events",
-    emptyTitle: "Nothing matches these filters.",
-    emptyDescription: "Clear one or more filters. Missing records are never replaced with synthetic values.",
+    emptyTitle: "This response contains no items matching these filters.",
+    emptyDescription: "No substitute or synthetic rows were shown, and this empty response is not a dataset-completeness claim.",
+    outOfRangeEyebrow: "Requested page out of range",
+    outOfRangeTitle: "The requested response page contains no items.",
+    outOfRangeDescription: (count) => `${count} events match the filters, but the requested page is outside the response range. No substitute rows were shown.`,
     clearAll: "Clear all filters",
     resultsRegionLabel: "Scrollable analyst calls results",
     tableCaption: "Filtered analyst call events",
