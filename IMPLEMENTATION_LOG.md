@@ -1816,3 +1816,106 @@ published or persisted, and broader P3 scoring remains open
   later reviewed P3 work.
 - Historical bars and live/licensed market providers remain in their later
   owning phases; this slice requires no provider credential or network access.
+
+## P3 — Strict session-close named-horizon and forecast-basis policy
+
+Status: complete for this disconnected schedule-policy slice; broader P3 scoring
+remains open, with no observed price, return, calculated outcome, provider,
+persistence, API, or product publication
+
+### Scope
+
+- Lock the approved `D1/W1/M1/M3/M6/Y1` session counts as exactly
+  `1/5/21/63/126/252` over one caller-supplied explicit session catalog.
+- Select the first N catalog entries whose close is strictly after the supplied
+  basis event time, preserving catalog order and returning the Nth as the
+  schedule endpoint.
+- Model an original and each already-validated correction as independent basis
+  lineages. A correction uses its own revision ID and event time; the original
+  basis remains separate and immutable. Cancellation is not a basis.
+- Add source-local Java golden schedules only. Add no evaluation-as-of,
+  readiness, observation, endpoint price, return calculation, calendar
+  provider, account/key, scheduler, schema, fixture, manifest member, OpenAPI
+  path, Flyway migration, database row, API behavior, or web surface.
+
+### Locked contract decisions
+
+- ADR-010 and `quality/P3_ACCEPTANCE.md` own the exact basis, horizon-count,
+  strict-close boundary, missing-coverage, canonical-definition, purity, and
+  deferred-integration contracts.
+- `OutcomeBasis` is sealed as `Original(callId,eventTime)` and
+  `Correction(callId,basisRevisionId,eventTime)`. The caller attests that a
+  correction belongs to the call and is valid; this leaf loads no aggregate and
+  performs no revision supersession or cancellation decision.
+- `STRICTLY_AFTER_BASIS_EVENT_SESSION_CLOSE_V1` uses only
+  `session.closesAt > basis.eventTime`. Before/open/interior events may select
+  the current/first session; exact close skips it; touching selects the opening
+  session; gaps select the following supplied session. No local date, timezone,
+  weekday, holiday, duration, or missing session is inferred.
+- The exact single-line canonical definition is 633 ASCII/UTF-8 bytes with
+  fixed lowercase SHA-256
+  `550087efe7ddf2ba31974c89c2740ab79df986eefef48919c32c56a3232f8dc1`.
+  Definition bytes are defensively returned and every resolution context echoes
+  the digest. This identity is not either existing model-only scoring-
+  methodology hash.
+- Results are only `Resolved(window)` or
+  `Incomplete(FIRST_ELIGIBLE_SESSION_MISSING|HORIZON_ENDPOINT_SESSION_MISSING)`.
+  Resolved means endpoint schedule identification, not readiness, a known bar,
+  `CALCULATED`, `dataComplete`, or observed performance.
+- Public context/window constructors validate only locally decidable policy
+  hash/count, strict-first-close, size, uniqueness/order, and endpoint-last
+  invariants. They cannot attest membership or first-N selection against a
+  catalog they do not carry, and a directly built incomplete record cannot
+  attest its reason. Those claims belong only to the resolver.
+
+### Module and file boundary
+
+- The existing API horizon package is extended append-only with
+  `OutcomeBasis.java`, `SessionCloseHorizonPolicyVersion.java`,
+  `SessionCloseHorizonRequest.java`, `SessionCloseHorizonResolution.java`, and
+  `SessionCloseHorizonResolver.java`. Existing session-offset and event/session
+  relation contracts remain unchanged.
+- `SessionCloseHorizonResolverGoldenTest.java` owns source-local definition,
+  count, temporal-boundary, original/correction, missing-coverage, invalid-input,
+  immutable-window, and default-environment replay coverage.
+- ADR-010, the P3 acceptance contract, README, this log, and a mutation-sensitive
+  repository CI extension own exact-shape, reverse-wiring, unchanged-canonical-
+  surface, and no-provider boundaries.
+
+### Routes
+
+- None. The policy is not invoked by a controller, application service,
+  repository, fixture adapter, API response, scheduler, or web route.
+
+### Verification
+
+- Focused `SessionCloseHorizonResolverGoldenTest`: PASS, 47/47 tests.
+- Full API Maven verification: PASS, 20 Surefire suites and 298/298 tests with
+  zero failures, errors, or skips; the application JAR was packaged.
+- PostgreSQL Testcontainers migration coverage executed 4/4 tests with zero
+  skips. Compose environment-file validation also passed.
+- The new strict-close contract guard passed against the final 633-byte policy
+  definition and fixed digest. Both pre-existing horizon guards also passed
+  after their exact source/test file sets admitted the new isolated leaf.
+- All 19 embedded workflow Python blocks compiled. Repository-local blocks
+  1–18 executed 18/18, including 14 schema/32 fixture-record validation and both
+  protected P2 consumer baselines. Block 19 is the cross-stack log verifier and
+  was intentionally not run because no Spring/Next services were launched; no
+  cross-stack result is claimed.
+- SnakeYAML 2.5 parsed the workflow directly in Java source-file mode, and
+  `git diff --check` passed. Final production/test/CI review reported zero
+  blocker and zero high-severity findings.
+- Web, cross-stack, and browser verification are not required unless this slice
+  changes a web/runtime surface; the locked boundary rejects such a change.
+
+### Deferred boundary
+
+- Point-in-time calendar provenance, asset/venue association, observed endpoint
+  closes, corporate-action and currency policy, asset-return calculation,
+  target error, target-hit/directional-win orchestration, cancellation
+  eligibility, methodology activation, input fingerprinting, persistence,
+  aggregates, and UI publication remain later reviewed P3 work.
+- Real calendar and market providers, display/storage/derived-data rights,
+  freshness/health, credentials, and non-DEMO publication remain P5 work. This
+  disconnected slice requires no API key, account, paid plan, domain, license,
+  or network access.
