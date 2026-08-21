@@ -3,10 +3,12 @@
 Current status: the methodology-registry, multiple market-map shell,
 sector/industry PRICE_CHANGE treemap, dashboard evidence-composition,
 institution and analyst identity directories, known-unavailable market-board
-publication state, recorded S&P 500 forecast-call history, and application-
-owned screener known-deferred shell vertical slices are complete. These checks
-close only delivered P2 slices. Leaderboard, full-universe map, and production
-market-mode work stays open; actual historical screening remains P8 work.
+publication state, recorded S&P 500 forecast-call history, application-owned
+screener known-deferred shell, and Korean-default bilingual evidence-first
+product UI vertical slices are complete. These checks close only delivered P2
+slices. Leaderboard, full-universe map, and production market-mode work stays
+open; actual historical screening remains P8 work. Presentation localization
+does not change canonical evidence or any backend contract.
 
 The methodology registry is a read-only, fixture-backed explanation surface. It
 publishes the immutable definition identities already present in
@@ -780,6 +782,108 @@ regime analytics. P3 retains reproducible outcome and leaderboard metrics. P5
 retains licensed observed market/analyst providers, provider health, licensing
 flags, and current rights review. No future API, feature catalog, calculation,
 or provider capability is bootstrapped by this application-owned P2 status.
+
+## Korean-default bilingual product UI boundary
+
+- Every existing product route remains at its current URL. This slice adds no
+  locale-prefixed route, locale query parameter, API endpoint, canonical
+  schema, fixture, manifest member, OpenAPI path, Flyway migration, persisted
+  preference, or provider/network dependency.
+- Presentation locale is exactly `ko` or `en`. The server resolves the exact
+  `wsr_locale` cookie value; a missing, blank, or otherwise unsupported value
+  resolves to Korean. It does not infer locale from `Accept-Language`, browser
+  APIs, geography, timezone, URL state, or a client-side default.
+- Locale mutation is a server action accepting only exact scalar `ko` or `en`.
+  Invalid mutation input is rejected rather than normalized. It writes an
+  HTTP-only `wsr_locale` cookie with `Path=/`, `SameSite=Lax`, `Max-Age=31536000`
+  and `Secure` in production only. The action does not redirect, change the
+  current path/query/hash, or use local/session storage.
+- Korean is present in the raw first server response when the cookie is absent
+  or invalid; English is present in the raw first response for a valid `en`
+  cookie. The document `lang` value equals the resolved locale before
+  hydration. A server-set preference survives revisit and direct navigation.
+- Product labels, explanations, accessible names, loading/error/empty copy,
+  and mode-neutral unsupported-request copy may be translated. Canonical
+  evidence never is: IDs, hashes, versions, enum/status/reason/data-mode
+  tokens, tickers, entity identities, source titles/publishers, URLs,
+  `sourcePaths`, fixture disclaimers, ISO timestamps, numeric strings, nulls,
+  ordering, and `NA` remain byte- and meaning-preserving.
+- The common root not-found boundary resolves the same server locale and
+  exposes only translated route guidance plus exact `/` and `/calls` links. It
+  has no DEMO badge, provider state, inferred evidence, or route fallback.
+- The visual system is a white editorial financial terminal: white or quiet
+  off-white canvas, dark readable type, thin neutral rules, near-square
+  controls, restrained low radii, compact monospace metadata and tabular
+  values, restrained green/red semantic accents, and deliberate whitespace.
+  It does not introduce gradients, glass effects, neon glow, giant heroes,
+  decorative cards/pills, or fabricated live, ranking, screening, market, or
+  outcome values.
+
+## Korean-default bilingual product UI contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-L10N01 | Closed locale set and default | `SUPPORTED_LOCALES` is exactly ordered `ko`, `en`; `DEFAULT_LOCALE` is exactly `ko`. Server parsing returns only those values and maps every missing or unsupported cookie value to `ko`. No third locale or English fallback is accepted. |
+| P2-L10N02 | Exact server-owned cookie | The cookie is exactly `wsr_locale` with `HttpOnly`, `Path=/`, `SameSite=Lax`, and one-year `Max-Age=31536000`; `Secure` is true only in production. Mutation accepts only exact `ko` or `en`, rejects missing/file/unsupported input before writing, and neither redirects nor mutates URL state. |
+| P2-L10N03 | SSR before hydration | Locale is read through the server cookie boundary. Raw HTML without a valid cookie is Korean with `html[lang=ko]`; raw HTML with `wsr_locale=en` is English with `html[lang=en]`. Hydration, a client effect, local storage, or an extra translation request is never required to correct the language. |
+| P2-L10N04 | Revisit persistence | A keyboard-activated locale control invokes the server action, writes the exact cookie, preserves path/query/hash, and renders the selected locale on revisit and direct navigation. Invalid resolved cookie input deterministically returns to Korean. |
+| P2-L10N05 | No inference or remote translation | Production localization source contains no `Accept-Language`, `navigator.language`/`languages`, `localStorage`, `sessionStorage`, geolocation, remote translation SDK/API, locale fetch, or browser-only preference store. Message catalogs are typed, colocated, version-controlled application source. |
+| P2-L10N06 | Immutable canonical evidence | Locale changes presentation copy only. Canonical fixture/provider/API data, field values, source evidence, null/`NA` policy, microsecond UTC values, numeric formatting inputs, identity/order, route/query/hash semantics, and exact disclaimers are unchanged. No application adapter, API model, schema, fixture, manifest, OpenAPI, or Flyway contract is localized. |
+| P2-L10N07 | Route and state parity | Every supported route, loading/error/empty boundary, noindex unsupported request, link target, filter value, and current-navigation state remains available in both locales. The common root not-found boundary is Korean-default/English-selectable and mode-neutral with exact `/` and `/calls` links. A translated heading or accessible label cannot become a separate data state or conceal `DEMO`, unavailable/deferred, null, or incomplete semantics. |
+| P2-L10N08 | Evidence-first visual system | Shared tokens and layouts use the locked white editorial treatment, thin rules, near-square controls, compact mono evidence, tabular numerics, restrained semantic colors, and whitespace. Muted text is exactly `#70706c`; map positive/negative metric text uses the semantic positive/negative tokens, and neutral/map/treemap colored surfaces explicitly restore dark text. Color is never the only carrier of state; existing evidence hierarchy and local dense-table/treemap containment remain intact. |
+| P2-L10N09 | Source and backend isolation | Locale/config/message/action/provider components do not import raw fixture JSON, canonical adapters, outcome calculators, providers, API code, or network transports. Canonical schema/fixture/manifest/OpenAPI/Flyway and Spring production sets remain unchanged by this slice. |
+| P2-L10N10 | Deterministic replay | The same route, canonical evidence, and cookie yield the same locale and evidence order in raw SSR and hydrated navigation. Server locale logic has no `Clock`, randomness, host locale, timezone, or request-language dependency. |
+
+## Korean-default bilingual product UI web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-L10NW01 | Semantic locale control | The global header exposes one labelled locale group with exact `KO` and `EN` controls, current selection through `aria-pressed`, pending/disabled semantics, and a visible focus indicator. Accessible option names are stable autonyms, exactly `한국어` and `English`, in both locales; the buttons expose exact `lang=ko` / `lang=en`, are at least 24 pixels high, and focus returns to the newly selected language after the server render. No hidden test-only label is used. |
+| P2-L10NW02 | Korean default and English parity | Korean-default and English views cover the same information architecture and canonical rows. Navigation has the same eight targets/order/current item; only user-facing copy changes. Wordmark, canonical evidence, routes, and data ordering remain stable. |
+| P2-L10NW03 | Complete state translation | Route headings, policy explanations, table labels, loading, recoverable error, valid empty, route-local unsupported/not-found copy, and the common root not-found boundary are Korean by default and English when selected. Canonical status/reason/data-mode tokens and mode-neutral noindex constraints remain exact in both locales. |
+| P2-L10NW04 | Responsive editorial layout | At 1440, 1280, and 390 pixels, the white evidence-first layout preserves readable hierarchy, keyboard focus, locally contained navigation/tables/treemaps, and zero page overflow. Korean text may wrap without clipping, overlap, hidden evidence, or minimum-tile distortion. |
+| P2-L10NW05 | Runtime integrity | Supported flows produce zero hydration mismatch, console warning/error, or page error. Switching and revisiting do not flash the wrong locale, reset filters, lose anchors, execute a screen, create a quote, or change canonical data. |
+
+## Korean-default bilingual product UI required tests
+
+- Unit tests cover exact locale parsing/defaulting, typed Korean/English
+  catalogs, valid mutation, missing/unsupported/file mutation rejection, and
+  exact development/production cookie attributes without relying on browser
+  storage or a redirect.
+- Layout/header tests cover raw `html[lang]`/metadata resolution, all eight
+  localized navigation labels and targets, current state, exact `DEMO`
+  preservation, locale-control autonym names/pressed/pending/focus-restoration
+  behavior, exact per-button language attributes, and provider-required context
+  so missing localization wiring fails closed.
+- Common root not-found tests cover Korean and English copy, exact dashboard and
+  call-ledger links, mode neutrality, and absence of invented DEMO/evidence.
+- Raw-response tests request an existing SSR route with no cookie, an invalid
+  cookie, `ko`, and `en`; assert language-specific server HTML and matching
+  document language; then set the preference through the UI and prove revisit
+  and direct navigation preserve it without changing path/query/hash.
+- Existing route/component tests cover both presentation locales where copy is
+  owned by the route and continue to assert exact canonical evidence values.
+  Provider/domain tests remain locale-independent and unchanged.
+- Responsive Playwright exercises Korean default, English toggle/revisit, direct
+  navigation, keyboard focus restoration, per-language attributes and minimum
+  24-pixel targets, localized unknown routes, translated loading/error/empty
+  boundaries, local containment, page overflow, and zero console warnings/
+  errors/page errors at 1440, 1280, and 390 pixels.
+- Repository CI locks the exact locale/cookie/SSR source boundary, append-safe
+  discovery of production localization files and localization tests, forbidden
+  inference/storage/translation transports, canonical-source isolation, the
+  visual-system invariants, and the absence of schema/fixture/manifest/OpenAPI/
+  API/Flyway expansion without weakening existing contract gates.
+
+## Korean-default bilingual product UI deferred work
+
+Additional locales, user-account preferences, translated canonical source
+documents, machine translation, locale-prefixed routing, localized API payloads,
+and provider-supplied translations are not introduced. Live/current provider
+data remains P5-owned, deterministic leaderboard metrics remain P3-owned, and
+actual historical screening remains P8-owned. This presentation slice cannot
+turn unavailable, fixture, null, incomplete, or model-only evidence into an
+observed fact.
 
 ## Local gate
 

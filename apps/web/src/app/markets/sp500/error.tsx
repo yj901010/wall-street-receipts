@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useLocale } from "@/components/locale-provider";
 import { SiteHeader } from "@/components/site-header";
+import { getSp500HistoryMessages } from "./messages";
 
 export default function Sp500HistoryError({
   reset,
@@ -9,19 +11,19 @@ export default function Sp500HistoryError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { locale } = useLocale();
+  const messages = getSp500HistoryMessages(locale).states;
+
   return (
     <>
       <SiteHeader current="market" dataMode="DEMO" />
       <main className="state-page route-error" role="alert">
-        <p className="eyebrow">S&amp;P 500 call-event history unavailable</p>
-        <h1>The committed DEMO call subset could not be read.</h1>
-        <p>
-          No partial call, market snapshot, chart, outcome, consensus, or application literal is
-          being displayed as a fallback.
-        </p>
+        <p className="eyebrow">{messages.errorEyebrow}</p>
+        <h1>{messages.errorTitle}</h1>
+        <p>{messages.errorDescription}</p>
         <div className="state-actions">
-          <button type="button" onClick={reset}>Try again</button>
-          <Link className="text-action" href="/market">Return to market publication status</Link>
+          <button type="button" onClick={reset}>{messages.tryAgain}</button>
+          <Link className="text-action" href="/market">{messages.returnMarket}</Link>
         </div>
       </main>
     </>

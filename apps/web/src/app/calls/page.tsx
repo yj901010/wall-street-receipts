@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { DATA_MODES, type DataMode } from "@/lib/data-mode";
 import { formatMoney } from "@/lib/format-money";
+import { getLocale } from "@/lib/i18n/server";
 import { callsProvider } from "@/lib/providers";
 import {
   CALL_DIRECTIONS,
@@ -11,6 +12,7 @@ import {
   type CallStatus,
   type CallsQuery,
 } from "@/lib/providers/calls-provider";
+import { getCallsMessages } from "./messages";
 
 type SearchValue = string | string[] | undefined;
 type CallsSearchParams = Record<string, SearchValue>;
@@ -95,7 +97,8 @@ export default async function CallsPage({
 }: {
   searchParams: Promise<CallsSearchParams>;
 }) {
-  const raw = await searchParams;
+  const [raw, locale] = await Promise.all([searchParams, getLocale()]);
+  const messages = getCallsMessages(locale).list;
   const values = {
     assetId: first(raw.assetId),
     ticker: first(raw.ticker),
@@ -134,37 +137,35 @@ export default async function CallsPage({
       <div className="page-shell calls-shell">
         <section className="page-heading calls-heading" aria-labelledby="calls-page-title">
           <div>
-            <p className="eyebrow">Canonical event ledger</p>
-            <h1 id="calls-page-title">Analyst calls</h1>
-            <p className="page-summary">
-              Search point-in-time call events with their canonical identities and source evidence.
-            </p>
+            <p className="eyebrow">{messages.eyebrow}</p>
+            <h1 id="calls-page-title">{messages.title}</h1>
+            <p className="page-summary">{messages.summary}</p>
           </div>
-          <dl className="provenance-strip" aria-label="Call dataset provenance">
+          <dl className="provenance-strip" aria-label={messages.provenanceLabel}>
             <div>
-              <dt>As of</dt>
+              <dt>{messages.asOf}</dt>
               <dd>{utc(metadata.asOf)}</dd>
             </div>
             <div>
-              <dt>Source</dt>
+              <dt>{messages.source}</dt>
               <dd>{metadata.source}</dd>
             </div>
             <div>
-              <dt>Mode</dt>
+              <dt>{messages.mode}</dt>
               <dd>{metadata.dataMode}</dd>
             </div>
           </dl>
         </section>
 
-        <form className="calls-filters" action="/calls" method="get" aria-label="Filter analyst calls">
+        <form className="calls-filters" action="/calls" method="get" aria-label={messages.filterLabel}>
           <label>
-            <span>Ticker</span>
-            <input name="ticker" defaultValue={values.ticker} placeholder="e.g. NVDA" />
+            <span>{messages.ticker}</span>
+            <input name="ticker" defaultValue={values.ticker} placeholder={messages.tickerPlaceholder} />
           </label>
           <label>
-            <span>Asset</span>
+            <span>{messages.asset}</span>
             <select name="assetId" defaultValue={values.assetId}>
-              <option value="">All assets</option>
+              <option value="">{messages.allAssets}</option>
               {metadata.facets.assets.map((asset) => (
                 <option key={asset.assetId} value={asset.assetId}>
                   {asset.ticker ?? "NA"} — {asset.canonicalName}
@@ -173,9 +174,9 @@ export default async function CallsPage({
             </select>
           </label>
           <label>
-            <span>Institution</span>
+            <span>{messages.institution}</span>
             <select name="institutionId" defaultValue={values.institutionId}>
-              <option value="">All institutions</option>
+              <option value="">{messages.allInstitutions}</option>
               {metadata.facets.institutions.map((institution) => (
                 <option key={institution.institutionId} value={institution.institutionId}>
                   {institution.canonicalName}
@@ -184,9 +185,9 @@ export default async function CallsPage({
             </select>
           </label>
           <label>
-            <span>Analyst</span>
+            <span>{messages.analyst}</span>
             <select name="analystId" defaultValue={values.analystId}>
-              <option value="">All analysts</option>
+              <option value="">{messages.allAnalysts}</option>
               {metadata.facets.analysts.map((analyst) => (
                 <option key={analyst.analystId} value={analyst.analystId}>
                   {analyst.canonicalName}
@@ -195,9 +196,9 @@ export default async function CallsPage({
             </select>
           </label>
           <label>
-            <span>Direction</span>
+            <span>{messages.direction}</span>
             <select name="direction" defaultValue={values.direction}>
-              <option value="">All directions</option>
+              <option value="">{messages.allDirections}</option>
               {metadata.facets.directions.map((candidate) => (
                 <option key={candidate} value={candidate}>
                   {directionLabel(candidate)}
@@ -206,47 +207,47 @@ export default async function CallsPage({
             </select>
           </label>
           <label>
-            <span>Status</span>
+            <span>{messages.status}</span>
             <select name="status" defaultValue={values.status}>
-              <option value="">All statuses</option>
+              <option value="">{messages.allStatuses}</option>
               {metadata.facets.statuses.map((candidate) => (
                 <option key={candidate} value={candidate}>{candidate}</option>
               ))}
             </select>
           </label>
           <label>
-            <span>From</span>
+            <span>{messages.from}</span>
             <input type="date" name="from" defaultValue={values.from} />
           </label>
           <label>
-            <span>Through date (UTC)</span>
+            <span>{messages.throughDate}</span>
             <input type="date" name="to" defaultValue={values.to} />
-            <small>Applied as the next day&apos;s exclusive UTC bound.</small>
+            <small>{messages.throughDateNote}</small>
           </label>
           <label>
-            <span>Data mode</span>
+            <span>{messages.dataMode}</span>
             <select name="dataMode" defaultValue={values.dataMode}>
-              <option value="">All modes</option>
+              <option value="">{messages.allModes}</option>
               <option value="DEMO">DEMO</option>
             </select>
           </label>
           <label>
-            <span>Sort by</span>
+            <span>{messages.sortBy}</span>
             <select name="sort" defaultValue={values.sort || "eventTime"}>
-              <option value="eventTime">Event time</option>
-              <option value="processingTime">Processing time</option>
-              <option value="capturedAt">Captured at</option>
+              <option value="eventTime">{messages.eventTime}</option>
+              <option value="processingTime">{messages.processingTime}</option>
+              <option value="capturedAt">{messages.capturedAt}</option>
             </select>
           </label>
           <label>
-            <span>Order</span>
+            <span>{messages.order}</span>
             <select name="order" defaultValue={values.order || "desc"}>
-              <option value="desc">Descending</option>
-              <option value="asc">Ascending</option>
+              <option value="desc">{messages.descending}</option>
+              <option value="asc">{messages.ascending}</option>
             </select>
           </label>
           <label>
-            <span>Rows</span>
+            <span>{messages.rows}</span>
             <select name="size" defaultValue={values.size || "25"}>
               <option value="25">25</option>
               <option value="50">50</option>
@@ -254,68 +255,69 @@ export default async function CallsPage({
             </select>
           </label>
           <div className="filter-actions">
-            <button type="submit">Apply filters</button>
-            <Link href="/calls">Clear</Link>
+            <button type="submit">{messages.applyFilters}</button>
+            <Link href="/calls">{messages.clear}</Link>
           </div>
         </form>
 
         <section className="data-section calls-results" aria-labelledby="results-title">
           <div className="section-heading results-heading">
             <div>
-              <p className="eyebrow">Results</p>
-              <h2 id="results-title">
-                {result.page.totalElements} {result.page.totalElements === 1 ? "event" : "events"}
-              </h2>
+              <p className="eyebrow">{messages.results}</p>
+              <h2 id="results-title">{messages.eventCount(result.page.totalElements)}</h2>
             </div>
-            <span>
-              Page {result.page.number + 1} of {Math.max(result.page.totalPages, 1)} · {result.page.sort.field},{result.page.sort.order}
-            </span>
+            <span>{messages.pageStatus(
+              result.page.number + 1,
+              Math.max(result.page.totalPages, 1),
+              result.page.sort.field,
+              result.page.sort.order,
+            )}</span>
           </div>
 
           {result.items.length === 0 ? (
             <div className="empty-state" role="status">
-              <p className="eyebrow">No matching events</p>
-              <h3>Nothing matches these filters.</h3>
-              <p>Clear one or more filters. Missing records are never replaced with synthetic values.</p>
-              <Link className="text-action" href="/calls">Clear all filters</Link>
+              <p className="eyebrow">{messages.emptyEyebrow}</p>
+              <h3>{messages.emptyTitle}</h3>
+              <p>{messages.emptyDescription}</p>
+              <Link className="text-action" href="/calls">{messages.clearAll}</Link>
             </div>
           ) : (
-            <div className="table-scroll calls-table-scroll" tabIndex={0} aria-label="Scrollable analyst calls results">
+            <div className="table-scroll calls-table-scroll" tabIndex={0} aria-label={messages.resultsRegionLabel}>
               <table className="calls-table">
-                <caption className="visually-hidden">Filtered analyst call events</caption>
+                <caption className="visually-hidden">{messages.tableCaption}</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Event time</th>
-                    <th scope="col">Institution / analyst</th>
-                    <th scope="col">Asset</th>
-                    <th scope="col">Direction</th>
-                    <th scope="col" className="numeric">Target change</th>
-                    <th scope="col">Source</th>
+                    <th scope="col">{messages.eventTime}</th>
+                    <th scope="col">{messages.institutionAnalyst}</th>
+                    <th scope="col">{messages.asset}</th>
+                    <th scope="col">{messages.direction}</th>
+                    <th scope="col" className="numeric">{messages.targetChange}</th>
+                    <th scope="col">{messages.source}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {result.items.map(({ call, institution, analyst, asset, source }) => (
                     <tr key={call.callId}>
-                      <td data-label="Event time" className="mono">
+                      <td data-field="event-time" data-label={messages.eventTime} className="mono">
                         <Link className="row-link" href={`/calls/${call.callId}`}>{utc(call.eventTime)}</Link>
                       </td>
-                      <td data-label="Institution / analyst">
+                      <td data-field="institution-analyst" data-label={messages.institutionAnalyst}>
                         <strong>{institution.canonicalName}</strong>
                         <span className="cell-secondary">{analyst?.canonicalName ?? "NA"}</span>
                       </td>
-                      <td data-label="Asset">
+                      <td data-field="asset" data-label={messages.asset}>
                         <strong>{asset.ticker ?? "NA"}</strong>
                         <span className="cell-secondary">{asset.canonicalName}</span>
                       </td>
-                      <td data-label="Direction">
+                      <td data-field="direction" data-label={messages.direction}>
                         <span className={`direction direction-${call.direction.toLowerCase()}`}>
                           {directionLabel(call.direction)}
                         </span>
                       </td>
-                      <td data-label="Target change" className="numeric mono">
+                      <td data-field="target-change" data-label={messages.targetChange} className="numeric mono">
                         {formatMoney(call.previousTarget, call.currency)} → {formatMoney(call.target, call.currency)}
                       </td>
-                      <td data-label="Source">
+                      <td data-field="source" data-label={messages.source}>
                         <Link className="source-link" href={`/calls/${call.callId}#source`}>
                           {source.document.title}
                         </Link>
@@ -329,17 +331,17 @@ export default async function CallsPage({
           )}
 
           {result.page.totalPages > 1 ? (
-            <nav className="pagination" aria-label="Calls pages">
+            <nav className="pagination" aria-label={messages.callsPagesLabel}>
               {result.page.first ? (
-                <span aria-disabled="true">Previous</span>
+                <span aria-disabled="true">{messages.previous}</span>
               ) : (
-                <Link href={pageHref(values, result.page.number - 1)}>Previous</Link>
+                <Link href={pageHref(values, result.page.number - 1)}>{messages.previous}</Link>
               )}
               <span aria-current="page">{result.page.number + 1}</span>
               {result.page.last ? (
-                <span aria-disabled="true">Next</span>
+                <span aria-disabled="true">{messages.next}</span>
               ) : (
-                <Link href={pageHref(values, result.page.number + 1)}>Next</Link>
+                <Link href={pageHref(values, result.page.number + 1)}>{messages.next}</Link>
               )}
             </nav>
           ) : null}

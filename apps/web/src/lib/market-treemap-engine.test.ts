@@ -26,7 +26,7 @@ describe("presentMarketTreemapCell", () => {
     expect(presentMarketTreemapCell(cell(null), metric)).toEqual({
       metricDisplay: "NA",
       metricTone: "unavailable",
-      backgroundColor: "#303841",
+      backgroundColor: "#e2e4e2",
       paletteStrength: 0,
     });
   });
@@ -35,13 +35,13 @@ describe("presentMarketTreemapCell", () => {
     expect(presentMarketTreemapCell(cell(-7.25), metric)).toEqual({
       metricDisplay: "-7.25%",
       metricTone: "negative",
-      backgroundColor: "rgb(138, 52, 56)",
+      backgroundColor: "rgb(221, 188, 188)",
       paletteStrength: 1,
     });
     expect(presentMarketTreemapCell(cell(12.5), metric)).toEqual({
       metricDisplay: "+12.5%",
       metricTone: "positive",
-      backgroundColor: "rgb(33, 107, 80)",
+      backgroundColor: "rgb(183, 206, 196)",
       paletteStrength: 1,
     });
   });

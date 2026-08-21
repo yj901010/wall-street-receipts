@@ -18,18 +18,18 @@ test.describe("methodology registry", () => {
     await page.goto("/methodology");
 
     await expect(
-      page.getByRole("heading", { name: "Methodology definitions, before performance claims." }),
+      page.getByRole("heading", { name: "성과 주장에 앞서 방법론 정의를 확인합니다." }),
     ).toBeVisible();
     await expect(page.getByText("DEMO", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("MODEL_ONLY", { exact: true })).toHaveCount(2);
 
-    const registry = page.getByRole("region", { name: "Methodology registry table" });
+    const registry = page.getByRole("region", { name: "방법론 레지스트리 표" });
     const table = registry.getByRole("table");
     await expect(registry).toBeVisible();
     await expect(table.getByRole("row")).toHaveCount(3);
     await expect(
       page
-        .getByLabel("Methodology dataset provenance")
+        .getByLabel("방법론 데이터셋 출처")
         .getByText("fixture-call-outcomes-v1", { exact: true }),
     ).toBeVisible();
     await expect(table.getByText("fixture-call-outcomes-v1", { exact: true })).toHaveCount(2);
@@ -71,8 +71,8 @@ test.describe("methodology registry", () => {
 
     await page.goto("/methodology");
 
-    const navigation = page.getByRole("navigation", { name: "Primary navigation" });
-    const methodologyLink = navigation.getByRole("link", { name: "Methodology" });
+    const navigation = page.getByRole("navigation", { name: "주요 탐색" });
+    const methodologyLink = navigation.getByRole("link", { name: "방법론" });
     await expect(navigation).toBeVisible();
     await expect(methodologyLink).toBeVisible();
     await expect(methodologyLink).toHaveAttribute("aria-current", "page");
@@ -86,8 +86,11 @@ test.describe("methodology registry", () => {
 
     await expectVisibleKeyboardFocus(methodologyLink);
 
-    const registry = page.getByRole("region", { name: "Methodology registry table" });
-    await page.keyboard.press("Tab");
+    const registry = page.getByRole("region", { name: "방법론 레지스트리 표" });
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await page.keyboard.press("Tab");
+      if (await registry.evaluate((element) => element === document.activeElement)) break;
+    }
     await expectVisibleKeyboardFocus(registry);
 
     const viewportWidth = testInfo.project.use.viewport?.width;

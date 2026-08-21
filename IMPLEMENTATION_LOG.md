@@ -1242,3 +1242,108 @@ broader P3 scoring remains open
 - Market providers, historical bars, schedulers, persistence orchestration,
   calculated outcomes, aggregate rankings, API expansion, and UI publication
   remain outside this slice.
+
+## P2 — Korean-default bilingual product UI and editorial visual system
+
+Status: complete; existing routes and canonical evidence remain the product
+boundary, and broader P2/P3/P5/P8 work remains open
+
+### Scope
+
+- Add a server-resolved Korean-default presentation locale with exact Korean
+  and English application catalogs across existing product routes and states.
+- Add a keyboard-operable global locale control backed by one HTTP-only cookie,
+  with raw SSR and revisit behavior that never depends on hydration, browser
+  inference, local storage, or a remote translation service.
+- Localize the common root not-found boundary without attaching DEMO/provider
+  state or inferred evidence, while retaining exact dashboard and calls links.
+- Refresh the shared visual system toward the supplied white editorial
+  financial-terminal references: thin neutral rules, near-square controls,
+  compact mono evidence, tabular numerics, restrained semantic green/red, and
+  deliberate whitespace at 1440, 1280, and 390 pixels.
+- Preserve every canonical fixture/provider/API value, route/query/hash,
+  ordering rule, DEMO/unavailable/null semantic, and existing backend contract.
+
+### Contract and phase decisions
+
+- Presentation locale is exactly `ko | en`; `ko` is the deterministic default
+  for a missing or unsupported resolved cookie value. No `Accept-Language`,
+  browser locale, geography, timezone, URL parameter, or host setting is used.
+- `wsr_locale` is server owned and HTTP-only with `Path=/`, `SameSite=Lax`,
+  `Max-Age=31536000`, and production-only `Secure`. The server action accepts
+  only exact `ko` or `en`, rejects invalid input, and preserves the current URL.
+- `html[lang]`, metadata, navigation, page/state copy, and accessible names use
+  the server-resolved catalog before hydration. A selected locale persists on
+  revisit and direct navigation without `localStorage`, `sessionStorage`, or a
+  translation request.
+- Locale buttons retain stable `한국어`/`English` autonyms, exact per-option
+  `lang`, a minimum 24-pixel height, pending disable/announcement semantics,
+  and focus restoration to the selected option after the server locale changes.
+- The light system locks muted text to `#70706c`; positive/negative map metric
+  text uses semantic tokens, while neutral map and colored treemap surfaces
+  explicitly restore dark text for contrast without changing stored values.
+- Translation is presentation-only. IDs, enums, hashes, versions, data modes,
+  reason/status tokens, tickers, entity and source identities, exact fixture
+  disclaimers, URLs/source paths, UTC evidence, numerics, nulls/`NA`, and order
+  remain canonical.
+- This slice adds no locale route, API/OpenAPI surface, canonical schema or
+  fixture, manifest member, Flyway migration, persistence, provider connection,
+  quote, screening result, ranking, or calculated outcome.
+
+### Module structure
+
+- `apps/web/src/lib/i18n/config.ts`, `messages.ts`, and `server.ts` own the
+  closed locale set, typed application catalogs, exact cookie constants, and
+  server resolution boundary.
+- `apps/web/src/app/actions/locale.ts` owns the validated server-side cookie
+  mutation. `locale-provider.tsx`, `locale-switcher.tsx`, the root layout, and
+  `site-header.tsx` own client catalog access, the semantic switch, document
+  language, metadata, and localized global navigation.
+- The common `apps/web/src/app/not-found.tsx` reads the server locale and common
+  catalog; its colocated test owns Korean/English, mode-neutral, and link
+  regressions.
+- Existing route-local view/state files own their product copy. Providers,
+  canonical adapters, domain calculations, fixtures, and APIs remain
+  locale-independent.
+- Shared tokens and `globals.css` own the white editorial evidence system;
+  colocated unit/page tests and responsive Playwright own locale, SSR, revisit,
+  focus, containment, and canonical-value regressions.
+- `quality/P2_ACCEPTANCE.md` and the focused repository CI gate own the exact
+  cookie/SSR/source/design/no-contract-expansion boundary.
+
+### Routes
+
+- No route is added or renamed. Every existing route remains directly
+  addressable in Korean-default and English presentation.
+- Unknown routes use the common locale-aware mode-neutral not-found boundary;
+  they do not become evidence or a new product route.
+
+### Verification
+
+- Web ESLint and `tsc --noEmit`: PASS. Vitest passed 32 files and 316 tests.
+- Next 16.2.11 production build: PASS, including compilation, TypeScript, and
+  12/12 static-generation tasks. The route table contained 11 dynamic routes,
+  including the locale-aware `/_not-found` boundary.
+- Targeted bilingual Playwright passed 12/12. The full suite passed 63/63 at
+  1440, 1280, and 390 pixels, covering raw Korean-default/invalid/explicit-ko/
+  English SSR, cookie persistence, keyboard switching and focus restoration,
+  direct/revisited navigation, common unknown routes, containment, overflow,
+  external-request isolation, and runtime errors.
+- The focused bilingual/design and localized Screener repository gates passed.
+  All 14 embedded workflow Python blocks passed syntax; SnakeYAML parsing and
+  `git diff --check` passed.
+- The production `next-env.d.ts` import had no diff. Playwright report and test-
+  result directories were absent, and ports 3000 and 3011 had no listeners.
+- No API, schema, fixture, manifest, OpenAPI, Flyway, or provider boundary was
+  changed; the focused repository gate locks those unchanged sets, so no API
+  execution result is claimed for this presentation-only slice.
+
+### Deferred boundary
+
+- Additional locales, account-synced preferences, locale-prefixed routes,
+  machine/remote translation, translated canonical evidence or API payloads,
+  and provider-supplied localization require separate contracts.
+- Live/current data stays P5-owned, deterministic ranking/scoring stays
+  P3-owned, and populated historical screening stays P8-owned. The redesign
+  cannot fabricate or visually promote missing, model-only, unavailable, or
+  fixture evidence.

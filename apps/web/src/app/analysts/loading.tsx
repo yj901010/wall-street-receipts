@@ -1,13 +1,16 @@
 import { SiteHeader } from "@/components/site-header";
+import { getLocale } from "@/lib/i18n/server";
+import { getAnalystMessages } from "./messages";
 
-export default function AnalystsLoading() {
+export default async function AnalystsLoading() {
+  const messages = getAnalystMessages(await getLocale());
   return (
     <>
       <SiteHeader current="analysts" dataMode="DEMO" />
       <main className="state-page route-loading" aria-busy="true" aria-live="polite">
-        <p className="eyebrow">Canonical analyst identities</p>
-        <h1>Loading analyst evidence…</h1>
-        <p>Reading the committed DEMO master-data fixture and its provenance.</p>
+        <p className="eyebrow">{messages.loading.eyebrow}</p>
+        <h1>{messages.loading.title}</h1>
+        <p>{messages.loading.body}</p>
       </main>
     </>
   );

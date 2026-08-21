@@ -1,54 +1,57 @@
+"use client";
+
 import Link from "next/link";
+import { LocaleSwitcher } from "@/components/locale-switcher";
+import { useLocale } from "@/components/locale-provider";
+import type { NavigationItem } from "@/lib/i18n/messages";
 
 type SiteHeaderProps = {
-  current:
-    | "dashboard"
-    | "market"
-    | "calls"
-    | "institutions"
-    | "analysts"
-    | "maps"
-    | "screener"
-    | "methodology";
-  dataMode: string;
+  current?: NavigationItem;
+  dataMode?: string;
 };
 
 export function SiteHeader({ current, dataMode }: SiteHeaderProps) {
+  const { messages } = useLocale();
+
   return (
     <header className="site-header">
-      <Link className="wordmark" href="/" aria-label="Wall Street Receipts home">
-        WALL STREET <span>RECEIPTS</span>
+      <Link className="wordmark" href="/" aria-label={messages.siteHeader.homeLabel}>
+        <span aria-hidden="true" className="wordmark-mark" />
+        <span className="wordmark-text">WALL STREET RECEIPTS</span>
       </Link>
-      <nav aria-label="Primary navigation">
+      <nav aria-label={messages.siteHeader.primaryNavigationLabel}>
         <Link aria-current={current === "dashboard" ? "page" : undefined} href="/">
-          Dashboard
+          {messages.navigation.dashboard}
         </Link>
         <Link aria-current={current === "market" ? "page" : undefined} href="/market">
-          Market
+          {messages.navigation.market}
         </Link>
         <Link aria-current={current === "calls" ? "page" : undefined} href="/calls">
-          Calls
+          {messages.navigation.calls}
         </Link>
         <Link
           aria-current={current === "institutions" ? "page" : undefined}
           href="/institutions"
         >
-          Institutions
+          {messages.navigation.institutions}
         </Link>
         <Link aria-current={current === "analysts" ? "page" : undefined} href="/analysts">
-          Analysts
+          {messages.navigation.analysts}
         </Link>
         <Link aria-current={current === "maps" ? "page" : undefined} href="/maps/sp500">
-          Maps
+          {messages.navigation.maps}
         </Link>
         <Link aria-current={current === "screener" ? "page" : undefined} href="/screener">
-          Screener
+          {messages.navigation.screener}
         </Link>
         <Link aria-current={current === "methodology" ? "page" : undefined} href="/methodology">
-          Methodology
+          {messages.navigation.methodology}
         </Link>
       </nav>
-      <span className="mode-badge">{dataMode}</span>
+      <div className="site-header-actions">
+        {dataMode ? <span className="mode-badge">{dataMode}</span> : null}
+        <LocaleSwitcher />
+      </div>
     </header>
   );
 }

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { formatMoney } from "@/lib/format-money";
+import type { Locale } from "@/lib/i18n/config";
 import type { Sp500HistorySnapshot } from "@/lib/providers";
 import { KeyboardScrollRegion } from "./keyboard-scroll-region";
+import { getSp500HistoryMessages } from "./messages";
 
 function UtcTimestamp({ value }: { value: string }) {
   return <time dateTime={value}>{value}</time>;
@@ -11,9 +13,14 @@ function directionLabel(value: string) {
   return value.replaceAll("_", " ");
 }
 
-export function Sp500CallHistory({ snapshot }: { snapshot: Sp500HistorySnapshot }) {
-  const eventLabel = snapshot.page.totalElements === 1 ? "event" : "events";
-  const shownLabel = snapshot.items.length === 1 ? "row" : "rows";
+export function Sp500CallHistory({
+  locale,
+  snapshot,
+}: {
+  locale: Locale;
+  snapshot: Sp500HistorySnapshot;
+}) {
+  const messages = getSp500HistoryMessages(locale).history;
 
   return (
     <section
@@ -22,54 +29,48 @@ export function Sp500CallHistory({ snapshot }: { snapshot: Sp500HistorySnapshot 
     >
       <div className="section-heading sp500-history-heading">
         <div>
-          <p className="eyebrow">Original committed call records</p>
-          <h2 id="sp500-history-title">S&amp;P 500 call-event history</h2>
+          <p className="eyebrow">{messages.eyebrow}</p>
+          <h2 id="sp500-history-title">{messages.title}</h2>
         </div>
-        <span>
-          {snapshot.items.length} {shownLabel} shown · {snapshot.page.totalElements} matching DEMO {eventLabel}
-          {" · "}incomplete fixture coverage
-        </span>
+        <span>{messages.countSummary(snapshot.items.length, snapshot.page.totalElements)}</span>
       </div>
 
-      <div className="sp500-history-policy" aria-label="S&P 500 call-history policy">
-        <p className="sp500-history-policy-label">Presentation policy · not fixture evidence</p>
+      <div className="sp500-history-policy" aria-label={messages.policyLabel}>
+        <p className="sp500-history-policy-label">{messages.policyEyebrow}</p>
         <p>
-          <strong>Original events.</strong> Rows are committed analyst-call events ordered by their
-          recorded event time. No correction or revision is folded into a current effective view.
+          <strong>{messages.originalEventsTitle}</strong> {messages.originalEventsDescription}
         </p>
         <p>
-          <strong>Stored facts only.</strong> Direction, rating, targets, and status are values stored
-          on each event. They are not current recommendations, prices, consensus, or performance.
+          <strong>{messages.storedFactsTitle}</strong> {messages.storedFactsDescription}
         </p>
         <p>
-          <strong>Incomplete DEMO fixture.</strong> Row totals describe this exact fixture query;
-          they do not assert S&amp;P 500 coverage, confidence, completeness, or market trend.
+          <strong>{messages.incompleteFixtureTitle}</strong> {messages.incompleteFixtureDescription}
         </p>
       </div>
 
-      <dl className="sp500-history-query-evidence" aria-label="S&P 500 history query evidence">
+      <dl className="sp500-history-query-evidence" aria-label={messages.queryEvidenceLabel}>
         <div>
-          <dt>Canonical asset</dt>
+          <dt>{messages.canonicalAsset}</dt>
           <dd>{snapshot.asset.canonicalName}</dd>
         </div>
         <div>
-          <dt>Asset ID</dt>
+          <dt>{messages.assetId}</dt>
           <dd className="mono">{snapshot.asset.assetId}</dd>
         </div>
         <div>
-          <dt>Ticker / type</dt>
+          <dt>{messages.tickerType}</dt>
           <dd className="mono">{snapshot.asset.ticker ?? "NA"} · {snapshot.asset.assetType}</dd>
         </div>
         <div>
-          <dt>Fixed query</dt>
+          <dt>{messages.fixedQuery}</dt>
           <dd className="mono">asset-spx · page 0 · size 25</dd>
         </div>
         <div>
-          <dt>Ordering</dt>
-          <dd>Event time descending · call ID ascending tie break</dd>
+          <dt>{messages.ordering}</dt>
+          <dd>{messages.orderingValue}</dd>
         </div>
         <div>
-          <dt>Fixture query page</dt>
+          <dt>{messages.fixtureQueryPage}</dt>
           <dd className="mono">
             {snapshot.page.totalPages === 0
               ? "0 / 0"
@@ -82,73 +83,71 @@ export function Sp500CallHistory({ snapshot }: { snapshot: Sp500HistorySnapshot 
 
       {snapshot.items.length === 0 ? (
         <div className="empty-state sp500-history-empty" role="status">
-          <h3>No S&amp;P 500 call events are recorded in this DEMO query.</h3>
-          <p>No placeholder forecast, target, status, source, market price, or outcome was created.</p>
+          <h3>{messages.emptyTitle}</h3>
+          <p>{messages.emptyDescription}</p>
         </div>
       ) : (
         <KeyboardScrollRegion
           className="table-scroll calls-table-scroll sp500-history-table-scroll"
-          ariaLabel="S&P 500 call-event history table"
+          ariaLabel={messages.tableRegionLabel}
         >
           <table className="calls-table sp500-history-table">
-            <caption className="visually-hidden">
-              Original committed S&amp;P 500 DEMO analyst-call events
-            </caption>
+            <caption className="visually-hidden">{messages.tableCaption}</caption>
             <thead>
               <tr>
-                <th scope="col">Event record</th>
-                <th scope="col">Institution / analyst</th>
-                <th scope="col">Recorded direction / rating</th>
-                <th scope="col" className="numeric">Stored targets</th>
-                <th scope="col">Target date</th>
-                <th scope="col">Recorded status</th>
-                <th scope="col">Source evidence</th>
-                <th scope="col">Processing / capture evidence</th>
+                <th scope="col">{messages.eventRecord}</th>
+                <th scope="col">{messages.institutionAnalyst}</th>
+                <th scope="col">{messages.directionRating}</th>
+                <th scope="col" className="numeric">{messages.storedTargets}</th>
+                <th scope="col">{messages.targetDate}</th>
+                <th scope="col">{messages.recordedStatus}</th>
+                <th scope="col">{messages.sourceEvidence}</th>
+                <th scope="col">{messages.processingCaptureEvidence}</th>
               </tr>
             </thead>
             <tbody>
               {snapshot.items.map(({ call, institution, analyst, source }) => (
                 <tr key={call.callId}>
-                  <td data-label="Event record" className="mono">
+                  <td data-field="event-record" data-label={messages.eventRecord} className="mono">
                     <Link className="row-link" href={`/calls/${call.callId}`}>
                       <UtcTimestamp value={call.eventTime} />
                     </Link>
                     <span className="cell-secondary">{call.callId}</span>
                   </td>
-                  <td data-label="Institution / analyst">
+                  <td data-field="institution-analyst" data-label={messages.institutionAnalyst}>
                     <strong>{institution.canonicalName}</strong>
                     <span className="cell-secondary">{analyst?.canonicalName ?? "NA"}</span>
                   </td>
-                  <td data-label="Recorded direction / rating">
+                  <td data-field="direction-rating" data-label={messages.directionRating}>
                     <span className={`direction direction-${call.direction.toLowerCase()}`}>
                       {directionLabel(call.direction)}
                     </span>
                     <span className="cell-secondary">{call.originalRating ?? "NA"}</span>
                   </td>
-                  <td data-label="Stored targets" className="numeric mono">
+                  <td data-field="stored-targets" data-label={messages.storedTargets} className="numeric mono">
                     <span className="sp500-history-target-range">
                       {formatMoney(call.previousTarget, call.currency)} → {formatMoney(call.target, call.currency)}
                     </span>
-                    <span className="cell-secondary">Currency: {call.currency ?? "NA"}</span>
+                    <span className="cell-secondary">{messages.currency}: {call.currency ?? "NA"}</span>
                   </td>
-                  <td data-label="Target date" className="mono">
+                  <td data-field="target-date" data-label={messages.targetDate} className="mono">
                     {call.targetDate ?? "NA"}
                   </td>
-                  <td data-label="Recorded status" className="mono sp500-history-recorded-status">
+                  <td data-field="recorded-status" data-label={messages.recordedStatus} className="mono sp500-history-recorded-status">
                     {call.status}
                   </td>
-                  <td data-label="Source evidence">
+                  <td data-field="source-evidence" data-label={messages.sourceEvidence}>
                     <Link className="source-link" href={`/calls/${call.callId}#source`}>
                       {source.document.title}
                     </Link>
                     <span className="cell-secondary">
-                      {source.document.publisher ?? "NA"} · Verified: {String(source.reference.verified)}
+                      {source.document.publisher ?? "NA"} · {messages.verified}: {String(source.reference.verified)}
                     </span>
                   </td>
-                  <td data-label="Processing / capture evidence" className="mono">
+                  <td data-field="processing-capture" data-label={messages.processingCaptureEvidence} className="mono">
                     <UtcTimestamp value={call.processingTime} />
                     <span className="cell-secondary">
-                      Captured <UtcTimestamp value={call.capturedAt} />
+                      {messages.captured} <UtcTimestamp value={call.capturedAt} />
                     </span>
                     <span className="cell-secondary">{call.dataMode} · {call.provenanceId}</span>
                   </td>
@@ -161,9 +160,9 @@ export function Sp500CallHistory({ snapshot }: { snapshot: Sp500HistorySnapshot 
 
       <div className="sp500-history-actions">
         <Link className="text-action" href="/calls?assetId=asset-spx">
-          Open filtered call ledger
+          {messages.openFilteredLedger}
         </Link>
-        <Link className="text-action" href="/market">Return to market publication status</Link>
+        <Link className="text-action" href="/market">{messages.returnMarket}</Link>
       </div>
     </section>
   );

@@ -1,7 +1,10 @@
 import Link from "next/link";
+import type { Locale } from "@/lib/i18n/config";
 import type { MarketBoardSnapshot } from "@/lib/providers";
+import { getMarketMessages } from "./messages";
 
-export function MarketBoard({ snapshot }: { snapshot: MarketBoardSnapshot }) {
+export function MarketBoard({ snapshot, locale }: { snapshot: MarketBoardSnapshot; locale: Locale }) {
+  const messages = getMarketMessages(locale);
   return (
     <section
       className="data-section market-board-publication"
@@ -11,25 +14,22 @@ export function MarketBoard({ snapshot }: { snapshot: MarketBoardSnapshot }) {
     >
       <div className="section-heading market-board-publication-heading">
         <div>
-          <p className="eyebrow">Closed publication state</p>
-          <h2 id="market-board-publication-title">Market board publication state</h2>
+          <p className="eyebrow">{messages.board.eyebrow}</p>
+          <h2 id="market-board-publication-title">{messages.board.title}</h2>
         </div>
-        <span>Not published</span>
+        <span>{messages.board.state}</span>
       </div>
 
-      <div className="market-board-policy" aria-label="Market board publication policy">
-        <p className="market-board-policy-label">Publication policy · not market evidence</p>
+      <div className="market-board-policy" aria-label={messages.board.policyLabel}>
+        <p className="market-board-policy-label">{messages.board.policyNotice}</p>
         <p>
-          <strong>No quote catalog.</strong> This fixture records that a canonical global market
-          board has not been published. It is not a delayed, end-of-day, or current quote surface.
+          <strong>{messages.board.noCatalogTitle}</strong> {messages.board.noCatalogBody}
         </p>
         <p>
-          <strong>No promoted context.</strong> Call-event snapshots and synthetic map samples stay
-          in their owning evidence views; neither is substituted here.
+          <strong>{messages.board.noContextTitle}</strong> {messages.board.noContextBody}
         </p>
         <p>
-          <strong>No inferred values.</strong> Price, change, market status, freshness, and coverage
-          remain unavailable. Missing values are never replaced with zero.
+          <strong>{messages.board.noValuesTitle}</strong> {messages.board.noValuesBody}
         </p>
       </div>
 
@@ -37,62 +37,58 @@ export function MarketBoard({ snapshot }: { snapshot: MarketBoardSnapshot }) {
         <div
           className="market-board-availability"
           role="status"
-          aria-label="Known-unavailable market board status"
+          aria-label={messages.board.unavailableLabel}
         >
           <dl>
             <div>
-              <dt>Publication status</dt>
+              <dt>{messages.board.publicationStatus}</dt>
               <dd className="mono">{snapshot.publicationStatus}</dd>
             </div>
             <div>
-              <dt>Scope</dt>
+              <dt>{messages.board.scope}</dt>
               <dd className="mono">{snapshot.scope}</dd>
             </div>
             <div>
-              <dt>Reason</dt>
+              <dt>{messages.board.reason}</dt>
               <dd className="mono">{snapshot.publicationReasonCode}</dd>
             </div>
             <div>
-              <dt>Market as of</dt>
+              <dt>{messages.board.marketAsOf}</dt>
               <dd className="mono na-value">{snapshot.marketAsOf ?? snapshot.missingDisplay}</dd>
             </div>
             <div>
-              <dt>Quote publication</dt>
-              <dd>None published</dd>
+              <dt>{messages.board.quotePublication}</dt>
+              <dd>{messages.board.nonePublished}</dd>
             </div>
             <div>
-              <dt>Missing display</dt>
+              <dt>{messages.board.missingDisplay}</dt>
               <dd className="mono na-value">{snapshot.missingDisplay}</dd>
             </div>
           </dl>
         </div>
 
-        <div className="market-board-policy-metadata" aria-label="Market board policy metadata">
-          <h3>Policy-record timestamps</h3>
-          <p>
-            Generated and captured timestamps describe this fixture publication-policy record.
-            They are not a market as-of time, quote timestamp, freshness marker, or trading-session
-            status.
-          </p>
+        <div className="market-board-policy-metadata" aria-label={messages.board.metadataLabel}>
+          <h3>{messages.board.timestampTitle}</h3>
+          <p>{messages.board.timestampBody}</p>
           <dl>
             <div>
-              <dt>Source type</dt>
+              <dt>{messages.board.sourceType}</dt>
               <dd className="mono">{snapshot.provenance.sourceType}</dd>
             </div>
             <div>
-              <dt>License</dt>
+              <dt>{messages.board.license}</dt>
               <dd className="mono">{snapshot.provenance.licenseClass}</dd>
             </div>
             <div>
-              <dt>Synthetic policy record</dt>
+              <dt>{messages.board.synthetic}</dt>
               <dd className="mono">{String(snapshot.provenance.synthetic)}</dd>
             </div>
           </dl>
         </div>
       </div>
 
-      <div className="market-board-source-paths" aria-label="Market board source paths">
-        <span>Contract sources</span>
+      <div className="market-board-source-paths" aria-label={messages.board.sourcePathsLabel}>
+        <span>{messages.board.contractSources}</span>
         <ul>
           {snapshot.provenance.sourcePaths.map((path) => (
             <li className="mono" key={path}>{path}</li>
@@ -103,9 +99,9 @@ export function MarketBoard({ snapshot }: { snapshot: MarketBoardSnapshot }) {
       <p className="dataset-disclaimer market-board-disclaimer">{snapshot.disclaimer}</p>
 
       <div className="market-board-actions">
-        <Link className="text-action" href="/">Return to dashboard evidence</Link>
+        <Link className="text-action" href="/">{messages.board.dashboard}</Link>
         <Link className="text-action" href="/markets/sp500">
-          Open recorded S&amp;P 500 call-event history
+          {messages.board.history}
         </Link>
       </div>
     </section>

@@ -1,13 +1,16 @@
+import { getDashboardMessages } from "@/components/dashboard-messages";
 import { SiteHeader } from "@/components/site-header";
+import { getLocale } from "@/lib/i18n/server";
 
-export default function DashboardLoading() {
+export default async function DashboardLoading() {
+  const messages = getDashboardMessages(await getLocale());
   return (
     <main>
       <SiteHeader current="dashboard" dataMode="DEMO" />
       <div className="state-page route-loading" aria-busy="true" aria-live="polite">
-        <p className="eyebrow">Dashboard evidence</p>
-        <h1>Loading independently sourced DEMO sections…</h1>
-        <p>No global timestamp, source, quote, event, or ranking is being filled while evidence loads.</p>
+        <p className="eyebrow">{messages.loading.eyebrow}</p>
+        <h1>{messages.loading.title}</h1>
+        <p>{messages.loading.body}</p>
       </div>
     </main>
   );

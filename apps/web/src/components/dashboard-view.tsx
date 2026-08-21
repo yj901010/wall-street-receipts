@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import {
+  formatDashboardUtc,
+  getDashboardMessages,
+  type DashboardMessages,
+} from "@/components/dashboard-messages";
 import { formatMoney } from "@/lib/format-money";
+import type { Locale } from "@/lib/i18n/config";
 import { presentMarketTreemapCell } from "@/lib/market-treemap-engine";
 import type {
   DashboardDeferredSection,
@@ -15,21 +21,17 @@ const universeLabels: Record<MarketTreemapUniverse, string> = {
   nasdaq100: "Nasdaq 100",
 };
 
-const utcFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
-
-function utc(value: string) {
-  return `${utcFormatter.format(new Date(value))} UTC`;
-}
-
 function directionLabel(value: string) {
   return value.replaceAll("_", " ");
 }
 
-function MarketMapPreview({ snapshot }: { snapshot: MarketTreemapSnapshot }) {
+function MarketMapPreview({
+  snapshot,
+  messages,
+}: {
+  snapshot: MarketTreemapSnapshot;
+  messages: DashboardMessages;
+}) {
   const universeLabel = universeLabels[snapshot.universe];
   const titleId = `dashboard-map-preview-${snapshot.universe}-title`;
   const sectorCount = new Set(
@@ -49,66 +51,68 @@ function MarketMapPreview({ snapshot }: { snapshot: MarketTreemapSnapshot }) {
       <header>
         <div>
           <p className="eyebrow">{snapshot.mode} · {snapshot.dataMode}</p>
-          <h3 id={titleId}>{universeLabel} map preview</h3>
+          <h3 id={titleId}>{messages.mapPreview.title(universeLabel)}</h3>
         </div>
         <Link className="text-action" href={`/maps/${snapshot.universe}`}>
-          Open {universeLabel} map
+          {messages.mapPreview.open(universeLabel)}
         </Link>
       </header>
 
       <dl
         className="dashboard-map-provenance"
-        aria-label={`${universeLabel} dashboard map preview provenance`}
+        aria-label={messages.mapPreview.provenanceLabel(universeLabel)}
       >
         <div>
-          <dt>As of</dt>
-          <dd>{utc(snapshot.asOf)}</dd>
+          <dt>{messages.mapPreview.asOf}</dt>
+          <dd>{formatDashboardUtc(snapshot.asOf)}</dd>
         </div>
         <div>
-          <dt>Generated</dt>
-          <dd>{utc(snapshot.generatedAt)}</dd>
+          <dt>{messages.mapPreview.generated}</dt>
+          <dd>{formatDashboardUtc(snapshot.generatedAt)}</dd>
         </div>
         <div>
-          <dt>Captured</dt>
-          <dd>{utc(snapshot.provenance.capturedAt)}</dd>
+          <dt>{messages.mapPreview.captured}</dt>
+          <dd>{formatDashboardUtc(snapshot.provenance.capturedAt)}</dd>
         </div>
         <div>
-          <dt>Provenance</dt>
+          <dt>{messages.mapPreview.provenance}</dt>
           <dd className="mono">{snapshot.provenance.id}</dd>
         </div>
         <div>
-          <dt>Coverage</dt>
-          <dd className="mono">{snapshot.coverage.kind} · {snapshot.coverage.cellCount} cells</dd>
-        </div>
-        <div>
-          <dt>Complete universe</dt>
-          <dd className="mono">{String(snapshot.coverage.completeUniverse)}</dd>
-        </div>
-        <div>
-          <dt>Stored grouping</dt>
+          <dt>{messages.mapPreview.coverage}</dt>
           <dd className="mono">
-            {sectorCount} outer {sectorCount === 1 ? "sector" : "sectors"} · {industryCount} industries
+            {messages.mapPreview.coverageValue(snapshot.coverage.kind, snapshot.coverage.cellCount)}
           </dd>
         </div>
         <div>
-          <dt>Weight basis</dt>
+          <dt>{messages.mapPreview.completeUniverse}</dt>
+          <dd className="mono">{String(snapshot.coverage.completeUniverse)}</dd>
+        </div>
+        <div>
+          <dt>{messages.mapPreview.storedGrouping}</dt>
+          <dd className="mono">
+            {messages.mapPreview.storedGroupingValue(sectorCount, industryCount)}
+          </dd>
+        </div>
+        <div>
+          <dt>{messages.mapPreview.weightBasis}</dt>
           <dd className="mono">{snapshot.coverage.weightBasis}</dd>
         </div>
         <div>
-          <dt>Area unit</dt>
+          <dt>{messages.mapPreview.areaUnit}</dt>
           <dd className="mono">{snapshot.geometry.areaUnit}</dd>
         </div>
       </dl>
 
       {snapshot.cells.length === 0 ? (
         <div className="empty-state dashboard-map-empty" role="status">
-          <h4>No {universeLabel} preview cells are recorded.</h4>
-          <p>No cell from another universe was substituted.</p>
+          <h4>{messages.mapPreview.emptyTitle(universeLabel)}</h4>
+          <p>{messages.mapPreview.emptyBody}</p>
         </div>
       ) : (
         <ol
           className="dashboard-map-cells"
-          aria-label={`${universeLabel} dashboard PRICE_CHANGE preview cells`}
+          aria-label={messages.mapPreview.cellsLabel(universeLabel)}
         >
           {snapshot.cells.map((cell) => {
             const presentation = presentMarketTreemapCell(cell, snapshot.metric);
@@ -121,20 +125,23 @@ function MarketMapPreview({ snapshot }: { snapshot: MarketTreemapSnapshot }) {
                 </div>
                 <dl>
                   <div>
-                    <dt>Stored change</dt>
+                    <dt>{messages.mapPreview.storedChange}</dt>
                     <dd className={`mono dashboard-map-metric dashboard-map-metric-${presentation.metricTone}`}>
                       {presentation.metricDisplay}
                     </dd>
                   </div>
                   <div>
-                    <dt>Synthetic proxy</dt>
+                    <dt>{messages.mapPreview.syntheticProxy}</dt>
                     <dd className="mono">
-                      {cell.syntheticMarketCapProxy} {snapshot.geometry.areaUnit} units
+                      {messages.mapPreview.syntheticProxyValue(
+                        cell.syntheticMarketCapProxy,
+                        snapshot.geometry.areaUnit,
+                      )}
                     </dd>
                   </div>
                   <div>
-                    <dt>Timestamp</dt>
-                    <dd>{utc(cell.timestamp)}</dd>
+                    <dt>{messages.mapPreview.timestamp}</dt>
+                    <dd>{formatDashboardUtc(cell.timestamp)}</dd>
                   </div>
                 </dl>
               </li>
@@ -153,16 +160,20 @@ function UnavailableSection({
   eyebrow,
   title,
   state,
+  messages,
   children,
 }: {
   id: string;
   eyebrow: string;
   title: string;
   state: DashboardUnavailableSection | DashboardDeferredSection;
+  messages: DashboardMessages;
   children: React.ReactNode;
 }) {
   const titleId = `${id}-title`;
-  const statusLabel = state.status === "NOT_PUBLISHED" ? "Not published" : "P3 deferred";
+  const statusLabel = state.status === "NOT_PUBLISHED"
+    ? messages.availability.notPublished
+    : messages.availability.p3Deferred;
 
   return (
     <section className="data-section dashboard-unavailable" id={id} aria-labelledby={titleId}>
@@ -175,13 +186,13 @@ function UnavailableSection({
       </div>
       <div className="dashboard-unavailable-body">
         <div role="status">
-          <dl aria-label={`${title} availability`}>
+          <dl aria-label={messages.availability.label(title)}>
             <div>
-              <dt>Status</dt>
+              <dt>{messages.availability.status}</dt>
               <dd className="mono">{state.status}</dd>
             </div>
             <div>
-              <dt>Display</dt>
+              <dt>{messages.availability.display}</dt>
               <dd className="mono na-value">{state.missingDisplay}</dd>
             </div>
           </dl>
@@ -192,7 +203,8 @@ function UnavailableSection({
   );
 }
 
-export function DashboardView({ snapshot }: { snapshot: DashboardSnapshot }) {
+export function DashboardView({ snapshot, locale }: { snapshot: DashboardSnapshot; locale: Locale }) {
+  const messages = getDashboardMessages(locale);
   const [sp500, nasdaq100] = snapshot.mapPreviews;
   const sharedTickerCount = sp500.cells.filter((cell) =>
     nasdaq100.cells.some((candidate) => candidate.assetId === cell.assetId)
@@ -205,110 +217,108 @@ export function DashboardView({ snapshot }: { snapshot: DashboardSnapshot }) {
       <div className="page-shell dashboard-shell" id="top">
         <section className="page-heading dashboard-heading" aria-labelledby="page-title">
           <div>
-            <p className="eyebrow">Point-in-time analyst intelligence</p>
-            <h1 id="page-title">Market evidence, without inferred gaps.</h1>
-            <p className="page-summary">
-              Each populated section retains its own timestamp and provenance. This dashboard does
-              not synthesize one global as-of time or source across independent fixtures.
-            </p>
+            <p className="eyebrow">{messages.page.eyebrow}</p>
+            <h1 id="page-title">{messages.page.title}</h1>
+            <p className="page-summary">{messages.page.summary}</p>
           </div>
         </section>
 
         <UnavailableSection
           id="market-board"
-          eyebrow="Global market strip"
-          title="Market board"
+          eyebrow={messages.marketBoard.eyebrow}
+          title={messages.marketBoard.title}
           state={snapshot.marketBoard}
+          messages={messages}
         >
-          <p>
-            A canonical latest-market-board read model is not published. Call-event snapshots are
-            immutable historical context and are not promoted to current quotes.
-          </p>
+          <p>{messages.marketBoard.body}</p>
         </UnavailableSection>
 
         <section className="data-section dashboard-calls" id="calls" aria-labelledby="dashboard-calls-title">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Committed DEMO event ledger</p>
-              <h2 id="dashboard-calls-title">Latest calls within this fixture</h2>
+              <p className="eyebrow">{messages.calls.eyebrow}</p>
+              <h2 id="dashboard-calls-title">{messages.calls.title}</h2>
             </div>
-            <span>{snapshot.latestCalls.items.length} DEMO events</span>
+            <span>{messages.calls.count(snapshot.latestCalls.items.length)}</span>
           </div>
 
-          <dl className="dashboard-section-provenance" aria-label="Dashboard call section provenance">
+          <dl className="dashboard-section-provenance" aria-label={messages.calls.provenanceLabel}>
             <div>
-              <dt>As of</dt>
-              <dd>{utc(snapshot.latestCalls.asOf)}</dd>
+              <dt>{messages.calls.asOf}</dt>
+              <dd>{formatDashboardUtc(snapshot.latestCalls.asOf)}</dd>
             </div>
             <div>
-              <dt>Source</dt>
+              <dt>{messages.calls.source}</dt>
               <dd className="mono">{snapshot.latestCalls.source}</dd>
             </div>
             <div>
-              <dt>Data mode</dt>
+              <dt>{messages.calls.dataMode}</dt>
               <dd className="mono">{snapshot.latestCalls.dataMode}</dd>
             </div>
             <div>
-              <dt>Ordering</dt>
-              <dd>Original event time, descending</dd>
+              <dt>{messages.calls.ordering}</dt>
+              <dd>{messages.calls.orderingValue}</dd>
             </div>
           </dl>
 
           <p className="section-note dashboard-calls-note">
-            “Latest” means latest within the committed DEMO fixture. It does not mean current or
-            live, and no revision-folded ranking or performance result is produced.
+            {messages.calls.note}
           </p>
 
           {snapshot.latestCalls.items.length === 0 ? (
             <div className="empty-state" role="status">
-              <h3>No call events are recorded.</h3>
-              <p>No placeholder event was created for the dashboard.</p>
+              <h3>{messages.calls.emptyTitle}</h3>
+              <p>{messages.calls.emptyBody}</p>
             </div>
           ) : (
             <div
               className="table-scroll calls-table-scroll dashboard-calls-scroll"
               tabIndex={0}
-              aria-label="Scrollable dashboard latest calls table"
+              aria-label={messages.calls.scrollLabel}
             >
               <table className="calls-table dashboard-calls-table">
                 <caption className="visually-hidden">
-                  Latest analyst calls within the committed DEMO fixture
+                  {messages.calls.caption}
                 </caption>
                 <thead>
                   <tr>
-                    <th scope="col">Event time</th>
-                    <th scope="col">Institution / analyst</th>
-                    <th scope="col">Asset</th>
-                    <th scope="col">Direction</th>
-                    <th scope="col" className="numeric">Target change</th>
-                    <th scope="col">Evidence</th>
+                    <th scope="col">{messages.calls.columns.eventTime}</th>
+                    <th scope="col">{messages.calls.columns.institutionAnalyst}</th>
+                    <th scope="col">{messages.calls.columns.asset}</th>
+                    <th scope="col">{messages.calls.columns.direction}</th>
+                    <th scope="col" className="numeric">{messages.calls.columns.targetChange}</th>
+                    <th scope="col">{messages.calls.columns.evidence}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {snapshot.latestCalls.items.map(({ call, institution, analyst, asset, source }) => (
                     <tr key={call.callId}>
-                      <td data-label="Event time" className="mono">
+                      <td
+                        data-field="event-time"
+                        data-label={messages.calls.columns.eventTime}
+                        className="mono"
+                      >
                         <Link className="row-link" href={`/calls/${call.callId}`}>
-                          {utc(call.eventTime)}
+                          {formatDashboardUtc(call.eventTime)}
                         </Link>
                       </td>
-                      <td data-label="Institution / analyst">
+                      <td data-field="institution-analyst" data-label={messages.calls.columns.institutionAnalyst}>
                         <strong>{institution.canonicalName}</strong>
                         <span className="cell-secondary">{analyst?.canonicalName ?? "NA"}</span>
                       </td>
-                      <td data-label="Asset">
+                      <td data-field="asset" data-label={messages.calls.columns.asset}>
                         <strong>{asset.ticker ?? "NA"}</strong>
                         <span className="cell-secondary">{asset.canonicalName}</span>
                       </td>
-                      <td data-label="Direction">
+                      <td data-field="direction" data-label={messages.calls.columns.direction}>
                         <span className={`direction direction-${call.direction.toLowerCase()}`}>
                           {directionLabel(call.direction)}
                         </span>
                       </td>
-                      <td data-label="Target change" className="numeric mono">
+                      <td data-field="target-change" data-label={messages.calls.columns.targetChange} className="numeric mono">
                         {formatMoney(call.previousTarget, call.currency)} → {formatMoney(call.target, call.currency)}
                       </td>
-                      <td data-label="Evidence">
+                      <td data-field="evidence" data-label={messages.calls.columns.evidence}>
                         <Link className="source-link" href={`/calls/${call.callId}#source`}>
                           {source.document.title}
                         </Link>
@@ -330,19 +340,21 @@ export function DashboardView({ snapshot }: { snapshot: DashboardSnapshot }) {
         <section className="data-section dashboard-maps" aria-labelledby="dashboard-maps-title">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Independent fixture evidence</p>
-              <h2 id="dashboard-maps-title">PRICE_CHANGE map previews</h2>
+              <p className="eyebrow">{messages.maps.eyebrow}</p>
+              <h2 id="dashboard-maps-title">{messages.maps.title}</h2>
             </div>
-            <span>2 DEMO map fixtures</span>
+            <span>{messages.maps.fixtureCount(snapshot.mapPreviews.length)}</span>
           </div>
           <p className="section-note dashboard-map-reuse-note" role="note">
-            The two previews reuse {sharedTickerCount} stored synthetic ticker cells. Cross-universe
-            overlap is demonstration evidence only and does not assert official membership in
-            either index.
+            {messages.maps.overlap(sharedTickerCount)}
           </p>
           <div className="dashboard-map-grid">
             {snapshot.mapPreviews.map((map) => (
-              <MarketMapPreview key={map.universe} snapshot={map} />
+              <MarketMapPreview
+                key={map.universe}
+                snapshot={map}
+                messages={messages}
+              />
             ))}
           </div>
         </section>
@@ -350,27 +362,23 @@ export function DashboardView({ snapshot }: { snapshot: DashboardSnapshot }) {
         <div className="dashboard-deferred-grid">
           <UnavailableSection
             id="event-calendar"
-            eyebrow="Global event calendar"
-            title="Scheduled events"
+            eyebrow={messages.calendar.eyebrow}
+            title={messages.calendar.title}
             state={snapshot.eventCalendar}
+            messages={messages}
           >
-            <p>
-              No global event-calendar read model is published. Call-linked scheduled context stays
-              attached to its historical call and is not presented as a current calendar.
-            </p>
+            <p>{messages.calendar.body}</p>
           </UnavailableSection>
 
           <UnavailableSection
             id="ranking-preview"
-            eyebrow="Deterministic outcomes"
-            title="Ranking preview"
+            eyebrow={messages.ranking.eyebrow}
+            title={messages.ranking.title}
             state={snapshot.ranking}
+            messages={messages}
           >
-            <p>
-              No accuracy, return, alpha, hit-rate, score, rank, sample count, or ordering is
-              calculated. Deterministic ranking work remains deferred to P3.
-            </p>
-            <Link className="text-action" href="/methodology">Review methodology evidence</Link>
+            <p>{messages.ranking.body}</p>
+            <Link className="text-action" href="/methodology">{messages.ranking.methodology}</Link>
           </UnavailableSection>
         </div>
       </div>

@@ -1,58 +1,48 @@
 import Link from "next/link";
+import type { Locale } from "@/lib/i18n/config";
 import type { AnalystDirectorySnapshot } from "@/lib/providers";
+import { formatAnalystUtc, getAnalystMessages } from "./messages";
 
-const utcFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
-
-function utc(value: string) {
-  return `${utcFormatter.format(new Date(value))} UTC`;
-}
-
-export function AnalystDirectory({ snapshot }: { snapshot: AnalystDirectorySnapshot }) {
+export function AnalystDirectory({ snapshot, locale }: { snapshot: AnalystDirectorySnapshot; locale: Locale }) {
+  const messages = getAnalystMessages(locale);
   return (
     <section className="data-section analyst-directory" aria-labelledby="analyst-directory-title">
       <div className="section-heading analyst-directory-heading">
         <div>
-          <p className="eyebrow">Canonical identity records</p>
-          <h2 id="analyst-directory-title">Analyst directory</h2>
+          <p className="eyebrow">{messages.directory.eyebrow}</p>
+          <h2 id="analyst-directory-title">{messages.directory.title}</h2>
         </div>
-        <span>{snapshot.dataMode} identity fixture · coverage not asserted</span>
+        <span>{snapshot.dataMode} {messages.directory.countSuffix}</span>
       </div>
 
-      <div className="analyst-directory-policy" aria-label="Analyst directory policy">
-        <p className="analyst-policy-label">Product policy · not fixture evidence</p>
+      <div className="analyst-directory-policy" aria-label={messages.directory.policyLabel}>
+        <p className="analyst-policy-label">{messages.directory.productPolicy}</p>
         <p>
-          <strong>Not ranked.</strong> Rows use canonical-name order, never performance, accuracy,
-          score, call volume, confidence, or recommendation order.
+          <strong>{messages.directory.notRankedTitle}</strong> {messages.directory.notRankedBody}
         </p>
         <p>
-          <strong>Recorded state.</strong> The active field is preserved as captured fixture evidence
-          at its stated effective and capture times; it is not a live activity claim.
+          <strong>{messages.directory.recordedTitle}</strong> {messages.directory.recordedBody}
         </p>
         <p>
-          <strong>Synthetic DEMO identity only.</strong> Names and recorded status do not establish
-          verified coverage, employer or affiliation, endorsement, performance, or investment advice.
+          <strong>{messages.directory.syntheticTitle}</strong> {messages.directory.syntheticBody}
         </p>
       </div>
 
-      <div className="analyst-source-evidence" aria-label="Analyst source evidence">
+      <div className="analyst-source-evidence" aria-label={messages.directory.sourceEvidenceLabel}>
         <div>
-          <span>Source type</span>
+          <span>{messages.directory.sourceType}</span>
           <strong>{snapshot.provenance.sourceType}</strong>
         </div>
         <div>
-          <span>License</span>
+          <span>{messages.directory.license}</span>
           <strong>{snapshot.provenance.licenseClass}</strong>
         </div>
         <div>
-          <span>Synthetic</span>
+          <span>{messages.directory.synthetic}</span>
           <strong>{String(snapshot.provenance.synthetic)}</strong>
         </div>
         <div className="analyst-source-paths">
-          <span>Source paths</span>
+          <span>{messages.directory.sourcePaths}</span>
           <ul>
             {snapshot.provenance.sourcePaths.map((path) => (
               <li className="mono" key={path}>{path}</li>
@@ -65,45 +55,45 @@ export function AnalystDirectory({ snapshot }: { snapshot: AnalystDirectorySnaps
         <div
           className="table-scroll analyst-table-scroll"
           role="region"
-          aria-label="Analyst identity table"
+          aria-label={messages.directory.tableLabel}
           tabIndex={0}
         >
           <table className="calls-table analyst-table">
             <caption className="visually-hidden">
-              Canonical analyst identities and their captured evidence
+              {messages.directory.caption}
             </caption>
             <thead>
               <tr>
-                <th scope="col">Analyst</th>
-                <th scope="col">Recorded active</th>
-                <th scope="col">Mode</th>
-                <th scope="col">Effective</th>
-                <th scope="col">Captured</th>
-                <th scope="col">Provenance</th>
-                <th scope="col">Call ledger</th>
+                <th scope="col">{messages.directory.columns.analyst}</th>
+                <th scope="col">{messages.directory.columns.recordedActive}</th>
+                <th scope="col">{messages.directory.columns.mode}</th>
+                <th scope="col">{messages.directory.columns.effective}</th>
+                <th scope="col">{messages.directory.columns.captured}</th>
+                <th scope="col">{messages.directory.columns.provenance}</th>
+                <th scope="col">{messages.directory.columns.callLedger}</th>
               </tr>
             </thead>
             <tbody>
               {snapshot.analysts.map((analyst) => (
                 <tr key={analyst.analystId}>
-                  <td data-label="Analyst">
+                  <td data-label={messages.directory.columns.analyst}>
                     <strong>{analyst.canonicalName}</strong>
                     <span className="cell-secondary mono">{analyst.analystId}</span>
                   </td>
-                  <td className="mono analyst-recorded-state" data-label="Recorded active">
+                  <td className="mono analyst-recorded-state" data-label={messages.directory.columns.recordedActive}>
                     {String(analyst.active)}
                   </td>
-                  <td className="mono" data-label="Mode">{analyst.dataMode}</td>
-                  <td className="mono" data-label="Effective">{utc(analyst.effectiveAt)}</td>
-                  <td className="mono" data-label="Captured">{utc(analyst.capturedAt)}</td>
-                  <td className="mono" data-label="Provenance">{analyst.provenanceId}</td>
-                  <td data-label="Call ledger">
+                  <td className="mono" data-label={messages.directory.columns.mode}>{analyst.dataMode}</td>
+                  <td className="mono" data-label={messages.directory.columns.effective}>{formatAnalystUtc(analyst.effectiveAt)}</td>
+                  <td className="mono" data-label={messages.directory.columns.captured}>{formatAnalystUtc(analyst.capturedAt)}</td>
+                  <td className="mono" data-label={messages.directory.columns.provenance}>{analyst.provenanceId}</td>
+                  <td data-label={messages.directory.columns.callLedger}>
                     <Link
                       className="text-action"
                       href={`/calls?analystId=${encodeURIComponent(analyst.analystId)}`}
-                      aria-label={`Filter call ledger for ${analyst.canonicalName}`}
+                      aria-label={`${messages.directory.filterCallLedgerFor} ${analyst.canonicalName}`}
                     >
-                      Filter call ledger
+                      {messages.directory.filterCallLedger}
                     </Link>
                   </td>
                 </tr>
@@ -113,8 +103,8 @@ export function AnalystDirectory({ snapshot }: { snapshot: AnalystDirectorySnaps
         </div>
       ) : (
         <div className="empty-state" role="status">
-          <h3>No analyst identities are recorded.</h3>
-          <p>No placeholder identity, affiliation, call data, metric, score, or rank was generated.</p>
+          <h3>{messages.directory.emptyTitle}</h3>
+          <p>{messages.directory.emptyBody}</p>
         </div>
       )}
     </section>
