@@ -5,10 +5,11 @@ public analyst calls, preserves the market context that was available when each
 call was made, and evaluates later outcomes with a reproducible methodology.
 
 The P0 foundation and P1 domain/fixture phase are complete, broader P2 work
-remains open, and the first four isolated P3 slices are complete: the target-hit
+remains open, and the first five isolated P3 slices are complete: the target-hit
 comparison core, schedule-only session-offset mechanics, the policy-neutral
 event/session relation classifier, and the pure directional-win comparison
-core. Delivered P2 work includes
+core, plus the strict session-close named-horizon and independent
+original/correction schedule-lineage policy. Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
 maps, market publication state, recorded S&P call history, and the honest
 known-deferred Screener shell; broader P2 remains open and actual screening
@@ -105,8 +106,9 @@ ordered, append-only `PENDING`/`INCOMPLETE` DEMO audit records whose ten metric/
 fields are JSON null. The page must show each record or an explicit known-empty
 array without choosing a latest/effective result, inferring an exclusion from a
 cancellation, or combining API evidence with fixture data. Calculated outcomes,
-named-horizon and correction-basis policy, lifecycle projection, aggregation,
-ranking, and real/licensed publication remain later P3/P5 work. This paragraph
+endpoint observations and returns, cancellation eligibility, lifecycle
+projection, aggregation, ranking, and real/licensed publication remain later
+P3/P5 work. This paragraph
 records a verified synthetic DEMO boundary and does not infer methodology
 activation status or claim observed/live performance.
 
@@ -166,6 +168,15 @@ Bullish uses strict `> 0`, bearish uses strict `< 0`, and zero is false for both
 a null return remains explicitly unavailable. This leaf does not calculate a
 return, select a horizon or observation, activate a methodology, modify the
 canonical outcome archive's null metric/result fields, or publish a result.
+
+The fifth P3 slice uses an explicit original or correction basis and
+the supplied session catalog only. It maps D1/W1/M1/M3/M6/Y1 to exactly
+1/5/21/63/126/252 session closes strictly after that basis event, with each
+validated correction starting an independent clock while the original lineage
+is preserved. Its exact 633-byte policy definition and SHA-256 are versioned;
+the result identifies a schedule endpoint only and does not claim a licensed
+calendar, observed price, calculated return, complete outcome, or methodology
+activation. It requires no provider credential or network access.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider

@@ -2,8 +2,10 @@
 
 Current status: the pure target-hit and directional-win comparison cores,
 explicit-anchor session-offset mechanics, and policy-neutral event/session
-relation classifier vertical slices are complete. None publishes a calculated
-outcome or completes the broader P3 scoring phase, which remains open.
+relation classifier vertical slices are complete. The strict session-close
+named-horizon and explicit forecast-basis policy slice is also complete. None
+publishes a calculated outcome or completes the broader P3 scoring phase, which
+remains open.
 
 ## Pure target-hit slice boundary
 
@@ -219,12 +221,90 @@ outcome or completes the broader P3 scoring phase, which remains open.
   four PENDING/INCOMPLETE all-null outcomes, the read-only outcome endpoint,
   and PostgreSQL migration coverage.
 
+## Strict session-close horizon and forecast-basis slice boundary
+
+- `OutcomeBasis` is supplied explicitly as either an original call with null
+  revision identity or one already-validated correction with non-null revision
+  identity. Each variant owns its own event time; a correction never borrows the
+  original event time or rewrites the original schedule lineage.
+- The approved named counts are exactly `D1=1`, `W1=5`, `M1=21`, `M3=63`,
+  `M6=126`, and `Y1=252`. A candidate session is eligible only when its supplied
+  `closesAt` is strictly after the basis event time. The Nth eligible supplied
+  session is the named-horizon endpoint.
+- This is a direct close-selection policy, not a predecessor-anchor or
+  evaluation-readiness policy. It has no evaluation-as-of and returns no
+  ready/pending state. Resolved proves only that a schedule endpoint can be
+  identified from the supplied catalog.
+- The exact 633-byte UTF-8 canonical definition and fixed lowercase SHA-256
+  `550087efe7ddf2ba31974c89c2740ab79df986eefef48919c32c56a3232f8dc1`
+  are locked by ADR-010, code, and source-local golden tests. The digest is a
+  schedule-policy identity, not a scoring-methodology hash.
+- The caller still owns call/revision existence and validity, cancellation
+  eligibility, asset/venue/calendar selection, catalog provenance and point-in-
+  time availability, observed prices, currency/corporate actions, methodology
+  selection, input fingerprinting, and outcome completeness.
+
+## Strict session-close horizon contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-SC01 | Exact request | `SessionCloseHorizonRequest` contains exactly `SessionCloseHorizonPolicyVersion policyVersion`, `OutcomeBasis basis`, `OutcomeHorizon horizon`, and `TradingSessionCatalog catalog`. It has no anchor, evaluation-as-of, price, observation, snapshot, provider, provenance, methodology, fingerprint, clock, or persistence field. |
+| P3-SC02 | Closed basis | `OutcomeBasis` permits exactly `Original(callId,eventTime)` and `Correction(callId,basisRevisionId,eventTime)`. Both expose call ID, nullable basis revision ID, and event time; original returns exact null revision identity and correction requires one. Cancellation is not a basis. Null, blank/untrimmed identity, null time, or finer-than-microsecond time fails closed. |
+| P3-SC03 | Exact policy identity | `SessionCloseHorizonPolicyVersion` contains exactly `STRICTLY_AFTER_BASIS_EVENT_SESSION_CLOSE_V1`. Its canonical definition is the exact ADR-010 single-line 633-byte ASCII/UTF-8 sequence with no BOM, surrounding whitespace, or line ending; key order explicitly fixes supplied-catalog order, first-N window choice, Nth endpoint, both incomplete reasons, absent readiness, and nested D1/W1/M1/M3/M6/Y1 counts. Its fixed lowercase SHA-256 is `550087efe7ddf2ba31974c89c2740ab79df986eefef48919c32c56a3232f8dc1`. Returned byte arrays are defensive copies. |
+| P3-SC04 | Closed named counts | `sessionCount` maps exactly `D1→1`, `W1→5`, `M1→21`, `M3→63`, `M6→126`, and `Y1→252`; null or an unsupported horizon cannot default. Counts are fixed integers, not calendar duration arithmetic. |
+| P3-SC05 | Strict eligible predicate | The resolver preserves catalog source order and selects only entries satisfying `session.closesAt > basis.eventTime`. It takes the first exactly N eligible sessions and never sorts, inserts, drops, derives, or mutates a session. |
+| P3-SC06 | Exact temporal boundaries | Before-first, exact-open, and strict-interior events may resolve the current/first session; exact close skips it; a touching close/open selects the opening session; a strict gap selects the following session. Comparison is exact with no epsilon, local date, timezone, weekday, holiday, or duration inference. |
+| P3-SC07 | Exact result | `SessionCloseHorizonResolution` is sealed as exactly `Resolved(window)` or `Incomplete(context,reason)`. Context contains exactly policy version, policy definition hash, basis, horizon, session count, calendar ID, and catalog revision. A resolved window contains exactly context, immutable selected sessions, and endpoint session, with exactly N unique source-ordered sessions and endpoint equal to the last. |
+| P3-SC07A | Resolver-owned catalog claim | Public context/window constructors enforce only locally decidable hash/count, exact-size, strict-first-close, unique/chronological/nonoverlapping, and endpoint-last invariants. Because a direct window carries no catalog, it cannot attest catalog membership, adjacency, or first-N eligibility; a direct `Incomplete` cannot attest reason correctness. Only `SessionCloseHorizonResolver` guarantees catalog-derived first-N selection and the matching incomplete reason. |
+| P3-SC08 | Explicit missing coverage | Empty catalog or no session with close strictly after the basis event returns only `FIRST_ELIGIBLE_SESSION_MISSING`. A first eligible session with fewer than N total eligible sessions returns only `HORIZON_ENDPOINT_SESSION_MISSING`. Missing coverage is never ready, pending, resolved, zero, a guessed endpoint, or canonical `HORIZON_DATA_MISSING`. |
+| P3-SC09 | Independent correction clock | An original uses its own call event time and null revision identity. Every caller-validated correction uses its own correction event time and non-null basis revision identity, producing an independent context/window without replacing the original. The primitive does not load a call/revision or decide validity/supersession. |
+| P3-SC10 | Determinism and definition replay | Identical request/catalog input produces equal results regardless of clock, locale, default timezone, invocation order, prior calls, or mutation attempts against returned definition bytes/window lists. Policy definition bytes recompute the fixed digest. |
+| P3-SC11 | Pure source boundary | Production policy code may depend only on deterministic JDK types, `PersistentInstant`, `OutcomeHorizon`, and existing horizon-package types. It imports no call/revision/outcome aggregate beyond the closed horizon enum, calculation primitive, provider, repository, fixture, JSON mapper, framework, controller, persistence, network, scheduler, `Clock`, local-calendar type, random, or floating-point dependency. No product runtime class wires the policy. |
+| P3-SC12 | No observation or PIT claim | Catalog ID/revision and basis identity/time are caller evidence echoed in context. `Resolved` claims no licensed/complete calendar, point-in-time availability, venue association, observed close/bar/price, corporate-action adjustment, asset return, target hit, directional win, readiness, or data completeness. |
+| P3-SC13 | No product publication | Existing 14 schemas, 13 canonical fixture files, manifest membership/order, five OpenAPI paths, five Flyway migrations, API/controller/repository/database behavior, canonical methodology/outcome rows, and web source remain unchanged. No API key, account, paid plan, domain, data license, or network access is required. |
+| P3-SC14 | Later integration boundary | Endpoint observation, deterministic return calculation, calendar provenance, cancellation eligibility, methodology definition/activation, point-in-time input identity, input fingerprinting, append-only outcome orchestration, aggregation, and UI publication require later reviewed contracts. |
+
+## Required strict session-close golden and negative tests
+
+- The canonical policy string is asserted byte-for-byte in exact key order;
+  UTF-8 length is 633, recomputed SHA-256 equals the fixed digest, code returns
+  that digest, and mutating one returned byte array cannot affect a later call.
+- Every `OutcomeHorizon` asserts its exact count and resolves with exactly N
+  eligible source-local sessions. The N-minus-one matrix is exact: D1 with zero
+  eligible entries returns `FIRST_ELIGIBLE_SESSION_MISSING`; W1/M1/M3/M6/Y1
+  with N-minus-one entries and at least one eligible entry return
+  `HORIZON_ENDPOINT_SESSION_MISSING`. No test demands the impossible D1
+  endpoint-shortage state.
+- One-microsecond boundary vectors cover before first open, exact open, strict
+  interior, one microsecond before close, exact close, one microsecond after
+  close in a gap, exact touching close/open, one microsecond after touching,
+  a strict weekend-like gap, an explicitly supplied Saturday session, and an
+  irregular early close before and exactly at its close.
+  The labels describe tests only; the resolver infers none of them.
+- Empty, exact final close, after final close, no-first-eligible, and insufficient
+  D1/W1/M1/M3/M6/Y1 coverage assert the two exact incomplete reasons and no
+  resolved window. A valid first eligible session distinguishes endpoint
+  shortage from first-eligible absence.
+- Original and correction bases with the same call ID but different event times
+  prove separate revision identity, schedule clocks, contexts, and endpoints.
+  A second correction remains separate; cancellation has no construction path.
+- Null request/policy/basis/horizon/catalog, null or malformed identities, null
+  or sub-microsecond basis time, invalid public result construction, wrong
+  context hash/count, `sessionCount(null)`, duplicate/out-of-order window
+  sessions, first-window close not strictly after basis time, and endpoint-not-
+  last fail closed. Direct-constructor tests claim only local invariants; resolver
+  tests separately own catalog membership, first-N choice, and reason mapping.
+- Reflection or equivalent exact-shape tests lock every new enum, interface,
+  record component, result variant, and reason. Replay under changed locale and
+  default timezone restores global state in `finally`; source-boundary and
+  repository CI prove no runtime wiring, canonical JSON, or product publication.
+
 ## Deferred work and implementation order
 
-1. Define the versioned relation-to-anchor, original/correction-basis, and
-   named-horizon policy before selecting any runtime target-hit input; the
-   policy-neutral event/session classification prerequisite is complete.
-2. Add endpoint-price/asset-return support, then target error after the exact
+1. Add endpoint-price/asset-return support only after catalog provenance, asset/venue
+   association, observation identity, corporate-action, and currency rules are
+   versioned.
+2. Add target error after the exact
    `actual` observation, positivity, output scale, and rounding policy are
    versioned. Target error precedes window metrics because it needs one resolved
    close rather than a complete high/low path.
