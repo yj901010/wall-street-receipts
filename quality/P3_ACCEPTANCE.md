@@ -5,7 +5,8 @@ explicit-anchor session-offset mechanics, and policy-neutral event/session
 relation classifier vertical slices are complete. The strict session-close
 named-horizon and explicit forecast-basis policy slice is also complete. The
 call-direction polarity policy slice is also complete. None publishes a
-calculated outcome or completes the broader P3 scoring phase, which remains open.
+calculated outcome or completes the broader P3 scoring phase, which remains
+open. The mechanical calculator-side adapter slice is also complete.
 
 ## Pure target-hit slice boundary
 
@@ -311,9 +312,10 @@ calculated outcome or completes the broader P3 scoring phase, which remains open
 - Every resolution preserves the original source direction and echoes the exact
   versioned policy-definition hash. Strong directions are not rewritten in the
   context even though their directional side is collapsed.
-- This leaf performs no side-enum adapter wiring, target or return calculation,
-  horizon/observation selection, methodology activation, persistence, provider
-  read, or product publication.
+- The polarity leaf itself performs no side-enum adapter wiring, target or
+  return calculation, horizon/observation selection, methodology activation,
+  persistence, provider read, or product publication. ADR-012 separately owns
+  the sole mechanical common-side adapter.
 
 ## Call-direction polarity policy contract gate
 
@@ -329,9 +331,9 @@ calculated outcome or completes the broader P3 scoring phase, which remains open
 | P3-CP08 | Fail-closed request | Null request, policy version, or direction is invalid. The resolver has no fallback branch, default side, exception-to-neutral conversion, or behavior based on enum ordinal/name text. |
 | P3-CP09 | Determinism | Identical requests produce equal results regardless of clock, locale, default timezone, invocation order, prior calls, or attempted mutation of returned policy bytes. |
 | P3-CP10 | Pure source boundary | Production policy code imports only canonical `CallDirection`, its own package types, and exact deterministic JDK null/UTF-8 support. It imports no call/revision/outcome aggregate, calculator, horizon/calendar/window type, decimal/floating arithmetic, price/return/observation, provider, repository, fixture, JSON, Spring, persistence, network, scheduler, clock, locale, timezone, random, or LLM dependency. |
-| P3-CP11 | No reverse wiring | No other production class references any new polarity-policy type. In particular, neither target-hit nor directional-win is invoked or adapted, and no controller, application service, provider, repository, scheduler, or web source consumes the policy. |
+| P3-CP11 | Closed reverse wiring | Only ADR-012's exact `CalculatorSideAdapter` may import nested `DirectionalSide`, solely to return the two calculator-specific side enums. No production class may reference the polarity request, resolver, version, context, full resolution, `NonDirectional`, or reason; no calculator is invoked; no controller, application service, provider, repository, scheduler, or web source consumes the policy. |
 | P3-CP12 | No publication | Existing 14 schemas, 13 canonical fixture files, manifest membership/order, five OpenAPI paths, five Flyway migrations, API/controller/repository/database behavior, canonical `CallDirection`, two model-only methodologies, four all-null outcomes, and web source remain unchanged. No API key, account, paid plan, domain, data license, or network access is required. |
-| P3-CP13 | Later integration boundary | Calculator-side adaptation, target eligibility, horizon observations and returns, cancellation eligibility, methodology definition/activation, point-in-time input identity, fingerprinting, outcome persistence, aggregation, and UI publication require later reviewed contracts. |
+| P3-CP13 | Later integration boundary | Beyond ADR-012's mechanical side translation, target eligibility, calculator invocation, horizon observations and returns, cancellation eligibility, methodology definition/activation, point-in-time input identity, fingerprinting, outcome persistence, aggregation, and UI publication require later reviewed contracts. |
 
 ## Required call-direction polarity golden and negative tests
 
@@ -354,8 +356,56 @@ calculated outcome or completes the broader P3 scoring phase, which remains open
   non-directional reason. Replay under changed locale/default timezone restores
   global state in `finally`.
 - Source-boundary and repository CI reject ordinal/name/string/default mapping,
-  calculator or runtime reverse wiring, canonical JSON changes, and product
-  publication. Source-local vectors are tests only, not analyst or market facts.
+  any reverse wiring beyond ADR-012's exact nested-side import, calculator
+  invocation, canonical JSON changes, and product publication. Source-local
+  vectors are tests only, not analyst or market facts.
+
+## Calculator-side polarity adapter slice boundary
+
+- `CalculatorSideAdapter` translates an already resolved common
+  `DirectionalSide` into each existing calculator's side vocabulary only.
+  Common `BULLISH` maps to both destination `BULLISH` values, and common
+  `BEARISH` maps to both destination `BEARISH` values.
+- It accepts no `NonDirectional`, full polarity resolution, context, policy,
+  canonical direction, string, ordinal, Boolean, target, return, or calculator
+  input. Neutral therefore has no adapter invocation path and cannot become
+  false, a loss, bearish, or an unavailable calculation.
+- This is a mechanical type bridge with no independent methodology choice. It
+  owns no version, definition, hash, provenance, fingerprint, or data evidence.
+- Both calculators remain uninvoked and unchanged. Source-local vectors prove
+  type translation only and publish no result.
+
+## Calculator-side polarity adapter contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-CSA01 | Exact file surface | Production adds exactly `apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/adapter/CalculatorSideAdapter.java`; tests add exactly the matching `CalculatorSideAdapterGoldenTest.java`. No second adapter/helper/mapper/result/version file exists. |
+| P3-CSA02 | Exact class surface | `CalculatorSideAdapter` is public and final, has exactly one private zero-argument constructor, and declares exactly two public methods. Both are static; no public constructor, instance method, field, nested public type, generic API, or overload exists. |
+| P3-CSA03 | Exact target-hit method | The exact signature is `public static TargetHitSide toTargetHitSide(DirectionalSide side)`. `BULLISH→TargetHitSide.BULLISH`, `BEARISH→TargetHitSide.BEARISH`, and null is rejected before translation. |
+| P3-CSA04 | Exact directional-win method | The exact signature is `public static DirectionalWinSide toDirectionalWinSide(DirectionalSide side)`. `BULLISH→DirectionalWinSide.BULLISH`, `BEARISH→DirectionalWinSide.BEARISH`, and null is rejected before translation. |
+| P3-CSA05 | Exhaustive enum translation | Each method uses an exhaustive enum switch with no default, ordinal/name/text parsing, reflection, alias, case normalization, map lookup, fallback, or future-value inference. Source-order goldens cover common `BULLISH` then `BEARISH` and both destination values together. |
+| P3-CSA06 | No neutral entry point | No public method accepts `CallDirection`, `CallDirectionPolarityResolution`, `NonDirectional`, `NonDirectionalReason`, `ResolutionContext`, policy version, nullable wrapper, or Boolean. The adapter neither creates nor consumes neutral evidence. |
+| P3-CSA07 | No calculator invocation | Production imports only the three side enums and `Objects`. It does not reference calculator/input/result classes, call `calculate`, create a target/return input, or produce available/unavailable metric evidence. |
+| P3-CSA08 | No new policy identity | The adapter contains no policy/methodology version, canonical definition, UTF-8 definition bytes, hash, fingerprint, provenance, clock, or state. ADR-011 remains the only source-direction reduction policy identity. |
+| P3-CSA09 | Determinism | Repeated identical translations return the same enum constants regardless of clock, locale, default timezone, invocation order, or prior calls. |
+| P3-CSA10 | Pure/no reverse wiring | Production depends on no aggregate, horizon/calendar/window, decimal/floating arithmetic, price/return/observation, provider, repository, fixture, JSON, Spring, persistence, network, scheduler, clock, locale, timezone, random, or LLM type. No other production class references the adapter. |
+| P3-CSA11 | No publication | Existing 14 schemas, 13 canonical fixture files, manifest membership/order, five OpenAPI paths, five Flyway migrations, API/controller/repository/database behavior, two model-only methodologies, four all-null outcomes, and web source remain unchanged. No API key, account, market calendar, price feed, paid plan, domain, data license, or network access is required. |
+| P3-CSA12 | Later orchestration boundary | Extracting `Directional` from a full polarity result, preserving `NonDirectional`, choosing metric inputs, invoking calculators, composing unavailable states, activating methodology, fingerprinting, persisting, aggregating, and publishing remain later reviewed contracts. |
+
+## Required calculator-side adapter golden and negative tests
+
+- One source-order parameterized matrix contains exactly common `BULLISH` and
+  `BEARISH`; each row asserts both exact destination enum constants, repeated
+  translation, and no cross-polarity mapping.
+- Both public methods reject null with no fallback. No test obtains neutral by
+  null, a string, reflection, or a fabricated enum.
+- Reflection or equivalent exact-shape tests prove one final class, one private
+  constructor, exactly two public static methods, one `DirectionalSide`
+  parameter each, and the two exact return types/names. No overload accepts a
+  full resolution or non-directional type.
+- Replay under changed locale/default timezone restores global state in
+  `finally`. Source-boundary and repository CI prove no calculator invocation,
+  reverse runtime wiring, version/hash, canonical JSON, or product publication.
 
 ## Deferred work and implementation order
 
@@ -366,10 +416,9 @@ calculated outcome or completes the broader P3 scoring phase, which remains open
    `actual` observation, positivity, output scale, and rounding policy are
    versioned. Target error precedes window metrics because it needs one resolved
    close rather than a complete high/low path.
-3. Adapt the completed common polarity only after calculator-side mapping,
-   target eligibility, window inclusivity, point-in-time input identity, and
-   unavailable mapping are locked; the polarity leaf does not wire target hit or
-   directional win by itself.
+3. Invoke the calculators through the completed mechanical adapter only after
+   target eligibility, window inclusivity, point-in-time input identity,
+   non-directional propagation, and unavailable-state composition are locked.
 4. Add MFE/MAE after full-window completeness and bullish/bearish sign rules;
    add alpha/sector alpha last, after benchmark/sector identity and corporate-
    action-adjusted return policy exist.
