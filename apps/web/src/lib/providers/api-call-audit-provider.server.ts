@@ -1,6 +1,7 @@
 import {
   adaptCallContextResponse,
   adaptCallDetailResponse,
+  adaptCallOutcomesResponse,
   adaptCallRevisionsResponse,
   validateCallAuditSnapshot,
 } from "./call-audit-adapter";
@@ -97,7 +98,7 @@ export class ApiCallAuditProvider implements CallAuditProvider {
       throw new Error("Call audit API detail did not match the requested call ID.");
     }
 
-    const [contextPayload, revisionsPayload] = await Promise.all([
+    const [contextPayload, revisionsPayload, outcomesPayload] = await Promise.all([
       jsonResponse(
         this.fetcher,
         new URL(`v1/calls/${encodedCallId}/context`, this.baseUrl),
@@ -110,12 +111,19 @@ export class ApiCallAuditProvider implements CallAuditProvider {
         "revisions",
         false,
       ),
+      jsonResponse(
+        this.fetcher,
+        new URL(`v1/calls/${encodedCallId}/outcomes`, this.baseUrl),
+        "outcomes",
+        false,
+      ),
     ]);
 
     return validateCallAuditSnapshot({
       detail,
       context: adaptCallContextResponse(contextPayload),
       revisions: adaptCallRevisionsResponse(revisionsPayload, callId),
+      outcomes: adaptCallOutcomesResponse(outcomesPayload, callId),
     });
   }
 }

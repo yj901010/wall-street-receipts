@@ -19,8 +19,12 @@ import {
   type SourceReference,
 } from "./calls-provider";
 import {
+  CALL_OUTCOME_EVALUATION_STATUSES,
+  CALL_OUTCOME_HORIZONS,
+  CALL_OUTCOME_REASON_CODES,
   CALL_REVISION_TYPES,
   type CallAuditSnapshot,
+  type CallOutcome,
   type CallRevision,
   type CorrectedCallTerms,
 } from "./call-audit-provider";
@@ -30,11 +34,19 @@ const UTC_INSTANT = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?Z$/;
 const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CURRENCY = /^[A-Z]{3}$/;
 const CONTENT_HASH = /^[A-Fa-f0-9]{64}$/;
+const LOWERCASE_SHA256 = /^[0-9a-f]{64}$/;
+const METHODOLOGY_VERSION = /^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$/;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const ASSET_TYPES = ["INDEX", "EQUITY", "ETF", "BOND", "COMMODITY", "FX"] as const;
 const SOURCE_TYPES = ["VIDEO", "ARTICLE", "RESEARCH", "PODCAST", "FILING", "TRANSCRIPT"] as const;
 const MACRO_UNITS = ["PERCENT", "PERCENTAGE_POINTS", "INDEX"] as const;
+const ALL_OUTCOME_EVALUATION_STATUSES = ["PENDING", "CALCULATED", "INCOMPLETE", "EXCLUDED"] as const;
+const ALL_OUTCOME_REASON_CODES = ["HORIZON_NOT_REACHED", "HORIZON_DATA_MISSING", "CALL_CANCELLED"] as const;
+const OUTCOME_NULL_FIELDS = [
+  "assetReturn", "benchmarkReturn", "sectorReturn", "alpha", "sectorAlpha", "mfe", "mae",
+  "targetHit", "directionalWin", "targetError",
+] as const;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -89,6 +101,31 @@ function identifier(value: unknown, owner: string): string {
 
 function nullableIdentifier(value: unknown, owner: string): string | null {
   return value === null ? null : identifier(value, owner);
+}
+
+function methodologyVersion(value: unknown, owner: string): string {
+  if (typeof value !== "string" || !METHODOLOGY_VERSION.test(value)) {
+    fail(owner, "must be a canonical methodology version");
+  }
+  return value;
+}
+
+function lowercaseSha256(value: unknown, owner: string): string {
+  if (typeof value !== "string" || !LOWERCASE_SHA256.test(value)) {
+    fail(owner, "must be a lowercase SHA-256 hash");
+  }
+  return value;
+}
+
+function exactNull(value: unknown, owner: string): null {
+  if (value !== null) {
+    fail(owner, "must remain JSON null in the P2 audit-only boundary");
+  }
+  return null;
+}
+
+function compareCodePoints(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function enumValue<const T extends readonly string[]>(
@@ -656,6 +693,188 @@ export function adaptCallRevisionsResponse(value: unknown, expectedCallId: strin
   return revisions;
 }
 
+function adaptOutcome(value: unknown, index: number, expectedCallId: string): CallOutcome {
+  const owner = `Call outcomes[${index}]`;
+  const record = closedRecord(value, [
+    "outcomeId", "schemaVersion", "callId", "horizon", "basisRevisionId", "cancellationRevisionId",
+    "snapshotId", "methodologyId", "methodologyVersion", "methodologyDefinitionHash", "inputFingerprint",
+    "sequenceNumber", "supersedesOutcomeId", "evaluationStatus", "reasonCode", "eventTime",
+    "processingTime", "assetReturn", "benchmarkReturn", "sectorReturn", "alpha", "sectorAlpha", "mfe",
+    "mae", "targetHit", "directionalWin", "targetError", "dataComplete", "dataMode", "capturedAt",
+    "provenanceId",
+  ], owner);
+  const callId = identifier(record.callId, `${owner}.callId`);
+  if (callId !== expectedCallId) fail(`${owner}.callId`, `must equal ${expectedCallId}`);
+  const sequenceNumber = integer(record.sequenceNumber, `${owner}.sequenceNumber`, 1);
+  const supersedesOutcomeId = nullableIdentifier(record.supersedesOutcomeId, `${owner}.supersedesOutcomeId`);
+  if ((sequenceNumber === 1) !== (supersedesOutcomeId === null)) {
+    fail(owner, "must omit supersedesOutcomeId exactly for sequence 1");
+  }
+  const rawStatus = enumValue(
+    record.evaluationStatus,
+    ALL_OUTCOME_EVALUATION_STATUSES,
+    `${owner}.evaluationStatus`,
+  );
+  if (!CALL_OUTCOME_EVALUATION_STATUSES.includes(rawStatus as (typeof CALL_OUTCOME_EVALUATION_STATUSES)[number])) {
+    fail(`${owner}.evaluationStatus`, "must remain PENDING or INCOMPLETE in the P2 audit-only boundary");
+  }
+  const evaluationStatus = rawStatus as CallOutcome["evaluationStatus"];
+  const rawReason = record.reasonCode === null
+    ? null
+    : enumValue(record.reasonCode, ALL_OUTCOME_REASON_CODES, `${owner}.reasonCode`);
+  const expectedReason = evaluationStatus === "PENDING" ? "HORIZON_NOT_REACHED" : "HORIZON_DATA_MISSING";
+  if (rawReason !== expectedReason || !CALL_OUTCOME_REASON_CODES.includes(rawReason)) {
+    fail(`${owner}.reasonCode`, `must equal ${expectedReason} for ${evaluationStatus}`);
+  }
+  const cancellationRevisionId = nullableIdentifier(
+    record.cancellationRevisionId,
+    `${owner}.cancellationRevisionId`,
+  );
+  if (cancellationRevisionId !== null) {
+    fail(`${owner}.cancellationRevisionId`, "must remain JSON null in the P2 audit-only boundary");
+  }
+  const dataComplete = booleanValue(record.dataComplete, `${owner}.dataComplete`);
+  if (dataComplete !== false) {
+    fail(`${owner}.dataComplete`, "must remain false in the P2 audit-only boundary");
+  }
+  const outcomeMode = dataMode(record.dataMode, `${owner}.dataMode`);
+  if (outcomeMode !== "DEMO") {
+    fail(`${owner}.dataMode`, "must remain DEMO in the P2 audit-only boundary");
+  }
+  const eventTime = callAuditInstant(record.eventTime, `${owner}.eventTime`);
+  const processingTime = callAuditInstant(record.processingTime, `${owner}.processingTime`);
+  const capturedAt = callAuditInstant(record.capturedAt, `${owner}.capturedAt`);
+  assertChronology(eventTime, processingTime, capturedAt, owner);
+  for (const field of OUTCOME_NULL_FIELDS) {
+    exactNull(record[field], `${owner}.${field}`);
+  }
+  return {
+    outcomeId: identifier(record.outcomeId, `${owner}.outcomeId`),
+    schemaVersion: schemaVersion(record.schemaVersion, `${owner}.schemaVersion`),
+    callId,
+    horizon: enumValue(record.horizon, CALL_OUTCOME_HORIZONS, `${owner}.horizon`),
+    basisRevisionId: nullableIdentifier(record.basisRevisionId, `${owner}.basisRevisionId`),
+    cancellationRevisionId: null,
+    snapshotId: nullableIdentifier(record.snapshotId, `${owner}.snapshotId`),
+    methodologyId: identifier(record.methodologyId, `${owner}.methodologyId`),
+    methodologyVersion: methodologyVersion(record.methodologyVersion, `${owner}.methodologyVersion`),
+    methodologyDefinitionHash: lowercaseSha256(
+      record.methodologyDefinitionHash,
+      `${owner}.methodologyDefinitionHash`,
+    ),
+    inputFingerprint: lowercaseSha256(record.inputFingerprint, `${owner}.inputFingerprint`),
+    sequenceNumber,
+    supersedesOutcomeId,
+    evaluationStatus,
+    reasonCode: rawReason,
+    eventTime,
+    processingTime,
+    assetReturn: null,
+    benchmarkReturn: null,
+    sectorReturn: null,
+    alpha: null,
+    sectorAlpha: null,
+    mfe: null,
+    mae: null,
+    targetHit: null,
+    directionalWin: null,
+    targetError: null,
+    dataComplete: false,
+    dataMode: "DEMO",
+    capturedAt,
+    provenanceId: identifier(record.provenanceId, `${owner}.provenanceId`),
+  };
+}
+
+function outcomeOrder(left: CallOutcome, right: CallOutcome): number {
+  const horizon = CALL_OUTCOME_HORIZONS.indexOf(left.horizon) - CALL_OUTCOME_HORIZONS.indexOf(right.horizon);
+  if (horizon !== 0) return horizon;
+  const methodologyId = compareCodePoints(left.methodologyId, right.methodologyId);
+  if (methodologyId !== 0) return methodologyId;
+  const methodologyVersionOrder = compareCodePoints(left.methodologyVersion, right.methodologyVersion);
+  if (methodologyVersionOrder !== 0) return methodologyVersionOrder;
+  const sequence = left.sequenceNumber - right.sequenceNumber;
+  return sequence !== 0 ? sequence : compareCodePoints(left.outcomeId, right.outcomeId);
+}
+
+function validateOutcomeResponse(outcomes: readonly CallOutcome[], expectedCallId: string) {
+  const outcomeIds = new Set<string>();
+  const naturalIdentities = new Set<string>();
+  const methodologyHashes = new Map<string, string>();
+  const lineages = new Map<string, CallOutcome[]>();
+  let previous: CallOutcome | null = null;
+
+  for (const outcome of outcomes) {
+    if (outcome.callId !== expectedCallId) fail(`Outcome ${outcome.outcomeId}`, "has a call join mismatch");
+    if (previous && outcomeOrder(previous, outcome) > 0) {
+      fail(`Outcome ${outcome.outcomeId}`, "is not in deterministic server order");
+    }
+    if (outcomeIds.has(outcome.outcomeId)) fail(`Outcome ${outcome.outcomeId}`, "duplicates an outcome ID");
+    outcomeIds.add(outcome.outcomeId);
+
+    const naturalIdentity = JSON.stringify([
+      outcome.callId,
+      outcome.basisRevisionId,
+      outcome.horizon,
+      outcome.methodologyId,
+      outcome.methodologyVersion,
+      outcome.inputFingerprint,
+    ]);
+    if (naturalIdentities.has(naturalIdentity)) {
+      fail(`Outcome ${outcome.outcomeId}`, "duplicates a natural outcome identity");
+    }
+    naturalIdentities.add(naturalIdentity);
+
+    const methodologyIdentity = JSON.stringify([outcome.methodologyId, outcome.methodologyVersion]);
+    const knownHash = methodologyHashes.get(methodologyIdentity);
+    if (knownHash !== undefined && knownHash !== outcome.methodologyDefinitionHash) {
+      fail(`Outcome ${outcome.outcomeId}`, "conflicts with its methodology definition hash");
+    }
+    methodologyHashes.set(methodologyIdentity, outcome.methodologyDefinitionHash);
+
+    const lineageIdentity = JSON.stringify([
+      outcome.callId,
+      outcome.basisRevisionId,
+      outcome.horizon,
+      outcome.methodologyId,
+      outcome.methodologyVersion,
+    ]);
+    lineages.set(lineageIdentity, [...(lineages.get(lineageIdentity) ?? []), outcome]);
+    previous = outcome;
+  }
+
+  for (const lineage of lineages.values()) {
+    let parent: CallOutcome | null = null;
+    for (const outcome of lineage) {
+      const expectedSequence = (parent?.sequenceNumber ?? 0) + 1;
+      if (outcome.sequenceNumber !== expectedSequence) {
+        fail(`Outcome ${outcome.outcomeId}`, "has a lineage sequence gap or reordering");
+      }
+      if (outcome.supersedesOutcomeId !== (parent?.outcomeId ?? null)) {
+        fail(`Outcome ${outcome.outcomeId}`, "does not supersede its immediate lineage predecessor");
+      }
+      if (
+        parent && (
+          instantOrder(outcome.eventTime) < instantOrder(parent.eventTime) ||
+          instantOrder(outcome.processingTime) < instantOrder(parent.processingTime) ||
+          instantOrder(outcome.capturedAt) < instantOrder(parent.capturedAt)
+        )
+      ) {
+        fail(`Outcome ${outcome.outcomeId}`, "moves a lineage timestamp backwards");
+      }
+      parent = outcome;
+    }
+  }
+}
+
+export function adaptCallOutcomesResponse(value: unknown, expectedCallId: string): readonly CallOutcome[] {
+  identifier(expectedCallId, "Expected call ID");
+  if (!Array.isArray(value)) fail("Call outcomes response", "must be an array");
+  const outcomes = value.map((outcome, index) => adaptOutcome(outcome, index, expectedCallId));
+  validateOutcomeResponse(outcomes, expectedCallId);
+  return outcomes;
+}
+
 function validateDetailJoins(detail: AnalystCallDetail) {
   const { call, institution, analyst, asset, source, snapshot } = detail;
   if (institution.institutionId !== call.institutionId) fail("Call detail", "has an institution join mismatch");
@@ -732,14 +951,72 @@ function validateRevisionLineage(revisions: readonly CallRevision[], expectedCal
   });
 }
 
+function validateOutcomeJoins(
+  detail: AnalystCallDetail,
+  revisions: readonly CallRevision[],
+  outcomes: readonly CallOutcome[],
+) {
+  const { call, snapshot } = detail;
+  const callEventTime = instantOrder(callAuditInstant(call.eventTime, "Call eventTime"));
+  const callProcessingTime = instantOrder(callAuditInstant(call.processingTime, "Call processingTime"));
+  const callCapturedAt = instantOrder(callAuditInstant(call.capturedAt, "Call capturedAt"));
+  const revisionsById = new Map(revisions.map((revision) => [revision.revisionId, revision]));
+
+  for (const outcome of outcomes) {
+    const owner = `Outcome ${outcome.outcomeId}`;
+    const eventTime = instantOrder(outcome.eventTime);
+    const processingTime = instantOrder(outcome.processingTime);
+    if (outcome.callId !== call.callId) fail(owner, "has a call join mismatch");
+    if (outcome.dataMode !== call.dataMode || outcome.dataMode !== "DEMO") {
+      fail(owner, "has a non-DEMO data-mode mismatch with the call");
+    }
+    if (
+      eventTime < callEventTime ||
+      processingTime < callProcessingTime ||
+      processingTime < callCapturedAt
+    ) {
+      fail(owner, "predates the original call evidence");
+    }
+
+    if (outcome.snapshotId !== null) {
+      if (!snapshot || snapshot.snapshotId !== outcome.snapshotId) {
+        fail(owner, "has a snapshot join mismatch");
+      }
+      if (
+        instantOrder(snapshot.processingTime) > processingTime ||
+        instantOrder(snapshot.capturedAt) > processingTime
+      ) {
+        fail(owner, "uses a snapshot that was not available by outcome processingTime");
+      }
+    }
+
+    if (outcome.basisRevisionId !== null) {
+      const basis = revisionsById.get(outcome.basisRevisionId);
+      if (!basis || basis.revisionType !== "CORRECTION") {
+        fail(owner, "must reference a same-call CORRECTION as its basis");
+      }
+      if (
+        instantOrder(basis.eventTime) > processingTime ||
+        instantOrder(basis.processingTime) > processingTime ||
+        instantOrder(basis.capturedAt) > processingTime
+      ) {
+        fail(owner, "uses a basis revision that was not available by outcome processingTime");
+      }
+    }
+
+  }
+}
+
 export function validateCallAuditSnapshot(snapshot: CallAuditSnapshot): CallAuditSnapshot {
-  const { detail, context, revisions } = snapshot;
+  const { detail, context, revisions, outcomes } = snapshot;
   validateDetailJoins(detail);
   validateContextJoins(detail, context);
   validateRevisionLineage(revisions, detail.call.callId);
+  validateOutcomeResponse(outcomes, detail.call.callId);
   if (detail.call.dataMode !== "DEMO") {
     fail("Call audit snapshot", "must remain DEMO until a later provider-publication phase");
   }
+  validateOutcomeJoins(detail, revisions, outcomes);
   const originalEventTime = instantOrder(callAuditInstant(detail.call.eventTime, "Call eventTime"));
   for (const revision of revisions) {
     if (revision.dataMode !== detail.call.dataMode) {

@@ -92,7 +92,7 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
     notFound();
   }
 
-  const { detail, context, revisions } = audit;
+  const { detail, context, revisions, outcomes } = audit;
   const { call, institution, analyst, asset, source, snapshot } = detail;
   const snapshotMetrics = snapshot
     ? [
@@ -320,21 +320,78 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
 
         <CallContextSections call={call} context={context} locale={locale} />
 
-        <section className="detail-section outcome-section" aria-labelledby="outcome-title">
+        <section className="detail-section outcome-section" aria-labelledby="outcome-title" tabIndex={0}>
           <div className="section-heading">
             <div>
-              <p className="eyebrow">{messages.deterministicScoring}</p>
+              <p className="eyebrow">{messages.outcomeAuditEyebrow}</p>
               <h2 id="outcome-title">{messages.outcome}</h2>
             </div>
-            <span>{messages.methodologyInactive}</span>
+            <span>{messages.outcomeBoundary}</span>
           </div>
-          <dl className="outcome-grid">
-            <div><dt>{messages.directionalWin}</dt><dd>NA</dd></div>
-            <div><dt>{messages.targetHit}</dt><dd>NA</dd></div>
-            <div><dt>{messages.alpha}</dt><dd>NA</dd></div>
-            <div><dt>{messages.methodologyVersion}</dt><dd>NA</dd></div>
-          </dl>
-          <p className="section-note">{messages.outcomeNote}</p>
+          <p className="section-note outcome-policy">{messages.outcomeAppendOnly}</p>
+          <p className="section-note outcome-policy">{messages.outcomeNullPolicy}</p>
+          <p className="section-note outcome-policy">{messages.outcomeNoCancellationInference}</p>
+          <p className="mono outcome-count">{messages.outcomeCount(outcomes.length)}</p>
+          {outcomes.length === 0 ? (
+            <div className="empty-state outcome-empty" role="status">
+              <h3>{messages.noOutcomesTitle}</h3>
+              <p>{messages.noOutcomesDescription}</p>
+            </div>
+          ) : (
+            <ol className="outcome-timeline">
+              {outcomes.map((outcome) => (
+                <li key={outcome.outcomeId}>
+                  <article aria-label={messages.outcomeItemLabel(
+                    outcome.sequenceNumber,
+                    outcome.horizon,
+                    outcome.methodologyVersion,
+                    outcome.evaluationStatus,
+                  )}>
+                    <div className="outcome-heading">
+                      <div>
+                        <p className="eyebrow">{outcome.horizon} · #{outcome.sequenceNumber}</p>
+                        <h3>{outcome.evaluationStatus}</h3>
+                      </div>
+                      <span className="mode-badge">{outcome.dataMode}</span>
+                    </div>
+                    <dl className="outcome-evidence-grid">
+                      <div><dt>{messages.outcomeId}</dt><dd className="mono">{outcome.outcomeId}</dd></div>
+                      <div><dt>{messages.outcomeSchemaVersion}</dt><dd className="mono">{outcome.schemaVersion}</dd></div>
+                      <div><dt>{messages.outcomeCallId}</dt><dd className="mono">{outcome.callId}</dd></div>
+                      <div><dt>{messages.outcomeHorizon}</dt><dd>{outcome.horizon}</dd></div>
+                      <div><dt>{messages.outcomeBasisRevision}</dt><dd className="mono">{valueOrNa(outcome.basisRevisionId)}</dd></div>
+                      <div><dt>{messages.outcomeCancellationRevision}</dt><dd className="mono">{valueOrNa(outcome.cancellationRevisionId)}</dd></div>
+                      <div><dt>{messages.outcomeSnapshotId}</dt><dd className="mono">{valueOrNa(outcome.snapshotId)}</dd></div>
+                      <div><dt>{messages.methodologyId}</dt><dd className="mono">{outcome.methodologyId}</dd></div>
+                      <div><dt>{messages.methodologyVersion}</dt><dd className="mono">{outcome.methodologyVersion}</dd></div>
+                      <div className="outcome-wide"><dt>{messages.methodologyDefinitionHash}</dt><dd className="mono">{outcome.methodologyDefinitionHash}</dd></div>
+                      <div className="outcome-wide"><dt>{messages.inputFingerprint}</dt><dd className="mono">{outcome.inputFingerprint}</dd></div>
+                      <div><dt>{messages.outcomeSequence}</dt><dd className="mono">{outcome.sequenceNumber}</dd></div>
+                      <div><dt>{messages.supersedesOutcome}</dt><dd className="mono">{valueOrNa(outcome.supersedesOutcomeId)}</dd></div>
+                      <div><dt>{messages.evaluationStatus}</dt><dd>{outcome.evaluationStatus}</dd></div>
+                      <div><dt>{messages.reasonCode}</dt><dd>{outcome.reasonCode}</dd></div>
+                      <div><dt>{messages.outcomeEventTime}</dt><dd className="mono"><time dateTime={outcome.eventTime}>{outcome.eventTime}</time></dd></div>
+                      <div><dt>{messages.outcomeProcessingTime}</dt><dd className="mono"><time dateTime={outcome.processingTime}>{outcome.processingTime}</time></dd></div>
+                      <div><dt>{messages.outcomeCapturedAt}</dt><dd className="mono"><time dateTime={outcome.capturedAt}>{outcome.capturedAt}</time></dd></div>
+                      <div><dt>{messages.assetReturn}</dt><dd>NA</dd></div>
+                      <div><dt>{messages.benchmarkReturn}</dt><dd>NA</dd></div>
+                      <div><dt>{messages.sectorReturn}</dt><dd>NA</dd></div>
+                      <div><dt>{messages.alpha}</dt><dd>NA</dd></div>
+                      <div><dt>{messages.sectorAlpha}</dt><dd>NA</dd></div>
+                      <div><dt>{messages.mfe}</dt><dd>NA</dd></div>
+                      <div><dt>{messages.mae}</dt><dd>NA</dd></div>
+                      <div><dt>{messages.targetHit}</dt><dd>NA</dd></div>
+                      <div><dt>{messages.directionalWin}</dt><dd>NA</dd></div>
+                      <div><dt>{messages.targetError}</dt><dd>NA</dd></div>
+                      <div><dt>{messages.outcomeDataComplete}</dt><dd className="mono">{String(outcome.dataComplete)}</dd></div>
+                      <div><dt>{messages.outcomeDataMode}</dt><dd>{outcome.dataMode}</dd></div>
+                      <div><dt>{messages.outcomeProvenance}</dt><dd className="mono">{outcome.provenanceId}</dd></div>
+                    </dl>
+                  </article>
+                </li>
+              ))}
+            </ol>
+          )}
         </section>
       </div>
     </main>

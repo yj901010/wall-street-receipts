@@ -96,6 +96,19 @@ commercial market-data connection: Spring still imports the repository's
 synthetic DEMO fixtures into PostgreSQL. Licensed provider ingestion remains a
 separately reviewed P5 boundary.
 
+The completed `feature/p2-call-outcome-audit-api` slice extends the same
+whole-page call audit with the existing read-only
+`GET /v1/calls/{id}/outcomes` resource. Its delivered contract is deliberately an
+audit consumer, not a scoring release: the current canonical records remain
+ordered, append-only `PENDING`/`INCOMPLETE` DEMO audit records whose ten metric/result
+fields are JSON null. The page must show each record or an explicit known-empty
+array without choosing a latest/effective result, inferring an exclusion from a
+cancellation, or combining API evidence with fixture data. Calculated outcomes,
+named-horizon and correction-basis policy, lifecycle projection, aggregation,
+ranking, and real/licensed publication remain later P3/P5 work. This paragraph
+records a verified synthetic DEMO boundary and does not infer methodology
+activation status or claim observed/live performance.
+
 Stop the database without deleting its volume:
 
 ```powershell

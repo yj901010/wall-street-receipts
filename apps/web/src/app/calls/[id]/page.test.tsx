@@ -69,6 +69,21 @@ class PrecisionAuditProvider extends FixtureCallAuditProvider {
   }
 }
 
+class OutcomePrecisionAuditProvider extends FixtureCallAuditProvider {
+  override async findById(id: string) {
+    const audit = structuredClone(await super.findById(id));
+    if (!audit || id !== "demo-call-001") return audit;
+    const outcome = audit.outcomes[0];
+    const successor = audit.outcomes[1];
+    if (!outcome || !successor) throw new Error("Expected outcome fixture lineage.");
+    outcome.eventTime = "2026-08-11T20:00:00.000001Z";
+    successor.eventTime = "2026-08-11T20:00:00.000001Z";
+    outcome.processingTime = "2026-08-11T20:01:00.000002Z";
+    outcome.capturedAt = "2026-08-11T20:01:00.000003Z";
+    return audit;
+  }
+}
+
 async function renderDetail(id: string, locale: Locale = "ko") {
   i18nServer.getLocale.mockResolvedValue(locale);
   return renderWithLocale(
@@ -176,7 +191,158 @@ describe("CallDetailPage", () => {
     expect(screen.getByText("스냅샷 처리 시각")).toBeInTheDocument();
     expect(screen.getByText("fixture-market-snapshots-v1")).toBeInTheDocument();
     expect(screen.getAllByText("NA").length).toBeGreaterThan(5);
-    expect(screen.getByText(/버전이 있는 방법론으로 계산되기 전까지 성과 값은 NA/)).toBeInTheDocument();
+    expect(screen.getByText(/P2 감사 경계에서는 계산되지 않은 결과 필드/)).toBeInTheDocument();
+  });
+
+  it("renders all append-only outcome evidence in Spring response order without projection", async () => {
+    await renderDetail("demo-call-001");
+
+    const section = screen.getByRole("heading", { name: "성과 감사 이력" }).closest("section");
+    expect(section).not.toBeNull();
+    expect(within(section!).getByText("감사 전용 · DEMO")).toBeInTheDocument();
+    expect(within(section!).getByText("성과 기록 4건")).toBeInTheDocument();
+    expect(within(section!).getByText(/응답 순서를 그대로 보존한 추가 전용 이력/)).toBeInTheDocument();
+    expect(within(section!).getByText(/JSON null로만 허용/)).toBeInTheDocument();
+
+    const articles = within(section!).getAllByRole("article");
+    expect(articles.map((article) => article.getAttribute("aria-label"))).toEqual([
+      "성과 기록 1 · D1 · 방법론 1.0.0 · INCOMPLETE",
+      "성과 기록 2 · D1 · 방법론 1.0.0 · INCOMPLETE",
+      "성과 기록 1 · D1 · 방법론 2.0.0 · INCOMPLETE",
+      "성과 기록 1 · M1 · 방법론 1.0.0 · PENDING",
+    ]);
+    expect(articles.map((article) => article.textContent)).toEqual([
+      expect.stringContaining("outcome-demo-call-001-d1-v1-001"),
+      expect.stringContaining("outcome-demo-call-001-d1-v1-002"),
+      expect.stringContaining("outcome-demo-call-001-d1-v2-001"),
+      expect.stringContaining("outcome-demo-call-001-m1-v1-001"),
+    ]);
+    expect(section).toHaveAttribute("tabindex", "0");
+
+    const first = articles[0]!;
+    const firstOutcomeLabels = Array.from(first.querySelectorAll("dt"), (node) => node.textContent);
+    const firstOutcomeValues = Array.from(first.querySelectorAll("dd"), (node) => node.textContent);
+    expect(firstOutcomeLabels).toEqual([
+      "성과 ID",
+      "스키마 버전",
+      "콜 ID",
+      "평가 구간",
+      "기준 변경 ID",
+      "취소 증거 ID",
+      "스냅샷 ID",
+      "방법론 ID",
+      "방법론 버전",
+      "방법론 정의 해시",
+      "입력 지문",
+      "계보 순번",
+      "직전 성과 ID",
+      "평가 상태",
+      "사유 코드",
+      "성과 이벤트 시각",
+      "성과 처리 시각",
+      "성과 수집 시각",
+      "자산 수익률",
+      "벤치마크 수익률",
+      "섹터 수익률",
+      "알파",
+      "섹터 알파",
+      "최대 유리 변동(MFE)",
+      "최대 불리 변동(MAE)",
+      "목표가 도달",
+      "방향 적중",
+      "목표 오차",
+      "데이터 완결",
+      "데이터 모드",
+      "성과 출처 계보",
+    ]);
+    expect(firstOutcomeValues).toEqual([
+      "outcome-demo-call-001-d1-v1-001",
+      "1.0.0",
+      "demo-call-001",
+      "D1",
+      "NA",
+      "NA",
+      "market-snapshot-demo-001",
+      "standard-call-outcome",
+      "1.0.0",
+      "03af803fd61c21b86e1897d006e6cf4f92f28ce627b06eda13b319ebfa8a07e2",
+      "b359ec47c7a5b17bc6a7ee18e82f1fe92eb100f9e2abee23a8e3c9aa7b94acd6",
+      "1",
+      "NA",
+      "INCOMPLETE",
+      "HORIZON_DATA_MISSING",
+      "2026-08-11T20:00:00Z",
+      "2026-08-11T20:01:00Z",
+      "2026-08-11T20:01:00Z",
+      "NA",
+      "NA",
+      "NA",
+      "NA",
+      "NA",
+      "NA",
+      "NA",
+      "NA",
+      "NA",
+      "NA",
+      "false",
+      "DEMO",
+      "fixture-call-outcomes-v1",
+    ]);
+    expect(within(first).getByText("outcome-demo-call-001-d1-v1-001")).toBeInTheDocument();
+    expect(within(first).getByText("standard-call-outcome")).toBeInTheDocument();
+    expect(within(first).getByText("HORIZON_DATA_MISSING")).toBeInTheDocument();
+    expect(within(first).getByText("market-snapshot-demo-001")).toBeInTheDocument();
+    expect(within(first).getByText("방법론 정의 해시")).toBeInTheDocument();
+    expect(within(first).getByText("입력 지문")).toBeInTheDocument();
+    expect(within(first).getByText("false", { exact: true })).toBeInTheDocument();
+    expect(within(first).getAllByText("NA")).toHaveLength(13);
+    expect(within(first).getAllByText("2026-08-11T20:01:00Z")).toHaveLength(2);
+    for (const rawTime of within(first).getAllByText("2026-08-11T20:01:00Z")) {
+      expect(rawTime).toHaveAttribute("datetime", "2026-08-11T20:01:00Z");
+    }
+    expect(within(first).getAllByText("03af803fd61c21b86e1897d006e6cf4f92f28ce627b06eda13b319ebfa8a07e2").length)
+      .toBeGreaterThan(0);
+    expect(within(first).getByText("b359ec47c7a5b17bc6a7ee18e82f1fe92eb100f9e2abee23a8e3c9aa7b94acd6"))
+      .toBeInTheDocument();
+    expect(within(articles[3]!).getByText("HORIZON_NOT_REACHED")).toBeInTheDocument();
+
+    for (const unsupportedProjection of [
+      "최신 성과", "현재 성과", "유효 성과", "성과 점수", "승패", "애널리스트 순위", "투자 조언",
+      "방법론 활성", "방법론 비활성",
+    ]) {
+      expect(within(section!).queryByText(unsupportedProjection, { exact: true })).not.toBeInTheDocument();
+    }
+  });
+
+  it("preserves raw outcome microseconds without presentation formatting", async () => {
+    providers.callAuditProvider.mockImplementation(() => new OutcomePrecisionAuditProvider());
+    await renderDetail("demo-call-001");
+
+    const outcome = screen.getByRole("article", {
+      name: "성과 기록 1 · D1 · 방법론 1.0.0 · INCOMPLETE",
+    });
+    for (const instant of [
+      "2026-08-11T20:00:00.000001Z",
+      "2026-08-11T20:01:00.000002Z",
+      "2026-08-11T20:01:00.000003Z",
+    ]) {
+      expect(within(outcome).getByText(instant)).toHaveAttribute("datetime", instant);
+    }
+  });
+
+  it("keeps a known-empty outcome response bounded and does not infer EXCLUDED from cancellation", async () => {
+    await renderDetail("demo-call-002");
+
+    const section = screen.getByRole("heading", { name: "성과 감사 이력" }).closest("section");
+    expect(section).not.toBeNull();
+    expect(within(section!).getByText("성과 기록 0건")).toBeInTheDocument();
+    expect(within(section!).getByRole("status")).toHaveTextContent(
+      "이 감사 응답에는 기록된 성과 이벤트가 없습니다. 다른 이력이나 대체 결과를 표시하지 않았습니다.",
+    );
+    expect(within(section!).queryByRole("article")).not.toBeInTheDocument();
+    expect(within(section!).getByText(/취소를 EXCLUDED 성과나 다른 결과로 추론하지 않습니다/)).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "변경 2 · CANCELLATION" })).toBeInTheDocument();
+    expect(screen.getByText("ACTIVE", { exact: true })).toBeInTheDocument();
   });
 
   it("renders the append-only revision lineage in Korean without translating canonical evidence", async () => {
@@ -295,6 +461,35 @@ describe("CallDetailPage", () => {
     expect(within(eventSection!).queryByLabelText("관측된 예정 이벤트 시각")).not.toBeInTheDocument();
   });
 
+  it("renders the populated outcome audit in English without translating canonical evidence", async () => {
+    await renderDetail("demo-call-001", "en");
+
+    const section = screen.getByRole("heading", { name: "Outcome audit history" }).closest("section");
+    expect(section).not.toBeNull();
+    expect(within(section!).getByText("AUDIT ONLY · DEMO")).toBeInTheDocument();
+    expect(within(section!).getByText("4 outcome records")).toBeInTheDocument();
+    expect(within(section!).getByText(/accepted only as JSON null and displayed as NA/)).toBeInTheDocument();
+    const first = within(section!).getByRole("article", {
+      name: "Outcome record 1 · D1 · methodology 1.0.0 · INCOMPLETE",
+    });
+    expect(within(first).getByText("Outcome ID")).toBeInTheDocument();
+    expect(within(first).getByText("Methodology definition hash")).toBeInTheDocument();
+    expect(within(first).getByText("Input fingerprint")).toBeInTheDocument();
+    expect(within(first).getByText("outcome-demo-call-001-d1-v1-001")).toBeInTheDocument();
+    expect(within(first).getByText("HORIZON_DATA_MISSING")).toBeInTheDocument();
+    expect(within(first).getByText("03af803fd61c21b86e1897d006e6cf4f92f28ce627b06eda13b319ebfa8a07e2"))
+      .toBeInTheDocument();
+    expect(within(first).getByText("b359ec47c7a5b17bc6a7ee18e82f1fe92eb100f9e2abee23a8e3c9aa7b94acd6"))
+      .toBeInTheDocument();
+    expect(within(first).getAllByText("NA")).toHaveLength(13);
+    for (const unsupportedProjection of [
+      "Latest outcome", "Current outcome", "Effective outcome", "Outcome score", "Win/loss", "Analyst rank",
+      "Investment advice", "Methodology active", "Methodology inactive",
+    ]) {
+      expect(within(section!).queryByText(unsupportedProjection, { exact: true })).not.toBeInTheDocument();
+    }
+  });
+
   it("renders English UI while keeping date, money, IDs, source evidence, and NA identical", async () => {
     await renderDetail("demo-call-002", "en");
 
@@ -323,6 +518,14 @@ describe("CallDetailPage", () => {
     for (const unsupportedProjection of ["Effective status", "Current outcome", "Analyst rank", "Investment advice"]) {
       expect(within(revisionSection!).queryByText(unsupportedProjection, { exact: true })).not.toBeInTheDocument();
     }
+    const outcomeSection = screen.getByRole("heading", { name: "Outcome audit history" }).closest("section");
+    expect(outcomeSection).not.toBeNull();
+    expect(within(outcomeSection!).getByText("0 outcome records")).toBeInTheDocument();
+    expect(within(outcomeSection!).getByRole("status")).toHaveTextContent(
+      "No outcome event is recorded in this audit response. No other history or substitute result was shown.",
+    );
+    expect(within(outcomeSection!).queryByRole("article")).not.toBeInTheDocument();
+    expect(within(outcomeSection!).queryByText("Methodology not active", { exact: true })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open canonical source" })).toHaveAttribute(
       "href",
       "https://example.invalid/demo-call-002",
@@ -339,8 +542,20 @@ describe("CallDetailPage", () => {
     expect(thrown).toMatchObject({ digest: expect.stringContaining("404") });
   });
 
+  it("reads the coherent detail/context/revision/outcome aggregate exactly once on success", async () => {
+    const fixture = new FixtureCallAuditProvider();
+    const findById = vi.fn(fixture.findById.bind(fixture));
+    providers.callAuditProvider.mockReturnValue({ findById });
+
+    await renderDetail("demo-call-001");
+
+    expect(providers.callAuditProvider).toHaveBeenCalledTimes(1);
+    expect(findById).toHaveBeenCalledTimes(1);
+    expect(findById).toHaveBeenCalledWith("demo-call-001");
+  });
+
   it("propagates provider rejection so the route error boundary cannot publish partial evidence", async () => {
-    const failure = new Error("revision response malformed");
+    const failure = new Error("outcome response malformed");
     providers.callAuditProvider.mockReturnValue({
       findById: vi.fn().mockRejectedValue(failure),
     });

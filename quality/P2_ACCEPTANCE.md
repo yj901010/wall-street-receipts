@@ -4,8 +4,9 @@ Current status: the methodology-registry, multiple market-map shell,
 sector/industry PRICE_CHANGE treemap, dashboard evidence-composition,
 institution and analyst identity directories, known-unavailable market-board
 publication state, recorded S&P 500 forecast-call history, application-owned
-screener known-deferred shell, and Korean-default bilingual evidence-first
-product UI, and coherent call-detail audit API consumer vertical slices are
+screener known-deferred shell, Korean-default bilingual evidence-first product
+UI, and coherent call-detail and analyst-call list API consumer vertical slices
+are complete. The coherent call-outcome audit consumer described below is also
 complete. These checks close only delivered P2 slices. Leaderboard,
 full-universe map, and production market-mode work stays open; actual
 historical screening remains P8 work. Presentation localization does not
@@ -1191,6 +1192,158 @@ freshness/health, polling/streaming, saved filters, exports, user preferences,
 and current/effective lifecycle projection remain separate reviewed work. This
 slice is still synthetic DEMO evidence delivered through Spring/PostgreSQL, not
 a live or production market-data connection.
+
+## Coherent call-outcome audit API boundary
+
+Status: complete for this vertical slice; the broader P2 phase remains open.
+The results below close only the synthetic DEMO audit-consumer boundary.
+
+- This slice consumes the existing `GET /v1/calls/{id}/outcomes` subresource
+  without adding or changing an OpenAPI path, canonical schema, fixture,
+  manifest member, Flyway migration, Spring class, persistence query, mutation,
+  calculation, scheduler, or provider-ingestion boundary.
+- The existing page-scoped `CallAuditProvider` becomes one exact
+  `{detail, context, revisions, outcomes}` aggregate. The page may not obtain an
+  outcome from a second provider, a raw fixture import, another origin, or a
+  fallback. Fixture and API remain explicit whole-aggregate modes selected by
+  the same exact `CALL_AUDIT_PROVIDER` value used by the call list and detail.
+- API mode establishes existence with the exact encoded detail GET first. Only
+  after a non-null detail does it request context, revisions, and outcomes from
+  the same normalized private `API_BASE_URL`. An exact detail 404 remains the
+  only not-found result. Every dependent 404 or other transport/validation
+  failure rejects the complete audit rather than returning a partial page,
+  `[]`, `NA`, or fixture evidence.
+- A known call with an exact outcome `[]` is valid recorded-empty evidence. It
+  does not prove that a horizon was evaluated, that no future outcome will be
+  appended, or that the provider/data set is complete.
+- The web adapter accepts the closed 31-field canonical outcome shape and
+  preserves source array order, explicit nulls, raw canonical tokens, hashes,
+  fingerprints, IDs, and UTC instants. It never selects one record as current,
+  effective, latest, or authoritative and never folds an append-only lineage
+  into the immutable base call.
+- The fixture envelope groups records by call and sorts a copied group into the
+  existing server order before adaptation because its canonical document order
+  is not the API order. It never mutates the fixture. The shared adapter only
+  validates and preserves the array it receives; API payloads are never sorted.
+- This P2 publication boundary remains exact DEMO and null-only. The outcomes
+  API does not expose methodology status. Returned outcomes are accepted only
+  as `PENDING/HORIZON_NOT_REACHED` or
+  `INCOMPLETE/HORIZON_DATA_MISSING`, with `dataComplete=false` and all ten
+  metric/result fields JSON null. A coherent `CALCULATED` or `EXCLUDED` record,
+  a non-null metric/result, or any non-DEMO mode requires its separately
+  reviewed P3/P5 boundary and therefore fails closed here.
+- A nullable `basisRevisionId` remains recorded outcome evidence, not a basis
+  selected by the UI. If present, it must resolve to a same-call correction
+  available by outcome processing time. `cancellationRevisionId` is exact JSON
+  null in this boundary. Cancellation-reference relationship semantics remain
+  deferred with `EXCLUDED/CALL_CANCELLED`; the UI never infers either from a
+  terminal revision.
+
+## Coherent call-outcome audit API contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-OA01 | One coherent aggregate | `CallAuditProvider` returns exactly detail, required closed context, ordered revisions, and ordered outcomes from one selected mode. The page has one provider read and no mixed API/fixture source. |
+| P2-OA02 | Private exact transport | API mode uses the encoded opaque call ID and exact existing detail, context, revisions, and outcomes GET paths on one private normalized `API_BASE_URL`, with JSON acceptance, no-store caching, redirect rejection, no body/credentials/browser fetch, no retry, and no alternate origin. |
+| P2-OA03 | Existence and failure semantics | Detail is requested first; its exact 404 maps to route not-found. Every other detail failure and every context/revision/outcome failure aborts the whole aggregate. A known call plus exact outcome `[]` remains distinct from failure. |
+| P2-OA04 | Closed outcome shape | Every outcome has exactly `outcomeId`, `schemaVersion`, `callId`, `horizon`, `basisRevisionId`, `cancellationRevisionId`, `snapshotId`, `methodologyId`, `methodologyVersion`, `methodologyDefinitionHash`, `inputFingerprint`, `sequenceNumber`, `supersedesOutcomeId`, `evaluationStatus`, `reasonCode`, `eventTime`, `processingTime`, `assetReturn`, `benchmarkReturn`, `sectorReturn`, `alpha`, `sectorAlpha`, `mfe`, `mae`, `targetHit`, `directionalWin`, `targetError`, `dataComplete`, `dataMode`, `capturedAt`, and `provenanceId`; missing, extra, omitted-null, or mistyped fields fail closed. |
+| P2-OA05 | Canonical scalar boundary | Schema version is exact `1.0.0`; opaque IDs, methodology versions, lower-case SHA-256 hashes/fingerprints, horizons, statuses, reasons, `dataComplete`, and UTC `Z` instants with zero-to-six fractional digits retain their closed canonical rules. This P2 consumer accepts no metric number or result Boolean, makes no JavaScript-number precision claim, and defers BigDecimal lexical/scale support until calculated outcomes have a reviewed P3 transport boundary. |
+| P2-OA06 | Exact P2 phase guard | Every returned outcome is exact `DEMO`, is either `PENDING/HORIZON_NOT_REACHED` or `INCOMPLETE/HORIZON_DATA_MISSING`, has `dataComplete=false`, and has exact JSON null for asset, benchmark, sector, alpha, sector alpha, MFE, MAE, target-hit, directional-win, and target-error values. `CALCULATED`, `EXCLUDED`, `REALTIME`, `DELAYED`, `EOD`, or any number/Boolean/other non-null metric/result is rejected even when otherwise schema-coherent. |
+| P2-OA07 | Identity and natural-key uniqueness | Every outcome ID is unique. The natural input identity `(callId, basisRevisionId, horizon, methodologyId, methodologyVersion, inputFingerprint)` is unique, while the same fingerprint may validly appear under a different methodology version. One `(methodologyId, methodologyVersion)` never carries conflicting definition hashes. |
+| P2-OA08 | Append-only lineage | A lineage is scoped exactly by `(callId, basisRevisionId, horizon, methodologyId, methodologyVersion)`. It starts at sequence one with null supersession, remains contiguous, and every later record names the immediately preceding outcome. Event, processing, and capture times are independently nondecreasing within one lineage; unrelated lineages gain no invented cross-time constraint. |
+| P2-OA09 | Point-in-time joins | Every outcome belongs to the requested/base call and preserves `base eventTime <= outcome eventTime <= processingTime <= capturedAt`; base processing/capture are no later than outcome processing. A non-null snapshot matches the detail snapshot and was processed/captured by outcome processing. A non-null basis is a same-call correction whose event/processing/capture was available by outcome processing. Cancellation reference joins are not interpreted because this P2 boundary requires that field to be exact null. |
+| P2-OA10 | Exact response order | The adapter preserves and validates the current API order without sorting: horizon `D1`, `W1`, `M1`, `M3`, `M6`, `Y1`, followed by raw methodology ID, methodology version, sequence number, and outcome ID ascending. Methodology versions are not reinterpreted as semantic versions. Lineage validation remains scoped correctly if distinct basis lineages interleave. |
+| P2-OA11 | Provenance independence | Outcome provenance is preserved as raw evidence and need not equal call, snapshot, context, revision, or source-document provenance. The page does not fabricate a methodology source document or claim that the outcome endpoint exposes methodology activation status. |
+| P2-OA12 | No calculation or lifecycle projection | The page renders the immutable base event, revisions, and each outcome record separately. It never infers an excluded outcome from cancellation, chooses an effective basis, collapses to a latest result, or publishes return, target hit, win/loss, score, accuracy, rank, confidence, recommendation, or advice. |
+| P2-OA13 | Backend and canonical isolation | The five OpenAPI paths, 14 schema files, 13 fixture files, V1-V5 migrations, Spring production/read behavior, and P1/P3 domain source remain unchanged. This slice is a web consumer of the existing read only. |
+
+## Coherent call-outcome audit web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-OAW01 | Populated audit | `/calls/demo-call-001` renders all four existing outcome records in the exact API order, including the two-record D1 v1 lineage, the separate D1 v2 root, and the M1 root. Every canonical field, ID, nullable reference, methodology identity/hash, fingerprint, status/reason, raw instant, data flag/mode, provenance, and null metric remains visible. |
+| P2-OAW02 | Honest empty audit | `/calls/demo-call-002` renders an explicit no-recorded-outcomes state while retaining its correction/cancellation lineage. It does not infer `EXCLUDED`, unchanged eligibility, provider completeness, or absence of a future outcome. |
+| P2-OAW03 | Original and revision preservation | Adding outcome rows does not change the immutable base `ACTIVE`, direction, target, source/snapshot/context facts, or append-only revision values and order. Outcome status never becomes call status or an effective stance. |
+| P2-OAW04 | Canonical versus presentation language | Korean-default and English views translate only labels and explanatory copy. Horizon/status/reason tokens, IDs, hashes, fingerprints, raw UTC instants, booleans, null/`NA`, data mode, provenance, and response order remain canonical. Copy does not call a methodology active/inactive because this endpoint does not expose that state. |
+| P2-OAW05 | Error and not-found truth | Exact detail 404 retains the localized not-found boundary. Configuration, transport, media, JSON, or validation failure on any of four resources uses the provider-neutral recoverable error boundary and reveals no partial audit, recorded-empty substitute, or fallback. |
+| P2-OAW06 | Accessibility and responsive containment | Outcome evidence uses semantic headings and table/list/description structures, has a sequential keyboard path and visible focus, and keeps long hashes/fingerprints and dense fields locally contained without truncating canonical text or creating page overflow at 1440, 1280, and 390 pixels. |
+| P2-OAW07 | Server-only runtime | Browser navigation produces no request to `API_BASE_URL`; Next performs all four reads server-side. Populated and empty outcome states produce no hydration, console warning/error, or page error. |
+
+## Coherent call-outcome audit required tests
+
+- Adapter tests must cover the exact 31-key row, every permitted nullable branch,
+  all six horizons, identity/version/hash/instant bounds, missing/extra/mistyped
+  fields, and explicit preservation of nulls and source order. Every metric
+  number and result Boolean is a negative phase test; numeric precision/scale
+  support is not claimed or tested by this consumer.
+- One-at-a-time phase mutations must reject every non-DEMO mode, coherent
+  calculated and excluded records, each wrong status/reason/completeness pair,
+  and each of the ten non-null metric/result fields.
+- Cross-record tests must cover requested-call mismatch, duplicate outcome and
+  natural-input identities, methodology hash conflicts, same fingerprint under
+  a different methodology version, lineage root/gap/predecessor/sequence and
+  each nondecreasing timestamp, unrelated-lineage independence, exact API order,
+  call/snapshot/correction joins and timing, exact-null cancellation reference,
+  and distinct valid provenance across document families.
+- Transport tests must prove exact detail-first four-path behavior, opaque-ID
+  encoding, one private origin, JSON/no-store/redirect options, known-empty
+  `[]`, and fail-whole behavior for invalid configuration, network, every
+  dependent non-200 including 404, media type, malformed JSON, and response
+  shape without retry or fallback.
+- Fixture tests must prove the same aggregate shape from the existing outcome
+  envelope, methodology/hash and call/revision/snapshot joins, populated and
+  known-empty calls, invalid envelope/reference failure, and no API dependency.
+  Factory tests retain the exact shared fixture/API selector and no fallback.
+- Korean/English page tests must lock the four-row populated audit, explicit
+  empty state, every raw evidence class, base/revision preservation, microsecond
+  display, and absence of current/effective/latest/score/win/rank/advice or
+  inferred cancellation-outcome claims.
+- Responsive Playwright must exercise populated call 001 and empty call 002 at
+  1440, 1280, and 390 pixels, sequential keyboard reachability, local overflow
+  containment, zero browser-to-API requests, and zero runtime errors.
+- The existing PostgreSQL 17 -> packaged Spring -> Next API-mode job must run
+  the outcome E2E and prove exact full-line Tomcat access for both outcomes
+  paths in addition to the existing five list and six detail/context/revision
+  reads. With `%m %U%q %s`, queryless rows retain Tomcat's observed `-` value;
+  the required set therefore contains 13 exact HTTP-200 lines.
+- Repository CI must lock the exact aggregate/provider graph, 31-field type,
+  phase and lineage markers, fixture/API reverse isolation, page/test/E2E
+  sources, and the unchanged protected backend/canonical digest.
+
+## Coherent call-outcome audit observed verification
+
+- Web ESLint and TypeScript both passed. Vitest passed all 42 files and 569
+  tests. The Next production build passed, including 12/12 static-generation
+  work items and 11 dynamic routes.
+- Retry-free Playwright passed all 72 tests across 1440, 1280, and 390 pixels;
+  the focused outcome-plus-revision matrix passed 6/6. It covered populated and
+  known-empty evidence, sequential keyboard focus, long hash/fingerprint
+  containment, and browser-to-API isolation.
+- The real PostgreSQL 17 -> packaged Spring -> Next API-mode gate passed 3/3
+  browser tests and matched all 13 exact Tomcat access-log lines: five list
+  queries plus eight populated/known-empty detail, context, revision, and
+  outcome reads.
+- Maven verification passed 223/223 tests with zero failures, errors, or skips.
+  PostgreSQL 17.10 migration coverage passed 4/4 Testcontainers integration
+  tests with zero skips; Compose configuration also passed.
+- All 18 embedded workflow Python blocks passed syntax and execution. Canonical
+  validation covered 14 JSON Schemas and 32 fixture records; SnakeYAML parsing
+  and `git diff --check` passed. Generated reports were removed and
+  `next-env.d.ts` retained its production import.
+- In-app browser QA confirmed Korean default SSR, desktop and 390-pixel
+  containment without overflow or canonical-token truncation, the honest empty
+  state, and zero console warnings or errors. Independent final review found
+  zero blockers, zero high-severity issues, and zero known false-positive gates.
+
+## Coherent call-outcome audit deferred work
+
+Effective original/correction/cancellation basis selection, named-horizon
+policy, calculated metrics, current/latest projection, scoring, aggregation,
+confidence, ranking, and persistence remain P3 work. Dashboard/API migration,
+dataset catalog metadata, and cross-request snapshot tokens require separate
+contracts. Live/licensed providers, entitlements, rights, freshness/health,
+retry/polling/streaming, and non-DEMO publication remain P5 work. This consumer
+does not turn the four synthetic model records into observed performance.
 
 ## Local gate
 

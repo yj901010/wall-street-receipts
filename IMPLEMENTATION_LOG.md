@@ -1636,3 +1636,106 @@ materialization remain open
 - Dataset metadata/facet APIs, dashboard migration, snapshot tokens, live or
   licensed ingestion, freshness/health, polling/streaming, lifecycle projection,
   scoring, saved filters, and exports remain separate reviewed work.
+
+## P2 — Coherent call-outcome audit API consumer
+
+Status: complete for this vertical slice; the broader P2 phase remains open
+
+### Scope
+
+- Extend the existing page-scoped call audit from exact detail/context/revisions
+  to exact detail/context/revisions/outcomes using the already published Spring
+  `GET /v1/calls/{id}/outcomes` read.
+- Keep fixture and API as explicit whole-aggregate modes under the shared exact
+  `CALL_AUDIT_PROVIDER` selector. The call-detail page must not add a second
+  provider read, raw fixture import, alternate origin, or fallback.
+- Replace the hard-coded outcome `NA` summary with an append-only evidence view
+  of every returned canonical outcome field and an explicit known-empty state.
+  Do not calculate, aggregate, choose a latest result, or project lifecycle.
+
+### Locked contract decisions
+
+- API mode remains private and server-only. It establishes detail existence
+  first, then reads context, revisions, and outcomes from the same normalized
+  `API_BASE_URL` with exact JSON/no-store/redirect-error GET semantics. Only a
+  detail 404 is not-found; every dependent failure rejects the whole audit.
+- An outcome retains the exact 31-field canonical shape, source order, explicit
+  nulls, hashes, fingerprints, opaque IDs, canonical tokens, and UTC instants.
+  The adapter must not reorder or collapse the response. Fixture mode sorts a
+  copied per-call group into the existing API order before adaptation without
+  mutating the canonical document; API payloads are never sorted by the web.
+- The P2 publication guard accepts only exact DEMO
+  `PENDING/HORIZON_NOT_REACHED` and `INCOMPLETE/HORIZON_DATA_MISSING` records,
+  `dataComplete=false`, and JSON null for all ten metric/result fields. Even a
+  schema-valid calculated/excluded or non-DEMO record remains outside this
+  consumer and fails closed.
+- Outcome IDs and natural input identities remain unique. Lineages are scoped
+  by call, nullable basis revision, horizon, methodology ID, and methodology
+  version; sequence and supersession are contiguous and each lineage's event,
+  processing, and capture times do not move backwards.
+- Call, snapshot, and nullable correction-basis joins retain the P1
+  point-in-time bounds. `cancellationRevisionId` remains exact null; cancellation
+  relationship semantics stay deferred. Separate call/source/context/revision/
+  outcome provenance values are preserved without inventing equality.
+- `/calls/demo-call-001` is the populated four-record golden and
+  `/calls/demo-call-002` is the known-empty outcome golden beside its existing
+  terminal revision. The UI must never infer an excluded outcome from that
+  cancellation or relabel the immutable base call.
+
+### Module and file boundary
+
+- Existing `call-audit-provider.ts`, `call-audit-adapter.ts`,
+  `api-call-audit-provider.server.ts`, and `fixture-call-audit-provider.ts` own
+  the extended aggregate. No second outcome provider, factory, environment
+  selector, or browser transport was added.
+- The existing call-detail page, typed Korean/English messages, contained dense
+  evidence styles, focused adapter/API/fixture/factory/page tests, and the new
+  `call-outcomes.spec.ts` own the product behavior.
+- `quality/P2_ACCEPTANCE.md`, `.github/workflows/ci.yml`, README, and this log
+  own the delivered merge gate and phase/deferred boundary.
+- OpenAPI, canonical schemas/fixtures/manifest, Spring production source,
+  Flyway, P1 domain contracts, and P3 pure scoring source remain unchanged.
+
+### Routes
+
+- No product or API route is added or renamed. The existing `/calls/[id]` page
+  consumes the existing `/v1/calls/{id}/outcomes` subresource through its one
+  coherent audit provider.
+
+### Verification
+
+- Web ESLint and TypeScript passed. Vitest passed 42 files and 569 tests. The
+  Next production build passed with 12/12 static-generation work items and 11
+  dynamic routes.
+- Retry-free Playwright passed 72/72 tests across 1440, 1280, and 390 pixels;
+  the focused outcome-plus-revision matrix passed 6/6. Long hashes and
+  fingerprints remained untruncated, sequential keyboard focus reached the
+  outcome section, populated and known-empty states remained honest, and the
+  browser made no request to the private API origin.
+- The real PostgreSQL 17 -> packaged Spring -> Next API-mode integration passed
+  3/3 browser tests and matched all 13 exact Tomcat HTTP-200 access-log lines:
+  five list queries plus eight detail/context/revision/outcome reads. Queryless
+  `%q` retained Tomcat's observed `-` placeholder.
+- Maven verification passed 223/223 tests with zero failures, errors, or skips.
+  PostgreSQL 17.10 migration coverage passed 4/4 Testcontainers integration
+  tests with zero skips. Compose configuration passed.
+- All 18 embedded workflow Python blocks passed syntax and execution. Canonical
+  validation covered 14 JSON Schemas and 32 fixture records. SnakeYAML parsing
+  and `git diff --check` passed; generated reports were removed and
+  `next-env.d.ts` retained its production import.
+- In-app browser QA confirmed Korean default SSR, desktop and 390-pixel
+  containment without overflow or canonical-token truncation, the explicit
+  outcome empty state, and zero console warnings or errors. Independent final
+  review found zero blockers, zero high-severity issues, and zero known
+  false-positive gates.
+
+### Deferred boundary
+
+- Effective basis and cancellation eligibility, named horizons, calculated
+  metrics, latest/current projection, scoring, confidence, leaderboards, and
+  persistence remain P3 work.
+- Dashboard/API migration and dataset catalogs need separate contracts. Live or
+  licensed providers, rights, freshness/health, polling/streaming, and non-DEMO
+  publication remain P5 work. This slice cannot create an observed performance
+  claim from the current synthetic null-only audit records, and the shared API
+  view cannot infer a methodology activation status that the endpoint omits.

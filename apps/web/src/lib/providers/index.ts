@@ -21,6 +21,10 @@ export { FixtureCallAuditProvider } from "./fixture-call-audit-provider";
 export type {
   CallAuditProvider,
   CallAuditSnapshot,
+  CallOutcome,
+  CallOutcomeEvaluationStatus,
+  CallOutcomeHorizon,
+  CallOutcomeReasonCode,
   CallRevision,
   CallRevisionType,
   CorrectedCallTerms,
