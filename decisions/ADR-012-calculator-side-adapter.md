@@ -54,10 +54,13 @@ horizon/calendar/window type, price, return, observation, provider, repository,
 fixture, JSON, Spring, persistence, controller, scheduler, network, clock,
 locale, timezone, random, or LLM dependency.
 
-No other production class references `CalculatorSideAdapter`. The polarity
-policy itself remains calculator-neutral, and neither calculator knows about
-the common side. The sole bridge is not invoked by a controller, application
-service, provider, repository, scheduler, API response, or web source.
+At this slice boundary no other production class referenced
+`CalculatorSideAdapter`. ADR-013 later opens exactly one disconnected consumer,
+`CalculatorSideRouting`; no other production class may reference the adapter.
+The polarity policy itself remains calculator-neutral, and neither calculator
+knows about the common side. Neither bridge is invoked by a controller,
+application service, provider, repository, scheduler, API response, or web
+source.
 
 The slice adds no schema, canonical fixture, manifest member, OpenAPI path,
 Flyway migration, database row, API behavior, provider, or web source.
@@ -66,11 +69,12 @@ methodology, or market evidence.
 
 ## Consequences
 
-- Later reviewed orchestration can translate an already directional policy
-  result without duplicating or guessing enum-name semantics.
+- ADR-013's later reviewed routing leaf translates an already directional
+  policy result through this adapter without duplicating or guessing enum-name
+  semantics.
 - Neutral cannot accidentally become bearish, false, a loss, or a calculator
-  input through this adapter. Its handling remains owned by the polarity result
-  and later orchestration.
+  input through this adapter. ADR-013 preserves it only as the original
+  non-directional polarity result.
 - A side-enum change fails exhaustive compilation/tests rather than inheriting a
   fallback. A genuinely different translation policy requires a separate
   reviewed contract; this mechanical bridge must not acquire version/hash
