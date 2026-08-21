@@ -1425,3 +1425,115 @@ boundary, and broader P2/P3/P5/P8 work remains open
   P3-owned, and populated historical screening stays P8-owned. The redesign
   cannot fabricate or visually promote missing, model-only, unavailable, or
   fixture evidence.
+
+## P2 — Coherent call-detail audit API consumer
+
+Status: complete for this consumer vertical slice; broader P2, P3 lifecycle and
+scoring, P5 licensed provider publication, and P8 history remain open
+
+### Scope
+
+- Connect the existing `/calls/[id]` server route to the existing Spring detail,
+  context, and revision reads through one coherent call-audit provider.
+- Preserve an explicit whole-aggregate fixture mode for deterministic offline
+  development while making the documented local two-process stack use the real
+  private API transport with no runtime fallback or mixed-source page.
+- Render ordered append-only correction/cancellation evidence without mutating
+  the original event or projecting a current/effective stance, outcome,
+  accuracy, rank, confidence, or advice.
+- Keep Korean-default and English presentation, raw canonical evidence,
+  responsive containment, and all existing backend/canonical contracts intact.
+
+### Contract and phase decisions
+
+- `CALL_AUDIT_PROVIDER` accepts exact `fixture | api`; missing input defaults to
+  fixture in code, while the checked-in local example and documented web launch
+  explicitly select `api`. API mode requires private `API_BASE_URL`; neither
+  configuration nor transport is exposed as `NEXT_PUBLIC_*`.
+- API mode establishes detail existence first, maps only its exact 404 to
+  not-found, then reads context and revisions together. Redirects, non-200
+  dependent responses, non-JSON/malformed/invalid payloads, and cross-surface
+  divergence fail the complete page without partial data or fixture fallback.
+- The aggregate accepts exactly `DEMO` throughout this P2 slice. The Spring API
+  remains backed by synthetic repository fixtures; HTTP delivery is not a
+  licensed, live, delayed, or EOD provider-publication claim.
+- Runtime adaptation is closed and validates each surface's own joins,
+  chronology, nullability, numeric bounds, and provenance. Separate source and
+  provenance families are preserved without inventing equality. Revision
+  identity is `(provider, providerEventId)`; event time alone must be
+  nondecreasing across the append-only lineage.
+- Revision event/processing/capture instants render as raw ISO evidence,
+  including microseconds. Corrected targets render as raw numeric text with a
+  separate currency field. Adjacent Korean and English copy states that the
+  visible base `ACTIVE` value is immutable original-event status, not a current
+  or effective stance, including beside terminal cancellation.
+- Server confinement uses `.server.ts` modules, explicit browser-runtime guards,
+  private environment access only in the factory/transport, and a reverse
+  static/dynamic/CommonJS import-graph CI fence. No new `server-only` package,
+  ambient alias, browser transport, API endpoint, schema, fixture, manifest
+  member, Flyway migration, persistence model, or Spring call-audit wrapper was
+  added.
+
+### Module structure
+
+- `apps/web/src/lib/providers/call-audit-provider.ts` owns the closed
+  detail/context/revisions aggregate and canonical revision presentation types.
+- `call-audit-adapter.ts` owns closed response adaptation and compatible
+  DEMO/point-in-time/lineage validation. `fixture-call-audit-provider.ts` owns
+  the complete offline aggregate.
+- `api-call-audit-provider.server.ts` owns the exact private GET transport;
+  `call-audit-provider.server.ts` owns exact provider selection and is the only
+  API-transport importer. The existing detail page is its only production
+  consumer.
+- The call-detail page, typed Korean/English call catalog, scoped shared styles,
+  provider/page unit tests, and `apps/web/e2e/call-revisions.spec.ts` own raw
+  audit presentation and responsive browser regressions.
+- `.env.example`, this README, `quality/P2_ACCEPTANCE.md`, and the focused
+  repository plus dedicated cross-stack CI jobs own configuration,
+  reproducibility, source isolation, and integration evidence.
+
+### Routes
+
+- No product or API route was added or renamed. `/calls/[id]` now obtains its
+  complete detail audit from one provider; `/calls` and dashboard provider
+  boundaries remain unchanged.
+- API mode consumes the existing `GET /v1/calls/{id}`,
+  `GET /v1/calls/{id}/context`, and `GET /v1/calls/{id}/revisions` paths from one
+  private origin.
+
+### Verification
+
+- Full web ESLint and `tsc --noEmit --incremental false`: PASS. Vitest passed
+  36 files and 388 tests.
+- Next 16.2.11 production build: PASS, including 12/12 generated page-data
+  steps and 11 dynamic routes with `/calls/[id]`.
+- Targeted call-revision Playwright passed 3/3 at 1440, 1280, and 390 pixels.
+  The final retry-free full browser suite passed 66/66 across all three widths.
+  The stabilized sequential keyboard-focus regression separately repeated
+  18/18 with zero retries.
+- Full API Maven verification: PASS, 223/223 tests with zero failures, errors,
+  or skips; PostgreSQL 17.10 Testcontainers migration coverage executed 4/4
+  with zero skips.
+- Local cross-stack API mode: PASS, 1/1 Playwright test through PostgreSQL,
+  packaged Spring, and Next. The unbuffered Tomcat access log recorded HTTP 200
+  for exact detail/context/revisions reads of both `demo-call-002` and known-
+  empty-lineage `demo-call-001`, proving all six real Spring paths were used.
+- `docker compose --env-file .env.example config --quiet`, the focused coherent
+  call-audit repository gate, SnakeYAML workflow parsing, and
+  `git diff --check`: PASS. All 17/17 embedded workflow Python blocks passed
+  syntax and execution, including canonical validation of 14 schemas and 32
+  fixture records plus the six-path observed integration log. The production
+  `next-env.d.ts` import had no diff, generated Playwright report/result
+  directories were absent, and ports 3000, 3011, 3120, 3133, 8080, and 5432
+  were idle after verification.
+- Independent final contract/source/UI review: blocker 0, HIGH 0.
+
+### Deferred boundary
+
+- Licensed analyst/market-provider ingestion, entitlements, rights, freshness,
+  health, retry policy, and real live/delayed/EOD publication remain P5 work.
+- Effective lifecycle/basis selection and deterministic outcome calculations
+  remain P3 work; historical materialization and screening remain P8 work.
+- Authentication, user-specific visibility, cross-endpoint snapshot tokens,
+  streaming/polling, writes, source-document expansion, and list/dashboard API
+  migration require separate reviewed contracts.

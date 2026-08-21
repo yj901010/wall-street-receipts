@@ -5,10 +5,11 @@ sector/industry PRICE_CHANGE treemap, dashboard evidence-composition,
 institution and analyst identity directories, known-unavailable market-board
 publication state, recorded S&P 500 forecast-call history, application-owned
 screener known-deferred shell, and Korean-default bilingual evidence-first
-product UI vertical slices are complete. These checks close only delivered P2
-slices. Leaderboard, full-universe map, and production market-mode work stays
-open; actual historical screening remains P8 work. Presentation localization
-does not change canonical evidence or any backend contract.
+product UI, and coherent call-detail audit API consumer vertical slices are
+complete. These checks close only delivered P2 slices. Leaderboard,
+full-universe map, and production market-mode work stays open; actual
+historical screening remains P8 work. Presentation localization does not
+change canonical evidence or any backend contract.
 
 The methodology registry is a read-only, fixture-backed explanation surface. It
 publishes the immutable definition identities already present in
@@ -884,6 +885,157 @@ data remains P5-owned, deterministic leaderboard metrics remain P3-owned, and
 actual historical screening remains P8-owned. This presentation slice cannot
 turn unavailable, fixture, null, incomplete, or model-only evidence into an
 observed fact.
+
+## Coherent call-detail audit API boundary
+
+- This slice connects the existing `/calls/[id]` product route to the existing
+  Spring read API without adding or changing an API, OpenAPI, schema, fixture,
+  manifest, Flyway, persistence, provider-ingestion, or mutation contract.
+- `CALL_AUDIT_PROVIDER` accepts only exact `fixture` or `api`; missing input
+  selects the deterministic fixture implementation. The checked-in local
+  environment selects `api` so the documented two-process stack exercises the
+  real transport. Unsupported input fails closed. Provider selection never
+  changes during one request and no API failure falls back to fixtures.
+- `CallAuditProvider` returns one closed detail audit containing exactly the
+  canonical call detail, a required closed call-context object whose
+  `macroSnapshot` and `eventContext` members are independently nullable, and the
+  ordered revision lineage. A top-level null context is malformed, not known
+  empty. The route obtains all three surfaces from this one provider. It never combines
+  a legacy fixture `CallsProvider` result with an API revision result.
+- API mode uses only the private server-side `API_BASE_URL`. It first requests
+  exact `GET /v1/calls/{encodedCallId}` to establish existence, then requests
+  exact `GET /v1/calls/{encodedCallId}/context` and
+  `GET /v1/calls/{encodedCallId}/revisions` from the same normalized origin.
+  Every request accepts JSON and bypasses caches. It sends no body, mutation,
+  browser cookie, authorization value, locale, or user-controlled forwarding
+  header. `API_BASE_URL` is never a `NEXT_PUBLIC_*` setting or client fetch.
+- An exact detail 404 is the only transport result mapped to product not-found.
+  Missing/invalid configuration, network failure, redirect, any other non-2xx
+  status, non-JSON content, invalid JSON, wrong or extra fields, invalid values,
+  or a context/revision failure rejects the complete audit. Those states never
+  become `[]`, null context, `NA`, a partial page, or fixture evidence.
+- Runtime adaptation is closed at every object boundary. It preserves canonical
+  enums, IDs, names, source text, decimal JSON values, UTC instants, order, and
+  explicit nulls without filling or translating data. The detail's own source
+  document/reference joins, snapshot identity, and context observation/source
+  identifiers remain independently valid where the response carries both sides
+  of a documented join. Every provenance ID is preserved but equality is not
+  inferred between a call and its source records, a macro snapshot and its
+  observations, or separate canonical document families.
+- JSON numeric adaptation retains the existing web number boundary: every
+  accepted value is finite, targets and non-null snapshot asset price are
+  positive, and macro observation magnitude is strictly below `1e26`. The web
+  adapter does not claim to recover BigDecimal lexical scale after
+  `Response.json()` has produced a JavaScript number; exact stored decimal
+  replay remains owned by the canonical API/persistence contract.
+- This P2 transport accepts exactly `DEMO` throughout the aggregate. A
+  `REALTIME`, `DELAYED`, or `EOD` detail, nested source/snapshot/context record,
+  observation, or revision is rejected even when internally consistent. HTTP
+  delivery does not turn the fixture-backed Spring API into a licensed or live
+  provider publication boundary.
+- Every revision belongs to the requested original call, has the same data mode,
+  and preserves `original call eventTime <= revision eventTime <= processingTime
+  <= capturedAt`. Sequence numbers are exactly contiguous from one, the root has
+  a null predecessor, every later event names the immediately previous revision,
+  revision event time alone is nondecreasing, and a cancellation terminates the
+  lineage. Cross-row processing/capture monotonicity is deliberately not added
+  because it is not part of the canonical P1 contract.
+- A correction has the complete six-field replacement terms object; a
+  cancellation has JSON null there. Nullable ratings, targets, currency, and
+  target date stay null, not omitted or inferred. Revision reason,
+  `sourceReferenceId`, and `provenanceId` remain the raw revision evidence; they
+  are not required to equal the original call's source/provenance and are not
+  promoted into an unverified source document.
+- Revision `eventTime`, `processingTime`, and `capturedAt` render as their raw
+  canonical ISO strings so zero-to-six fractional digits are not lost through a
+  human date formatter. Corrected numeric targets render as raw JavaScript
+  number text with the independently supplied currency in its separate field;
+  they are not passed through money/percent rounding or used to calculate a
+  delta. This display rule does not claim recovery of JSON lexical trailing
+  zeros.
+- The page presents the original event and append-only revision events as
+  separate evidence. It does not overwrite or relabel the original call,
+  project an effective status/direction/target, select a scoring basis, infer a
+  cancellation outcome, or calculate return, alpha, target hit, accuracy, rank,
+  confidence, or recommendation. Visible Korean and English copy explicitly
+  says that the base `ACTIVE` value is the immutable original-event status, not
+  a current or effective stance, including when the lineage ends in cancellation.
+
+## Coherent call-detail audit API contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-CA01 | Whole-audit provider | One `CallAuditProvider` owns detail, context, and revisions for a request. API and fixture are explicit whole-aggregate modes; the page has no second calls-provider read and no mixed-source fallback. |
+| P2-CA02 | Private exact transport | API mode uses only private `API_BASE_URL`, an encoded opaque call ID, the exact existing detail/context/revision GET paths, JSON acceptance, and no-store caching. It performs no client fetch, mutation, request-body, credential forwarding, public API-base setting, retry, or alternate-origin request. |
+| P2-CA03 | Existence and failure semantics | Detail is requested first. Its exact 404 maps to route not-found; every other detail failure and every context/revision failure aborts the complete audit. Valid known-empty context or `[]` lineage is distinct from failure. |
+| P2-CA04 | Closed runtime shape and raw display | Detail, every nested source/snapshot record, context/observations, every 16-field revision, and every non-null six-field corrected-terms object reject missing, extra, or mistyped fields. JSON null is preserved, no missing numeric is coerced to zero, targets/non-null asset price are positive and finite, and macro magnitude is strictly below `1e26`. Revision ISO instants and corrected target numbers render without formatter rounding; the JS adapter does not claim lexical decimal-scale recovery. |
+| P2-CA05 | Cross-surface joins and phase mode | Detail call/source/snapshot, context records, and revisions retain their own canonical joins and all belong to the requested call where applicable. Every aggregate record is exactly `DEMO`; `REALTIME`, `DELAYED`, and `EOD` fail closed. Separate document-family provenance/source IDs remain independent rather than being forced equal. |
+| P2-CA06 | Compatible chronology | Call and nested records preserve their canonical point-in-time bounds. Revisions preserve original-event lower bound, their own event/processing/capture order, and nondecreasing event time only; the web adapter adds no unsupported cross-row processing/capture rule. |
+| P2-CA07 | Exact append-only lineage | Revision IDs and `(provider, providerEventId)` identity pairs are unique, sequence is `1..N`, parent links name the immediately preceding event, correction/cancellation payload rules are exact, and cancellation is terminal. Reuse of one provider-event string by a different provider is not rejected. Source IDs and raw reasons remain revision evidence. |
+| P2-CA08 | No lifecycle or scoring projection | Rendering explicitly identifies base `ACTIVE` as immutable original-event status rather than current/effective stance, even beside terminal cancellation. It does not mutate the original call or infer effective fields, outcome eligibility, result, metric, confidence, rank, or advice. Existing model-only outcomes remain disconnected. |
+| P2-CA09 | Backend and canonical isolation | The five existing OpenAPI paths, 14 schema files, 13 fixture files, manifest membership, V1–V5 Flyway set, and Spring read contracts remain unchanged. This slice adds only a web consumer of the existing reads. |
+
+## Coherent call-detail audit web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-CAW01 | Populated audit | `/calls/demo-call-002` retains original `ACTIVE`, `BULLISH`, and `$235.00` detail evidence and adds exactly the ordered `demo-call-revision-001` correction followed by terminal `demo-call-revision-002` cancellation, with canonical IDs, types, raw ISO times, reason, source reference, data mode, provenance, and nullable terms intact. Correction target `232` remains separate revision evidence. Adjacent copy explicitly says base `ACTIVE` is original-event status, not a current/effective stance. |
+| P2-CAW02 | Honest empty lineage | A known call with a valid API `[]` renders an explicit no-recorded-revisions state. It does not display zero revisions as completeness, unchanged status, provider health, or proof that no later correction exists. |
+| P2-CAW03 | Error and not-found distinction | Exact detail 404 uses the localized call not-found boundary. Configuration, transport, response, context, or revision validation failures use the recoverable localized route error and reveal no partial canonical record or fixture fallback. Korean and English state copy stays provider-neutral: it must not mislabel an API, configuration, transport, or validation failure as a fixture-read failure. |
+| P2-CAW04 | Canonical versus presentation language | Korean-default and English views translate only labels and explanations. Revision type, reason, IDs, source/provenance, timestamps, numeric inputs, null/`NA`, and lineage order remain canonical in both locales. |
+| P2-CAW05 | Evidence-first layout | Original and revision events remain visibly distinct, use semantic headings/list or table structures, and expose state without color alone. At 1440, 1280, and 390 pixels dense audit evidence is locally contained with no page overflow or hidden fields. |
+| P2-CAW06 | Server-only runtime | Browser navigation causes no request to `API_BASE_URL`; Next performs the transport server-side. Populated, empty, not-found, and recoverable-error flows produce no hydration, console warning/error, or page error. |
+| P2-CAW07 | Regression boundary | Calls list/dashboard and all other routes retain their current provider contracts. Existing detail/source/snapshot/context facts, locale persistence, navigation, schemas, backend responses, and deferred P3/P5/P8 boundaries are not weakened. |
+
+## Coherent call-detail audit API required tests
+
+- Adapter tests cover exact detail/context/revision records, all nullable fields,
+  populated and known-empty contexts, populated and empty lineages, opaque ID
+  encoding, closed keys, enum/date/instant/numeric validation, nested joins,
+  exact all-surface `DEMO` enforcement (including otherwise-consistent
+  `REALTIME`/`DELAYED`/`EOD` rejection), and the compatible chronology/lineage
+  rules. Context goldens include inclusive macro-vintage bounds, start/end
+  ordering, future-event lower bounds with earnings exempt, positive snapshot
+  asset price, strict macro `1e26` magnitude boundaries, and distinct preserved
+  provenance IDs that must not be forced equal.
+- Transport tests prove detail-first ordering, exact three paths from one private
+  origin, JSON/no-store options, 404-only not-found mapping, and fail-closed
+  behavior for invalid configuration, redirects, network errors, every non-2xx
+  stage, content-type/JSON/shape failures, and dependent endpoint divergence.
+- Fixture-provider tests prove it returns the same whole-audit shape without an
+  API import. Factory tests cover exact `fixture`/`api`, deterministic default,
+  unsupported input, and the absence of runtime fallback.
+- Page/component tests cover Korean and English populated correction and
+  cancellation, known-empty lineage, not-found/error separation, canonical
+  values, nullable terms, original-event preservation, and absence of effective
+  lifecycle, outcome, ranking, or advice claims. Both locales assert the explicit
+  base-`ACTIVE` original-event/not-current-or-effective disclosure.
+- A synthetic page-provider test renders revision instants containing six
+  fractional digits and a high-precision corrected target. It asserts the exact
+  ISO strings and raw numeric text, the separate currency, and unchanged base
+  status/direction/target, proving the UI does not silently format away evidence.
+- Responsive Playwright covers populated and empty audit flows, keyboard focus,
+  local containment, page overflow, external-browser request isolation, and
+  zero runtime errors at 1440, 1280, and 390 pixels.
+- A dedicated integration job boots PostgreSQL 17, the packaged Spring API, and
+  Next in exact API mode. It exercises the real server-side detail/context/
+  revision path for populated and known-empty calls and proves that the browser
+  never calls the API origin directly. Route interception or a web-only mock is
+  not accepted as the cross-stack proof.
+- Repository CI locks the exact server-only provider structure, adapter field
+  sets and transport markers, page/factory source isolation, unchanged canonical
+  and backend file/path sets, and the required unit/E2E/integration test sources.
+
+## Coherent call-detail audit API deferred work
+
+This slice does not connect a paid or production analyst provider. The Spring
+API still serves canonical DEMO fixture-backed persistence. P5 retains licensed
+provider ingestion, entitlements, freshness/health, retry policy, and rights
+review. P3 retains effective lifecycle/basis rules and deterministic outcomes;
+P8 retains historical materialization and screening. Authentication, user-
+specific visibility, cross-endpoint snapshot tokens, streaming, polling,
+revision writes, source-document expansion, and list/dashboard API migration
+require separate reviewed contracts.
 
 ## Local gate
 

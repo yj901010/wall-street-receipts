@@ -13,9 +13,11 @@ market publication state, recorded S&P call history, and the honest known-
 deferred Screener shell; actual screening remains P8 work. P1 provides a
 canonical analyst-call ledger,
 source evidence, immutable point-in-time market and macro/event context,
-list/detail APIs, and responsive web routes. Append-only correction,
-cancellation, and outcome records preserve audit, methodology, and input
-lineage without claiming P3 scoring results. Kafka, Redis,
+list/detail APIs, and responsive web routes. The call-detail audit can now read
+its detail, context, and append-only correction/cancellation lineage together
+through the private Spring API transport without mixing API and fixture facts.
+Outcome records preserve audit, methodology, and input lineage without claiming
+P3 scoring results. Kafka, Redis,
 ClickHouse, OpenSearch, object storage, and commercial data providers remain
 later-phase extension points rather than runtime dependencies.
 
@@ -37,6 +39,8 @@ Copy-Item .env.example .env
 docker compose up -d postgres
 corepack enable
 pnpm install --frozen-lockfile
+$env:CALL_AUDIT_PROVIDER = "api"
+$env:API_BASE_URL = "http://localhost:8080"
 pnpm --dir apps/web dev
 ```
 
@@ -47,13 +51,16 @@ Set-Location apps/api
 .\mvnw.cmd spring-boot:run
 ```
 
-On macOS or Linux, use `cp .env.example .env` and
-`./apps/api/mvnw spring-boot:run` instead. The default local endpoints are:
+On macOS or Linux, use `cp .env.example .env`, start the web process with
+`CALL_AUDIT_PROVIDER=api API_BASE_URL=http://localhost:8080 pnpm --dir apps/web dev`,
+and use `./apps/api/mvnw spring-boot:run` instead. The default local endpoints
+are:
 
 - Web: <http://localhost:3000>
 - API: <http://localhost:8080>
 - PostgreSQL: `localhost:5432`
 - Analyst calls: <http://localhost:3000/calls>
+- Coherent call-detail audit: <http://localhost:3000/calls/demo-call-002>
 - Analyst identities: <http://localhost:3000/analysts>
 - Institution identities: <http://localhost:3000/institutions>
 - Methodology registry: <http://localhost:3000/methodology>
@@ -63,6 +70,19 @@ On macOS or Linux, use `cp .env.example .env` and
 - Analyst-call API: <http://localhost:8080/v1/calls>
 - Revision audit API: <http://localhost:8080/v1/calls/demo-call-002/revisions>
 - Outcome audit API: <http://localhost:8080/v1/calls/demo-call-001/outcomes>
+
+The explicit web-process environment above selects `CALL_AUDIT_PROVIDER=api`.
+Consequently,
+`/calls/[id]` reads the canonical detail, context, and revision resources from
+the Spring API through the server-only `API_BASE_URL`. The browser never calls
+that origin directly. Set `CALL_AUDIT_PROVIDER=fixture` only when deliberately
+running the complete detail audit offline; an API error never falls back to
+fixture data or becomes an empty lineage.
+
+This is the first real web-to-application-API connection, but it is not yet a
+commercial market-data connection: Spring still imports the repository's
+synthetic DEMO fixtures into PostgreSQL. Licensed provider ingestion remains a
+separately reviewed P5 boundary.
 
 Stop the database without deleting its volume:
 

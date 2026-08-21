@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { formatMoney } from "@/lib/format-money";
 import { getLocale } from "@/lib/i18n/server";
-import { callsProvider, type AnalystCallDetail } from "@/lib/providers";
+import { callAuditProvider } from "@/lib/providers/call-audit-provider.server";
+import type { AnalystCallDetail } from "@/lib/providers";
 import { getCallsMessages, type CallsMessages } from "../messages";
 import { CallContextSections } from "./call-context-sections";
 
@@ -19,6 +20,10 @@ function utc(value: string) {
 
 function valueOrNa(value: string | number | null) {
   return value ?? "NA";
+}
+
+function rawNumberOrNa(value: number | null) {
+  return value === null ? "NA" : String(value);
 }
 
 function number(value: number | null, options: Intl.NumberFormatOptions = {}) {
@@ -81,16 +86,13 @@ function sourceLocation(
 export default async function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [{ id }, locale] = await Promise.all([params, getLocale()]);
   const messages = getCallsMessages(locale).detail;
-  const provider = callsProvider();
-  const [detail, context] = await Promise.all([
-    provider.findById(id),
-    provider.findContextByCallId(id),
-  ]);
+  const audit = await callAuditProvider().findById(id);
 
-  if (!detail) {
+  if (!audit) {
     notFound();
   }
 
+  const { detail, context, revisions } = audit;
   const { call, institution, analyst, asset, source, snapshot } = detail;
   const snapshotMetrics = snapshot
     ? [
@@ -213,6 +215,71 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
             )}
           </section>
         </div>
+
+        <section className="detail-section revision-section" aria-labelledby="revision-history-title">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">{messages.revisionHistoryEyebrow}</p>
+              <h2 id="revision-history-title">{messages.revisionHistory}</h2>
+            </div>
+            <span className="mono">{messages.revisionCount(revisions.length)}</span>
+          </div>
+          <p className="section-note revision-policy">{messages.revisionAppendOnly}</p>
+          {revisions.length === 0 ? (
+            <div className="empty-state revision-empty" role="status">
+              <h3>{messages.noRevisionsTitle}</h3>
+              <p>{messages.noRevisionsDescription}</p>
+            </div>
+          ) : (
+            <ol className="revision-timeline">
+              {revisions.map((revision) => (
+                <li key={revision.revisionId}>
+                  <article aria-label={messages.revisionItemLabel(revision.sequenceNumber, revision.revisionType)}>
+                    <div className="revision-heading">
+                      <div>
+                        <p className="eyebrow">#{revision.sequenceNumber}</p>
+                        <h3>{revision.revisionType}</h3>
+                      </div>
+                      <span className="mode-badge">{revision.dataMode}</span>
+                    </div>
+                    <dl className="revision-evidence-grid">
+                      <div><dt>{messages.revisionId}</dt><dd className="mono">{revision.revisionId}</dd></div>
+                      <div><dt>{messages.revisionSchema}</dt><dd className="mono">{revision.schemaVersion}</dd></div>
+                      <div><dt>{messages.revisionCallId}</dt><dd className="mono">{revision.callId}</dd></div>
+                      <div><dt>{messages.revisionSequence}</dt><dd className="mono">{revision.sequenceNumber}</dd></div>
+                      <div><dt>{messages.revisionType}</dt><dd>{revision.revisionType}</dd></div>
+                      <div><dt>{messages.supersedesRevision}</dt><dd className="mono">{valueOrNa(revision.supersedesRevisionId)}</dd></div>
+                      <div><dt>{messages.revisionEventTime}</dt><dd className="mono"><time dateTime={revision.eventTime}>{revision.eventTime}</time></dd></div>
+                      <div><dt>{messages.revisionProcessingTime}</dt><dd className="mono"><time dateTime={revision.processingTime}>{revision.processingTime}</time></dd></div>
+                      <div><dt>{messages.revisionCapturedAt}</dt><dd className="mono"><time dateTime={revision.capturedAt}>{revision.capturedAt}</time></dd></div>
+                      <div><dt>{messages.revisionProvider}</dt><dd>{revision.provider}</dd></div>
+                      <div><dt>{messages.revisionProviderEvent}</dt><dd className="mono">{revision.providerEventId}</dd></div>
+                      <div><dt>{messages.revisionSourceReference}</dt><dd className="mono">{revision.sourceReferenceId}</dd></div>
+                      <div><dt>{messages.revisionDataMode}</dt><dd>{revision.dataMode}</dd></div>
+                      <div><dt>{messages.revisionProvenance}</dt><dd className="mono">{revision.provenanceId}</dd></div>
+                      <div className="revision-reason"><dt>{messages.revisionReason}</dt><dd>{revision.reason}</dd></div>
+                    </dl>
+                    {revision.correctedTerms ? (
+                      <div className="revision-terms">
+                        <h4>{messages.correctedTerms}</h4>
+                        <dl className="revision-evidence-grid" aria-label={messages.correctionTermsLabel}>
+                          <div><dt>{messages.correctedDirection}</dt><dd>{revision.correctedTerms.direction}</dd></div>
+                          <div><dt>{messages.correctedRating}</dt><dd>{valueOrNa(revision.correctedTerms.originalRating)}</dd></div>
+                          <div><dt>{messages.correctedPreviousTarget}</dt><dd className="mono">{rawNumberOrNa(revision.correctedTerms.previousTarget)}</dd></div>
+                          <div><dt>{messages.correctedTarget}</dt><dd className="mono">{rawNumberOrNa(revision.correctedTerms.target)}</dd></div>
+                          <div><dt>{messages.correctedCurrency}</dt><dd className="mono">{valueOrNa(revision.correctedTerms.currency)}</dd></div>
+                          <div><dt>{messages.correctedTargetDate}</dt><dd className="mono">{valueOrNa(revision.correctedTerms.targetDate)}</dd></div>
+                        </dl>
+                      </div>
+                    ) : (
+                      <p className="section-note revision-cancellation-note">{messages.cancellationTermsUnavailable}</p>
+                    )}
+                  </article>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
 
         <section className="detail-section snapshot-section" aria-labelledby="snapshot-title">
           <div className="section-heading">

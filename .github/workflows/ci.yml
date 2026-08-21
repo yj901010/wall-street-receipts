@@ -3333,6 +3333,423 @@ jobs:
           )
           PYTHON
 
+      - name: Guard coherent server-side call audit API boundary
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import json
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          web_root = Path("apps/web/src")
+          provider_root = web_root / "lib/providers"
+          expected_provider_files = {
+              "call-audit-provider.ts",
+              "call-audit-adapter.ts",
+              "fixture-call-audit-provider.ts",
+              "api-call-audit-provider.server.ts",
+              "call-audit-provider.server.ts",
+          }
+          actual_provider_files = {
+              path.name
+              for path in provider_root.glob("*call-audit*.ts")
+              if not path.name.endswith(".test.ts")
+          }
+          require(
+              actual_provider_files == expected_provider_files,
+              f"Call-audit production provider set is not exact: {sorted(actual_provider_files)}",
+          )
+
+          interface_path = provider_root / "call-audit-provider.ts"
+          adapter_path = provider_root / "call-audit-adapter.ts"
+          fixture_path = provider_root / "fixture-call-audit-provider.ts"
+          api_path = provider_root / "api-call-audit-provider.server.ts"
+          factory_path = provider_root / "call-audit-provider.server.ts"
+          page_path = web_root / "app/calls/[id]/page.tsx"
+          messages_path = web_root / "app/calls/messages.ts"
+          required_paths = (
+              interface_path, adapter_path, fixture_path, api_path, factory_path,
+              page_path, messages_path,
+          )
+          require(all(path.is_file() for path in required_paths), "Call-audit source boundary is incomplete")
+
+          interface_source = interface_path.read_text(encoding="utf-8")
+          adapter_source = adapter_path.read_text(encoding="utf-8")
+          fixture_source = fixture_path.read_text(encoding="utf-8")
+          api_source = api_path.read_text(encoding="utf-8")
+          factory_source = factory_path.read_text(encoding="utf-8")
+          page_source = page_path.read_text(encoding="utf-8")
+          messages_source = messages_path.read_text(encoding="utf-8")
+
+          require(
+              all(marker in interface_source for marker in (
+                  "export type CallAuditSnapshot", "detail: AnalystCallDetail",
+                  "context: CallContext", "revisions: readonly CallRevision[]",
+                  "findById(callId: string): Promise<CallAuditSnapshot | null>",
+              )),
+              "CallAuditProvider must expose one closed detail/context/revision aggregate",
+          )
+          revision_fields = {
+              "revisionId", "schemaVersion", "callId", "supersedesRevisionId",
+              "sequenceNumber", "provider", "providerEventId", "revisionType",
+              "eventTime", "processingTime", "correctedTerms", "reason",
+              "sourceReferenceId", "dataMode", "capturedAt", "provenanceId",
+          }
+          corrected_fields = {
+              "direction", "originalRating", "previousTarget", "target", "currency", "targetDate",
+          }
+          require(
+              all(re.search(rf"\b{re.escape(field)}\b", interface_source) for field in revision_fields),
+              "CallRevision is missing canonical fields",
+          )
+          require(
+              all(re.search(rf"\b{re.escape(field)}\b", interface_source) for field in corrected_fields),
+              "CorrectedCallTerms is missing canonical fields",
+          )
+
+          require(
+              all(marker in api_source for marker in (
+                  "typeof window", 'method: "GET"', 'cache: "no-store"',
+                  'redirect: "error"', 'Accept: "application/json"',
+                  'split(";", 1)', 'contentType !== "application/json"',
+                  "encodeURIComponent(callId)", "Promise.all([",
+                  "v1/calls/${encodedCallId}", "v1/calls/${encodedCallId}/context",
+                  "v1/calls/${encodedCallId}/revisions", "response.status === 404",
+              )),
+              "API call-audit transport is missing exact GET/no-store/redirect/media/path semantics",
+          )
+          detail_request = api_source.find('"detail"')
+          dependent_requests = api_source.find("Promise.all([")
+          require(
+              0 <= detail_request < dependent_requests,
+              "API call-audit transport must establish detail existence before dependent reads",
+          )
+          require(
+              not any(marker in api_source for marker in (
+                  "fixtures/", "fixture-call-audit-provider", "NEXT_PUBLIC_",
+                  "localStorage", "sessionStorage", "document.cookie", "Authorization",
+              )),
+              "API call-audit transport crosses its server/source boundary",
+          )
+
+          require("typeof window" in factory_source, "Call-audit factory lacks the server runtime guard")
+          require(
+              'process.env.CALL_AUDIT_PROVIDER ?? "fixture"' in factory_source
+              and 'configuredProvider === "fixture"' in factory_source
+              and 'configuredProvider === "api"' in factory_source
+              and "process.env.API_BASE_URL" in factory_source,
+              "Call-audit factory must select exact fixture/api modes and private API_BASE_URL",
+          )
+          require(
+              ".toLowerCase(" not in factory_source and ".toLocaleLowerCase(" not in factory_source,
+              "Call-audit provider selector must not normalize unsupported values",
+          )
+          require(
+              "catch" not in factory_source and "fallback" not in factory_source.lower(),
+              "Call-audit factory must not implement runtime fallback",
+          )
+
+          require(
+              "fixtures/v1/analyst-call-revisions.json" in fixture_source
+              and "FixtureCallsProvider" in fixture_source
+              and "validateCallAuditSnapshot" in fixture_source
+              and "compareCallAuditInstants" in fixture_source,
+              "Fixture call-audit mode must assemble and validate one canonical aggregate",
+          )
+          require(
+              "Date.parse(" not in fixture_source
+              and "API_BASE_URL" not in fixture_source
+              and "fetch(" not in fixture_source,
+              "Fixture call-audit mode must remain microsecond-safe and transport-free",
+          )
+
+          adapter_markers = (
+              "closedRecord", "adaptCallDetailResponse", "adaptCallContextResponse",
+              "adaptCallRevisionsResponse", "validateCallAuditSnapshot",
+              'detail.call.dataMode !== "DEMO"', "nullablePositiveNumber(record.assetPrice",
+              "absolute magnitude below 1e26",
+              "vintageStart must not follow vintageEnd", "must be active on the snapshot event date",
+              "must not precede eventTime", "providerEventIdentity",
+              r"${revision.provider}\u0000${revision.providerEventId}",
+              "has an eventTime earlier than the prior revision",
+              "appears after a terminal cancellation", "predates the original call event",
+          )
+          require(
+              all(marker in adapter_source for marker in adapter_markers),
+              "Call-audit adapter lacks closed DEMO/chronology/vintage/lineage validation",
+          )
+          require(
+              not re.search(r"\.provenanceId\s*!==\s*[^\n;]*\.provenanceId", adapter_source),
+              "Call-audit adapter must not invent cross-record provenance equality",
+          )
+
+          require(
+              "callAuditProvider" in page_source
+              and "const { detail, context, revisions } = audit" in page_source
+              and "revision.revisionId" in page_source
+              and "revision.correctedTerms" in page_source,
+              "Call-detail page must render the one-provider audit and append-only revisions",
+          )
+          require(
+              "callsProvider" not in page_source
+              and "FixtureCallAuditProvider" not in page_source
+              and "ApiCallAuditProvider" not in page_source,
+              "Call-detail page must not bypass the whole-audit factory",
+          )
+          require(
+              "utc(revision." not in page_source
+              and "formatMoney(revision.correctedTerms" not in page_source,
+              "Revision ISO instants and corrected targets must render without formatter rounding",
+          )
+          require(
+              all(marker in messages_source for marker in (
+                  "revisionHistory", "revisionAppendOnly", "noRevisionsTitle",
+                  "noRevisionsDescription", "cancellationTermsUnavailable",
+              ))
+              and "불변 이벤트 계보" in messages_source
+              and "Immutable event lineage" in messages_source
+              and "current or effective stance" in messages_source,
+              "Revision audit needs Korean and English presentation copy",
+          )
+          require(
+              all(marker in messages_source for marker in (
+                  'errorTitle: "콜 증거를 읽을 수 없습니다."',
+                  'errorTitle: "Call evidence could not be read."',
+                  'notFoundTitle: "이 이벤트는 정규 콜 원장에 없습니다."',
+                  'notFoundTitle: "This event is not in the canonical call ledger."',
+              ))
+              and "픽스처를 읽을 수 없습니다." not in messages_source
+              and "The fixture could not be read." not in messages_source
+              and "픽스처 원장에 없습니다." not in messages_source
+              and "not in the fixture ledger" not in messages_source,
+              "Call error and not-found copy must remain provider-neutral in Korean and English",
+          )
+
+          # Build a production import graph and prove no Client Component can
+          # reach either private `.server.ts` module. The explicit window guards
+          # remain defense in depth; no new package/ambient alias is required.
+          production_paths = tuple(
+              sorted(
+                  path for path in web_root.rglob("*")
+                  if path.is_file()
+                  and path.suffix in {".ts", ".tsx"}
+                  and ".test." not in path.name
+              )
+          )
+          production_set = {path.resolve() for path in production_paths}
+          import_pattern = re.compile(
+              r"(?:import|export)\s+(?:(?!;)[\s\S])*?[\"']([^\"']+)[\"']"
+          )
+          dynamic_import_pattern = re.compile(r"import\s*\(\s*[\"']([^\"']+)[\"']\s*\)")
+          commonjs_require_pattern = re.compile(r"require\s*\(\s*[\"']([^\"']+)[\"']\s*\)")
+
+          def resolve_import(owner, specifier):
+              if specifier.startswith("@/"):
+                  candidate = web_root / specifier[2:]
+              elif specifier.startswith("."):
+                  candidate = owner.parent / specifier
+              else:
+                  return None
+              variants = (
+                  candidate,
+                  Path(f"{candidate}.ts"),
+                  Path(f"{candidate}.tsx"),
+                  candidate / "index.ts",
+                  candidate / "index.tsx",
+              )
+              for variant in variants:
+                  if variant.is_file() and variant.resolve() in production_set:
+                      return variant.resolve()
+              return None
+
+          graph = {}
+          for source_path in production_paths:
+              source = source_path.read_text(encoding="utf-8")
+              module_specifiers = (
+                  import_pattern.findall(source)
+                  + dynamic_import_pattern.findall(source)
+                  + commonjs_require_pattern.findall(source)
+              )
+              graph[source_path.resolve()] = {
+                  resolved for specifier in module_specifiers
+                  if (resolved := resolve_import(source_path, specifier)) is not None
+              }
+          server_paths = {api_path.resolve(), factory_path.resolve()}
+          api_importers = {owner for owner, imports in graph.items() if api_path.resolve() in imports}
+          factory_importers = {owner for owner, imports in graph.items() if factory_path.resolve() in imports}
+          require(
+              api_importers == {factory_path.resolve()},
+              f"Only the whole-audit factory may import API transport: {sorted(map(str, api_importers))}",
+          )
+          require(
+              factory_importers == {page_path.resolve()},
+              f"Only the call-detail server page may import the audit factory: {sorted(map(str, factory_importers))}",
+          )
+          client_roots = {
+              path.resolve() for path in production_paths
+              if re.match(r"^\s*[\"']use client[\"'];", path.read_text(encoding="utf-8"))
+          }
+          for client_root in client_roots:
+              pending = [client_root]
+              visited = set()
+              while pending:
+                  candidate = pending.pop()
+                  if candidate in visited:
+                      continue
+                  visited.add(candidate)
+                  require(
+                      candidate not in server_paths,
+                      f"Client import graph reaches private call-audit server module: {client_root} -> {candidate}",
+                  )
+                  pending.extend(graph.get(candidate, ()))
+
+          env_entries = {}
+          for raw_line in Path(".env.example").read_text(encoding="utf-8").splitlines():
+              line = raw_line.strip()
+              if not line or line.startswith("#") or "=" not in line:
+                  continue
+              key, value = line.split("=", 1)
+              env_entries[key] = value
+          require(env_entries.get("API_BASE_URL") == "http://localhost:8080", "Private API_BASE_URL default changed")
+          require(env_entries.get("CALL_AUDIT_PROVIDER") == "api", "Documented local call audit must use api mode")
+          require("NEXT_PUBLIC_API_BASE_URL" not in env_entries, "Private API origin must not be public")
+          readme_source = Path("README.md").read_text(encoding="utf-8")
+          require(
+              '$env:CALL_AUDIT_PROVIDER = "api"' in readme_source
+              and '$env:API_BASE_URL = "http://localhost:8080"' in readme_source
+              and "CALL_AUDIT_PROVIDER=api API_BASE_URL=http://localhost:8080 pnpm --dir apps/web dev" in readme_source,
+              "Local web startup docs must pass the private API selector/origin into the Next process",
+          )
+
+          expected_schemas = {
+              "analyst-call-revision.schema.json", "analyst-call.schema.json",
+              "call-context.schema.json", "call-outcome.schema.json", "event-context.schema.json",
+              "macro-observation.schema.json", "macro-snapshot.schema.json", "market-board.schema.json",
+              "market-map.schema.json", "market-snapshot.schema.json", "market-treemap.schema.json",
+              "scoring-methodology.schema.json", "source-document.schema.json", "source-reference.schema.json",
+          }
+          expected_fixtures = {
+              "analyst-call-revisions.json", "analyst-calls.json", "call-contexts.json",
+              "call-outcomes.json", "manifest.json", "market-board.json",
+              "market-map-nasdaq100.json", "market-map.json", "market-snapshots.json",
+              "market-treemap-nasdaq100.json", "market-treemap-sp500.json",
+              "master-data.json", "timeline-nvda.json",
+          }
+          expected_migrations = {
+              "V1__baseline.sql", "V2__analyst_calls.sql", "V3__analyst_call_revisions.sql",
+              "V4__call_outcomes.sql", "V5__call_contexts.sql",
+          }
+          require(
+              {path.name for path in Path("schemas").glob("*.json")} == expected_schemas,
+              "Call-audit web transport must not change the canonical schema set",
+          )
+          require(
+              {path.name for path in Path("fixtures/v1").glob("*.json")} == expected_fixtures,
+              "Call-audit web transport must not change the canonical fixture set",
+          )
+          require(
+              {path.name for path in Path("apps/api/src/main/resources/db/migration").glob("*.sql")}
+              == expected_migrations,
+              "Call-audit web transport must not change Flyway",
+          )
+          openapi_source = Path("contracts/openapi.yaml").read_text(encoding="utf-8")
+          openapi_paths = set(re.findall(r"^  (/[^\n]+):\s*$", openapi_source, re.MULTILINE))
+          require(
+              openapi_paths == {
+                  "/v1/calls", "/v1/calls/{id}", "/v1/calls/{id}/revisions",
+                  "/v1/calls/{id}/outcomes", "/v1/calls/{id}/context",
+              },
+              "Call-audit web transport must consume the unchanged five-path OpenAPI surface",
+          )
+          api_main_source = "\n".join(
+              path.read_text(encoding="utf-8")
+              for path in Path("apps/api/src/main").rglob("*")
+              if path.is_file() and path.suffix.lower() in {".java", ".sql", ".yml", ".yaml"}
+          )
+          require(
+              "CallAudit" not in api_main_source and "/call-audit" not in api_main_source,
+              "P2 call-audit consumer must not add a Spring audit endpoint or model",
+          )
+
+          provider_tests = {path.name for path in provider_root.glob("*call-audit*.test.ts")}
+          require(
+              any("adapter" in name for name in provider_tests)
+              and any("api" in name for name in provider_tests)
+              and any("fixture" in name for name in provider_tests)
+              and any("provider.server" in name for name in provider_tests),
+              f"Missing adapter/API/fixture/factory call-audit unit tests: {sorted(provider_tests)}",
+          )
+          provider_test_source = "\n".join(
+              path.read_text(encoding="utf-8") for path in provider_root.glob("*call-audit*.test.ts")
+          )
+          require(
+              all(marker in provider_test_source for marker in (
+                  "redirect", "application/jsonp", "REALTIME", "DELAYED", "EOD",
+                  "microsecond", "provider-event identity tuple", "vintage", "assetPrice",
+                  "rejects unsupported selector", "1e26",
+              )),
+              "Call-audit unit tests must cover transport and canonical negative boundaries",
+          )
+
+          page_test_path = web_root / "app/calls/[id]/page.test.tsx"
+          require(page_test_path.is_file(), "Missing call-detail page contract tests")
+          page_test_source = page_test_path.read_text(encoding="utf-8")
+          calls_page_test_path = web_root / "app/calls/page.test.tsx"
+          require(calls_page_test_path.is_file(), "Missing call-ledger state tests")
+          calls_page_test_source = calls_page_test_path.read_text(encoding="utf-8")
+          require(
+              all(marker in page_test_source for marker in (
+                  "ACTIVE", "BULLISH", "235", "상단 상태는 변경 불가 원본 이벤트 필드",
+              )),
+              "Call-detail tests must lock original status/direction/target and raw microsecond revisions",
+          )
+          microsecond_instants = set(re.findall(
+              r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z", page_test_source
+          ))
+          high_precision_targets = re.findall(r"\b\d+\.\d{3,}\b", page_test_source)
+          require(
+              len(microsecond_instants) >= 3 and high_precision_targets,
+              "Call-detail synthetic test must retain three raw microsecond instants and a precise target",
+          )
+          require(
+              "콜 증거를 읽을 수 없습니다." in calls_page_test_source
+              and "이 이벤트는 정규 콜 원장에 없습니다." in page_test_source,
+              "Call route-state tests must exercise provider-neutral error and not-found copy",
+          )
+
+          e2e_path = Path("apps/web/e2e/call-revisions.spec.ts")
+          require(e2e_path.is_file(), "Missing call-revisions Playwright integration source")
+          e2e_source = e2e_path.read_text(encoding="utf-8")
+          require(
+              all(marker in e2e_source for marker in (
+                  "demo-call-002", "demo-call-001", "demo-call-revision-001",
+                  "demo-call-revision-002", "CORRECTION", "CANCELLATION",
+                  "ACTIVE", "BULLISH", "235", "current or effective stance",
+                  "collectRuntimeErrors", 'page.on("request"', "browserApiRequests",
+              )),
+              "Call-revisions E2E must cover populated/empty/server-only/runtime boundaries",
+          )
+          workflow_source = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+          require(
+              all(marker in workflow_source for marker in (
+                  "call-audit-integration:", "postgres:17-alpine", "CALL_AUDIT_PROVIDER: api",
+                  "API_BASE_URL: http://localhost:8080", "call-revisions.spec.ts",
+                  "SERVER_TOMCAT_ACCESSLOG_BUFFERED: 'false'", "call_audit_access",
+                  "Verify Next requested all three real API resources",
+              )),
+              "CI must retain the real PostgreSQL/Spring/Next call-audit integration gate",
+          )
+
+          print(
+              "Validated coherent DEMO-only detail/context/revision providers, private exact "
+              "transport, reverse client isolation, and unchanged canonical/backend surfaces"
+          )
+          PYTHON
+
       - name: Guard application-owned screener shell boundary
         shell: bash
         run: |
@@ -5271,15 +5688,139 @@ jobs:
 
       - name: Build
         env:
-          NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+          CALL_AUDIT_PROVIDER: fixture
           NEXT_PUBLIC_DATA_MODE: DEMO
         run: pnpm --dir apps/web build
 
       - name: End-to-end test
         env:
-          NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+          CALL_AUDIT_PROVIDER: fixture
           NEXT_PUBLIC_DATA_MODE: DEMO
         run: pnpm --dir apps/web test:e2e
+
+  call-audit-integration:
+    name: Call audit integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: wsr
+          POSTGRES_USER: wsr
+          POSTGRES_PASSWORD: wsr
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wsr -d wsr"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+          cache-dependency-path: apps/api/pom.xml
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium and system dependencies
+        run: pnpm --dir apps/web exec playwright install --with-deps chromium
+
+      - name: Package API without repeating the API test job
+        working-directory: apps/api
+        run: |
+          chmod +x mvnw
+          ./mvnw -B -ntp -DskipTests package
+
+      - name: Start fixture-backed Spring API
+        env:
+          APP_ENV: integration
+          DATA_MODE: DEMO
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: wsr
+          POSTGRES_USER: wsr
+          POSTGRES_PASSWORD: wsr
+          MARKET_PROVIDER: fixture
+          ANALYST_PROVIDER: fixture
+          SERVER_TOMCAT_ACCESSLOG_ENABLED: 'true'
+          SERVER_TOMCAT_ACCESSLOG_BUFFERED: 'false'
+          SERVER_TOMCAT_BASEDIR: ${{ runner.temp }}/call-audit-tomcat
+          SERVER_TOMCAT_ACCESSLOG_DIRECTORY: logs
+          SERVER_TOMCAT_ACCESSLOG_PREFIX: call_audit_access
+          SERVER_TOMCAT_ACCESSLOG_SUFFIX: .log
+          SERVER_TOMCAT_ACCESSLOG_PATTERN: '%m %U %s'
+        run: |
+          java -jar apps/api/target/wall-street-receipts-api-0.0.1-SNAPSHOT.jar \
+            > "${RUNNER_TEMP}/call-audit-api.log" 2>&1 &
+          echo $! > "${RUNNER_TEMP}/call-audit-api.pid"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:8080/actuator/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "${RUNNER_TEMP}/call-audit-api.log"
+          exit 1
+
+      - name: Exercise real Spring call-audit transport through Next
+        env:
+          CI: 'true'
+          CALL_AUDIT_PROVIDER: api
+          API_BASE_URL: http://localhost:8080
+          NEXT_PUBLIC_DATA_MODE: DEMO
+        run: >-
+          pnpm --dir apps/web exec playwright test call-revisions.spec.ts
+          --project=chromium-1280
+
+      - name: Verify Next requested all three real API resources
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import os
+          from pathlib import Path
+
+          log_root = Path(os.environ["RUNNER_TEMP"]) / "call-audit-tomcat" / "logs"
+          logs = sorted(log_root.glob("call_audit_access*.log"))
+          if not logs:
+              raise SystemExit(f"Spring access log is missing under {log_root}")
+          access = "\n".join(path.read_text(encoding="utf-8") for path in logs)
+          required = {
+              "GET /v1/calls/demo-call-002 200",
+              "GET /v1/calls/demo-call-002/context 200",
+              "GET /v1/calls/demo-call-002/revisions 200",
+              "GET /v1/calls/demo-call-001 200",
+              "GET /v1/calls/demo-call-001/context 200",
+              "GET /v1/calls/demo-call-001/revisions 200",
+          }
+          missing = sorted(marker for marker in required if marker not in access)
+          if missing:
+              raise SystemExit(f"Next did not exercise the complete Spring audit: {missing}\n{access}")
+          print("Verified populated and known-empty detail/context/revision reads through Spring")
+          PYTHON
+
+      - name: Print integration logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          test ! -f "${RUNNER_TEMP}/call-audit-api.log" || cat "${RUNNER_TEMP}/call-audit-api.log"
+          find "${RUNNER_TEMP}/call-audit-tomcat" -type f -name '*.log' -print -exec cat {} \; 2>/dev/null || true
 
   api:
     name: API

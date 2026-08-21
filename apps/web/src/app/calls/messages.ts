@@ -74,6 +74,37 @@ export type CallsMessages = {
     newTarget: string;
     targetChange: string;
     targetDate: string;
+    revisionHistoryEyebrow: string;
+    revisionHistory: string;
+    revisionCount: (count: number) => string;
+    revisionAppendOnly: string;
+    noRevisionsTitle: string;
+    noRevisionsDescription: string;
+    revisionItemLabel: (sequence: number, type: string) => string;
+    revisionId: string;
+    revisionSchema: string;
+    revisionCallId: string;
+    revisionSequence: string;
+    revisionType: string;
+    supersedesRevision: string;
+    revisionEventTime: string;
+    revisionProcessingTime: string;
+    revisionCapturedAt: string;
+    revisionReason: string;
+    revisionProvider: string;
+    revisionProviderEvent: string;
+    revisionSourceReference: string;
+    revisionDataMode: string;
+    revisionProvenance: string;
+    correctedTerms: string;
+    correctionTermsLabel: string;
+    cancellationTermsUnavailable: string;
+    correctedDirection: string;
+    correctedRating: string;
+    correctedPreviousTarget: string;
+    correctedTarget: string;
+    correctedCurrency: string;
+    correctedTargetDate: string;
     evidenceChain: string;
     sourceProvenance: string;
     verified: string;
@@ -274,6 +305,37 @@ const ko = {
     newTarget: "새 목표가",
     targetChange: "목표가 변경",
     targetDate: "목표 기준일",
+    revisionHistoryEyebrow: "불변 이벤트 계보",
+    revisionHistory: "콜 변경 이력",
+    revisionCount: (count) => `변경 이벤트 ${count}건`,
+    revisionAppendOnly: "상단 상태는 변경 불가 원본 이벤트 필드이며 현재 또는 유효 의견을 뜻하지 않습니다. 원본 콜은 덮어쓰지 않고 정정과 취소 이벤트를 발생 순서대로 추가 전용 기록으로 표시합니다.",
+    noRevisionsTitle: "기록된 변경 이벤트 없음",
+    noRevisionsDescription: "이 조회 응답에는 기록된 정정 또는 취소 이벤트가 없습니다. 빈 이력을 다른 기록으로 대체하지 않았습니다.",
+    revisionItemLabel: (sequence, type) => `변경 ${sequence} · ${type}`,
+    revisionId: "변경 ID",
+    revisionSchema: "스키마 버전",
+    revisionCallId: "콜 ID",
+    revisionSequence: "순서",
+    revisionType: "변경 유형",
+    supersedesRevision: "대체한 변경",
+    revisionEventTime: "변경 이벤트 시각",
+    revisionProcessingTime: "변경 처리 시각",
+    revisionCapturedAt: "변경 수집 시각",
+    revisionReason: "변경 사유",
+    revisionProvider: "제공자",
+    revisionProviderEvent: "제공자 이벤트",
+    revisionSourceReference: "출처 참조 ID",
+    revisionDataMode: "데이터 모드",
+    revisionProvenance: "출처 계보",
+    correctedTerms: "정정 조건",
+    correctionTermsLabel: "정정된 콜 조건",
+    cancellationTermsUnavailable: "취소 이벤트에는 정정 조건이 없습니다.",
+    correctedDirection: "정정 방향",
+    correctedRating: "정정 원문 투자의견",
+    correctedPreviousTarget: "정정 이전 목표가",
+    correctedTarget: "정정 목표가",
+    correctedCurrency: "정정 통화",
+    correctedTargetDate: "정정 목표 기준일",
     evidenceChain: "증거 연결",
     sourceProvenance: "출처 추적 정보",
     verified: "검증됨",
@@ -383,9 +445,9 @@ const ko = {
   states: {
     listLoadingEyebrow: "정규 이벤트 원장",
     listLoadingTitle: "애널리스트 콜을 불러오는 중…",
-    listLoadingDescription: "버전이 있는 픽스처와 출처 정보를 읽고 있습니다.",
+    listLoadingDescription: "버전이 있는 콜 증거와 출처 정보를 읽고 있습니다.",
     errorEyebrow: "콜 원장 이용 불가",
-    errorTitle: "픽스처를 읽을 수 없습니다.",
+    errorTitle: "콜 증거를 읽을 수 없습니다.",
     errorDescription: "일부 기록이나 임의로 만든 기록은 표시하지 않습니다.",
     tryAgain: "다시 시도",
     returnDashboard: "대시보드로 돌아가기",
@@ -393,7 +455,7 @@ const ko = {
     detailLoadingTitle: "콜 증거를 불러오는 중…",
     detailLoadingDescription: "식별자, 출처 정보, 변경 불가 시점 기준 스냅샷을 확인하고 있습니다.",
     notFoundEyebrow: "콜을 찾을 수 없음",
-    notFoundTitle: "이 이벤트는 픽스처 원장에 없습니다.",
+    notFoundTitle: "이 이벤트는 정규 콜 원장에 없습니다.",
     notFoundDescription: "요청한 식별자에 해당하는 정규 콜 기록이 없습니다. 대체 기록은 표시하지 않았습니다.",
     returnCalls: "애널리스트 콜로 돌아가기",
   },
@@ -474,6 +536,37 @@ const en = {
     newTarget: "New target",
     targetChange: "Target change",
     targetDate: "Target date",
+    revisionHistoryEyebrow: "Immutable event lineage",
+    revisionHistory: "Call revision history",
+    revisionCount: (count) => `${count} revision ${count === 1 ? "event" : "events"}`,
+    revisionAppendOnly: "The status above is the immutable original-event field, not a current or effective stance. The original call is never overwritten; correction and cancellation events appear in append-only event order.",
+    noRevisionsTitle: "No revision events recorded",
+    noRevisionsDescription: "This response contains no recorded correction or cancellation events. No substitute history was shown.",
+    revisionItemLabel: (sequence, type) => `Revision ${sequence} · ${type}`,
+    revisionId: "Revision ID",
+    revisionSchema: "Schema version",
+    revisionCallId: "Call ID",
+    revisionSequence: "Sequence",
+    revisionType: "Revision type",
+    supersedesRevision: "Supersedes revision",
+    revisionEventTime: "Revision event time",
+    revisionProcessingTime: "Revision processing time",
+    revisionCapturedAt: "Revision captured at",
+    revisionReason: "Revision reason",
+    revisionProvider: "Provider",
+    revisionProviderEvent: "Provider event",
+    revisionSourceReference: "Source reference ID",
+    revisionDataMode: "Data mode",
+    revisionProvenance: "Provenance",
+    correctedTerms: "Corrected terms",
+    correctionTermsLabel: "Corrected call terms",
+    cancellationTermsUnavailable: "Cancellation events do not carry corrected terms.",
+    correctedDirection: "Corrected direction",
+    correctedRating: "Corrected original rating",
+    correctedPreviousTarget: "Corrected previous target",
+    correctedTarget: "Corrected target",
+    correctedCurrency: "Corrected currency",
+    correctedTargetDate: "Corrected target date",
     evidenceChain: "Evidence chain",
     sourceProvenance: "Source provenance",
     verified: "Verified",
@@ -583,9 +676,9 @@ const en = {
   states: {
     listLoadingEyebrow: "Canonical event ledger",
     listLoadingTitle: "Loading analyst calls…",
-    listLoadingDescription: "Reading the versioned fixture and source provenance.",
+    listLoadingDescription: "Reading versioned call evidence and source provenance.",
     errorEyebrow: "Call ledger unavailable",
-    errorTitle: "The fixture could not be read.",
+    errorTitle: "Call evidence could not be read.",
     errorDescription: "No partial or invented records are being displayed.",
     tryAgain: "Try again",
     returnDashboard: "Return to dashboard",
@@ -593,7 +686,7 @@ const en = {
     detailLoadingTitle: "Loading call evidence…",
     detailLoadingDescription: "Resolving identities, provenance, and the immutable point-in-time snapshot.",
     notFoundEyebrow: "Call not found",
-    notFoundTitle: "This event is not in the fixture ledger.",
+    notFoundTitle: "This event is not in the canonical call ledger.",
     notFoundDescription: "The requested identifier has no canonical call record. No substitute record was shown.",
     returnCalls: "Return to analyst calls",
   },

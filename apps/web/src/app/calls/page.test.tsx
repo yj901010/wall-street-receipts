@@ -97,7 +97,7 @@ describe("CallsPage", () => {
       <CallsError error={new Error("fixture failed")} reset={reset} />,
       "ko",
     );
-    expect(screen.getByRole("heading", { name: "픽스처를 읽을 수 없습니다." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "콜 증거를 읽을 수 없습니다." })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(reset).toHaveBeenCalledOnce();
   });

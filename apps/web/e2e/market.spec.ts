@@ -95,13 +95,12 @@ test.describe("known-unavailable market board", () => {
     await expectVisibleKeyboardFocus(marketLink);
 
     const publication = page.getByRole("region", { name: "시장 보드 게시 상태" });
-    for (let attempt = 0; attempt < 12; attempt += 1) {
-      await page.keyboard.press("Tab");
-      if (await publication.evaluate((element) => element === document.activeElement)) break;
-    }
+    await expect(publication).toHaveAttribute("tabindex", "0");
+    const dashboardLink = publication.getByRole("link", { name: "대시보드 증거로 돌아가기" });
+    await dashboardLink.focus();
+    await page.keyboard.press("Shift+Tab");
     await expectVisibleKeyboardFocus(publication);
 
-    const dashboardLink = publication.getByRole("link", { name: "대시보드 증거로 돌아가기" });
     await page.keyboard.press("Tab");
     await expectVisibleKeyboardFocus(dashboardLink);
     await Promise.all([
