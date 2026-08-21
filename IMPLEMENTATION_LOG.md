@@ -2014,3 +2014,81 @@ outcome, provider, persistence, API, or product publication
   freshness/health, credentials, and non-DEMO publication remain P5 work. This
   disconnected policy requires no API key, account, paid plan, domain, license,
   or network access.
+
+## P3 — Calculator-side polarity adapter
+
+Status: complete for this disconnected adapter slice; the broader P3 scoring
+phase remains open, with no neutral entry point, calculator invocation, market
+input, provider, persistence, API, or product publication
+
+### Scope
+
+- Translate the already resolved common `DirectionalSide.BULLISH` and
+  `DirectionalSide.BEARISH` one-to-one into both existing calculator-specific
+  side enums.
+- Add exactly two public static methods on one final utility class; reject null,
+  use exhaustive enum switches, and expose no overload for the full polarity
+  resolution or any non-directional type.
+- Add no policy/methodology version, definition/hash, target, price, return,
+  horizon, calendar, observation, calculator input/result/invocation,
+  provider/account/key, scheduler, schema, fixture, manifest member, OpenAPI
+  path, Flyway migration, database row, API behavior, or web source.
+
+### Locked contract decisions
+
+- ADR-012 and `quality/P3_ACCEPTANCE.md` own the exact file/class/method surface,
+  two-side mappings, null rejection, purity, reverse-wiring, and deferred-
+  orchestration contracts.
+- `CalculatorSideAdapter.toTargetHitSide(DirectionalSide)` maps only
+  `BULLISH→TargetHitSide.BULLISH` and `BEARISH→TargetHitSide.BEARISH`.
+- `CalculatorSideAdapter.toDirectionalWinSide(DirectionalSide)` maps only
+  `BULLISH→DirectionalWinSide.BULLISH` and
+  `BEARISH→DirectionalWinSide.BEARISH`.
+- The adapter accepts neither `NonDirectional` nor the full polarity resolution;
+  neutral cannot become false, loss, bearish, unavailable, or a calculator
+  input. Null fails before translation rather than serving as neutral.
+- This one-to-one vocabulary bridge introduces no independent methodology
+  choice, so it has no policy version, canonical definition, hash, fingerprint,
+  provenance, or state.
+
+### Module and file boundary
+
+- Production adds exactly
+  `apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/adapter/CalculatorSideAdapter.java`.
+- Tests add exactly
+  `apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/adapter/CalculatorSideAdapterGoldenTest.java`.
+- ADR-012, the P3 acceptance contract, README, this log, and mutation-sensitive
+  repository CI own exact shape, sole-bridge imports, null/neutral closure,
+  unchanged canonical surfaces, and no-provider boundaries.
+
+### Routes
+
+- None. No calculator, controller, application service, provider, repository,
+  scheduler, API response, or web route invokes the adapter.
+
+### Verification
+
+- Focused `CalculatorSideAdapterGoldenTest`: PASS, 6/6 tests.
+- Full API Maven verification: PASS, 22 Surefire suites and 334/334 tests with
+  zero failures, errors, or skips; PostgreSQL Testcontainers migration coverage
+  executed 4/4 tests and the application JAR was packaged.
+- Repository-local workflow runtime blocks 1–20 passed 20/20, and embedded
+  Python blocks 1–21 passed syntax compilation 21/21. Block 21 is the
+  cross-stack verifier and was intentionally not run; no Spring or Next service
+  was launched for it.
+- SnakeYAML workflow parsing, Compose configuration validation, and
+  `git diff --check` passed.
+- Production/test/CI review reported zero blocker, zero high-severity, and zero
+  known false-positive findings. No web, browser, or cross-stack result is
+  claimed.
+
+### Deferred boundary
+
+- Extracting directional/non-directional branches from the full policy result,
+  choosing target/return inputs, composing unavailable states, invoking
+  calculators, methodology activation, fingerprinting, persistence, calculated
+  outcomes, aggregates, and UI publication remain later reviewed P3 work.
+- Real calendar and market providers, display/storage/derived-data rights,
+  freshness/health, credentials, and non-DEMO publication remain P5 work. This
+  adapter requires no API key, account, paid plan, domain, market calendar,
+  price feed, license, or network access.

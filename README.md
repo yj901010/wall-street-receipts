@@ -5,13 +5,16 @@ public analyst calls, preserves the market context that was available when each
 call was made, and evaluates later outcomes with a reproducible methodology.
 
 The P0 foundation and P1 domain/fixture phase are complete, broader P2 work
-remains open, and the first six isolated P3 slices are complete: the target-hit
+remains open, and the first seven isolated P3 slices are complete: the target-hit
 comparison core, schedule-only session-offset mechanics, the policy-neutral
 event/session relation classifier, and the pure directional-win comparison
 core, plus the strict session-close named-horizon and independent
 original/correction schedule-lineage policy and the approved five-direction
 polarity reduction that preserves neutral as non-directional rather than a
-loss. Delivered P2 work includes
+loss, and the disconnected mechanical adapter that translates the two common
+directional sides into the existing target-hit and directional-win side enums
+without invoking either calculator. The broader P3 scoring phase remains open.
+Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
 maps, market publication state, recorded S&P call history, and the honest
 known-deferred Screener shell; broader P2 remains open and actual screening
@@ -188,6 +191,14 @@ source direction remains in the policy context. Neutral is not false, a loss,
 missing evidence, or an excluded outcome. This disconnected leaf invokes no
 calculator or runtime surface and requires no provider credential or network
 access.
+
+The completed seventh P3 slice is one mechanical adapter with exactly two
+static methods. Common `BULLISH` and `BEARISH` map one-to-one into the existing
+target-hit and directional-win side enums. It accepts no neutral/full polarity
+result, invokes no calculator, and owns no policy version, hash, market input,
+provider, or runtime connection. Null is rejected rather than treated as
+neutral. No API key, account, provider, paid plan, market calendar, price feed,
+data license, or network access is required.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
