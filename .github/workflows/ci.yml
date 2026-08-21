@@ -3337,6 +3337,7 @@ jobs:
         shell: bash
         run: |
           python <<'PYTHON'
+          import hashlib
           import json
           import re
           from pathlib import Path
@@ -3371,9 +3372,10 @@ jobs:
           factory_path = provider_root / "call-audit-provider.server.ts"
           page_path = web_root / "app/calls/[id]/page.tsx"
           messages_path = web_root / "app/calls/messages.ts"
+          styles_path = web_root / "app/globals.css"
           required_paths = (
               interface_path, adapter_path, fixture_path, api_path, factory_path,
-              page_path, messages_path,
+              page_path, messages_path, styles_path,
           )
           require(all(path.is_file() for path in required_paths), "Call-audit source boundary is incomplete")
 
@@ -3384,14 +3386,16 @@ jobs:
           factory_source = factory_path.read_text(encoding="utf-8")
           page_source = page_path.read_text(encoding="utf-8")
           messages_source = messages_path.read_text(encoding="utf-8")
+          styles_source = styles_path.read_text(encoding="utf-8")
 
           require(
               all(marker in interface_source for marker in (
                   "export type CallAuditSnapshot", "detail: AnalystCallDetail",
                   "context: CallContext", "revisions: readonly CallRevision[]",
+                  "outcomes: readonly CallOutcome[]",
                   "findById(callId: string): Promise<CallAuditSnapshot | null>",
               )),
-              "CallAuditProvider must expose one closed detail/context/revision aggregate",
+              "CallAuditProvider must expose one closed detail/context/revision/outcome aggregate",
           )
           revision_fields = {
               "revisionId", "schemaVersion", "callId", "supersedesRevisionId",
@@ -3410,6 +3414,69 @@ jobs:
               all(re.search(rf"\b{re.escape(field)}\b", interface_source) for field in corrected_fields),
               "CorrectedCallTerms is missing canonical fields",
           )
+          outcome_fields = {
+              "outcomeId", "schemaVersion", "callId", "horizon", "basisRevisionId",
+              "cancellationRevisionId", "snapshotId", "methodologyId", "methodologyVersion",
+              "methodologyDefinitionHash", "inputFingerprint", "sequenceNumber",
+              "supersedesOutcomeId", "evaluationStatus", "reasonCode", "eventTime",
+              "processingTime", "assetReturn", "benchmarkReturn", "sectorReturn", "alpha",
+              "sectorAlpha", "mfe", "mae", "targetHit", "directionalWin", "targetError",
+              "dataComplete", "dataMode", "capturedAt", "provenanceId",
+          }
+          require(
+              all(re.search(rf"\b{re.escape(field)}\b", interface_source) for field in outcome_fields),
+              "CallOutcome is missing canonical fields",
+          )
+          outcome_type_match = re.search(
+              r"export type CallOutcome\s*=\s*\{(?P<body>[\s\S]*?)\n\};",
+              interface_source,
+          )
+          require(outcome_type_match is not None, "CallOutcome type declaration is missing")
+          declared_outcome_fields = set(re.findall(
+              r"^\s{2}([A-Za-z][A-Za-z0-9]*):", outcome_type_match.group("body"), re.MULTILINE
+          ))
+          require(
+              declared_outcome_fields == outcome_fields,
+              f"CallOutcome field set is not exact: {sorted(declared_outcome_fields)}",
+          )
+          snapshot_type_match = re.search(
+              r"export type CallAuditSnapshot\s*=\s*\{(?P<body>[\s\S]*?)\n\};",
+              interface_source,
+          )
+          require(snapshot_type_match is not None, "CallAuditSnapshot type declaration is missing")
+          declared_snapshot_fields = set(re.findall(
+              r"^\s{2}([A-Za-z][A-Za-z0-9]*):", snapshot_type_match.group("body"), re.MULTILINE
+          ))
+          require(
+              declared_snapshot_fields == {"detail", "context", "revisions", "outcomes"},
+              f"CallAuditSnapshot field set is not exact: {sorted(declared_snapshot_fields)}",
+          )
+          require(
+              all(marker in interface_source for marker in (
+                  "CALL_OUTCOME_HORIZONS", "CALL_OUTCOME_EVALUATION_STATUSES",
+                  "CALL_OUTCOME_REASON_CODES", "export type CallOutcome",
+              )),
+              "CallOutcome must retain closed horizon/status/reason/type declarations",
+          )
+          require(
+              'CALL_OUTCOME_HORIZONS = ["D1", "W1", "M1", "M3", "M6", "Y1"] as const'
+              in interface_source
+              and 'CALL_OUTCOME_EVALUATION_STATUSES = ["PENDING", "INCOMPLETE"] as const'
+              in interface_source
+              and 'CALL_OUTCOME_REASON_CODES = ["HORIZON_NOT_REACHED", "HORIZON_DATA_MISSING"] as const'
+              in interface_source
+              and "cancellationRevisionId: null;" in outcome_type_match.group("body")
+              and "dataComplete: false;" in outcome_type_match.group("body")
+              and 'dataMode: "DEMO";' in outcome_type_match.group("body")
+              and all(
+                  f"{field}: null;" in outcome_type_match.group("body")
+                  for field in (
+                      "assetReturn", "benchmarkReturn", "sectorReturn", "alpha", "sectorAlpha",
+                      "mfe", "mae", "targetHit", "directionalWin", "targetError",
+                  )
+              ),
+              "CallOutcome type must remain exact PENDING/INCOMPLETE DEMO with null metrics/results",
+          )
 
           require(
               all(marker in api_source for marker in (
@@ -3418,9 +3485,10 @@ jobs:
                   'split(";", 1)', 'contentType !== "application/json"',
                   "encodeURIComponent(callId)", "Promise.all([",
                   "v1/calls/${encodedCallId}", "v1/calls/${encodedCallId}/context",
-                  "v1/calls/${encodedCallId}/revisions", "response.status === 404",
+                  "v1/calls/${encodedCallId}/revisions", "v1/calls/${encodedCallId}/outcomes",
+                  "response.status === 404",
               )),
-              "API call-audit transport is missing exact GET/no-store/redirect/media/path semantics",
+              "API call-audit transport is missing exact four-read GET/no-store/redirect/media/path semantics",
           )
           detail_request = api_source.find('"detail"')
           dependent_requests = api_source.find("Promise.all([")
@@ -3455,10 +3523,12 @@ jobs:
 
           require(
               "fixtures/v1/analyst-call-revisions.json" in fixture_source
+              and "fixtures/v1/call-outcomes.json" in fixture_source
               and "FixtureCallsProvider" in fixture_source
               and "validateCallAuditSnapshot" in fixture_source
+              and "normalizeFixtureOutcomeOrder" in fixture_source
               and "compareCallAuditInstants" in fixture_source,
-              "Fixture call-audit mode must assemble and validate one canonical aggregate",
+              "Fixture call-audit mode must assemble and validate one canonical four-surface aggregate",
           )
           require(
               "Date.parse(" not in fixture_source
@@ -3469,7 +3539,7 @@ jobs:
 
           adapter_markers = (
               "closedRecord", "adaptCallDetailResponse", "adaptCallContextResponse",
-              "adaptCallRevisionsResponse", "validateCallAuditSnapshot",
+              "adaptCallRevisionsResponse", "adaptCallOutcomesResponse", "validateCallAuditSnapshot",
               'detail.call.dataMode !== "DEMO"', "nullablePositiveNumber(record.assetPrice",
               "absolute magnitude below 1e26",
               "vintageStart must not follow vintageEnd", "must be active on the snapshot event date",
@@ -3477,10 +3547,34 @@ jobs:
               r"${revision.provider}\u0000${revision.providerEventId}",
               "has an eventTime earlier than the prior revision",
               "appears after a terminal cancellation", "predates the original call event",
+              "validateOutcomeResponse", "validateOutcomeJoins",
+              "must remain JSON null in the P2 audit-only boundary",
+              "must remain PENDING or INCOMPLETE in the P2 audit-only boundary",
+              "must remain DEMO in the P2 audit-only boundary",
+              "const OUTCOME_NULL_FIELDS", "for (const field of OUTCOME_NULL_FIELDS)",
+              "exactNull(record[field]",
+              "is not in deterministic server order",
+              "duplicates a natural outcome identity",
+              "does not supersede its immediate lineage predecessor",
+              "moves a lineage timestamp backwards",
           )
           require(
               all(marker in adapter_source for marker in adapter_markers),
               "Call-audit adapter lacks closed DEMO/chronology/vintage/lineage validation",
+          )
+          outcome_adapter_start = adapter_source.index("function adaptOutcome(")
+          outcome_adapter_end = adapter_source.index("function outcomeOrder(", outcome_adapter_start)
+          outcome_adapter_source = adapter_source[outcome_adapter_start:outcome_adapter_end]
+          require(
+              "finiteNumber(" not in outcome_adapter_source
+              and "nullableNumber(" not in outcome_adapter_source
+              and "parseFloat(" not in outcome_adapter_source
+              and "Number(" not in outcome_adapter_source,
+              "P2 outcome adaptation must reject metrics/results as non-null rather than parse numbers",
+          )
+          require(
+              "return [...values].sort(rawOutcomeOrder);" in fixture_source,
+              "Only fixture normalization may sort a copied outcome array into API order",
           )
           require(
               not re.search(r"\.provenanceId\s*!==\s*[^\n;]*\.provenanceId", adapter_source),
@@ -3489,10 +3583,28 @@ jobs:
 
           require(
               "callAuditProvider" in page_source
-              and "const { detail, context, revisions } = audit" in page_source
+              and "const { detail, context, revisions, outcomes } = audit" in page_source
               and "revision.revisionId" in page_source
-              and "revision.correctedTerms" in page_source,
-              "Call-detail page must render the one-provider audit and append-only revisions",
+              and "revision.correctedTerms" in page_source
+              and "outcomes" in page_source
+              and re.search(
+                  r'className="detail-section outcome-section"\s+'
+                  r'aria-labelledby="outcome-title"\s+tabIndex=\{0\}',
+                  page_source,
+              ),
+              "Call-detail page must render one-provider revisions and outcome audit evidence",
+          )
+          require(
+              re.search(
+                  r"\.outcome-evidence-grid\s*>\s*div\s*\{[^}]*\bmin-width\s*:\s*0\s*;",
+                  styles_source,
+              )
+              and re.search(
+                  r"\.outcome-evidence-grid\s+dd\s*\{[^}]*\bmin-width\s*:\s*0\s*;"
+                  r"[^}]*\boverflow-wrap\s*:\s*anywhere\s*;",
+                  styles_source,
+              ),
+              "Outcome evidence must contain long canonical hashes without page overflow",
           )
           require(
               "callsProvider" not in page_source
@@ -3567,8 +3679,10 @@ jobs:
               return None
 
           graph = {}
+          production_sources = {}
           for source_path in production_paths:
               source = source_path.read_text(encoding="utf-8")
+              production_sources[source_path.resolve()] = source
               module_specifiers = (
                   import_pattern.findall(source)
                   + dynamic_import_pattern.findall(source)
@@ -3588,6 +3702,47 @@ jobs:
           require(
               factory_importers == {page_path.resolve()},
               f"Only the call-detail server page may import the audit factory: {sorted(map(str, factory_importers))}",
+          )
+
+          def reachable_from(root):
+              pending = [root]
+              visited = set()
+              while pending:
+                  candidate = pending.pop()
+                  if candidate in visited:
+                      continue
+                  visited.add(candidate)
+                  pending.extend(graph.get(candidate, ()))
+              return visited
+
+          fixture_calls_path = (provider_root / "fixture-calls-provider.ts").resolve()
+          api_descendants = reachable_from(api_path.resolve())
+          require(
+              fixture_path.resolve() not in api_descendants
+              and fixture_calls_path not in api_descendants,
+              "API call-audit descendant graph must not reach fixture aggregate or legacy fixture calls",
+          )
+          require(
+              all(
+                  "fixtures/" not in production_sources.get(candidate, "").replace("\\", "/")
+                  for candidate in api_descendants
+              ),
+              "API call-audit descendant graph must not reach raw canonical fixture imports",
+          )
+
+          fixture_descendants = reachable_from(fixture_path.resolve())
+          require(
+              api_path.resolve() not in fixture_descendants
+              and factory_path.resolve() not in fixture_descendants,
+              "Fixture call-audit descendant graph must not reach API transport or source factory",
+          )
+          fixture_descendant_source = "\n".join(
+              production_sources.get(candidate, "") for candidate in fixture_descendants
+          )
+          require(
+              "API_BASE_URL" not in fixture_descendant_source
+              and "fetch(" not in fixture_descendant_source,
+              "Fixture call-audit descendant graph must remain private-transport free",
           )
           client_roots = {
               path.resolve() for path in production_paths
@@ -3665,6 +3820,32 @@ jobs:
               },
               "Call-audit web transport must consume the unchanged five-path OpenAPI surface",
           )
+          protected_paths = sorted(
+              {
+                  Path("contracts/openapi.yaml"),
+                  *Path("schemas").glob("*.json"),
+                  *Path("fixtures/v1").glob("*.json"),
+                  *(
+                      path for path in Path("apps/api/src/main").rglob("*")
+                      if path.is_file()
+                  ),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          protected_digest = hashlib.sha256()
+          for protected_path in protected_paths:
+              protected_digest.update(protected_path.as_posix().encode("utf-8"))
+              protected_digest.update(b"\0")
+              protected_digest.update(
+                  protected_path.read_bytes().replace(b"\r\n", b"\n")
+              )
+              protected_digest.update(b"\0")
+          require(
+              len(protected_paths) == 117
+              and protected_digest.hexdigest()
+              == "51da0627166d747579ead5a99671ec71bacfaa2cc0956013e04b4a5535e10c10",
+              "Call-outcome audit consumer must not modify OpenAPI, schemas, fixtures, or API production",
+          )
           api_main_source = "\n".join(
               path.read_text(encoding="utf-8")
               for path in Path("apps/api/src/main").rglob("*")
@@ -3675,24 +3856,58 @@ jobs:
               "P2 call-audit consumer must not add a Spring audit endpoint or model",
           )
 
-          provider_tests = {path.name for path in provider_root.glob("*call-audit*.test.ts")}
+          provider_test_paths = {
+              *provider_root.glob("*call-audit*.test.ts"),
+              *provider_root.glob("*call-outcome*.test.ts"),
+          }
+          provider_tests = {path.name for path in provider_test_paths}
           require(
               any("adapter" in name for name in provider_tests)
               and any("api" in name for name in provider_tests)
               and any("fixture" in name for name in provider_tests)
-              and any("provider.server" in name for name in provider_tests),
+              and any("provider.server" in name for name in provider_tests)
+              and "call-outcome-adapter.test.ts" in provider_tests,
               f"Missing adapter/API/fixture/factory call-audit unit tests: {sorted(provider_tests)}",
           )
           provider_test_source = "\n".join(
-              path.read_text(encoding="utf-8") for path in provider_root.glob("*call-audit*.test.ts")
+              path.read_text(encoding="utf-8") for path in sorted(provider_test_paths)
           )
           require(
               all(marker in provider_test_source for marker in (
                   "redirect", "application/jsonp", "REALTIME", "DELAYED", "EOD",
                   "microsecond", "provider-event identity tuple", "vintage", "assetPrice",
                   "rejects unsupported selector", "1e26",
+                  "returns null after the detail 404 without requesting dependent resources",
+                  "rejects an exact dependent %s 404 while only detail 404 maps to not found",
+                  'it.each(["context", "revisions", "outcomes"] as const)',
               )),
               "Call-audit unit tests must cover transport and canonical negative boundaries",
+          )
+          require(
+              all(marker in provider_test_source for marker in (
+                  "outcome-demo-call-001-d1-v1-001",
+                  "outcome-demo-call-001-d1-v1-002",
+                  "outcome-demo-call-001-d1-v2-001",
+                  "outcome-demo-call-001-m1-v1-001",
+                  "PENDING", "HORIZON_NOT_REACHED", "INCOMPLETE",
+                  "HORIZON_DATA_MISSING", "CALCULATED", "EXCLUDED",
+                  "natural outcome identity", "methodology",
+                  "deterministic server order", "immediate lineage predecessor",
+                  "lineage timestamp backwards",
+                  "locks methodologyId final tie order with a mutation-sensitive response pair",
+                  "locks methodologyVersion as raw lexical text rather than semantic-version order",
+                  "locks outcomeId final tie order across independent basis lineages",
+                  "accepts a valid distinct-basis lineage interleave without folding either lineage",
+                  "rejects each snapshot availability timestamp independently when unavailable by outcome processing",
+                  'for (const field of ["processingTime", "capturedAt"] as const)',
+                  'methodologyVersion: "10.0.0"', 'methodologyVersion: "2.0.0"',
+              ))
+              and all(field in provider_test_source for field in (
+                  "assetReturn", "benchmarkReturn", "sectorReturn", "alpha",
+                  "sectorAlpha", "mfe", "mae", "targetHit", "directionalWin",
+                  "targetError",
+              )),
+              "Outcome tests must lock populated order, exact null phase guard, identity, and lineage",
           )
 
           page_test_path = web_root / "app/calls/[id]/page.test.tsx"
@@ -3720,6 +3935,42 @@ jobs:
               and "이 이벤트는 정규 콜 원장에 없습니다." in page_test_source,
               "Call route-state tests must exercise provider-neutral error and not-found copy",
           )
+          require(
+              all(marker in page_test_source for marker in (
+                  "outcome-demo-call-001-d1-v1-001",
+                  "outcome-demo-call-001-d1-v1-002",
+                  "outcome-demo-call-001-d1-v2-001",
+                  "outcome-demo-call-001-m1-v1-001",
+                  "HORIZON_DATA_MISSING", "HORIZON_NOT_REACHED",
+                  "방법론 정의 해시", "입력 지문",
+                  "Methodology definition hash", "Input fingerprint",
+                  "03af803fd61c21b86e1897d006e6cf4f92f28ce627b06eda13b319ebfa8a07e2",
+                  "b359ec47c7a5b17bc6a7ee18e82f1fe92eb100f9e2abee23a8e3c9aa7b94acd6",
+              )),
+              "Call-detail tests must render every outcome lineage and label distinct hash evidence",
+          )
+          require(
+              all(marker in page_test_source for marker in (
+                  'querySelectorAll("dt")', 'querySelectorAll("dd")',
+                  "expect(firstOutcomeLabels).toEqual([",
+                  "expect(firstOutcomeValues).toEqual([",
+              )),
+              "Call-detail tests must compare exact 31-label and 31-value outcome evidence arrays",
+          )
+          label_array = re.search(
+              r"expect\(firstOutcomeLabels\)\.toEqual\(\[(?P<body>[\s\S]*?)\]\);",
+              page_test_source,
+          )
+          value_array = re.search(
+              r"expect\(firstOutcomeValues\)\.toEqual\(\[(?P<body>[\s\S]*?)\]\);",
+              page_test_source,
+          )
+          require(
+              label_array is not None and value_array is not None
+              and len(re.findall(r'^\s*"(?:[^"\\]|\\.)*",?\s*$', label_array.group("body"), re.MULTILINE)) == 31
+              and len(re.findall(r'^\s*"(?:[^"\\]|\\.)*",?\s*$', value_array.group("body"), re.MULTILINE)) == 31,
+              "Call-detail outcome evidence arrays must each remain exactly 31 entries",
+          )
 
           e2e_path = Path("apps/web/e2e/call-revisions.spec.ts")
           require(e2e_path.is_file(), "Missing call-revisions Playwright integration source")
@@ -3733,6 +3984,49 @@ jobs:
               )),
               "Call-revisions E2E must cover populated/empty/server-only/runtime boundaries",
           )
+          outcome_e2e_path = Path("apps/web/e2e/call-outcomes.spec.ts")
+          require(outcome_e2e_path.is_file(), "Missing call-outcomes Playwright integration source")
+          outcome_e2e_source = outcome_e2e_path.read_text(encoding="utf-8")
+          require(
+              all(marker in outcome_e2e_source for marker in (
+                  "demo-call-001", "demo-call-002",
+                  "outcome-demo-call-001-d1-v1-001",
+                  "outcome-demo-call-001-d1-v1-002",
+                  "outcome-demo-call-001-d1-v2-001",
+                  "outcome-demo-call-001-m1-v1-001",
+                  "HORIZON_DATA_MISSING", "HORIZON_NOT_REACHED",
+                  "collectRuntimeErrors", 'page.on("request"', "browserApiRequests",
+                  "expectNoPageOverflow", "expectVisibleKeyboardFocus",
+                  'name: "거시 관측 증거 표"',
+                  'section[aria-labelledby="outcome-title"]',
+                  "await macroRegion.focus();", 'await page.keyboard.press("Tab");',
+                  "await expectVisibleKeyboardFocus(koreanOutcome);",
+                  "outcomeSectionMetrics", "firstRecordMetrics", "scrollWidth", "clientWidth",
+                  "methodologyHashEvidence", "inputFingerprintEvidence", "evidenceMetrics",
+                  "methodologyHashBox", "inputFingerprintBox", "boundingBox()",
+                  "expect(evidenceMetrics.scrollWidth).toBeLessThanOrEqual(evidenceMetrics.clientWidth + 1)",
+              )),
+              "Call-outcomes E2E must cover populated/empty/server-only/runtime boundaries",
+          )
+          require(
+              re.search(
+                  r"await macroRegion\.focus\(\);\s*"
+                  r"await page\.keyboard\.press\(\"Tab\"\);\s*"
+                  r"await expectVisibleKeyboardFocus\(koreanOutcome\);",
+                  outcome_e2e_source,
+              )
+              and not re.search(r"\b(?:koreanOutcome|englishOutcome|emptyOutcome)\.focus\(", outcome_e2e_source),
+              "Call-outcomes keyboard gate must Tab from context into outcome evidence without direct focus",
+          )
+          playwright_source = Path("apps/web/playwright.config.ts").read_text(encoding="utf-8")
+          require(
+              all(marker in playwright_source for marker in (
+                  'name: "chromium-1440"', 'viewport: { width: 1440, height: 1000 }',
+                  'name: "chromium-1280"', 'viewport: { width: 1280, height: 900 }',
+                  'name: "chromium-390"', 'viewport: { width: 390, height: 844 }',
+              )),
+              "Call-outcomes overflow gate must retain the shared 1440/1280/390 project matrix",
+          )
           workflow_source = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
           integration_start = workflow_source.index("\n  call-audit-integration:\n")
           integration_end = workflow_source.index("\n  api:\n", integration_start)
@@ -3741,6 +4035,7 @@ jobs:
               all(marker in integration_source for marker in (
                   "call-audit-integration:", "postgres:17-alpine", "CALL_AUDIT_PROVIDER: api",
                   "API_BASE_URL: http://localhost:8080", "call-revisions.spec.ts",
+                  "call-outcomes.spec.ts",
                   "SERVER_TOMCAT_ACCESSLOG_BUFFERED: 'false'", "call_audit_access",
                   "Verify Next requested the real list and all audit resources",
                   "GET /v1/calls/demo-call-002- 200",
@@ -3749,12 +4044,14 @@ jobs:
                   "GET /v1/calls/demo-call-001- 200",
                   "GET /v1/calls/demo-call-001/context- 200",
                   "GET /v1/calls/demo-call-001/revisions- 200",
+                  "GET /v1/calls/demo-call-002/outcomes- 200",
+                  "GET /v1/calls/demo-call-001/outcomes- 200",
               )),
               "CI must retain the real PostgreSQL/Spring/Next call-audit integration gate",
           )
 
           print(
-              "Validated coherent DEMO-only detail/context/revision providers, private exact "
+              "Validated coherent DEMO-only detail/context/revision/outcome providers, private exact "
               "transport, reverse client isolation, and unchanged canonical/backend surfaces"
           )
           PYTHON
@@ -6247,7 +6544,7 @@ jobs:
           NEXT_PUBLIC_DATA_MODE: DEMO
         run: >-
           pnpm --dir apps/web exec playwright test call-revisions.spec.ts
-          call-list-api.spec.ts --project=chromium-1280
+          call-outcomes.spec.ts call-list-api.spec.ts --project=chromium-1280
 
       - name: Verify Next requested the real list and all audit resources
         shell: bash
@@ -6271,14 +6568,16 @@ jobs:
               "GET /v1/calls/demo-call-002- 200",
               "GET /v1/calls/demo-call-002/context- 200",
               "GET /v1/calls/demo-call-002/revisions- 200",
+              "GET /v1/calls/demo-call-002/outcomes- 200",
               "GET /v1/calls/demo-call-001- 200",
               "GET /v1/calls/demo-call-001/context- 200",
               "GET /v1/calls/demo-call-001/revisions- 200",
+              "GET /v1/calls/demo-call-001/outcomes- 200",
           }
           missing = sorted(required - access_lines)
           if missing:
               raise SystemExit(f"Next did not exercise the complete Spring audit: {missing}\n{access}")
-          print("Verified list plus populated and known-empty detail/context/revision reads through Spring")
+          print("Verified list plus populated and known-empty detail/context/revision/outcome reads through Spring")
           PYTHON
 
       - name: Print integration logs on failure

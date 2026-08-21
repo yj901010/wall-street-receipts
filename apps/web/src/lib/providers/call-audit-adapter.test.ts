@@ -1,8 +1,10 @@
 import revisionsFixtureJson from "../../../../../fixtures/v1/analyst-call-revisions.json";
+import outcomesFixtureJson from "../../../../../fixtures/v1/call-outcomes.json";
 import { describe, expect, it } from "vitest";
 import {
   adaptCallContextResponse,
   adaptCallDetailResponse,
+  adaptCallOutcomesResponse,
   adaptCallRevisionsResponse,
   validateCallAuditSnapshot,
 } from "./call-audit-adapter";
@@ -19,10 +21,20 @@ async function fixtureAudit(callId = "demo-call-002"): Promise<CallAuditSnapshot
   const context = await calls.findContextByCallId(callId);
   if (!detail || !context) throw new Error("Test fixture call is unavailable.");
   const revisionPayload = revisionsFixtureJson.revisions.filter((revision) => revision.callId === callId);
+  const outcomePayload = [...outcomesFixtureJson.outcomes.filter((outcome) => outcome.callId === callId)]
+    .sort((left, right) => {
+      const horizonOrder = ["D1", "W1", "M1", "M3", "M6", "Y1"];
+      return horizonOrder.indexOf(left.horizon) - horizonOrder.indexOf(right.horizon)
+        || left.methodologyId.localeCompare(right.methodologyId, "en-US")
+        || left.methodologyVersion.localeCompare(right.methodologyVersion, "en-US")
+        || left.sequenceNumber - right.sequenceNumber
+        || left.outcomeId.localeCompare(right.outcomeId, "en-US");
+    });
   return {
     detail: adaptCallDetailResponse(clone(detail)),
     context: adaptCallContextResponse(clone(context)),
     revisions: adaptCallRevisionsResponse(clone(revisionPayload), callId),
+    outcomes: adaptCallOutcomesResponse(clone(outcomePayload), callId),
   };
 }
 
@@ -44,13 +56,18 @@ describe("call audit adapters", () => {
     const detail = clone(await calls.findById("demo-call-002"));
     const context = clone(await calls.findContextByCallId("demo-call-002"));
     const revisions = clone(revisionsFixtureJson.revisions);
-    const before = JSON.stringify({ detail, context, revisions });
+    const outcomes = clone(outcomesFixtureJson.outcomes.filter((outcome) => outcome.callId === "demo-call-001"));
+    const before = JSON.stringify({ detail, context, revisions, outcomes });
 
     adaptCallDetailResponse(detail);
     adaptCallContextResponse(context);
     adaptCallRevisionsResponse(revisions, "demo-call-002");
+    adaptCallOutcomesResponse(
+      [outcomes[0], outcomes[1], outcomes[3], outcomes[2]],
+      "demo-call-001",
+    );
 
-    expect(JSON.stringify({ detail, context, revisions })).toBe(before);
+    expect(JSON.stringify({ detail, context, revisions, outcomes })).toBe(before);
   });
 
   it("preserves every nullable detail field instead of filling missing evidence", async () => {
@@ -236,6 +253,9 @@ describe("call audit adapters", () => {
       }
       if (nonDemo.context.eventContext) nonDemo.context.eventContext.dataMode = mode;
       for (const revision of nonDemo.revisions) revision.dataMode = mode;
+      for (const outcome of nonDemo.outcomes) {
+        (outcome as unknown as { dataMode: typeof mode }).dataMode = mode;
+      }
       expect(() => validateCallAuditSnapshot(nonDemo)).toThrow(/must remain DEMO/);
     },
   );

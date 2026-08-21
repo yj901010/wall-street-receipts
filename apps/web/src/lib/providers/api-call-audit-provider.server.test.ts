@@ -1,11 +1,12 @@
 import revisionsFixtureJson from "../../../../../fixtures/v1/analyst-call-revisions.json";
+import outcomesFixtureJson from "../../../../../fixtures/v1/call-outcomes.json";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiCallAuditProvider } from "./api-call-audit-provider.server";
 import { FixtureCallAuditProvider } from "./fixture-call-audit-provider";
 import { FixtureCallsProvider } from "./fixture-calls-provider";
 
 type FetchCall = { url: URL; init: RequestInit | undefined };
-type ApiStage = "detail" | "context" | "revisions";
+type ApiStage = "detail" | "context" | "revisions" | "outcomes";
 
 function json(value: unknown, status = 200, contentType = "application/json; charset=utf-8") {
   return new Response(JSON.stringify(value), {
@@ -23,6 +24,16 @@ async function payloads(callId: string) {
     detail: structuredClone(detail),
     context: structuredClone(context),
     revisions: structuredClone(revisionsFixtureJson.revisions.filter((revision) => revision.callId === callId)),
+    outcomes: structuredClone([
+      ...outcomesFixtureJson.outcomes.filter((outcome) => outcome.callId === callId),
+    ].sort((left, right) => {
+      const horizons = ["D1", "W1", "M1", "M3", "M6", "Y1"];
+      return horizons.indexOf(left.horizon) - horizons.indexOf(right.horizon)
+        || (left.methodologyId < right.methodologyId ? -1 : left.methodologyId > right.methodologyId ? 1 : 0)
+        || (left.methodologyVersion < right.methodologyVersion ? -1 : left.methodologyVersion > right.methodologyVersion ? 1 : 0)
+        || left.sequenceNumber - right.sequenceNumber
+        || (left.outcomeId < right.outcomeId ? -1 : left.outcomeId > right.outcomeId ? 1 : 0);
+    })),
   };
 }
 
@@ -30,6 +41,7 @@ function apiStage(input: string | URL | Request): ApiStage {
   const pathname = new URL(input instanceof Request ? input.url : input.toString()).pathname;
   if (pathname.endsWith("/context")) return "context";
   if (pathname.endsWith("/revisions")) return "revisions";
+  if (pathname.endsWith("/outcomes")) return "outcomes";
   return "detail";
 }
 
@@ -58,6 +70,7 @@ function transport(payload: Awaited<ReturnType<typeof payloads>>) {
     calls.push({ url, init });
     if (url.pathname.endsWith("/context")) return json(payload.context);
     if (url.pathname.endsWith("/revisions")) return json(payload.revisions);
+    if (url.pathname.endsWith("/outcomes")) return json(payload.outcomes);
     return json(payload.detail);
   });
   return { calls, fetcher };
@@ -72,7 +85,7 @@ describe("ApiCallAuditProvider", () => {
     vi.unstubAllGlobals();
   });
 
-  it("fetches detail first, then context and revisions as one fail-closed aggregate", async () => {
+  it("fetches detail first, then context, revisions, and outcomes as one fail-closed aggregate", async () => {
     const fixturePayload = await payloads("demo-call-002");
     const { calls, fetcher } = transport(fixturePayload);
     const provider = new ApiCallAuditProvider("http://api.example.test/base/", fetcher);
@@ -80,10 +93,12 @@ describe("ApiCallAuditProvider", () => {
     const audit = await provider.findById("demo-call-002");
 
     expect(audit?.revisions).toHaveLength(2);
+    expect(audit?.outcomes).toEqual([]);
     expect(calls.map(({ url }) => url.pathname)).toEqual([
       "/base/v1/calls/demo-call-002",
       "/base/v1/calls/demo-call-002/context",
       "/base/v1/calls/demo-call-002/revisions",
+      "/base/v1/calls/demo-call-002/outcomes",
     ]);
     for (const { init } of calls) {
       expect(init).toMatchObject({ method: "GET", cache: "no-store", redirect: "error" });
@@ -100,12 +115,28 @@ describe("ApiCallAuditProvider", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it.each(["context", "revisions", "outcomes"] as const)(
+    "rejects an exact dependent %s 404 while only detail 404 maps to not found",
+    async (stage) => {
+      const fixturePayload = await payloads("demo-call-002");
+      const fetcher = failingStageTransport(
+        fixturePayload,
+        stage,
+        () => json({ code: "CALL_NOT_FOUND" }, 404, "application/problem+json"),
+      );
+      await expect(new ApiCallAuditProvider("http://api.example.test", fetcher).findById("demo-call-002"))
+        .rejects.toThrow(new RegExp(`${stage} returned HTTP 404`));
+      expect(fetcher).toHaveBeenCalledTimes(4);
+    },
+  );
+
   it("percent-encodes every path segment from the validated opaque call ID", async () => {
     const callId = "demo-call-002:archive";
     const fixturePayload = await payloads("demo-call-002");
     fixturePayload.detail.call.callId = callId;
     if (fixturePayload.detail.snapshot) fixturePayload.detail.snapshot.callId = callId;
     for (const revision of fixturePayload.revisions) revision.callId = callId;
+    for (const outcome of fixturePayload.outcomes) outcome.callId = callId;
     const { calls, fetcher } = transport(fixturePayload);
 
     await expect(new ApiCallAuditProvider("http://api.example.test", fetcher).findById(callId))
@@ -114,18 +145,19 @@ describe("ApiCallAuditProvider", () => {
       "http://api.example.test/v1/calls/demo-call-002%3Aarchive",
       "http://api.example.test/v1/calls/demo-call-002%3Aarchive/context",
       "http://api.example.test/v1/calls/demo-call-002%3Aarchive/revisions",
+      "http://api.example.test/v1/calls/demo-call-002%3Aarchive/outcomes",
     ]);
   });
 
-  it("preserves a valid known-empty revision response", async () => {
+  it("preserves known-empty revisions beside a populated outcome response", async () => {
     const fixturePayload = await payloads("demo-call-001");
     const { fetcher } = transport(fixturePayload);
     const provider = new ApiCallAuditProvider("http://api.example.test", fetcher);
 
-    await expect(provider.findById("demo-call-001")).resolves.toMatchObject({ revisions: [] });
+    await expect(provider.findById("demo-call-001")).resolves.toMatchObject({ revisions: [], outcomes: { length: 4 } });
   });
 
-  it.each(["detail", "context", "revisions"] as const)(
+  it.each(["detail", "context", "revisions", "outcomes"] as const)(
     "fails closed on a %s network failure",
     async (stage) => {
       const fixturePayload = await payloads("demo-call-002");
@@ -134,30 +166,33 @@ describe("ApiCallAuditProvider", () => {
       });
       await expect(new ApiCallAuditProvider("http://api.example.test", fetcher).findById("demo-call-002"))
         .rejects.toThrow(new RegExp(`${stage} request failed`));
+      expect(fetcher).toHaveBeenCalledTimes(stage === "detail" ? 1 : 4);
     },
   );
 
-  it.each(["detail", "context", "revisions"] as const)(
+  it.each(["detail", "context", "revisions", "outcomes"] as const)(
     "fails closed on a %s non-2xx response",
     async (stage) => {
       const fixturePayload = await payloads("demo-call-002");
       const fetcher = failingStageTransport(fixturePayload, stage, () => json({ code: "UPSTREAM" }, 503));
       await expect(new ApiCallAuditProvider("http://api.example.test", fetcher).findById("demo-call-002"))
         .rejects.toThrow(new RegExp(`${stage} returned HTTP 503`));
+      expect(fetcher).toHaveBeenCalledTimes(stage === "detail" ? 1 : 4);
     },
   );
 
-  it.each(["detail", "context", "revisions"] as const)(
+  it.each(["detail", "context", "revisions", "outcomes"] as const)(
     "fails closed on a %s non-JSON content type",
     async (stage) => {
       const fixturePayload = await payloads("demo-call-002");
       const fetcher = failingStageTransport(fixturePayload, stage, () => json({}, 200, "text/html"));
       await expect(new ApiCallAuditProvider("http://api.example.test", fetcher).findById("demo-call-002"))
         .rejects.toThrow(new RegExp(`${stage} did not return application/json`));
+      expect(fetcher).toHaveBeenCalledTimes(stage === "detail" ? 1 : 4);
     },
   );
 
-  it.each(["detail", "context", "revisions"] as const)(
+  it.each(["detail", "context", "revisions", "outcomes"] as const)(
     "fails closed on malformed %s JSON",
     async (stage) => {
       const fixturePayload = await payloads("demo-call-002");
@@ -167,6 +202,7 @@ describe("ApiCallAuditProvider", () => {
       }));
       await expect(new ApiCallAuditProvider("http://api.example.test", fetcher).findById("demo-call-002"))
         .rejects.toThrow(new RegExp(`${stage} returned malformed JSON`));
+      expect(fetcher).toHaveBeenCalledTimes(stage === "detail" ? 1 : 4);
     },
   );
 
@@ -174,14 +210,16 @@ describe("ApiCallAuditProvider", () => {
     ["detail", {}],
     ["context", null],
     ["revisions", { revisions: [] }],
+    ["outcomes", { outcomes: [] }],
   ] as const)("fails closed on a malformed %s shape", async (stage, malformedShape) => {
     const fixturePayload = await payloads("demo-call-002");
     const fetcher = failingStageTransport(fixturePayload, stage, () => json(malformedShape));
     await expect(new ApiCallAuditProvider("http://api.example.test", fetcher).findById("demo-call-002"))
       .rejects.toThrow();
+    expect(fetcher).toHaveBeenCalledTimes(stage === "detail" ? 1 : 4);
   });
 
-  it("rejects call-ID divergence at detail, context, and revision stages", async () => {
+  it("rejects call-ID divergence at detail, context, revision, and outcome stages", async () => {
     const detailDivergence = await payloads("demo-call-002");
     detailDivergence.detail.call.callId = "other-call";
     if (detailDivergence.detail.snapshot) detailDivergence.detail.snapshot.callId = "other-call";
@@ -201,6 +239,12 @@ describe("ApiCallAuditProvider", () => {
     const revisionFetch = transport(revisionDivergence).fetcher;
     await expect(new ApiCallAuditProvider("http://api.example.test", revisionFetch).findById("demo-call-002"))
       .rejects.toThrow(/must equal demo-call-002/);
+
+    const outcomeDivergence = await payloads("demo-call-001");
+    outcomeDivergence.outcomes[0]!.callId = "other-call";
+    const outcomeFetch = transport(outcomeDivergence).fetcher;
+    await expect(new ApiCallAuditProvider("http://api.example.test", outcomeFetch).findById("demo-call-001"))
+      .rejects.toThrow(/must equal demo-call-001/);
   });
 
   it("fails the whole aggregate on any dependent status without a fixture fallback", async () => {
@@ -210,6 +254,7 @@ describe("ApiCallAuditProvider", () => {
       const pathname = new URL(input instanceof Request ? input.url : input.toString()).pathname;
       if (pathname.endsWith("/context")) return json({ code: "CALL_NOT_FOUND" }, 404, "application/problem+json");
       if (pathname.endsWith("/revisions")) return json(fixturePayload.revisions);
+      if (pathname.endsWith("/outcomes")) return json(fixturePayload.outcomes);
       return json(fixturePayload.detail);
     });
 
@@ -225,6 +270,7 @@ describe("ApiCallAuditProvider", () => {
       const pathname = new URL(input instanceof Request ? input.url : input.toString()).pathname;
       if (pathname.endsWith("/context")) return json(fixturePayload.context);
       if (pathname.endsWith("/revisions")) return json({ revisions: fixturePayload.revisions });
+      if (pathname.endsWith("/outcomes")) return json(fixturePayload.outcomes);
       return json(fixturePayload.detail);
     });
 

@@ -60,7 +60,8 @@ test("renders populated and known-empty revision responses bilingually through t
   await expect(page.getByRole("status")).toContainText(
     "This response contains no recorded correction or cancellation events.",
   );
-  await expect(page.getByRole("article")).toHaveCount(0);
+  const emptyRevisionTimeline = page.locator('section[aria-labelledby="revision-history-title"]');
+  await expect(emptyRevisionTimeline.getByRole("article")).toHaveCount(0);
 
   await expectNoPageOverflow(page);
   expect(browserApiRequests).toEqual([]);

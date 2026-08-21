@@ -172,14 +172,47 @@ export type CallsMessages = {
     distance52WeekHigh: string;
     distanceAth: string;
     noInventedMarketValues: string;
-    deterministicScoring: string;
+    outcomeAuditEyebrow: string;
     outcome: string;
-    methodologyInactive: string;
+    outcomeBoundary: string;
+    outcomeCount: (count: number) => string;
+    outcomeAppendOnly: string;
+    outcomeNullPolicy: string;
+    outcomeNoCancellationInference: string;
+    noOutcomesTitle: string;
+    noOutcomesDescription: string;
+    outcomeItemLabel: (sequence: number, horizon: string, methodologyVersion: string, status: string) => string;
+    outcomeId: string;
+    outcomeSchemaVersion: string;
+    outcomeCallId: string;
+    outcomeHorizon: string;
+    outcomeBasisRevision: string;
+    outcomeCancellationRevision: string;
+    outcomeSnapshotId: string;
+    methodologyId: string;
     directionalWin: string;
     targetHit: string;
+    assetReturn: string;
+    benchmarkReturn: string;
+    sectorReturn: string;
     alpha: string;
+    sectorAlpha: string;
+    mfe: string;
+    mae: string;
+    targetError: string;
     methodologyVersion: string;
-    outcomeNote: string;
+    methodologyDefinitionHash: string;
+    inputFingerprint: string;
+    outcomeSequence: string;
+    supersedesOutcome: string;
+    evaluationStatus: string;
+    reasonCode: string;
+    outcomeEventTime: string;
+    outcomeProcessingTime: string;
+    outcomeCapturedAt: string;
+    outcomeDataComplete: string;
+    outcomeDataMode: string;
+    outcomeProvenance: string;
   };
   context: {
     macroSubject: string;
@@ -424,14 +457,47 @@ const ko = {
     distance52WeekHigh: "52주 최고가 대비 거리",
     distanceAth: "역대 최고가 대비 거리",
     noInventedMarketValues: "이 콜에 없는 시장 값을 임의로 만들지 않았습니다.",
-    deterministicScoring: "결정론적 평가",
-    outcome: "성과",
-    methodologyInactive: "방법론 미적용",
+    outcomeAuditEyebrow: "성과 감사 증거",
+    outcome: "성과 감사 이력",
+    outcomeBoundary: "감사 전용 · DEMO",
+    outcomeCount: (count) => `성과 기록 ${count}건`,
+    outcomeAppendOnly: "응답 순서를 그대로 보존한 추가 전용 이력입니다. 최신·현재·유효 성과로 접거나 대체하지 않습니다.",
+    outcomeNullPolicy: "P2 감사 경계에서는 계산되지 않은 결과 필드를 JSON null로만 허용하며 UI는 이를 NA로 표시합니다.",
+    outcomeNoCancellationInference: "콜 변경 이력의 취소를 EXCLUDED 성과나 다른 결과로 추론하지 않습니다.",
+    noOutcomesTitle: "이 감사 응답에 기록된 성과 이력 없음",
+    noOutcomesDescription: "이 감사 응답에는 기록된 성과 이벤트가 없습니다. 다른 이력이나 대체 결과를 표시하지 않았습니다.",
+    outcomeItemLabel: (sequence, horizon, methodologyVersion, status) => `성과 기록 ${sequence} · ${horizon} · 방법론 ${methodologyVersion} · ${status}`,
+    outcomeId: "성과 ID",
+    outcomeSchemaVersion: "스키마 버전",
+    outcomeCallId: "콜 ID",
+    outcomeHorizon: "평가 구간",
+    outcomeBasisRevision: "기준 변경 ID",
+    outcomeCancellationRevision: "취소 증거 ID",
+    outcomeSnapshotId: "스냅샷 ID",
+    methodologyId: "방법론 ID",
     directionalWin: "방향 적중",
     targetHit: "목표가 도달",
+    assetReturn: "자산 수익률",
+    benchmarkReturn: "벤치마크 수익률",
+    sectorReturn: "섹터 수익률",
     alpha: "알파",
+    sectorAlpha: "섹터 알파",
+    mfe: "최대 유리 변동(MFE)",
+    mae: "최대 불리 변동(MAE)",
+    targetError: "목표 오차",
     methodologyVersion: "방법론 버전",
-    outcomeNote: "버전이 있는 방법론으로 계산되기 전까지 성과 값은 NA로 유지됩니다. UI는 점수를 추론하지 않습니다.",
+    methodologyDefinitionHash: "방법론 정의 해시",
+    inputFingerprint: "입력 지문",
+    outcomeSequence: "계보 순번",
+    supersedesOutcome: "직전 성과 ID",
+    evaluationStatus: "평가 상태",
+    reasonCode: "사유 코드",
+    outcomeEventTime: "성과 이벤트 시각",
+    outcomeProcessingTime: "성과 처리 시각",
+    outcomeCapturedAt: "성과 수집 시각",
+    outcomeDataComplete: "데이터 완결",
+    outcomeDataMode: "데이터 모드",
+    outcomeProvenance: "성과 출처 계보",
   },
   context: {
     macroSubject: "거시 스냅샷",
@@ -676,14 +742,47 @@ const en = {
     distance52WeekHigh: "Distance from 52W high",
     distanceAth: "Distance from ATH",
     noInventedMarketValues: "No market values were invented for this call.",
-    deterministicScoring: "Deterministic scoring",
-    outcome: "Outcome",
-    methodologyInactive: "Methodology not active",
+    outcomeAuditEyebrow: "Outcome audit evidence",
+    outcome: "Outcome audit history",
+    outcomeBoundary: "AUDIT ONLY · DEMO",
+    outcomeCount: (count) => `${count} outcome record${count === 1 ? "" : "s"}`,
+    outcomeAppendOnly: "This append-only history preserves response order. It is never folded or substituted as a latest, current, or effective outcome.",
+    outcomeNullPolicy: "At the P2 audit boundary, uncalculated result fields are accepted only as JSON null and displayed as NA.",
+    outcomeNoCancellationInference: "A cancellation in call revision history is not inferred as an EXCLUDED outcome or any other result.",
+    noOutcomesTitle: "No outcome history recorded in this audit response",
+    noOutcomesDescription: "No outcome event is recorded in this audit response. No other history or substitute result was shown.",
+    outcomeItemLabel: (sequence, horizon, methodologyVersion, status) => `Outcome record ${sequence} · ${horizon} · methodology ${methodologyVersion} · ${status}`,
+    outcomeId: "Outcome ID",
+    outcomeSchemaVersion: "Schema version",
+    outcomeCallId: "Call ID",
+    outcomeHorizon: "Horizon",
+    outcomeBasisRevision: "Basis revision ID",
+    outcomeCancellationRevision: "Cancellation evidence ID",
+    outcomeSnapshotId: "Snapshot ID",
+    methodologyId: "Methodology ID",
     directionalWin: "Directional win",
     targetHit: "Target hit",
+    assetReturn: "Asset return",
+    benchmarkReturn: "Benchmark return",
+    sectorReturn: "Sector return",
     alpha: "Alpha",
+    sectorAlpha: "Sector alpha",
+    mfe: "Maximum favorable excursion (MFE)",
+    mae: "Maximum adverse excursion (MAE)",
+    targetError: "Target error",
     methodologyVersion: "Methodology version",
-    outcomeNote: "Outcome values remain NA until a versioned methodology is calculated. The UI never infers a score.",
+    methodologyDefinitionHash: "Methodology definition hash",
+    inputFingerprint: "Input fingerprint",
+    outcomeSequence: "Lineage sequence",
+    supersedesOutcome: "Superseded outcome ID",
+    evaluationStatus: "Evaluation status",
+    reasonCode: "Reason code",
+    outcomeEventTime: "Outcome event time",
+    outcomeProcessingTime: "Outcome processing time",
+    outcomeCapturedAt: "Outcome captured at",
+    outcomeDataComplete: "Data complete",
+    outcomeDataMode: "Data mode",
+    outcomeProvenance: "Outcome provenance",
   },
   context: {
     macroSubject: "macro snapshot",
