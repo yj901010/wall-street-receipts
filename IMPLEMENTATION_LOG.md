@@ -2084,11 +2084,88 @@ input, provider, persistence, API, or product publication
 
 ### Deferred boundary
 
-- Extracting directional/non-directional branches from the full policy result,
-  choosing target/return inputs, composing unavailable states, invoking
-  calculators, methodology activation, fingerprinting, persistence, calculated
-  outcomes, aggregates, and UI publication remain later reviewed P3 work.
+- ADR-013's disconnected routing slice now owns exact extraction and preservation
+  of directional/non-directional branches. Choosing target/return inputs,
+  composing unavailable states, invoking calculators, methodology activation,
+  fingerprinting, persistence, calculated outcomes, aggregates, and UI
+  publication remain later reviewed P3 work.
 - Real calendar and market providers, display/storage/derived-data rights,
   freshness/health, credentials, and non-DEMO publication remain P5 work. This
   adapter requires no API key, account, paid plan, domain, market calendar,
   price feed, license, or network access.
+
+## P3 — Calculator-side routing evidence
+
+Status: complete for this disconnected routing-evidence slice; the broader P3
+scoring phase remains open, with no calculator input/invocation, market input,
+provider, persistence, API, or product publication
+
+### Scope
+
+- Route one complete `CallDirectionPolarityResolution` into exactly preserved
+  directional calculator-side evidence or preserved non-directional evidence.
+- Keep the exact original polarity result record. Derive calculator-specific
+  sides only for a `Directional` source through `CalculatorSideAdapter`; give a
+  `NonDirectional` source no side or Boolean.
+- Add no target, favorable extreme, price, return, horizon, calendar,
+  observation, calculator input/result/invocation, provider/account/key,
+  methodology version/hash, scheduler, schema, fixture, manifest member,
+  OpenAPI path, Flyway migration, database row, API behavior, or web source.
+
+### Locked contract decisions
+
+- ADR-013 and `quality/P3_ACCEPTANCE.md` own the exact package/file/class/method,
+  sealed result, constructor consistency, source preservation, purity,
+  reverse-wiring, and deferred-calculation contracts.
+- `CalculatorSideRouting.route(CallDirectionPolarityResolution)` is the sole
+  public static routing method and uses an exhaustive sealed-pattern switch.
+- `DirectionalRoute(Directional source, TargetHitSide targetHitSide,
+  DirectionalWinSide directionalWinSide)` preserves the exact source and
+  recomputes both expected adapter translations before accepting direct
+  construction.
+- `NonDirectionalRoute(NonDirectional source)` preserves the exact source only.
+  Its `NEUTRAL_DIRECTION` evidence is not false, a miss/loss, bearish,
+  unavailable/missing, excluded, or a calculator input.
+- Routing mechanically composes ADR-011 and ADR-012, so it adds no policy or
+  methodology identity and does not rewrite the preserved source context/hash.
+
+### Module and file boundary
+
+- Production adds exactly
+  `apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/routing/CalculatorSideRouting.java`.
+- Tests add exactly
+  `apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/routing/CalculatorSideRoutingGoldenTest.java`.
+- ADR-013, the P3 acceptance contract, README, this log, and mutation-sensitive
+  repository CI own the exact sole routing exception and unchanged product/data
+  boundaries.
+
+### Routes
+
+- None. No calculator, controller, application service, provider, repository,
+  scheduler, API response, or web route invokes the routing leaf.
+
+### Verification
+
+- Focused `CalculatorSideRoutingGoldenTest`: PASS, 11/11 tests.
+- Full API Maven verification: PASS, 23 Surefire suites and 345/345 tests with
+  zero failures, errors, or skips; PostgreSQL Testcontainers migration coverage
+  executed 4/4 tests and the application JAR was packaged.
+- Repository-local workflow runtime blocks 1–21 passed 21/21. All embedded
+  Python blocks passed syntax compilation 22/22. Block 22 is the cross-stack
+  access-log verifier and was intentionally not run; no Spring or Next service
+  was launched for it.
+- SnakeYAML 2.5 workflow parsing, Compose configuration validation, and
+  `git diff --check` passed. No web, browser, or cross-stack result is claimed.
+
+### Deferred boundary
+
+- Target eligibility, target/return selection, horizon/window observation
+  identity, unavailable-state composition, calculator invocation, methodology
+  activation, fingerprinting, persistence, calculated outcomes, aggregates,
+  and UI publication remain later reviewed P3 work.
+- Before endpoint-price, asset-return, or target-error work, the exact price
+  basis, corporate-action/currency treatment, and decimal output policy require
+  reviewed versioned decisions. Real provider selection, credentials, and
+  display/storage/derived-data rights remain P5 work. This routing leaf requires
+  no API key, account, paid plan, domain, market calendar, price feed, license,
+  or network access.

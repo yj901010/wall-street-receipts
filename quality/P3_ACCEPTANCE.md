@@ -6,7 +6,8 @@ relation classifier vertical slices are complete. The strict session-close
 named-horizon and explicit forecast-basis policy slice is also complete. The
 call-direction polarity policy slice is also complete. None publishes a
 calculated outcome or completes the broader P3 scoring phase, which remains
-open. The mechanical calculator-side adapter slice is also complete.
+open. The mechanical calculator-side adapter slice is also complete. The
+disconnected calculator-side routing-evidence slice is also complete.
 
 ## Pure target-hit slice boundary
 
@@ -315,7 +316,8 @@ open. The mechanical calculator-side adapter slice is also complete.
 - The polarity leaf itself performs no side-enum adapter wiring, target or
   return calculation, horizon/observation selection, methodology activation,
   persistence, provider read, or product publication. ADR-012 separately owns
-  the sole mechanical common-side adapter.
+  the sole mechanical common-side adapter; ADR-013 separately owns the sole
+  disconnected full-result routing outside the direction package.
 
 ## Call-direction polarity policy contract gate
 
@@ -331,9 +333,9 @@ open. The mechanical calculator-side adapter slice is also complete.
 | P3-CP08 | Fail-closed request | Null request, policy version, or direction is invalid. The resolver has no fallback branch, default side, exception-to-neutral conversion, or behavior based on enum ordinal/name text. |
 | P3-CP09 | Determinism | Identical requests produce equal results regardless of clock, locale, default timezone, invocation order, prior calls, or attempted mutation of returned policy bytes. |
 | P3-CP10 | Pure source boundary | Production policy code imports only canonical `CallDirection`, its own package types, and exact deterministic JDK null/UTF-8 support. It imports no call/revision/outcome aggregate, calculator, horizon/calendar/window type, decimal/floating arithmetic, price/return/observation, provider, repository, fixture, JSON, Spring, persistence, network, scheduler, clock, locale, timezone, random, or LLM dependency. |
-| P3-CP11 | Closed reverse wiring | Only ADR-012's exact `CalculatorSideAdapter` may import nested `DirectionalSide`, solely to return the two calculator-specific side enums. No production class may reference the polarity request, resolver, version, context, full resolution, `NonDirectional`, or reason; no calculator is invoked; no controller, application service, provider, repository, scheduler, or web source consumes the policy. |
+| P3-CP11 | Closed reverse wiring | Outside the owning direction package, ADR-012's exact `CalculatorSideAdapter` may import only nested `DirectionalSide`, and ADR-013's exact `CalculatorSideRouting` may consume only the full resolution plus its `Directional`/`NonDirectional` variants. No other production class references the polarity types. Routing preserves the original result and invokes no calculator, controller, application service, provider, repository, scheduler, or web source. |
 | P3-CP12 | No publication | Existing 14 schemas, 13 canonical fixture files, manifest membership/order, five OpenAPI paths, five Flyway migrations, API/controller/repository/database behavior, canonical `CallDirection`, two model-only methodologies, four all-null outcomes, and web source remain unchanged. No API key, account, paid plan, domain, data license, or network access is required. |
-| P3-CP13 | Later integration boundary | Beyond ADR-012's mechanical side translation, target eligibility, calculator invocation, horizon observations and returns, cancellation eligibility, methodology definition/activation, point-in-time input identity, fingerprinting, outcome persistence, aggregation, and UI publication require later reviewed contracts. |
+| P3-CP13 | Later integration boundary | Beyond ADR-012's mechanical side translation and ADR-013's closed result routing, target eligibility, calculator invocation, horizon observations and returns, cancellation eligibility, methodology definition/activation, point-in-time input identity, fingerprinting, outcome persistence, aggregation, and UI publication require later reviewed contracts. |
 
 ## Required call-direction polarity golden and negative tests
 
@@ -356,9 +358,10 @@ open. The mechanical calculator-side adapter slice is also complete.
   non-directional reason. Replay under changed locale/default timezone restores
   global state in `finally`.
 - Source-boundary and repository CI reject ordinal/name/string/default mapping,
-  any reverse wiring beyond ADR-012's exact nested-side import, calculator
-  invocation, canonical JSON changes, and product publication. Source-local
-  vectors are tests only, not analyst or market facts.
+  any reverse wiring beyond ADR-012's exact nested-side import and ADR-013's
+  exact full-result routing, calculator invocation, canonical JSON changes, and
+  product publication. Source-local vectors are tests only, not analyst or
+  market facts.
 
 ## Calculator-side polarity adapter slice boundary
 
@@ -388,9 +391,9 @@ open. The mechanical calculator-side adapter slice is also complete.
 | P3-CSA07 | No calculator invocation | Production imports only the three side enums and `Objects`. It does not reference calculator/input/result classes, call `calculate`, create a target/return input, or produce available/unavailable metric evidence. |
 | P3-CSA08 | No new policy identity | The adapter contains no policy/methodology version, canonical definition, UTF-8 definition bytes, hash, fingerprint, provenance, clock, or state. ADR-011 remains the only source-direction reduction policy identity. |
 | P3-CSA09 | Determinism | Repeated identical translations return the same enum constants regardless of clock, locale, default timezone, invocation order, or prior calls. |
-| P3-CSA10 | Pure/no reverse wiring | Production depends on no aggregate, horizon/calendar/window, decimal/floating arithmetic, price/return/observation, provider, repository, fixture, JSON, Spring, persistence, network, scheduler, clock, locale, timezone, random, or LLM type. No other production class references the adapter. |
+| P3-CSA10 | Pure/closed reverse wiring | Production depends on no aggregate, horizon/calendar/window, decimal/floating arithmetic, price/return/observation, provider, repository, fixture, JSON, Spring, persistence, network, scheduler, clock, locale, timezone, random, or LLM type. Outside the adapter itself, only ADR-013's exact `CalculatorSideRouting` references it, solely to derive the two side enums; no other production class references the adapter. |
 | P3-CSA11 | No publication | Existing 14 schemas, 13 canonical fixture files, manifest membership/order, five OpenAPI paths, five Flyway migrations, API/controller/repository/database behavior, two model-only methodologies, four all-null outcomes, and web source remain unchanged. No API key, account, market calendar, price feed, paid plan, domain, data license, or network access is required. |
-| P3-CSA12 | Later orchestration boundary | Extracting `Directional` from a full polarity result, preserving `NonDirectional`, choosing metric inputs, invoking calculators, composing unavailable states, activating methodology, fingerprinting, persisting, aggregating, and publishing remain later reviewed contracts. |
+| P3-CSA12 | Later orchestration boundary | ADR-013 owns only extracting and preserving the two closed polarity branches. Choosing metric inputs, invoking calculators, composing unavailable states, activating methodology, fingerprinting, persisting, aggregating, and publishing remain later reviewed contracts. |
 
 ## Required calculator-side adapter golden and negative tests
 
@@ -407,6 +410,62 @@ open. The mechanical calculator-side adapter slice is also complete.
   `finally`. Source-boundary and repository CI prove no calculator invocation,
   reverse runtime wiring, version/hash, canonical JSON, or product publication.
 
+## Calculator-side routing evidence slice boundary
+
+- `CalculatorSideRouting` receives one complete
+  `CallDirectionPolarityResolution` and preserves its exact original record in
+  one of two closed evidence branches.
+- A `Directional` source becomes
+  `DirectionalRoute(source,targetHitSide,directionalWinSide)`. Both destination
+  sides are derived only through `CalculatorSideAdapter`; the route does not
+  reconstruct or replace the source policy context.
+- A `NonDirectional` source becomes `NonDirectionalRoute(source)` and retains
+  exact `NEUTRAL_DIRECTION` evidence. It has no target-hit side,
+  directional-win side, Boolean, unavailable state, metric, or fallback.
+- This is a mechanical composition of ADR-011 and ADR-012. It owns no new
+  policy/methodology version, definition, hash, fingerprint, provenance, state,
+  eligibility rule, or market evidence.
+- It constructs no calculator input and invokes no calculator. Source-local
+  vectors prove routing only and publish no result.
+
+## Calculator-side routing evidence contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-CSR01 | Exact file/package surface | Production adds exactly `apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/routing/CalculatorSideRouting.java`; tests add exactly the matching `CalculatorSideRoutingGoldenTest.java`. The separate routing package contains no second router/helper/request/result/version file, and ADR-012's adapter package remains exact-one-file. |
+| P3-CSR02 | Exact outer surface | `CalculatorSideRouting` is public and final with exactly one private zero-argument constructor and exactly one public static method, `Result route(CallDirectionPolarityResolution resolution)`. It has no field, instance method, overload, generic API, or other public member. |
+| P3-CSR03 | Exact closed result | Nested public sealed `Result` permits exactly public static final records `DirectionalRoute` and `NonDirectionalRoute` and declares no methods. `DirectionalRoute` components are exactly `Directional source`, `TargetHitSide targetHitSide`, and `DirectionalWinSide directionalWinSide`; `NonDirectionalRoute` contains exactly `NonDirectional source`. |
+| P3-CSR04 | Directional preservation | Routing either bullish source preserves that exact `Directional` record and derives both exact destination `BULLISH` sides through `CalculatorSideAdapter`; routing either bearish source preserves that exact record and derives both exact destination `BEARISH` sides. Strong source directions remain unchanged in the nested source context. |
+| P3-CSR05 | Neutral preservation | Routing the sole neutral policy result returns only `NonDirectionalRoute` containing the exact original `NonDirectional(NEUTRAL_DIRECTION)` record. No side, Boolean, false/loss, bearish mapping, unavailable/missing state, exclusion, or metric is created. |
+| P3-CSR06 | Constructor consistency | Null route input fails before switching. Direct `DirectionalRoute` construction rejects null source/either side and recomputes both expected adapter translations for both common sides, rejecting either mismatch. Direct `NonDirectionalRoute` rejects null source; its typed source already owns ADR-011 neutral/context/hash consistency. |
+| P3-CSR07 | Exhaustive routing | `route` uses an exhaustive sealed-pattern switch over exact `Directional` and `NonDirectional` variants with no default, ordinal/name/text parsing, reflection, alias, exception-to-neutral conversion, fallback, or future-variant inference. |
+| P3-CSR08 | Identity and determinism | Every route preserves the exact source object and therefore its original direction, policy version, and definition hash. Repeated routing returns equal evidence regardless of clock, locale, default timezone, invocation order, prior calls, environment, process, thread, or random state. |
+| P3-CSR09 | Pure composition | Production imports only `Objects`, `CalculatorSideAdapter`, the two calculator-side enums, full polarity resolution, and its exact two variants. It imports/references no calculator/input/result class, `calculate`, aggregate, horizon/calendar/window, decimal/floating arithmetic, price/return/observation, provider, repository, fixture, JSON, Spring, persistence, network, scheduler, clock, locale, timezone, environment/process/thread/random, reflection, or LLM type. |
+| P3-CSR10 | Exact reverse wiring | Outside the owning direction package, only this exact class consumes full polarity resolution; outside `CalculatorSideAdapter` itself, only this exact class consumes that adapter. No other production class references the routing class/package, and neither calculation primitive references routing or direction types. |
+| P3-CSR11 | No new policy/publication | Routing has no version/definition/hash/fingerprint/provenance/state and adds no schema, canonical fixture, manifest member, JSON golden, OpenAPI path, Flyway migration, database row, API/controller/provider/repository behavior, or web source. Both methodologies remain `MODEL_ONLY`; all four outcome metrics/results remain null. No API key, account, paid plan, domain, market calendar, price feed, data license, or network access is required. |
+| P3-CSR12 | Later calculation boundary | Target eligibility, target/return selection, horizon/window observation identity, unavailable-state composition, calculator invocation, methodology activation, fingerprinting, persistence, aggregation, and publication remain later reviewed contracts. A route is evidence only and cannot make an outcome calculated or complete. |
+
+## Required calculator-side routing golden and negative tests
+
+- One exact source-order matrix routes all five canonical directions through
+  the actual ADR-011 resolver. Strong/ordinary bullish and bearish rows assert
+  both exact destination sides; neutral asserts only the exact non-directional
+  source. Every route preserves the exact source object and repeated routing is
+  equal.
+- Direct `DirectionalRoute` construction covers both bullish and bearish
+  sources, both correct side pairs, each independently wrong target-hit side,
+  and each independently wrong directional-win side. Null route input and all
+  four null record components fail closed; direct neutral routing preserves its
+  exact source.
+- Reflection or equivalent exact-shape tests lock the final outer class,
+  private zero-argument constructor, sole public static route method, sealed
+  zero-method `Result`, exact permitted nested records/modifiers, and exact
+  record component names/types.
+- Replay under changed locale/default timezone restores global state in
+  `finally`. Source-boundary and repository CI prove exact imports, exhaustive
+  switching, sole reverse wiring, no calculator invocation, no policy identity,
+  no canonical JSON changes, and no product publication.
+
 ## Deferred work and implementation order
 
 1. Add endpoint-price/asset-return support only after catalog provenance, asset/venue
@@ -416,9 +475,9 @@ open. The mechanical calculator-side adapter slice is also complete.
    `actual` observation, positivity, output scale, and rounding policy are
    versioned. Target error precedes window metrics because it needs one resolved
    close rather than a complete high/low path.
-3. Invoke the calculators through the completed mechanical adapter only after
-   target eligibility, window inclusivity, point-in-time input identity,
-   non-directional propagation, and unavailable-state composition are locked.
+3. Invoke calculators only through a later orchestrator consuming the closed
+   routing evidence, after target eligibility, window inclusivity, point-in-time
+   input identity, and unavailable-state composition are locked.
 4. Add MFE/MAE after full-window completeness and bullish/bearish sign rules;
    add alpha/sector alpha last, after benchmark/sector identity and corporate-
    action-adjusted return policy exist.

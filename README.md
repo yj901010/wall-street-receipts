@@ -5,7 +5,7 @@ public analyst calls, preserves the market context that was available when each
 call was made, and evaluates later outcomes with a reproducible methodology.
 
 The P0 foundation and P1 domain/fixture phase are complete, broader P2 work
-remains open, and the first seven isolated P3 slices are complete: the target-hit
+remains open, and the first eight isolated P3 slices are complete: the target-hit
 comparison core, schedule-only session-offset mechanics, the policy-neutral
 event/session relation classifier, and the pure directional-win comparison
 core, plus the strict session-close named-horizon and independent
@@ -13,7 +13,9 @@ original/correction schedule-lineage policy and the approved five-direction
 polarity reduction that preserves neutral as non-directional rather than a
 loss, and the disconnected mechanical adapter that translates the two common
 directional sides into the existing target-hit and directional-win side enums
-without invoking either calculator. The broader P3 scoring phase remains open.
+without invoking either calculator, followed by closed full-polarity routing
+that preserves either directional calculator-side evidence or explicit
+non-directional evidence. The broader P3 scoring phase remains open.
 Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
 maps, market publication state, recorded S&P call history, and the honest
@@ -199,6 +201,15 @@ result, invokes no calculator, and owns no policy version, hash, market input,
 provider, or runtime connection. Null is rejected rather than treated as
 neutral. No API key, account, provider, paid plan, market calendar, price feed,
 data license, or network access is required.
+
+The completed eighth P3 slice routes one complete polarity resolution without
+reinterpreting it. Directional results preserve their original policy result
+and add both exact calculator-side enum values through the completed adapter;
+neutral preserves only the original `NonDirectional(NEUTRAL_DIRECTION)` record
+and gains no side or Boolean. The route constructs no calculator input, invokes
+no calculator, owns no new version/hash, and has no runtime or product
+connection. No API key, account, provider, market calendar, price feed, data
+license, or network access is required.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
