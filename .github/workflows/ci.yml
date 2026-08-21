@@ -3841,10 +3841,10 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 117
+              len(protected_paths) == 121
               and protected_digest.hexdigest()
-              == "51da0627166d747579ead5a99671ec71bacfaa2cc0956013e04b4a5535e10c10",
-              "Call-outcome audit consumer must not modify OpenAPI, schemas, fixtures, or API production",
+              == "bba9055ce48ee285590396fb5dc02d6d210ab3e4f6c9c68b1407bc40478b8b3c",
+              "Call-outcome audit consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           api_main_source = "\n".join(
               path.read_text(encoding="utf-8")
@@ -4476,10 +4476,10 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 117
+              len(protected_paths) == 121
               and protected_digest.hexdigest()
-              == "51da0627166d747579ead5a99671ec71bacfaa2cc0956013e04b4a5535e10c10",
-              "Call-list consumer must not modify OpenAPI, schemas, fixtures, or API production",
+              == "bba9055ce48ee285590396fb5dc02d6d210ab3e4f6c9c68b1407bc40478b8b3c",
+              "Call-list consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           workflow_source = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
           integration_start = workflow_source.index("\n  call-audit-integration:\n")
@@ -4776,7 +4776,7 @@ jobs:
           )
           PYTHON
 
-      - name: Guard pure target-hit calculation boundary
+      - name: Guard pure target-hit and directional-win calculation boundary
         shell: bash
         run: |
           python <<'PYTHON'
@@ -4795,12 +4795,19 @@ jobs:
               "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/calculation"
           )
           expected_production_files = {
+              "DirectionalWinSide.java",
+              "DirectionalWinInput.java",
+              "DirectionalWinResult.java",
+              "DirectionalWinCalculator.java",
               "TargetHitSide.java",
               "TargetHitInput.java",
               "TargetHitResult.java",
               "TargetHitCalculator.java",
           }
-          expected_test_files = {"TargetHitCalculatorGoldenTest.java"}
+          expected_test_files = {
+              "DirectionalWinCalculatorGoldenTest.java",
+              "TargetHitCalculatorGoldenTest.java",
+          }
           production_paths = sorted(
               path for path in calculation_dir.rglob("*.java") if path.is_file()
           )
@@ -4813,11 +4820,11 @@ jobs:
           }
           require(
               actual_production_files == expected_production_files,
-              f"Unexpected target-hit production files: {sorted(actual_production_files)}",
+              f"Unexpected pure-calculation production files: {sorted(actual_production_files)}",
           )
           require(
               actual_test_files == expected_test_files,
-              f"Unexpected target-hit test files: {sorted(actual_test_files)}",
+              f"Unexpected pure-calculation test files: {sorted(actual_test_files)}",
           )
 
           production_sources = {
@@ -4828,6 +4835,10 @@ jobs:
           side_source = production_sources["TargetHitSide.java"]
           result_source = production_sources["TargetHitResult.java"]
           calculator_source = production_sources["TargetHitCalculator.java"]
+          directional_input_source = production_sources["DirectionalWinInput.java"]
+          directional_side_source = production_sources["DirectionalWinSide.java"]
+          directional_result_source = production_sources["DirectionalWinResult.java"]
+          directional_calculator_source = production_sources["DirectionalWinCalculator.java"]
           compact_input = re.sub(r"\s+", "", input_source)
           require(
               "publicrecordTargetHitInput(TargetHitSideside,BigDecimaltarget,"
@@ -4885,10 +4896,16 @@ jobs:
               "BigDecimal.valueOf",
               ".parse",
           )
-          require(
-              not any(marker in calculator_source for marker in calculator_forbidden),
-              "Target-hit calculator must not hide arithmetic, rounding, conversion, or parsing",
-          )
+          for calculator_name, pure_calculator_source in {
+              "TargetHitCalculator.java": calculator_source,
+              "DirectionalWinCalculator.java": directional_calculator_source,
+          }.items():
+              require(
+                  not any(
+                      marker in pure_calculator_source for marker in calculator_forbidden
+                  ),
+                  f"Pure calculator must not hide arithmetic, rounding, conversion, or parsing: {calculator_name}",
+              )
           require(
               "setScale(STORAGE_SCALE, RoundingMode.UNNECESSARY)" in input_source
               and "STORAGE_SCALE = 12" in input_source
@@ -4896,33 +4913,110 @@ jobs:
               "Target-hit input must prove exact NUMERIC(38,12) representability",
           )
 
+          compact_directional_input = re.sub(r"\s+", "", directional_input_source)
+          require(
+              "publicrecordDirectionalWinInput(DirectionalWinSideside,"
+              "BigDecimalassetReturn)" in compact_directional_input,
+              "DirectionalWinInput must contain only side and nullable assetReturn",
+          )
+          require(
+              re.search(
+                  r"enum\s+DirectionalWinSide\s*\{\s*BULLISH\s*,\s*BEARISH\s*\}",
+                  directional_side_source,
+              ) is not None,
+              "DirectionalWinSide must contain exactly BULLISH then BEARISH",
+          )
+          require(
+              "permits DirectionalWinResult.Available, DirectionalWinResult.Unavailable"
+              in directional_result_source,
+              "DirectionalWinResult must be a closed Available/Unavailable result",
+          )
+          directional_reason_match = re.search(
+              r"enum\s+UnavailableReason\s*\{(?P<body>.*?)\}",
+              directional_result_source,
+              flags=re.DOTALL,
+          )
+          require(
+              directional_reason_match is not None,
+              "Missing directional-win unavailable reason",
+          )
+          directional_reasons = re.findall(
+              r"\b[A-Z][A-Z_]+\b", directional_reason_match.group("body")
+          )
+          require(
+              directional_reasons == ["ASSET_RETURN_MISSING"],
+              f"Unexpected directional-win unavailable reasons: {directional_reasons}",
+          )
+          require(
+              "record Available(boolean directionalWin)" in directional_result_source
+              and "record Unavailable(UnavailableReason reason)"
+              in directional_result_source,
+              "DirectionalWinResult payloads must be exact",
+          )
+          require(
+              "input.assetReturn().compareTo(BigDecimal.ZERO)"
+              in directional_calculator_source
+              and "case BULLISH -> comparison > 0;" in directional_calculator_source
+              and "case BEARISH -> comparison < 0;" in directional_calculator_source,
+              "Directional-win comparison must use strict sign semantics",
+          )
+          require(
+              "setScale(STORAGE_SCALE, RoundingMode.UNNECESSARY)"
+              in directional_input_source
+              and "STORAGE_SCALE = 12" in directional_input_source
+              and "STORAGE_PRECISION = 38" in directional_input_source,
+              "Directional-win input must prove exact signed NUMERIC(38,12) representability",
+          )
+          require(
+              "signum" not in directional_input_source
+              and "must be positive" not in directional_input_source.lower()
+              and "must be negative" not in directional_input_source.lower(),
+              "Directional-win input must accept negative, zero, and positive returns",
+          )
+
           allowed_internal_prefix = (
               "com.wallstreetreceipts.api.domain.outcome.calculation."
           )
+          allowed_java_imports = {
+              "java.math.BigDecimal",
+              "java.math.RoundingMode",
+              "java.util.Objects",
+          }
           forbidden_words = re.compile(
               r"\b(?:CallOutcome|AnalystCall|Clock|Instant|Provider|Repository|"
-              r"ObjectMapper|JdbcTemplate|Random|ThreadLocalRandom|double|float)\b"
+              r"ObjectMapper|JdbcTemplate|HttpClient|DataSource|DriverManager|"
+              r"Connection|PreparedStatement|ResultSet|Locale|TimeZone|Random|"
+              r"SecureRandom|ThreadLocalRandom|ScheduledExecutorService|"
+              r"ScheduledThreadPoolExecutor|Timer|double|float)\b"
           )
           for source_name, source in production_sources.items():
               imports = re.findall(r"^import\s+([^;]+);", source, flags=re.MULTILINE)
               require(
                   all(
-                      imported.startswith("java.")
+                      imported in allowed_java_imports
                       or imported.startswith(allowed_internal_prefix)
                       for imported in imports
                   ),
-                  f"Target-hit source crosses the pure domain boundary: {source_name} {imports}",
+                  f"Calculation source crosses the pure domain boundary: {source_name} {imports}",
               )
               require(
                   "org.springframework" not in source
                   and forbidden_words.search(source) is None
+                  and "Math.random" not in source
+                  and "System.currentTimeMillis" not in source
+                  and "System.nanoTime" not in source
+                  and "java.net." not in source
+                  and "java.sql." not in source
+                  and "java.time." not in source
+                  and "java.security." not in source
+                  and "java.util.concurrent." not in source
                   and "@Component" not in source
                   and "@Service" not in source,
-                  f"Target-hit source contains a forbidden runtime dependency: {source_name}",
+                  f"Calculation source contains a forbidden runtime dependency: {source_name}",
               )
 
           api_main_dir = Path("apps/api/src/main/java")
-          target_hit_markers = tuple(
+          calculation_markers = tuple(
               path.removesuffix(".java") for path in expected_production_files
           )
           for other_path in api_main_dir.rglob("*.java"):
@@ -4931,8 +5025,8 @@ jobs:
               other_source = other_path.read_text(encoding="utf-8")
               require(
                   "domain.outcome.calculation" not in other_source
-                  and not any(marker in other_source for marker in target_hit_markers),
-                  f"Target-hit core must not be wired into production yet: {other_path}",
+                  and not any(marker in other_source for marker in calculation_markers),
+                  f"Pure calculation core must not be wired into production yet: {other_path}",
               )
 
           golden_path = test_dir / "TargetHitCalculatorGoldenTest.java"
@@ -4964,6 +5058,60 @@ jobs:
               and "ClassPathResource" not in golden_source,
               "Target-hit goldens must remain source-local test vectors",
           )
+          directional_golden_path = test_dir / "DirectionalWinCalculatorGoldenTest.java"
+          directional_golden_source = directional_golden_path.read_text(encoding="utf-8")
+          require(
+              '@MethodSource("availableGoldenVectors")' in directional_golden_source
+              and '"T1 bullish positive return wins"' in directional_golden_source
+              and 'input(DirectionalWinSide.BULLISH, "0.08")'
+              in directional_golden_source
+              and '"T2 bullish negative return loses"' in directional_golden_source
+              and 'input(DirectionalWinSide.BULLISH, "-0.05")'
+              in directional_golden_source
+              and '"T3 bearish negative return wins"' in directional_golden_source
+              and 'input(DirectionalWinSide.BEARISH, "-0.10")'
+              in directional_golden_source,
+              "Directional-win documented source-local golden vectors are missing",
+          )
+          require(
+              "bullish exact zero is a miss" in directional_golden_source
+              and "bearish exact zero is a miss" in directional_golden_source
+              and "bullish scale-equivalent zero is a miss" in directional_golden_source
+              and "bearish scale-equivalent zero is a miss" in directional_golden_source
+              and "minimum positive ratio wins for bullish" in directional_golden_source
+              and "minimum negative ratio wins for bearish" in directional_golden_source
+              and "minimum positive ratio loses for bearish" in directional_golden_source
+              and "minimum negative ratio loses for bullish" in directional_golden_source
+              and "MAX_NUMERIC_38_12" in directional_golden_source
+              and "positive return exceeds storage scale" in directional_golden_source
+              and "negative return exceeds storage scale" in directional_golden_source
+              and "positive return exceeds storage precision" in directional_golden_source
+              and "negative return exceeds storage precision" in directional_golden_source,
+              "Directional-win signed boundary and negative coverage is incomplete",
+          )
+          require(
+              "UnavailableReason.ASSET_RETURN_MISSING" in directional_golden_source
+              and "DirectionalWinCalculator.calculate(null)" in directional_golden_source
+              and "reportsMissingReturnWithoutInventingFalse" in directional_golden_source
+              and '@MethodSource("directionalWinSides")' in directional_golden_source
+              and "new DirectionalWinInput(side, null)" in directional_golden_source
+              and "Stream.of(DirectionalWinSide.values())" in directional_golden_source
+              and "isNotEqualTo(new Available(false))" in directional_golden_source
+              and "Locale.setDefault(Locale.KOREA)" in directional_golden_source
+              and 'TimeZone.getTimeZone("Asia/Seoul")' in directional_golden_source
+              and "Locale.setDefault(Locale.US)" in directional_golden_source
+              and 'TimeZone.getTimeZone("America/New_York")'
+              in directional_golden_source
+              and "finally" in directional_golden_source
+              and "Locale.setDefault(originalLocale)" in directional_golden_source
+              and "TimeZone.setDefault(originalTimeZone)" in directional_golden_source,
+              "Directional-win unavailable and Locale/TimeZone replay coverage is incomplete",
+          )
+          require(
+              "ObjectMapper" not in directional_golden_source
+              and "ClassPathResource" not in directional_golden_source,
+              "Directional-win goldens must remain source-local test vectors",
+          )
           for resource_path in Path("apps/api/src/test/resources").rglob("*.json"):
               resource_source = resource_path.read_text(encoding="utf-8")
               require(
@@ -4971,6 +5119,12 @@ jobs:
                   and "targetHit" not in resource_source
                   and "target-hit" not in resource_source.lower(),
                   f"Target-hit must not add a JSON golden resource: {resource_path}",
+              )
+              require(
+                  "DirectionalWin" not in resource_source
+                  and "directionalWin" not in resource_source
+                  and "directional-win" not in resource_source.lower(),
+                  f"Directional-win must not add a JSON golden resource: {resource_path}",
               )
 
           expected_schemas = {
@@ -4990,7 +5144,10 @@ jobs:
               "source-reference.schema.json",
           }
           actual_schemas = {path.name for path in Path("schemas").glob("*.json")}
-          require(actual_schemas == expected_schemas, "P3 target-hit must not expand schemas")
+          require(
+              actual_schemas == expected_schemas,
+              "P3 pure calculations must preserve the exact 14 schemas",
+          )
 
           expected_fixture_files = {
               "analyst-call-revisions.json",
@@ -5011,7 +5168,7 @@ jobs:
           actual_fixture_files = {path.name for path in fixture_dir.glob("*.json")}
           require(
               actual_fixture_files == expected_fixture_files,
-              "P3 target-hit must not add a canonical fixture or golden JSON",
+              "P3 pure calculations must preserve the exact 13 canonical fixture files",
           )
           manifest = json.loads((fixture_dir / "manifest.json").read_text(encoding="utf-8"))
           expected_manifest_paths = [
@@ -5030,7 +5187,7 @@ jobs:
           ]
           require(
               [entry["path"] for entry in manifest["files"]] == expected_manifest_paths,
-              "P3 target-hit must not change fixture manifest membership/order",
+              "P3 pure calculations must not change fixture manifest membership/order",
           )
 
           outcome_document = json.loads(
@@ -5045,14 +5202,14 @@ jobs:
           require(
               len(methodologies) == 2
               and all(item["status"] == "MODEL_ONLY" for item in methodologies),
-              "P3 target-hit must not activate or append a methodology",
+              "P3 pure calculations must not activate or append a methodology",
           )
           require(
               len(outcomes) == 4
               and {item["evaluationStatus"] for item in outcomes} == {"PENDING", "INCOMPLETE"}
               and all(not item["dataComplete"] for item in outcomes)
               and all(item[field] is None for item in outcomes for field in metric_fields),
-              "P3 target-hit must not publish or persist a calculated fixture outcome",
+              "P3 pure calculations must not publish or persist a calculated fixture outcome",
           )
 
           openapi_source = Path("contracts/openapi.yaml").read_text(encoding="utf-8")
@@ -5068,7 +5225,7 @@ jobs:
                   "/v1/calls/{id}/outcomes",
                   "/v1/calls/{id}/context",
               },
-              f"P3 target-hit must not change OpenAPI paths: {sorted(openapi_paths)}",
+              f"P3 pure calculations must preserve the exact five OpenAPI paths: {sorted(openapi_paths)}",
           )
           migration_names = {
               path.name
@@ -5083,19 +5240,23 @@ jobs:
                   "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
               },
-              f"P3 target-hit must not add a Flyway migration: {sorted(migration_names)}",
+              f"P3 pure calculations must preserve the exact five Flyway migrations: {sorted(migration_names)}",
           )
-          web_markers = tuple(expected_production_files) + tuple(reasons)
+          web_markers = (
+              tuple(expected_production_files)
+              + tuple(reasons)
+              + tuple(directional_reasons)
+          )
           for web_path in Path("apps/web/src").rglob("*"):
               if web_path.is_file() and web_path.suffix in {".ts", ".tsx", ".js", ".jsx"}:
                   web_source = web_path.read_text(encoding="utf-8")
                   require(
                       not any(marker.removesuffix(".java") in web_source for marker in web_markers),
-                      f"P3 target-hit must not expand the web surface: {web_path}",
+                      f"P3 pure calculations must not expand the web surface: {web_path}",
                   )
 
           print(
-              "Validated the pure one-extreme target-hit core, source-local golden vectors, "
+              "Validated pure target-hit and directional-win cores, source-local golden vectors, "
               "unchanged 2 MODEL_ONLY methodologies/4 all-null outcomes, and no contract, "
               "fixture, API, Flyway, persistence, or web expansion"
           )

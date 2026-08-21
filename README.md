@@ -5,9 +5,10 @@ public analyst calls, preserves the market context that was available when each
 call was made, and evaluates later outcomes with a reproducible methodology.
 
 The P0 foundation and P1 domain/fixture phase are complete, broader P2 work
-remains open, and the first three isolated P3 slices are complete: the target-hit
-comparison core, schedule-only session-offset mechanics, and the policy-neutral
-event/session relation classifier. Delivered P2 work includes
+remains open, and the first four isolated P3 slices are complete: the target-hit
+comparison core, schedule-only session-offset mechanics, the policy-neutral
+event/session relation classifier, and the pure directional-win comparison
+core. Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
 maps, market publication state, recorded S&P call history, and the honest
 known-deferred Screener shell; broader P2 remains open and actual screening
@@ -158,6 +159,13 @@ The completed P3 relation slice classifies one caller-supplied event instant
 against an explicit test-session catalog. It preserves open, interior, close,
 gap, touching-boundary, and coverage states without choosing an anchor, call or
 correction basis, horizon, observation, or product surface.
+
+The completed fourth P3 directional-win slice compares only an already
+interpreted bullish/bearish side with one caller-supplied signed asset return.
+Bullish uses strict `> 0`, bearish uses strict `< 0`, and zero is false for both;
+a null return remains explicitly unavailable. This leaf does not calculate a
+return, select a horizon or observation, activate a methodology, modify the
+canonical outcome archive's null metric/result fields, or publish a result.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider

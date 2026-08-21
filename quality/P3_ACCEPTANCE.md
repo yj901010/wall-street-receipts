@@ -1,9 +1,9 @@
 # P3 Acceptance Checks — Deterministic Scoring
 
-Current status: the pure target-hit comparison core, explicit-anchor
-session-offset mechanics, and policy-neutral event/session relation classifier
-vertical slices are complete. None publishes a calculated outcome or completes
-the broader P3 scoring phase, which remains open.
+Current status: the pure target-hit and directional-win comparison cores,
+explicit-anchor session-offset mechanics, and policy-neutral event/session
+relation classifier vertical slices are complete. None publishes a calculated
+outcome or completes the broader P3 scoring phase, which remains open.
 
 ## Pure target-hit slice boundary
 
@@ -160,6 +160,64 @@ the broader P3 scoring phase, which remains open.
   exact eight permitted result variants. Constructor negatives cover only
   locally decidable contradictions; null/sub-microsecond input fails closed,
   and source lists/catalogs are not mutated.
+
+## Pure directional-win slice boundary
+
+- `DirectionalWinInput` accepts only an already interpreted `BULLISH` or
+  `BEARISH` side and one nullable asset return precomputed and selected by its
+  caller. It receives no prices and does not calculate or verify the return.
+- A bullish result is true exactly when `assetReturn > 0`; a bearish result is
+  true exactly when `assetReturn < 0`. Exact zero is false for both sides.
+- Every provided return is a signed decimal exactly representable as
+  `NUMERIC(38,12)`. Negative, zero, and positive values are valid; no division,
+  rounding, rescaling, parsing, tolerance, epsilon, or binary floating-point
+  conversion is permitted.
+- A null asset return produces only explicit unavailable reason
+  `ASSET_RETURN_MISSING`. It is not zero, false, a loss, or a calculated result.
+- The caller owns call-direction reduction, neutral eligibility, horizon and
+  observation selection, return calculation, price/currency normalization,
+  corporate actions, point-in-time input identity, methodology selection, and
+  outcome completeness.
+- Source-local golden vectors are tests, not canonical fixtures or market
+  facts. No vector is imported by production code or exposed by a product
+  surface.
+
+## Pure directional-win contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-DW01 | Exact input surface | `DirectionalWinInput` contains exactly `DirectionalWinSide side` and nullable `BigDecimal assetReturn`. It has no call direction, target, price, horizon, timestamp, asset, currency, snapshot, methodology, provider, source, or completeness field. |
+| P3-DW02 | Closed side semantics | `DirectionalWinSide` contains exactly `BULLISH` then `BEARISH`. No `CallDirection`, strong-direction reduction, neutral policy, string parsing, default, or fallback is present. |
+| P3-DW03 | Strict sign comparison | Complete bullish input returns true only for `assetReturn.compareTo(BigDecimal.ZERO) > 0`; complete bearish input returns true only for comparison `< 0`. Exact zero and scale-equivalent zero return false for both sides; no equality case is a win. |
+| P3-DW04 | Signed decimal safety | Every provided negative, zero, or positive decimal is exactly representable as `NUMERIC(38,12)`. Validation may make a non-mutating exact representability probe, but the primitive performs no arithmetic, rounding, output scale normalization, parsing, or binary floating-point conversion and does not mutate its input. |
+| P3-DW05 | Explicit unavailable state | `DirectionalWinResult` is exactly sealed `Available(boolean directionalWin)` or `Unavailable(ASSET_RETURN_MISSING)`. A null return never becomes zero, false, a loss, or a calculated value. Null side and provided invalid decimals fail closed rather than becoming unavailable. |
+| P3-DW06 | Determinism | Identical inputs produce equal results regardless of clock, locale, default timezone, decimal scale, invocation order, or prior calls. |
+| P3-DW07 | Pure source boundary | The exact calculation package contains the four existing target-hit files plus exactly `DirectionalWinSide`, `DirectionalWinInput`, `DirectionalWinResult`, and `DirectionalWinCalculator`; production calculation code imports no call/outcome aggregate, horizon package, provider, repository, fixture, framework, controller, persistence, network, JSON, scheduler, `Clock`, random, locale/timezone, or binary floating-point dependency. No production class outside the calculation leaf wires either primitive. |
+| P3-DW08 | No return or methodology claim | The primitive treats `assetReturn` as caller-supplied input. It computes no endpoint price or return and is not bound to a methodology/version/hash. Both canonical methodologies remain exactly `MODEL_ONLY`; no formula body, ACTIVE state, input fingerprint, sequence, or outcome is created. |
+| P3-DW09 | No product publication | Existing 14 schemas, 13 canonical fixture files, manifest membership/order, five OpenAPI paths, five Flyway migrations, API/controller/repository behavior, database rows, and web source remain unchanged. The outcome endpoint continues to expose only four P1 model records with every metric/result null. |
+| P3-DW10 | Later integration boundary | Runtime directional-win evaluation requires independently reviewed direction reduction, named-horizon and observation selection, deterministic asset-return calculation, corporate-action/currency policy, point-in-time input identity, canonical methodology definition/hash, unavailable mapping, and input fingerprinting. This leaf alone cannot make an outcome complete. |
+
+## Required directional-win golden and negative tests
+
+- Source-local parameterized vectors cover bullish positive as true, bullish
+  negative as false, bearish negative as true, and bearish positive as false.
+  Both sides cover exact and scale-equivalent zero as false, the smallest
+  positive and negative scale-12 values, negative-scale inputs, and exact
+  positive and negative `NUMERIC(38,12)` boundaries.
+- Null return on both permitted sides asserts `ASSET_RETURN_MISSING` and absence
+  of a Boolean value. Null side, positive and negative scale-13 values, and
+  positive and negative precision-39 values fail closed; invalid provided
+  evidence is never hidden as unavailable.
+- Repeated invocation, changed JVM locale/default timezone, scale-equivalent
+  values, and source-value inspection prove deterministic comparison and input
+  immutability.
+- Reflection or an equivalent exact-shape test locks both record components,
+  the two sides, result variants, and sole unavailable reason. A source-boundary
+  test or repository CI scan proves no reverse production wiring and no
+  canonical JSON golden or product publication.
+- Full API verification must preserve exactly two `MODEL_ONLY` methodologies,
+  four PENDING/INCOMPLETE all-null outcomes, the read-only outcome endpoint,
+  and PostgreSQL migration coverage.
 
 ## Deferred work and implementation order
 

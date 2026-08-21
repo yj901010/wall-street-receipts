@@ -1739,3 +1739,80 @@ Status: complete for this vertical slice; the broader P2 phase remains open
   publication remain P5 work. This slice cannot create an observed performance
   claim from the current synthetic null-only audit records, and the shared API
   view cannot infer a methodology activation status that the endpoint omits.
+
+## P3 — Pure directional-win comparison core
+
+Status: complete for this pure comparison slice; no calculation result is
+published or persisted, and broader P3 scoring remains open
+
+### Scope
+
+- Add a pure comparison leaf over an already interpreted bullish/bearish side
+  and one nullable, caller-supplied signed asset return.
+- Lock strict bullish `> 0` and bearish `< 0` semantics, with exact zero false
+  for both sides and null preserved as explicit unavailable evidence.
+- Validate every provided return as exactly representable by signed
+  `NUMERIC(38,12)` without rounding, rescaling, parsing, arithmetic, or binary
+  floating-point conversion.
+- Add source-local Java golden vectors only. Add no return calculation, price,
+  horizon, calendar, call-direction mapping, provider, scheduler, persistence,
+  schema, fixture, manifest member, OpenAPI/API path, Flyway migration, or web
+  surface.
+
+### Locked contract decisions
+
+- ADR-009 and `quality/P3_ACCEPTANCE.md` own the exact input, side, comparison,
+  signed-decimal, unavailable, purity, and later-integration boundaries.
+- The side enum is exactly `BULLISH` and `BEARISH`. This primitive does not
+  accept `CallDirection`, reduce strong directions, or decide neutral
+  eligibility.
+- `DirectionalWinResult` is a closed `Available(boolean directionalWin)` or
+  `Unavailable(ASSET_RETURN_MISSING)` result. Missing is not false or zero;
+  structurally invalid supplied evidence fails closed.
+- The caller owns the meaning and point-in-time validity of `assetReturn`.
+  Existing `MODEL_ONLY` methodology hashes are not reinterpreted and the
+  canonical outcome archive keeps every metric/result field null.
+
+### Module and file boundary
+
+- The existing API calculation package is extended append-only with
+  `DirectionalWinSide.java`, `DirectionalWinInput.java`,
+  `DirectionalWinResult.java`, and `DirectionalWinCalculator.java`; the four
+  target-hit files retain their existing contract.
+- `DirectionalWinCalculatorGoldenTest.java` owns source-local signed-boundary,
+  strict-sign, zero, missing, invalid-input, and determinism coverage beside the
+  unchanged target-hit golden test. The CI gate owns source isolation and
+  reverse-wiring rejection.
+- ADR-009, the P3 acceptance contract, README, this log, and the extended
+  calculation CI gate own the no-runtime/no-publication boundary.
+
+### Routes
+
+- None. Existing call/outcome routes remain unchanged and do not invoke either
+  calculation primitive.
+
+### Verification
+
+- Focused `DirectionalWinCalculatorGoldenTest`: PASS, 28/28 tests.
+- Full API Maven verification: PASS, 251/251 tests with zero failures, errors,
+  or skips. `PostgreSqlMigrationTest` executed 4/4 PostgreSQL Testcontainers
+  tests with zero skips.
+- `docker compose --env-file .env.example config --quiet`: PASS.
+- All 18 embedded workflow Python blocks compiled. Blocks 1–17 executed 17/17;
+  the canonical contract block validated 14 schemas and 32 fixture records,
+  and the combined pure-calculation guard passed. Block 18 is the existing
+  cross-stack access-log verifier and was intentionally not executed because
+  this disconnected API-domain slice launched no Spring or web service.
+- SnakeYAML 2.5 workflow parsing and `git diff --check`: PASS. No web or
+  cross-stack test is reported as executed for this slice.
+- Independent final review found zero blockers and zero high-severity issues.
+
+### Deferred boundary
+
+- Direction reduction, neutral eligibility, horizon return calculation,
+  session/window selection, endpoint prices, corporate actions, currency,
+  methodology serialization/hash, input fingerprinting, persistence
+  orchestration, calculated outcomes, aggregates, and UI publication remain
+  later reviewed P3 work.
+- Historical bars and live/licensed market providers remain in their later
+  owning phases; this slice requires no provider credential or network access.
