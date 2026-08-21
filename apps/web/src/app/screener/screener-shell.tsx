@@ -1,7 +1,10 @@
 import Link from "next/link";
+import type { Locale } from "@/lib/i18n/config";
 import type { ScreenerShellState } from "@/lib/screener-shell-state";
+import { getScreenerMessages } from "./messages";
 
-export function ScreenerShell({ state }: { state: ScreenerShellState }) {
+export function ScreenerShell({ state, locale }: { state: ScreenerShellState; locale: Locale }) {
+  const messages = getScreenerMessages(locale);
   return (
     <section
       className="data-section screener-policy-section"
@@ -11,72 +14,61 @@ export function ScreenerShell({ state }: { state: ScreenerShellState }) {
     >
       <div className="section-heading screener-policy-heading">
         <div>
-          <p className="eyebrow">Known-deferred application state</p>
-          <h2 id="screener-policy-title">Historical screening publication state</h2>
+          <p className="eyebrow">{messages.shell.eyebrow}</p>
+          <h2 id="screener-policy-title">{messages.shell.title}</h2>
         </div>
-        <span>Deferred to P8</span>
+        <span>{messages.shell.state}</span>
       </div>
 
-      <div className="screener-product-policy" aria-label="Screener product availability policy">
-        <p className="screener-product-policy-label">
-          Product availability policy · not fixture evidence
+      <div className="screener-product-policy" aria-label={messages.shell.policyLabel}>
+        <p className="screener-product-policy-label">{messages.shell.policyNotice}</p>
+        <p>
+          <strong>{messages.shell.noCatalogTitle}</strong> {messages.shell.noCatalogBody}
         </p>
         <p>
-          <strong>No feature catalog.</strong> Historical equity screening remains deferred until P8
-          supplies historical bars, a point-in-time feature catalog, and a materialized screening
-          read model.
+          <strong>{messages.shell.notEmptyTitle}</strong> {messages.shell.notEmptyBody}
         </p>
         <p>
-          <strong>Not an empty query.</strong> This state is distinct from a completed screen with no
-          matches, a loading state, and a route error. No screening query is executed here.
-        </p>
-        <p>
-          <strong>No substitute output.</strong> The application does not promote call evidence,
-          methodology definitions, fixture literals, or missing values into filters, results,
-          ordering, charts, or numeric metrics. Performance outcomes and rankings remain P3 work;
-          licensed observed-provider integration remains P5 work. Neither is substituted here.
+          <strong>{messages.shell.noSubstituteTitle}</strong> {messages.shell.noSubstituteBody}
         </p>
       </div>
 
-      <div className="screener-state" role="status" aria-label="Deferred screener state">
+      <div className="screener-state" role="status" aria-label={messages.shell.stateLabel}>
         <dl>
           <div>
-            <dt>Data mode</dt>
+            <dt>{messages.shell.labels.dataMode}</dt>
             <dd className="mono">{state.dataMode}</dd>
           </div>
           <div>
-            <dt>Scope</dt>
+            <dt>{messages.shell.labels.scope}</dt>
             <dd className="mono">{state.scope}</dd>
           </div>
           <div>
-            <dt>Status</dt>
+            <dt>{messages.shell.labels.status}</dt>
             <dd className="mono">{state.status}</dd>
           </div>
           <div>
-            <dt>Reason</dt>
+            <dt>{messages.shell.labels.reason}</dt>
             <dd className="mono">{state.reasonCode}</dd>
           </div>
           <div>
-            <dt>Missing display</dt>
+            <dt>{messages.shell.labels.missingDisplay}</dt>
             <dd className="mono na-value">{state.missingDisplay}</dd>
           </div>
         </dl>
       </div>
 
       <p className="screener-boundary-note" role="note">
-        <span className="mono">NA</span> records an unpublished capability state; it never means
-        zero matches, a zero numeric value, completeness, or a successful empty query. This policy
-        has no schema version, fixture version, timestamp, source, provenance, or disclaimer
-        because it is an application phase boundary rather than observed or fixture evidence.
+        <span className="mono">NA</span>{messages.shell.boundaryNote}
       </p>
 
-      <nav className="screener-evidence-links" aria-label="Adjacent evidence routes">
-        <span>Separate evidence surfaces · not screener output</span>
+      <nav className="screener-evidence-links" aria-label={messages.shell.adjacentLabel}>
+        <span>{messages.shell.adjacentNotice}</span>
         <Link className="text-action" href="/calls">
-          Open recorded call evidence
+          {messages.shell.calls}
         </Link>
         <Link className="text-action" href="/methodology">
-          Open methodology definitions
+          {messages.shell.methodology}
         </Link>
       </nav>
     </section>

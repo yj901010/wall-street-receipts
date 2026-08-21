@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { getLocale } from "@/lib/i18n/server";
+import { getCallsMessages } from "../messages";
 
-export default function CallNotFound() {
+export default async function CallNotFound() {
+  const messages = getCallsMessages(await getLocale()).states;
+
   return (
     <main>
       <SiteHeader current="calls" dataMode="DEMO" />
       <div className="page-shell state-page">
-        <p className="eyebrow">Call not found</p>
-        <h1>This event is not in the fixture ledger.</h1>
-        <p>The requested identifier has no canonical call record. No substitute record was shown.</p>
-        <Link className="text-action" href="/calls">Return to analyst calls</Link>
+        <p className="eyebrow">{messages.notFoundEyebrow}</p>
+        <h1>{messages.notFoundTitle}</h1>
+        <p>{messages.notFoundDescription}</p>
+        <Link className="text-action" href="/calls">{messages.returnCalls}</Link>
       </div>
     </main>
   );

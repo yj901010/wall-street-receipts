@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useLocale } from "@/components/locale-provider";
 import { SiteHeader } from "@/components/site-header";
+import { getInstitutionMessages } from "./messages";
 
 export default function InstitutionsError({
   reset,
@@ -9,16 +11,18 @@ export default function InstitutionsError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { locale } = useLocale();
+  const messages = getInstitutionMessages(locale);
   return (
     <>
       <SiteHeader current="institutions" dataMode="DEMO" />
       <main className="state-page route-error" role="alert">
-        <p className="eyebrow">Institution directory unavailable</p>
-        <h1>The identity fixture could not be read.</h1>
-        <p>No partial identity, placeholder institution, score, accuracy, or rank is being displayed.</p>
+        <p className="eyebrow">{messages.error.eyebrow}</p>
+        <h1>{messages.error.title}</h1>
+        <p>{messages.error.body}</p>
         <div className="state-actions">
-          <button type="button" onClick={reset}>Try again</button>
-          <Link className="text-action" href="/calls">Open the call ledger</Link>
+          <button type="button" onClick={reset}>{messages.error.retry}</button>
+          <Link className="text-action" href="/calls">{messages.error.callLedger}</Link>
         </div>
       </main>
     </>

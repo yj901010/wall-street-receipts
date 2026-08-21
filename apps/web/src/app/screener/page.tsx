@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
+import { getLocale } from "@/lib/i18n/server";
 import { SCREENER_SHELL_STATE } from "@/lib/screener-shell-state";
+import { getScreenerMessages } from "./messages";
 import { ScreenerShell } from "./screener-shell";
 
 type ScreenerSearchParams = Record<string, string | string[] | undefined>;
@@ -15,6 +17,8 @@ export default async function ScreenerPage({
   searchParams: Promise<ScreenerSearchParams>;
 }) {
   if (!isQueryFreeScreenerRequest(await searchParams)) notFound();
+  const locale = await getLocale();
+  const messages = getScreenerMessages(locale);
 
   return (
     <main>
@@ -23,17 +27,13 @@ export default async function ScreenerPage({
       <div className="page-shell screener-shell">
         <section className="page-heading screener-heading" aria-labelledby="screener-title">
           <div>
-            <p className="eyebrow">Application-owned release boundary</p>
-            <h1 id="screener-title">Historical equity screening is deferred.</h1>
-            <p className="page-summary">
-              This query-free route publishes only the product phase decision. It does not expose
-              executable filters, results, or a synthetic preview while the canonical P8 feature
-              catalog is unavailable.
-            </p>
+            <p className="eyebrow">{messages.page.eyebrow}</p>
+            <h1 id="screener-title">{messages.page.title}</h1>
+            <p className="page-summary">{messages.page.summary}</p>
           </div>
         </section>
 
-        <ScreenerShell state={SCREENER_SHELL_STATE} />
+        <ScreenerShell state={SCREENER_SHELL_STATE} locale={locale} />
       </div>
     </main>
   );

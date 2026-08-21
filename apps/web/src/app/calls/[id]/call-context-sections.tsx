@@ -1,4 +1,6 @@
+import type { Locale } from "@/lib/i18n/config";
 import type { AnalystCall, CallContext, EventContext, MacroSnapshot } from "@/lib/providers";
+import { getCallsMessages, type CallsMessages } from "../messages";
 
 const utcFormatter = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
@@ -11,6 +13,7 @@ const decimalFormatter = new Intl.NumberFormat("en-US", {
 });
 
 type CallCutoff = Pick<AnalystCall, "eventTime" | "dataMode">;
+type ContextMessages = CallsMessages["context"];
 
 function utc(value: string) {
   return `${utcFormatter.format(new Date(value))} UTC`;
@@ -31,122 +34,141 @@ function valueOrNa(value: string | number | null) {
 function EmptyContextEvidence({
   call,
   contextKnown,
+  messages,
   subject,
 }: {
   call: CallCutoff;
   contextKnown: boolean;
-  subject: "macro snapshot" | "scheduled-event context";
+  messages: ContextMessages;
+  subject: string;
 }) {
   return (
     <>
-      <dl className="snapshot-metadata context-metadata" aria-label={`${subject} availability evidence`}>
-        <div><dt>As of call event</dt><dd className="mono">{utc(call.eventTime)}</dd></div>
-        <div><dt>Data mode</dt><dd>{call.dataMode}</dd></div>
-        <div><dt>Source</dt><dd>NA</dd></div>
-        <div><dt>Provenance</dt><dd>NA</dd></div>
+      <dl className="snapshot-metadata context-metadata" aria-label={messages.availabilityEvidence(subject)}>
+        <div><dt>{messages.asOfCallEvent}</dt><dd className="mono">{utc(call.eventTime)}</dd></div>
+        <div><dt>{messages.dataMode}</dt><dd>{call.dataMode}</dd></div>
+        <div><dt>{messages.source}</dt><dd>NA</dd></div>
+        <div><dt>{messages.provenance}</dt><dd>NA</dd></div>
       </dl>
       <div className="empty-state context-empty" role="status">
-        <h3>{contextKnown ? "Known-empty context" : "Context unavailable"}</h3>
-        <p>No {subject} was recorded for this call. Missing values remain NA.</p>
+        <h3>{contextKnown ? messages.knownEmptyContext : messages.contextUnavailable}</h3>
+        <p>{messages.missingEvidence(subject)}</p>
       </div>
     </>
   );
 }
 
-function MacroContext({ snapshot }: { snapshot: MacroSnapshot }) {
+function MacroContext({
+  messages,
+  snapshot,
+}: {
+  messages: ContextMessages;
+  snapshot: MacroSnapshot;
+}) {
   return (
     <>
-      <dl className="snapshot-metadata context-metadata" aria-label="Macro context provenance">
-        <div><dt>Snapshot ID</dt><dd className="mono">{snapshot.macroSnapshotId}</dd></div>
-        <div><dt>As of</dt><dd className="mono">{utc(snapshot.eventTime)}</dd></div>
-        <div><dt>Processing time</dt><dd className="mono">{utc(snapshot.processingTime)}</dd></div>
-        <div><dt>Captured</dt><dd className="mono">{utc(snapshot.capturedAt)}</dd></div>
-        <div><dt>Data mode</dt><dd>{snapshot.dataMode}</dd></div>
-        <div><dt>Provenance</dt><dd className="mono">{snapshot.provenanceId}</dd></div>
-        <div><dt>Sources</dt><dd>Per-observation references below</dd></div>
-        <div><dt>Mutation policy</dt><dd>Append-only; no update surface</dd></div>
+      <dl className="snapshot-metadata context-metadata" aria-label={messages.macroProvenanceLabel}>
+        <div><dt>{messages.snapshotId}</dt><dd className="mono">{snapshot.macroSnapshotId}</dd></div>
+        <div><dt>{messages.asOf}</dt><dd className="mono">{utc(snapshot.eventTime)}</dd></div>
+        <div><dt>{messages.processingTime}</dt><dd className="mono">{utc(snapshot.processingTime)}</dd></div>
+        <div><dt>{messages.captured}</dt><dd className="mono">{utc(snapshot.capturedAt)}</dd></div>
+        <div><dt>{messages.dataMode}</dt><dd>{snapshot.dataMode}</dd></div>
+        <div><dt>{messages.provenance}</dt><dd className="mono">{snapshot.provenanceId}</dd></div>
+        <div><dt>{messages.sources}</dt><dd>{messages.perObservationSources}</dd></div>
+        <div><dt>{messages.mutationPolicy}</dt><dd>{messages.appendOnly}</dd></div>
       </dl>
       <div
         className="table-scroll context-table-scroll"
         role="region"
-        aria-label="Macro observation evidence table"
+        aria-label={messages.macroTableRegionLabel}
         tabIndex={0}
       >
         <table className="calls-table context-table">
-          <caption className="visually-hidden">Macro observations at analyst-call event time</caption>
+          <caption className="visually-hidden">{messages.macroTableCaption}</caption>
           <thead>
             <tr>
-              <th scope="col">Series</th>
-              <th className="numeric" scope="col">Value</th>
-              <th scope="col">Unit</th>
-              <th scope="col">Observation date</th>
-              <th scope="col">Released</th>
-              <th scope="col">Processing</th>
-              <th scope="col">Captured</th>
-              <th scope="col">Vintage start</th>
-              <th scope="col">Vintage end</th>
-              <th scope="col">Source</th>
-              <th scope="col">Provenance</th>
+              <th scope="col">{messages.series}</th>
+              <th className="numeric" scope="col">{messages.value}</th>
+              <th scope="col">{messages.unit}</th>
+              <th scope="col">{messages.observationDate}</th>
+              <th scope="col">{messages.released}</th>
+              <th scope="col">{messages.processing}</th>
+              <th scope="col">{messages.captured}</th>
+              <th scope="col">{messages.vintageStart}</th>
+              <th scope="col">{messages.vintageEnd}</th>
+              <th scope="col">{messages.source}</th>
+              <th scope="col">{messages.provenance}</th>
             </tr>
           </thead>
           <tbody>
             {snapshot.observations.map((observation) => (
               <tr key={observation.macroObservationId}>
-                <td data-label="Series">
+                <td data-field="series" data-label={messages.series}>
                   <strong className="mono">{observation.series}</strong>
                   {" "}
                   <span className="cell-secondary mono">{observation.macroObservationId}</span>
                 </td>
-                <td className="numeric mono" data-label="Value">{valueOrNa(observation.value)}</td>
-                <td data-label="Unit">{observation.unit}</td>
-                <td className="mono" data-label="Observation date">{observation.observationDate}</td>
-                <td className="mono" data-label="Released">{utc(observation.releasedAt)}</td>
-                <td className="mono" data-label="Processing">{utc(observation.processingTime)}</td>
-                <td className="mono" data-label="Captured">{utc(observation.capturedAt)}</td>
-                <td className="mono" data-label="Vintage start">{valueOrNa(observation.vintageStart)}</td>
-                <td className="mono" data-label="Vintage end">{valueOrNa(observation.vintageEnd)}</td>
-                <td className="mono" data-label="Source">{observation.sourceReferenceId}</td>
-                <td className="mono" data-label="Provenance">{observation.provenanceId}</td>
+                <td className="numeric mono" data-field="value" data-label={messages.value}>{valueOrNa(observation.value)}</td>
+                <td data-field="unit" data-label={messages.unit}>{observation.unit}</td>
+                <td className="mono" data-field="observation-date" data-label={messages.observationDate}>{observation.observationDate}</td>
+                <td className="mono" data-field="released" data-label={messages.released}>{utc(observation.releasedAt)}</td>
+                <td className="mono" data-field="processing" data-label={messages.processing}>{utc(observation.processingTime)}</td>
+                <td className="mono" data-field="captured" data-label={messages.captured}>{utc(observation.capturedAt)}</td>
+                <td className="mono" data-field="vintage-start" data-label={messages.vintageStart}>{valueOrNa(observation.vintageStart)}</td>
+                <td className="mono" data-field="vintage-end" data-label={messages.vintageEnd}>{valueOrNa(observation.vintageEnd)}</td>
+                <td className="mono" data-field="source" data-label={messages.source}>{observation.sourceReferenceId}</td>
+                <td className="mono" data-field="provenance" data-label={messages.provenance}>{observation.provenanceId}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="section-note context-note">
-        Only the ordered observation vintages available at the analyst-call event cutoff are shown.
-      </p>
+      <p className="section-note context-note">{messages.macroNote}</p>
     </>
   );
 }
 
-function ScheduledEventContext({ context }: { context: EventContext }) {
+function ScheduledEventContext({
+  context,
+  messages,
+}: {
+  context: EventContext;
+  messages: ContextMessages;
+}) {
   return (
     <>
-      <dl className="snapshot-metadata context-metadata" aria-label="Scheduled event context provenance">
-        <div><dt>Context ID</dt><dd className="mono">{context.eventContextId}</dd></div>
-        <div><dt>As of</dt><dd className="mono">{utc(context.eventTime)}</dd></div>
-        <div><dt>Processing time</dt><dd className="mono">{utc(context.processingTime)}</dd></div>
-        <div><dt>Captured</dt><dd className="mono">{utc(context.capturedAt)}</dd></div>
-        <div><dt>Data mode</dt><dd>{context.dataMode}</dd></div>
-        <div><dt>Provenance</dt><dd className="mono">{context.provenanceId}</dd></div>
-        <div><dt>Source</dt><dd className="mono">{context.sourceReferenceId}</dd></div>
-        <div><dt>Mutation policy</dt><dd>Append-only; no update surface</dd></div>
+      <dl className="snapshot-metadata context-metadata" aria-label={messages.scheduledProvenanceLabel}>
+        <div><dt>{messages.contextId}</dt><dd className="mono">{context.eventContextId}</dd></div>
+        <div><dt>{messages.asOf}</dt><dd className="mono">{utc(context.eventTime)}</dd></div>
+        <div><dt>{messages.processingTime}</dt><dd className="mono">{utc(context.processingTime)}</dd></div>
+        <div><dt>{messages.captured}</dt><dd className="mono">{utc(context.capturedAt)}</dd></div>
+        <div><dt>{messages.dataMode}</dt><dd>{context.dataMode}</dd></div>
+        <div><dt>{messages.provenance}</dt><dd className="mono">{context.provenanceId}</dd></div>
+        <div><dt>{messages.source}</dt><dd className="mono">{context.sourceReferenceId}</dd></div>
+        <div><dt>{messages.mutationPolicy}</dt><dd>{messages.appendOnly}</dd></div>
       </dl>
-      <dl className="fact-grid schedule-grid" aria-label="Observed scheduled event timestamps">
-        <div><dt>Earnings</dt><dd className="mono">{instantOrNa(context.earningsAt)}</dd></div>
-        <div><dt>Next CPI</dt><dd className="mono">{instantOrNa(context.nextCpiAt)}</dd></div>
-        <div><dt>Next FOMC</dt><dd className="mono">{instantOrNa(context.nextFomcAt)}</dd></div>
-        <div><dt>Next NFP</dt><dd className="mono">{instantOrNa(context.nextNfpAt)}</dd></div>
-        <div><dt>Options expiration</dt><dd className="mono">{instantOrNa(context.optionsExpirationAt)}</dd></div>
+      <dl className="fact-grid schedule-grid" aria-label={messages.scheduleValuesLabel}>
+        <div><dt>{messages.earnings}</dt><dd className="mono">{instantOrNa(context.earningsAt)}</dd></div>
+        <div><dt>{messages.nextCpi}</dt><dd className="mono">{instantOrNa(context.nextCpiAt)}</dd></div>
+        <div><dt>{messages.nextFomc}</dt><dd className="mono">{instantOrNa(context.nextFomcAt)}</dd></div>
+        <div><dt>{messages.nextNfp}</dt><dd className="mono">{instantOrNa(context.nextNfpAt)}</dd></div>
+        <div><dt>{messages.optionsExpiration}</dt><dd className="mono">{instantOrNa(context.optionsExpirationAt)}</dd></div>
       </dl>
-      <p className="section-note context-note">
-        These are source-recorded schedule timestamps at the call event cutoff.
-      </p>
+      <p className="section-note context-note">{messages.scheduledNote}</p>
     </>
   );
 }
 
-export function CallContextSections({ call, context }: { call: CallCutoff; context: CallContext | null }) {
+export function CallContextSections({
+  call,
+  context,
+  locale,
+}: {
+  call: CallCutoff;
+  context: CallContext | null;
+  locale: Locale;
+}) {
+  const messages = getCallsMessages(locale).context;
   const macroSnapshot = context?.macroSnapshot ?? null;
   const eventContext = context?.eventContext ?? null;
   const contextKnown = context !== null;
@@ -156,30 +178,44 @@ export function CallContextSections({ call, context }: { call: CallCutoff; conte
       <section className="detail-section context-section" aria-labelledby="macro-context-title">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Point-in-time evidence</p>
-            <h2 id="macro-context-title">Macro context</h2>
+            <p className="eyebrow">{messages.pointInTimeEvidence}</p>
+            <h2 id="macro-context-title">{messages.macroContext}</h2>
           </div>
-          <span>{macroSnapshot ? `${macroSnapshot.dataMode} · Immutable` : `${contextKnown ? "Known empty" : "Unavailable"} · ${call.dataMode}`}</span>
+          <span>{macroSnapshot
+            ? `${macroSnapshot.dataMode} · ${messages.immutable}`
+            : `${contextKnown ? messages.knownEmpty : messages.unavailable} · ${call.dataMode}`}</span>
         </div>
         {macroSnapshot ? (
-          <MacroContext snapshot={macroSnapshot} />
+          <MacroContext messages={messages} snapshot={macroSnapshot} />
         ) : (
-          <EmptyContextEvidence call={call} contextKnown={contextKnown} subject="macro snapshot" />
+          <EmptyContextEvidence
+            call={call}
+            contextKnown={contextKnown}
+            messages={messages}
+            subject={messages.macroSubject}
+          />
         )}
       </section>
 
       <section className="detail-section context-section" aria-labelledby="scheduled-event-context-title">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Observed schedule evidence</p>
-            <h2 id="scheduled-event-context-title">Scheduled event context</h2>
+            <p className="eyebrow">{messages.observedScheduleEvidence}</p>
+            <h2 id="scheduled-event-context-title">{messages.scheduledEventContext}</h2>
           </div>
-          <span>{eventContext ? `${eventContext.dataMode} · Immutable` : `${contextKnown ? "Known empty" : "Unavailable"} · ${call.dataMode}`}</span>
+          <span>{eventContext
+            ? `${eventContext.dataMode} · ${messages.immutable}`
+            : `${contextKnown ? messages.knownEmpty : messages.unavailable} · ${call.dataMode}`}</span>
         </div>
         {eventContext ? (
-          <ScheduledEventContext context={eventContext} />
+          <ScheduledEventContext context={eventContext} messages={messages} />
         ) : (
-          <EmptyContextEvidence call={call} contextKnown={contextKnown} subject="scheduled-event context" />
+          <EmptyContextEvidence
+            call={call}
+            contextKnown={contextKnown}
+            messages={messages}
+            subject={messages.scheduledSubject}
+          />
         )}
       </section>
     </div>

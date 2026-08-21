@@ -23,22 +23,22 @@ test.describe("known-deferred screener shell", () => {
 
     expect(response?.ok()).toBe(true);
     await expect(page.getByRole("heading", {
-      name: "Historical equity screening is deferred.",
+      name: "과거 주식 스크리닝은 연기됐습니다.",
     })).toBeVisible();
     await expect(page.locator(".mode-badge")).toHaveText("DEMO");
 
-    const navigation = page.getByRole("navigation", { name: "Primary navigation" });
+    const navigation = page.getByRole("navigation", { name: "주요 탐색" });
     await expect(navigation.getByRole("link")).toHaveText([
-      "Dashboard",
-      "Market",
-      "Calls",
-      "Institutions",
-      "Analysts",
-      "Maps",
-      "Screener",
-      "Methodology",
+      "대시보드",
+      "시장",
+      "콜 기록",
+      "기관",
+      "애널리스트",
+      "시장 지도",
+      "스크리너",
+      "방법론",
     ]);
-    const screenerLink = navigation.getByRole("link", { name: "Screener" });
+    const screenerLink = navigation.getByRole("link", { name: "스크리너" });
     await expect(screenerLink).toHaveAttribute("href", "/screener");
     await expect(screenerLink).toHaveAttribute("aria-current", "page");
 
@@ -61,41 +61,41 @@ test.describe("known-deferred screener shell", () => {
     }
 
     const region = page.getByRole("region", {
-      name: "Historical screening publication state",
+      name: "과거 스크리닝 게시 상태",
     });
-    const policy = region.getByLabel("Screener product availability policy");
+    const policy = region.getByLabel("스크리너 제품 제공 정책");
     await expect(policy.getByText(
-      "Product availability policy · not fixture evidence",
+      "제품 제공 정책 · 픽스처 증거 아님",
       { exact: true },
     )).toBeVisible();
-    await expect(policy).toContainText("historical bars, a point-in-time feature catalog");
-    await expect(policy).toContainText("Performance outcomes and rankings remain P3 work");
-    await expect(policy).toContainText("licensed observed-provider integration remains P5 work");
+    await expect(policy).toContainText("과거 가격 바, 시점 기준 기능 카탈로그");
+    await expect(policy).toContainText("P3 작업");
+    await expect(policy).toContainText("P5 작업");
     await expect(region.getByRole("note")).toContainText(
-      "NA records an unpublished capability state; it never means zero matches",
+      "NA는 게시되지 않은 기능 상태를 기록합니다",
     );
 
-    const state = region.getByRole("status", { name: "Deferred screener state" });
+    const state = region.getByRole("status", { name: "연기된 스크리너 상태" });
     await expect(state.locator("dt")).toHaveText([
-      "Data mode",
-      "Scope",
-      "Status",
-      "Reason",
-      "Missing display",
+      "데이터 모드",
+      "범위",
+      "상태",
+      "사유",
+      "누락 표시",
     ]);
     await expect(state.locator("dd")).toHaveText(STATE_VALUES);
-    await expect(state.getByText("As of", { exact: true })).toHaveCount(0);
-    await expect(state.getByText("Source", { exact: true })).toHaveCount(0);
-    await expect(state.getByText("Provenance", { exact: true })).toHaveCount(0);
+    await expect(state.getByText("기준 시각", { exact: true })).toHaveCount(0);
+    await expect(state.getByText("소스", { exact: true })).toHaveCount(0);
+    await expect(state.getByText("출처 식별자", { exact: true })).toHaveCount(0);
 
-    const adjacent = region.getByRole("navigation", { name: "Adjacent evidence routes" });
+    const adjacent = region.getByRole("navigation", { name: "인접 증거 경로" });
     await expect(adjacent.getByText(
-      "Separate evidence surfaces · not screener output",
+      "별도 증거 화면 · 스크리너 출력 아님",
       { exact: true },
     )).toBeVisible();
-    await expect(adjacent.getByRole("link", { name: "Open recorded call evidence" }))
+    await expect(adjacent.getByRole("link", { name: "기록된 콜 증거 열기" }))
       .toHaveAttribute("href", "/calls");
-    await expect(adjacent.getByRole("link", { name: "Open methodology definitions" }))
+    await expect(adjacent.getByRole("link", { name: "방법론 정의 열기" }))
       .toHaveAttribute("href", "/methodology");
 
     await expect(region.locator(
@@ -110,26 +110,26 @@ test.describe("known-deferred screener shell", () => {
     const runtimeErrors = collectRuntimeErrors(page);
     await page.goto("/screener");
     const region = page.getByRole("region", {
-      name: "Historical screening publication state",
+      name: "과거 스크리닝 게시 상태",
     });
     await expect(region).toBeVisible();
     await page.locator("body").focus();
 
-    const navigation = page.getByRole("navigation", { name: "Primary navigation" });
-    const screenerLink = navigation.getByRole("link", { name: "Screener" });
+    const navigation = page.getByRole("navigation", { name: "주요 탐색" });
+    const screenerLink = navigation.getByRole("link", { name: "스크리너" });
     for (let attempt = 0; attempt < 9; attempt += 1) {
       await page.keyboard.press("Tab");
       if (await screenerLink.evaluate((element) => element === document.activeElement)) break;
     }
     await expectVisibleKeyboardFocus(screenerLink);
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
       await page.keyboard.press("Tab");
       if (await region.evaluate((element) => element === document.activeElement)) break;
     }
     await expectVisibleKeyboardFocus(region);
 
-    const callsLink = region.getByRole("link", { name: "Open recorded call evidence" });
+    const callsLink = region.getByRole("link", { name: "기록된 콜 증거 열기" });
     await page.keyboard.press("Tab");
     await expectVisibleKeyboardFocus(callsLink);
     await expectNoPageOverflow(page);
@@ -147,9 +147,9 @@ test.describe("known-deferred screener shell", () => {
     ]) {
       await page.goto(url);
       const main = page.getByRole("main");
-      await expect(main.getByText("Unsupported screener request", { exact: true })).toBeVisible();
+      await expect(main.getByText("지원하지 않는 스크리너 요청", { exact: true })).toBeVisible();
       await expect(main.getByRole("heading", {
-        name: "This screener request is not published.",
+        name: "이 스크리너 요청은 게시되지 않았습니다.",
       })).toBeVisible();
       const robotsDirectives = await page.locator('meta[name="robots"]').evaluateAll((elements) =>
         elements.map((element) => element.getAttribute("content")),
@@ -157,7 +157,7 @@ test.describe("known-deferred screener shell", () => {
       expect(robotsDirectives.length).toBeGreaterThan(0);
       expect(robotsDirectives.every((content) => /noindex/i.test(content ?? ""))).toBe(true);
       await expect(main.locator(".mode-badge")).toHaveCount(0);
-      await expect(main.getByRole("navigation", { name: "Primary navigation" })).toHaveCount(0);
+      await expect(main.getByRole("navigation", { name: "주요 탐색" })).toHaveCount(0);
       for (const value of STATE_VALUES) {
         await expect(main.getByText(value, { exact: true })).toHaveCount(0);
       }

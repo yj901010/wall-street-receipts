@@ -25,7 +25,7 @@ async function tabTo(page: Page, target: Locator, attempts = 24) {
 }
 
 async function expectPrimaryNavigationUnchanged(page: Page) {
-  const navigation = page.getByRole("navigation", { name: "Primary navigation" });
+  const navigation = page.getByRole("navigation", { name: "주요 탐색" });
   await expect(navigation.getByRole("link")).toHaveCount(primaryNavigationHrefs.length);
   expect(
     await navigation.getByRole("link").evaluateAll((links) =>
@@ -44,19 +44,19 @@ test.describe("recorded S&P 500 call-event history", () => {
 
     expect(response?.ok()).toBe(true);
     await expect(page.getByRole("heading", {
-      name: "Recorded S&P 500 forecast-call events.",
+      name: "기록된 S&P 500 전망 콜 이벤트",
     })).toBeVisible();
     await expect(page.locator(".mode-badge")).toHaveText("DEMO");
     await expect(page.getByText(
-      "This is a point-in-time subset of original analyst-call records, not index-price history, a current forecast, consensus, market trend, or performance series.",
+      "원본 애널리스트 콜 기록의 시점 기준 일부입니다. 지수 가격 이력, 현재 전망, 컨센서스, 시장 추세 또는 성과 시계열이 아닙니다.",
       { exact: true },
     )).toBeVisible();
 
     const navigation = await expectPrimaryNavigationUnchanged(page);
-    await expect(navigation.getByRole("link", { name: "Market" }))
+    await expect(navigation.getByRole("link", { name: "시장", exact: true }))
       .toHaveAttribute("aria-current", "page");
 
-    const provenance = page.getByLabel("S&P 500 call-history provenance");
+    const provenance = page.getByLabel("S&P 500 콜 이력 출처 정보");
     const catalogAsOf = provenance.getByText("2026-08-18T00:00:00Z", { exact: true });
     await expect(catalogAsOf).toHaveAttribute("datetime", "2026-08-18T00:00:00Z");
     await expect(provenance.getByText("fixture-analyst-calls-v1", { exact: true }))
@@ -65,37 +65,37 @@ test.describe("recorded S&P 500 call-event history", () => {
     await expect(provenance.getByText("DEMO", { exact: true })).toBeVisible();
 
     const history = page.getByRole("region", {
-      name: "S&P 500 call-event history",
+      name: "S&P 500 콜 이벤트 이력",
       exact: true,
     });
-    await expect(history.getByRole("heading", { name: "S&P 500 call-event history" }))
+    await expect(history.getByRole("heading", { name: "S&P 500 콜 이벤트 이력" }))
       .toBeVisible();
     await expect(history.getByText(
-      "1 row shown · 1 matching DEMO event · incomplete fixture coverage",
+      "1개 행 표시 · 일치하는 DEMO 이벤트 1건 · 불완전한 픽스처 범위",
       { exact: true },
     )).toBeVisible();
 
-    const policy = history.getByLabel("S&P 500 call-history policy");
-    await expect(policy.getByText("Presentation policy · not fixture evidence", { exact: true }))
+    const policy = history.getByLabel("S&P 500 콜 이력 정책");
+    await expect(policy.getByText("표시 정책 · 픽스처 증거 아님", { exact: true }))
       .toBeVisible();
     await expect(policy).toContainText(
-      "No correction or revision is folded into a current effective view.",
+      "정정이나 개정 내용을 현재 유효 상태로 합치지 않습니다.",
     );
     await expect(policy).toContainText(
-      "They are not current recommendations, prices, consensus, or performance.",
+      "현재 추천, 가격, 컨센서스 또는 성과가 아닙니다.",
     );
     await expect(policy).toContainText(
-      "they do not assert S&P 500 coverage, confidence, completeness, or market trend.",
+      "S&P 500 범위, 신뢰도, 완전성 또는 시장 추세를 주장하지 않습니다.",
     );
 
-    const queryEvidence = history.getByLabel("S&P 500 history query evidence");
+    const queryEvidence = history.getByLabel("S&P 500 이력 쿼리 증거");
     await expect(queryEvidence.getByText("S&P 500 Index", { exact: true })).toBeVisible();
     await expect(queryEvidence.getByText("asset-spx", { exact: true })).toBeVisible();
     await expect(queryEvidence.getByText("SPX · INDEX", { exact: true })).toBeVisible();
     await expect(queryEvidence.getByText("asset-spx · page 0 · size 25", { exact: true }))
       .toBeVisible();
     await expect(queryEvidence.getByText(
-      "Event time descending · call ID ascending tie break",
+      "이벤트 시각 내림차순 · 동일 시각은 콜 ID 오름차순",
       { exact: true },
     )).toBeVisible();
     await expect(queryEvidence.getByText("1 / 1", { exact: true })).toBeVisible();
@@ -106,17 +106,17 @@ test.describe("recorded S&P 500 call-event history", () => {
     )).toBeVisible();
 
     const tableRegion = history.getByRole("region", {
-      name: "S&P 500 call-event history table",
+      name: "S&P 500 콜 이벤트 이력 표",
       exact: true,
     });
     const table = tableRegion.getByRole("table", {
-      name: "Original committed S&P 500 DEMO analyst-call events",
+      name: "원본 확정 S&P 500 DEMO 애널리스트 콜 이벤트",
     });
     const rows = table.getByRole("row");
     await expect(rows).toHaveCount(2);
     await expect(table.getByRole("columnheader")).toHaveCount(8);
     await expect(table.getByRole("columnheader", {
-      name: /market price|chart|return|alpha|hit|accuracy|rank|consensus|outcome|performance|current|complete/i,
+      name: /market price|chart|return|alpha|hit|accuracy|rank|consensus|outcome|performance|current|complete|시장 가격|차트|수익|알파|적중|정확도|순위|컨센서스|성과|현재|완전/i,
     })).toHaveCount(0);
 
     const row = rows.nth(1);
@@ -130,12 +130,12 @@ test.describe("recorded S&P 500 call-event history", () => {
     await expect(row.getByText("BULLISH", { exact: true })).toBeVisible();
     await expect(row.getByText("DEMO Bullish", { exact: true })).toBeVisible();
     await expect(row.getByText("$7,800.00 → $8,000.00", { exact: true })).toBeVisible();
-    await expect(row.getByText("Currency: USD", { exact: true })).toBeVisible();
+    await expect(row.getByText("통화: USD", { exact: true })).toBeVisible();
     await expect(row.getByText("NA", { exact: true })).toBeVisible();
     await expect(row.getByText("ACTIVE", { exact: true })).toBeVisible();
     await expect(row.getByRole("link", { name: "DEMO index outlook" }))
       .toHaveAttribute("href", "/calls/demo-call-001#source");
-    await expect(row.getByText("DEMO Publisher · Verified: false", { exact: true }))
+    await expect(row.getByText("DEMO Publisher · 검증 여부: false", { exact: true }))
       .toBeVisible();
     await expect(row.locator('time[datetime="2026-08-10T12:03:00Z"]')).toHaveCount(2);
     await expect(row.getByText("DEMO · fixture-analyst-calls-v1", { exact: true }))
@@ -180,18 +180,18 @@ test.describe("recorded S&P 500 call-event history", () => {
 
     expect(dashboardResponse?.ok()).toBe(true);
     const dashboardNavigation = await expectPrimaryNavigationUnchanged(page);
-    await expect(dashboardNavigation.getByRole("link", { name: "Dashboard" }))
+    await expect(dashboardNavigation.getByRole("link", { name: "대시보드" }))
       .toHaveAttribute("aria-current", "page");
-    const marketEntry = dashboardNavigation.getByRole("link", { name: "Market" });
+    const marketEntry = dashboardNavigation.getByRole("link", { name: "시장", exact: true });
     await expect(marketEntry).toHaveAttribute("href", "/market");
     await marketEntry.click();
     await expect(page).toHaveURL(/\/market$/);
 
     const marketNavigation = await expectPrimaryNavigationUnchanged(page);
-    await expect(marketNavigation.getByRole("link", { name: "Market" }))
+    await expect(marketNavigation.getByRole("link", { name: "시장", exact: true }))
       .toHaveAttribute("aria-current", "page");
-    const historyEntry = page.getByRole("region", { name: "Market board publication state" })
-      .getByRole("link", { name: "Open recorded S&P 500 call-event history" });
+    const historyEntry = page.getByRole("region", { name: "시장 보드 게시 상태" })
+      .getByRole("link", { name: "기록된 S&P 500 콜 이벤트 이력 열기" });
     await expect(historyEntry).toHaveAttribute("href", "/markets/sp500");
 
     await page.locator("body").focus();
@@ -203,18 +203,18 @@ test.describe("recorded S&P 500 call-event history", () => {
     ]);
 
     await expect(page.getByRole("heading", {
-      name: "Recorded S&P 500 forecast-call events.",
+      name: "기록된 S&P 500 전망 콜 이벤트",
     })).toBeVisible();
     const historyNavigation = await expectPrimaryNavigationUnchanged(page);
-    await expect(historyNavigation.getByRole("link", { name: "Market" }))
+    await expect(historyNavigation.getByRole("link", { name: "시장", exact: true }))
       .toHaveAttribute("aria-current", "page");
 
     const history = page.getByRole("region", {
-      name: "S&P 500 call-event history",
+      name: "S&P 500 콜 이벤트 이력",
       exact: true,
     });
     const tableRegion = history.getByRole("region", {
-      name: "S&P 500 call-event history table",
+      name: "S&P 500 콜 이벤트 이력 표",
       exact: true,
     });
     await page.locator("body").focus();
@@ -247,7 +247,7 @@ test.describe("recorded S&P 500 call-event history", () => {
     ]);
 
     await expect(page.locator("#source")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Source provenance" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "출처 추적 정보" })).toBeVisible();
     expect(await page.evaluate(() => window.location.hash)).toBe("#source");
     await expect.poll(() => page.locator("#source").evaluate((element) => {
       const bounds = element.getBoundingClientRect();
@@ -255,7 +255,7 @@ test.describe("recorded S&P 500 call-event history", () => {
     })).toBe(true);
 
     await page.goto("/markets/sp500");
-    const filterLink = page.getByRole("link", { name: "Open filtered call ledger" });
+    const filterLink = page.getByRole("link", { name: "필터링된 콜 원장 열기" });
     await expect(filterLink).toHaveAttribute("href", "/calls?assetId=asset-spx");
     await Promise.all([
       page.waitForURL((url) =>
@@ -266,9 +266,9 @@ test.describe("recorded S&P 500 call-event history", () => {
 
     const filteredUrl = new URL(page.url());
     expect([...filteredUrl.searchParams.entries()]).toEqual([["assetId", "asset-spx"]]);
-    await expect(page.getByLabel("Asset")).toHaveValue("asset-spx");
-    await expect(page.getByRole("heading", { name: "1 event" })).toBeVisible();
-    const filteredTable = page.getByRole("table", { name: "Filtered analyst call events" });
+    await expect(page.getByLabel("자산")).toHaveValue("asset-spx");
+    await expect(page.getByRole("heading", { name: "이벤트 1건" })).toBeVisible();
+    const filteredTable = page.getByRole("table", { name: "필터링된 애널리스트 콜 이벤트" });
     await expect(filteredTable.getByRole("row")).toHaveCount(2);
     const filteredRow = filteredTable.getByRole("row").nth(1);
     await expect(filteredRow).toContainText("SPX");
