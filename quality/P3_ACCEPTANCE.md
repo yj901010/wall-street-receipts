@@ -3,9 +3,9 @@
 Current status: the pure target-hit and directional-win comparison cores,
 explicit-anchor session-offset mechanics, and policy-neutral event/session
 relation classifier vertical slices are complete. The strict session-close
-named-horizon and explicit forecast-basis policy slice is also complete. None
-publishes a calculated outcome or completes the broader P3 scoring phase, which
-remains open.
+named-horizon and explicit forecast-basis policy slice is also complete. The
+call-direction polarity policy slice is also complete. None publishes a
+calculated outcome or completes the broader P3 scoring phase, which remains open.
 
 ## Pure target-hit slice boundary
 
@@ -299,6 +299,64 @@ remains open.
   default timezone restores global state in `finally`; source-boundary and
   repository CI prove no runtime wiring, canonical JSON, or product publication.
 
+## Call-direction polarity policy slice boundary
+
+- The canonical five-value `CallDirection` is the only input vocabulary.
+  `STRONG_BULLISH` and `BULLISH` reduce to directional `BULLISH`; `BEARISH` and
+  `STRONG_BEARISH` reduce to directional `BEARISH`; `NEUTRAL` reduces only to
+  explicit non-directional reason `NEUTRAL_DIRECTION`.
+- Neutral is a complete policy classification, not missing evidence. It is not
+  `Available(false)`, a loss, miss, bearish side, excluded/incomplete outcome,
+  null, or a fallback for an unknown value.
+- Every resolution preserves the original source direction and echoes the exact
+  versioned policy-definition hash. Strong directions are not rewritten in the
+  context even though their directional side is collapsed.
+- This leaf performs no side-enum adapter wiring, target or return calculation,
+  horizon/observation selection, methodology activation, persistence, provider
+  read, or product publication.
+
+## Call-direction polarity policy contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-CP01 | Exact request | `CallDirectionPolarityRequest` contains exactly `CallDirectionPolarityPolicyVersion policyVersion` and `CallDirection direction`. It has no call/revision aggregate, target, price, return, horizon, timestamp, snapshot, provider, methodology, fingerprint, completeness, or fallback field. |
+| P3-CP02 | Exact source vocabulary | The canonical `CallDirection` remains exactly, and in order, `STRONG_BULLISH`, `BULLISH`, `NEUTRAL`, `BEARISH`, `STRONG_BEARISH`. The policy accepts the enum directly and performs no string parsing, aliasing, case normalization, ordinal arithmetic, default, or unknown-value inference. |
+| P3-CP03 | Exact policy identity | `CallDirectionPolarityPolicyVersion` contains exactly `COLLAPSE_STRONG_DIRECTIONS_NEUTRAL_NON_DIRECTIONAL_V1`. Its canonical definition is the exact ADR-011 single-line 489-byte ASCII/UTF-8 sequence with no BOM, surrounding whitespace, or line ending and fixed lowercase SHA-256 `d83eccc92fedd7ba025745be2c8e78245bc308d0ff479467fa61afe543dc8a50`. Returned byte arrays are defensive copies. |
+| P3-CP04 | Exact five-direction mapping | The resolver exhaustively maps `STRONG_BULLISH→BULLISH`, `BULLISH→BULLISH`, `NEUTRAL→NON_DIRECTIONAL`, `BEARISH→BEARISH`, and `STRONG_BEARISH→BEARISH`. No mapping is scale-, locale-, order-, history-, call-, target-, or market-dependent. |
+| P3-CP05 | Closed result | `CallDirectionPolarityResolution` is sealed as exactly `Directional(context,side)` or `NonDirectional(context,reason)`. `DirectionalSide` is exactly `BULLISH`, `BEARISH`; `NonDirectionalReason` is exactly `NEUTRAL_DIRECTION`; context is exactly policy version, policy-definition hash, and original direction. |
+| P3-CP06 | Neutral is not false/loss | `NEUTRAL` returns only `NonDirectional(context,NEUTRAL_DIRECTION)`. It never returns a Boolean, `Directional`, unavailable/missing, miss/loss, exclusion, incomplete state, zero, null, or exception for a valid request. |
+| P3-CP07 | Constructor consistency | Public context/result construction fails closed for a wrong hash, directional result whose source direction maps to the other side or neutral, non-directional result whose source direction is bullish/bearish, null component, or any reason other than the sole closed neutral reason. Direct results preserve the source direction and can attest this locally decidable mapping. |
+| P3-CP08 | Fail-closed request | Null request, policy version, or direction is invalid. The resolver has no fallback branch, default side, exception-to-neutral conversion, or behavior based on enum ordinal/name text. |
+| P3-CP09 | Determinism | Identical requests produce equal results regardless of clock, locale, default timezone, invocation order, prior calls, or attempted mutation of returned policy bytes. |
+| P3-CP10 | Pure source boundary | Production policy code imports only canonical `CallDirection`, its own package types, and exact deterministic JDK null/UTF-8 support. It imports no call/revision/outcome aggregate, calculator, horizon/calendar/window type, decimal/floating arithmetic, price/return/observation, provider, repository, fixture, JSON, Spring, persistence, network, scheduler, clock, locale, timezone, random, or LLM dependency. |
+| P3-CP11 | No reverse wiring | No other production class references any new polarity-policy type. In particular, neither target-hit nor directional-win is invoked or adapted, and no controller, application service, provider, repository, scheduler, or web source consumes the policy. |
+| P3-CP12 | No publication | Existing 14 schemas, 13 canonical fixture files, manifest membership/order, five OpenAPI paths, five Flyway migrations, API/controller/repository/database behavior, canonical `CallDirection`, two model-only methodologies, four all-null outcomes, and web source remain unchanged. No API key, account, paid plan, domain, data license, or network access is required. |
+| P3-CP13 | Later integration boundary | Calculator-side adaptation, target eligibility, horizon observations and returns, cancellation eligibility, methodology definition/activation, point-in-time input identity, fingerprinting, outcome persistence, aggregation, and UI publication require later reviewed contracts. |
+
+## Required call-direction polarity golden and negative tests
+
+- One exhaustive source-order vector covers all five `CallDirection` values and
+  asserts the exact closed result, preserved source direction, policy version,
+  and definition hash for each. The two strong directions must distinguish
+  collapsed result side from preserved context direction.
+- Neutral asserts exact `NonDirectional(NEUTRAL_DIRECTION)` and absence of a
+  directional side or Boolean. Direct-constructor negatives reject neutral as
+  either directional side and reject every directional source as non-directional.
+- Wrong-side direct construction is rejected for both ordinary and strong
+  bullish/bearish sources. Wrong hash and every null request/context/result
+  component fail closed rather than selecting a default.
+- The canonical policy string is asserted byte-for-byte in exact key order;
+  UTF-8 length is 489, independently recomputed SHA-256 equals the fixed digest,
+  code returns that digest, and mutating one returned byte array cannot affect a
+  later call.
+- Reflection or equivalent exact-shape tests lock the one policy constant, two
+  request components, context components, result variants, two sides, and sole
+  non-directional reason. Replay under changed locale/default timezone restores
+  global state in `finally`.
+- Source-boundary and repository CI reject ordinal/name/string/default mapping,
+  calculator or runtime reverse wiring, canonical JSON changes, and product
+  publication. Source-local vectors are tests only, not analyst or market facts.
+
 ## Deferred work and implementation order
 
 1. Add endpoint-price/asset-return support only after catalog provenance, asset/venue
@@ -308,8 +366,10 @@ remains open.
    `actual` observation, positivity, output scale, and rounding policy are
    versioned. Target error precedes window metrics because it needs one resolved
    close rather than a complete high/low path.
-3. Wire target hit only after its side reduction, target eligibility, window
-   inclusivity, point-in-time input identity, and unavailable mapping are locked.
+3. Adapt the completed common polarity only after calculator-side mapping,
+   target eligibility, window inclusivity, point-in-time input identity, and
+   unavailable mapping are locked; the polarity leaf does not wire target hit or
+   directional win by itself.
 4. Add MFE/MAE after full-window completeness and bullish/bearish sign rules;
    add alpha/sector alpha last, after benchmark/sector identity and corporate-
    action-adjusted return policy exist.
