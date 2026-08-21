@@ -4,18 +4,20 @@ Wall Street Receipts is a point-in-time financial research product that records
 public analyst calls, preserves the market context that was available when each
 call was made, and evaluates later outcomes with a reproducible methodology.
 
-The P0 foundation and P1 domain/fixture phase are complete, P2 core UI work
-remains in progress, and the first three isolated P3 slices are complete: the
-target-hit comparison core, schedule-only session-offset mechanics, and the
-policy-neutral event/session relation classifier. Delivered P2 routes
-include the evidence directories, maps,
-market publication state, recorded S&P call history, and the honest known-
-deferred Screener shell; actual screening remains P8 work. P1 provides a
+The P0 foundation and P1 domain/fixture phase are complete, broader P2 work
+remains open, and the first three isolated P3 slices are complete: the target-hit
+comparison core, schedule-only session-offset mechanics, and the policy-neutral
+event/session relation classifier. Delivered P2 work includes
+the completed coherent analyst-call list/detail consumers, evidence directories,
+maps, market publication state, recorded S&P call history, and the honest
+known-deferred Screener shell; broader P2 remains open and actual screening
+remains P8 work. P1 provides a
 canonical analyst-call ledger,
 source evidence, immutable point-in-time market and macro/event context,
-list/detail APIs, and responsive web routes. The call-detail audit can now read
-its detail, context, and append-only correction/cancellation lineage together
-through the private Spring API transport without mixing API and fixture facts.
+list/detail APIs, and responsive web routes. The analyst-call ledger and each
+call-detail audit can now read through private Spring API transports; each
+detail-page aggregate keeps its call, context, and append-only correction/
+cancellation lineage together without mixing API and fixture facts.
 Outcome records preserve audit, methodology, and input lineage without claiming
 P3 scoring results. Kafka, Redis,
 ClickHouse, OpenSearch, object storage, and commercial data providers remain
@@ -72,12 +74,22 @@ are:
 - Outcome audit API: <http://localhost:8080/v1/calls/demo-call-001/outcomes>
 
 The explicit web-process environment above selects `CALL_AUDIT_PROVIDER=api`.
-Consequently,
-`/calls/[id]` reads the canonical detail, context, and revision resources from
-the Spring API through the server-only `API_BASE_URL`. The browser never calls
-that origin directly. Set `CALL_AUDIT_PROVIDER=fixture` only when deliberately
-running the complete detail audit offline; an API error never falls back to
-fixture data or becomes an empty lineage.
+Consequently, `/calls` reads one canonical list page and `/calls/[id]` reads the
+canonical detail, context, and revision resources from Spring through the
+server-only `API_BASE_URL`. The browser never calls that origin directly. The
+existing list API does not expose fixture dataset as-of, provenance, disclaimer,
+or complete facets, so API list mode marks those dataset-level values as not
+exposed instead of mixing in fixture metadata or inferring coverage from one
+page. Set `CALL_AUDIT_PROVIDER=fixture` only when deliberately running the call
+ledger and complete detail audit offline; an API error never falls back to
+fixture data, an empty page, or an empty lineage.
+
+The completed list-consumer slice adds no product route or backend contract.
+`/calls` uses a page-scoped provider selected by the same exact
+`CALL_AUDIT_PROVIDER` value as detail. API mode performs one private list read;
+fixture mode is an explicit whole-page alternative, never an automatic fallback.
+Returned-page capture/provenance remains separate from unavailable dataset-wide
+metadata, and opaque identity filters keep the existing API's exact-case rules.
 
 This is the first real web-to-application-API connection, but it is not yet a
 commercial market-data connection: Spring still imports the repository's

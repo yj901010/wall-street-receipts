@@ -266,7 +266,7 @@ test.describe("recorded S&P 500 call-event history", () => {
 
     const filteredUrl = new URL(page.url());
     expect([...filteredUrl.searchParams.entries()]).toEqual([["assetId", "asset-spx"]]);
-    await expect(page.getByLabel("자산")).toHaveValue("asset-spx");
+    await expect(page.getByLabel("자산 ID (대소문자 정확히 일치)")).toHaveValue("asset-spx");
     await expect(page.getByRole("heading", { name: "이벤트 1건" })).toBeVisible();
     const filteredTable = page.getByRole("table", { name: "필터링된 애널리스트 콜 이벤트" });
     await expect(filteredTable.getByRole("row")).toHaveCount(2);

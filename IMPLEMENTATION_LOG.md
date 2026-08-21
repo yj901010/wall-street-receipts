@@ -1537,3 +1537,102 @@ scoring, P5 licensed provider publication, and P8 history remain open
 - Authentication, user-specific visibility, cross-endpoint snapshot tokens,
   streaming/polling, writes, source-document expansion, and list/dashboard API
   migration require separate reviewed contracts.
+
+## P2 — Coherent analyst-call list API consumer
+
+Status: complete for the `/calls` list consumer vertical slice; broader P2,
+P3 lifecycle/scoring, P5 licensed provider publication, and P8 historical
+materialization remain open
+
+### Scope
+
+- Connected the existing server-rendered `/calls` route to the existing Spring
+  `GET /v1/calls` read through a page-scoped provider without changing the API,
+  canonical fixtures, persistence, or product routes.
+- Shared the existing exact fixture/API selector with call detail so the
+  documented local stack does not silently use different source modes between
+  list and detail navigation.
+- Preserved the existing filter, pagination, bilingual, evidence, empty, error,
+  keyboard, and responsive behavior while removing the list route's dependency
+  on fixture-only dataset metadata in API mode.
+
+### Contract and phase decisions
+
+- API mode owns one private no-store JSON GET and always requests exact DEMO as
+  the P2 phase boundary. It has no client transport, retry, second metadata
+  request, or API-to-fixture fallback.
+- Spring's existing list response is only `{items,page}`. Dataset as-of, source,
+  disclaimer, and complete facets therefore remain explicitly NOT_EXPOSED in
+  API mode rather than being copied from fixtures or inferred from one page.
+- Returned-page capture/provenance is independently labelled page-only evidence.
+  It cannot become a dataset timestamp, freshness, coverage, or provider-health
+  claim. In fixture mode only, the AVAILABLE dataset `asOf` must bound every
+  returned call capture; that coherence check never creates API metadata.
+- Exact opaque-ID inputs replace fixture facet selects; ticker retains its API
+  semantics, direction/status remain closed enums, and the list mode is fixed to
+  DEMO. Date inputs map to real UTC calendar-day bounds with an exclusive through
+  date. The typed provider separately preserves Spring-compatible request
+  instants through nanosecond precision and Java's UTC-offset boundary, while
+  response evidence remains canonical UTC `Z` at no more than microsecond
+  precision.
+- Runtime adaptation preserves the raw API order and explicit nulls while
+  validating closed response keys, joins, chronology, DEMO parity, deterministic
+  sort/tie order, page metadata, and empty/out-of-range semantics.
+
+### Module structure
+
+- `call-list-provider.ts` owns the page-scoped snapshot and honest dataset/page
+  evidence union. `call-list-query.ts` closes raw route parameters, and
+  `call-list-adapter.ts` validates the exact Spring page, filters, ordering,
+  identities, joins, modes, chronology, and evidence projection.
+- `fixture-call-list-provider.ts`, `api-call-list-provider.server.ts`, and
+  `call-list-provider.server.ts` provide explicit whole-page fixture/API modes,
+  the private one-read transport, and the shared exact source selector. The API
+  graph cannot reach fixture data and the browser graph cannot reach either
+  server-only module.
+- The existing `/calls` page, typed Korean/English messages, contained evidence
+  styles, provider/query/page unit tests, and `call-list-api.spec.ts` implement
+  and verify the product surface. Related analyst, institution, and S&P history
+  browser checks now target the exact opaque-ID inputs.
+- `quality/P2_ACCEPTANCE.md`, `.github/workflows/ci.yml`, README, and this log for
+  the source boundary, local runtime, and cross-stack proof.
+
+### Routes
+
+- No route was added or renamed. `/calls` consumes the existing
+  `GET /v1/calls`; `/calls/[id]` retains the existing coherent detail,
+  context, and revision aggregate.
+
+### Verification
+
+- Full web ESLint and `tsc --noEmit --incremental false`: PASS. The focused
+  eight-file call-list suite passed 162/162 tests, and the full Vitest suite
+  passed 515/515 tests across 41 files.
+- Next 16.2.11 production build: PASS, including 12/12 page-data generation and
+  all 11 dynamic routes.
+- Targeted call-list Playwright passed 3/3 at 1440, 1280, and 390 pixels; the
+  six related legacy route checks passed 6/6. The final retry-free full browser
+  suite passed 69/69 across all three widths with the sequential Tab path,
+  long returned-page provenance containment, exact URLs, and zero browser calls
+  to the API origin.
+- Full API Maven verification passed 223/223 tests with zero failures, errors,
+  or skips. PostgreSQL 17.10 migrations passed 4/4 integration tests with zero
+  skips, and Compose configuration validation passed.
+- The local PostgreSQL -> packaged Spring -> Next API-mode run passed 2/2
+  Playwright tests. Exact Tomcat access-log line membership passed 11/11: five
+  query-bearing list reads plus the six detail/context/revision reads. With the
+  configured `%m %U%q %s` pattern, Tomcat's queryless `%q` field is preserved as
+  `-`; the proof therefore checks the observed full lines rather than a partial
+  path substring.
+- All 18 embedded repository Python blocks passed syntax and execution against
+  14 schemas and 32 canonical records. SnakeYAML 2.5 parsing and
+  `git diff --check` passed; protected backend/canonical sets and the generated
+  `next-env.d.ts` remained clean.
+- Independent read-only review closed with zero blockers, zero HIGH findings,
+  and zero known false-positive gates.
+
+### Deferred boundary
+
+- Dataset metadata/facet APIs, dashboard migration, snapshot tokens, live or
+  licensed ingestion, freshness/health, polling/streaming, lifecycle projection,
+  scoring, saved filters, and exports remain separate reviewed work.

@@ -123,7 +123,7 @@ test.describe("analyst identity directory", () => {
     await page.keyboard.press("Enter");
 
     await expect(page).toHaveURL(/\/calls\?analystId=analyst-demo-a$/);
-    await expect(page.locator('select[name="analystId"]')).toHaveValue(
+    await expect(page.getByLabel("애널리스트 ID (대소문자 정확히 일치)")).toHaveValue(
       "analyst-demo-a",
     );
     await expect(page.getByRole("heading", { name: "애널리스트 콜" })).toBeVisible();

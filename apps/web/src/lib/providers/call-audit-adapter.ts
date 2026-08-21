@@ -5,6 +5,7 @@ import {
   MACRO_SERIES,
   type AnalystCall,
   type AnalystCallDetail,
+  type AnalystCallView,
   type AnalystSummary,
   type AssetSummary,
   type CallContext,
@@ -411,6 +412,27 @@ function adaptMarketSnapshot(value: unknown): MarketSnapshot | null {
   };
 }
 
+function adaptCallViewRecord(record: JsonRecord): AnalystCallView {
+  const view: AnalystCallView = {
+    call: adaptCall(record.call),
+    institution: adaptInstitution(record.institution),
+    analyst: adaptAnalyst(record.analyst),
+    asset: adaptAsset(record.asset),
+    source: adaptSource(record.source),
+  };
+  validateDetailJoins({ ...view, snapshot: null });
+  return view;
+}
+
+export function adaptCallViewResponse(value: unknown): AnalystCallView {
+  const record = closedRecord(
+    value,
+    ["call", "institution", "analyst", "asset", "source"],
+    "Call view response",
+  );
+  return adaptCallViewRecord(record);
+}
+
 export function adaptCallDetailResponse(value: unknown): AnalystCallDetail {
   const record = closedRecord(
     value,
@@ -418,11 +440,7 @@ export function adaptCallDetailResponse(value: unknown): AnalystCallDetail {
     "Call detail response",
   );
   const detail: AnalystCallDetail = {
-    call: adaptCall(record.call),
-    institution: adaptInstitution(record.institution),
-    analyst: adaptAnalyst(record.analyst),
-    asset: adaptAsset(record.asset),
-    source: adaptSource(record.source),
+    ...adaptCallViewRecord(record),
     snapshot: adaptMarketSnapshot(record.snapshot),
   };
   validateDetailJoins(detail);

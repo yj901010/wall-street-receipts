@@ -3734,12 +3734,21 @@ jobs:
               "Call-revisions E2E must cover populated/empty/server-only/runtime boundaries",
           )
           workflow_source = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+          integration_start = workflow_source.index("\n  call-audit-integration:\n")
+          integration_end = workflow_source.index("\n  api:\n", integration_start)
+          integration_source = workflow_source[integration_start:integration_end]
           require(
-              all(marker in workflow_source for marker in (
+              all(marker in integration_source for marker in (
                   "call-audit-integration:", "postgres:17-alpine", "CALL_AUDIT_PROVIDER: api",
                   "API_BASE_URL: http://localhost:8080", "call-revisions.spec.ts",
                   "SERVER_TOMCAT_ACCESSLOG_BUFFERED: 'false'", "call_audit_access",
-                  "Verify Next requested all three real API resources",
+                  "Verify Next requested the real list and all audit resources",
+                  "GET /v1/calls/demo-call-002- 200",
+                  "GET /v1/calls/demo-call-002/context- 200",
+                  "GET /v1/calls/demo-call-002/revisions- 200",
+                  "GET /v1/calls/demo-call-001- 200",
+                  "GET /v1/calls/demo-call-001/context- 200",
+                  "GET /v1/calls/demo-call-001/revisions- 200",
               )),
               "CI must retain the real PostgreSQL/Spring/Next call-audit integration gate",
           )
@@ -3747,6 +3756,457 @@ jobs:
           print(
               "Validated coherent DEMO-only detail/context/revision providers, private exact "
               "transport, reverse client isolation, and unchanged canonical/backend surfaces"
+          )
+          PYTHON
+
+      - name: Guard coherent server-side call list API boundary
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          web_root = Path("apps/web/src")
+          provider_root = web_root / "lib/providers"
+          expected_provider_files = {
+              "call-list-provider.ts",
+              "call-list-query.ts",
+              "call-list-adapter.ts",
+              "fixture-call-list-provider.ts",
+              "api-call-list-provider.server.ts",
+              "call-list-provider.server.ts",
+          }
+          actual_provider_files = {
+              path.name
+              for path in provider_root.glob("*call-list*.ts")
+              if not path.name.endswith(".test.ts")
+          }
+          require(
+              actual_provider_files == expected_provider_files,
+              f"Call-list production provider set is not exact: {sorted(actual_provider_files)}",
+          )
+
+          interface_path = provider_root / "call-list-provider.ts"
+          query_path = provider_root / "call-list-query.ts"
+          adapter_path = provider_root / "call-list-adapter.ts"
+          fixture_path = provider_root / "fixture-call-list-provider.ts"
+          legacy_fixture_path = provider_root / "fixture-calls-provider.ts"
+          api_path = provider_root / "api-call-list-provider.server.ts"
+          factory_path = provider_root / "call-list-provider.server.ts"
+          page_path = web_root / "app/calls/page.tsx"
+          messages_path = web_root / "app/calls/messages.ts"
+          styles_path = web_root / "app/globals.css"
+          required_paths = (
+              interface_path, query_path, adapter_path, fixture_path, api_path, factory_path,
+              page_path, messages_path, styles_path,
+          )
+          require(all(path.is_file() for path in required_paths), "Call-list source boundary is incomplete")
+
+          interface_source = interface_path.read_text(encoding="utf-8")
+          query_source = query_path.read_text(encoding="utf-8")
+          adapter_source = adapter_path.read_text(encoding="utf-8")
+          fixture_source = fixture_path.read_text(encoding="utf-8")
+          api_source = api_path.read_text(encoding="utf-8")
+          factory_source = factory_path.read_text(encoding="utf-8")
+          page_source = page_path.read_text(encoding="utf-8")
+          messages_source = messages_path.read_text(encoding="utf-8")
+          styles_source = styles_path.read_text(encoding="utf-8")
+
+          require(
+              all(marker in interface_source for marker in (
+                  "export type CallListSnapshot", 'dataMode: "DEMO"',
+                  "returnedPageEvidence", "latestCallCapturedAt", "callProvenanceIds",
+                  "datasetEvidence", 'availability: "AVAILABLE"',
+                  'availability: "NOT_EXPOSED"', 'scope: "RETURNED_PAGE"',
+                  "CALL_LIST_METADATA_NOT_EXPOSED_REASON",
+                  '"LIST_API_HAS_NO_DATASET_METADATA"',
+                  "list(query", "Promise<CallListSnapshot>",
+              )),
+              "CallListProvider must close page, page-only evidence, and dataset-evidence states",
+          )
+          require(
+              all(marker in query_source for marker in (
+                  "ALLOWED_PARAMETERS", "duplicate values are not allowed",
+                  "unsupported parameter", "whitespace is not normalized",
+                  "only DEMO is available in this phase", "2_147_483_647",
+                  "nextUtcDate", 'dataMode: "DEMO"',
+              )),
+              "Call-list raw query parser must reject ambiguity and construct exact DEMO UTC bounds",
+          )
+          require(
+              all(marker in api_source for marker in (
+                  "typeof window", "API_BASE_URL", 'method: "GET"',
+                  'cache: "no-store"', 'redirect: "error"',
+                  'Accept: "application/json"', 'split(";", 1)',
+                  'contentType !== "application/json"', "url.searchParams.set",
+                  '["dataMode", effective.dataMode]', "v1/calls", "adaptCallListResponse",
+                  "CALL_LIST_METADATA_NOT_EXPOSED_REASON",
+              )),
+              "API call-list transport lacks exact private one-page GET semantics",
+          )
+          require(
+              not any(marker in api_source for marker in (
+                  "fixtures/", "fixture-call-list-provider", "FixtureCallsProvider",
+                  ".metadata(", "NEXT_PUBLIC_", "localStorage", "sessionStorage",
+                  "document.cookie", "Authorization", "credentials:",
+              )),
+              "API call-list transport crosses its server/source boundary",
+          )
+          require(
+              "catch" not in factory_source
+              and "fallback" not in factory_source.lower()
+              and 'process.env.CALL_AUDIT_PROVIDER ?? "fixture"' in factory_source
+              and 'configuredProvider === "fixture"' in factory_source
+              and 'configuredProvider === "api"' in factory_source
+              and "process.env.API_BASE_URL" in factory_source
+              and ".toLowerCase(" not in factory_source
+              and ".toLocaleLowerCase(" not in factory_source,
+              "Call-list factory must share the exact raw fixture/api selector without fallback",
+          )
+          require(
+              "FixtureCallsProvider" in fixture_source
+              and ".metadata()" in fixture_source
+              and "AVAILABLE" in fixture_source
+              and "API_BASE_URL" not in fixture_source
+              and "fetch(" not in fixture_source,
+              "Fixture call-list mode must own one coherent fixture page and available metadata",
+          )
+
+          adapter_markers = (
+              "adaptCallListResponse", "adaptCallViewResponse", "closed",
+              "Number.isSafeInteger", "totalElements", "totalPages", "first", "last",
+              "providerEvent", "callId", "eventTime", "processingTime", "capturedAt",
+              '!== "DEMO"', "returnedPageEvidence", "latestCallCapturedAt",
+              "callProvenanceIds", "ticker", "institutionId", "analystId",
+              "direction", "status", "from", "to",
+          )
+          require(
+              all(marker in adapter_source for marker in adapter_markers),
+              "Call-list adapter lacks closed shape/page/filter/order/DEMO evidence validation",
+          )
+
+          require(
+              "callListProvider" in page_source
+              and "callsProvider" not in page_source
+              and "FixtureCallsProvider" not in page_source
+              and "fixture-calls-provider" not in page_source
+              and "fixtures/" not in page_source
+              and "catch" not in page_source
+              and ".metadata()" not in page_source
+              and "datasetEvidence" in page_source
+              and "returnedPageEvidence" in page_source,
+              "Calls page must use only the page-scoped list provider and honest evidence states",
+          )
+          require(
+              re.search(r'''from\s+["']@/lib/providers["']''', page_source) is None,
+              "Calls page must not bypass the list factory through the provider barrel",
+          )
+          for identity_name in ("assetId", "institutionId", "analystId"):
+              require(
+                  re.search(
+                      rf'messages\.{identity_name}Filter[\s\S]{{0,500}}'
+                      rf'<input[^>]+name="{identity_name}"',
+                      page_source,
+                  ) is not None,
+                  f"{identity_name} must be an exact opaque-ID text input",
+              )
+          require(
+              "metadata.facets" not in page_source
+              and "allAssets" not in page_source
+              and "allInstitutions" not in page_source
+              and "allAnalysts" not in page_source,
+              "API list UI must not retain or infer fixture facet catalogs",
+          )
+          require(
+              all(marker in messages_source for marker in (
+                  "datasetNotExposed", "latestReturnedCapture", "returnedCallProvenance",
+                  "returnedPageEvidenceNote",
+              )),
+              "Korean/English list catalog must explain dataset versus returned-page evidence",
+          )
+          require(
+              all(marker in messages_source for marker in (
+                  "자산 ID (대소문자 정확히 일치)", "기관 ID (대소문자 정확히 일치)",
+                  "애널리스트 ID (대소문자 정확히 일치)", "Asset ID (exact case)",
+                  "Institution ID (exact case)", "Analyst ID (exact case)",
+              )),
+              "Identity filter labels must disclose exact case-sensitive ID matching",
+          )
+          style_blocks = re.findall(r"([^{}]+)\{([^{}]*)\}", styles_source)
+          require(
+              any(
+                  all(marker in selectors for marker in (
+                      ".calls-heading .provenance-strip div",
+                      ".calls-dataset-evidence .provenance-strip div",
+                      ".calls-heading .provenance-strip dd",
+                      ".calls-dataset-evidence .provenance-strip dd",
+                  ))
+                  and re.search(r"\bmin-width\s*:\s*0\s*;", body)
+                  for selectors, body in style_blocks
+              )
+              and any(
+                  all(marker in selectors for marker in (
+                      ".calls-heading .provenance-strip dd",
+                      ".calls-dataset-evidence .provenance-strip dd",
+                  ))
+                  and re.search(r"\boverflow-wrap\s*:\s*anywhere\s*;", body)
+                  for selectors, body in style_blocks
+              )
+              and any(
+                  ".calls-heading > .provenance-strip" in selectors
+                  and re.search(r"\bwidth\s*:\s*min\(52vw,\s*620px\)\s*;", body)
+                  and re.search(r"\bmax-width\s*:\s*100%\s*;", body)
+                  and re.search(r"\bmin-width\s*:\s*0\s*;", body)
+                  and re.search(r"\bflex-wrap\s*:\s*wrap\s*;", body)
+                  for selectors, body in style_blocks
+              ),
+              "Returned-page and dataset evidence must contain long opaque values locally",
+          )
+
+          production_paths = tuple(
+              sorted(
+                  path for path in web_root.rglob("*")
+                  if path.is_file() and path.suffix in {".ts", ".tsx"}
+                  and ".test." not in path.name
+              )
+          )
+          production_set = {path.resolve() for path in production_paths}
+          import_pattern = re.compile(
+              r"(?:import|export)\s+(?:(?!;)[\s\S])*?[\"']([^\"']+)[\"']"
+          )
+          dynamic_import_pattern = re.compile(r"import\s*\(\s*[\"']([^\"']+)[\"']\s*\)")
+          commonjs_require_pattern = re.compile(r"require\s*\(\s*[\"']([^\"']+)[\"']\s*\)")
+
+          def resolve_import(owner, specifier):
+              if specifier.startswith("@/"):
+                  candidate = web_root / specifier[2:]
+              elif specifier.startswith("."):
+                  candidate = owner.parent / specifier
+              else:
+                  return None
+              for variant in (
+                  candidate, Path(f"{candidate}.ts"), Path(f"{candidate}.tsx"),
+                  candidate / "index.ts", candidate / "index.tsx",
+              ):
+                  if variant.is_file() and variant.resolve() in production_set:
+                      return variant.resolve()
+              return None
+
+          graph = {}
+          for source_path in production_paths:
+              source = source_path.read_text(encoding="utf-8")
+              specifiers = (
+                  import_pattern.findall(source)
+                  + dynamic_import_pattern.findall(source)
+                  + commonjs_require_pattern.findall(source)
+              )
+              graph[source_path.resolve()] = {
+                  resolved for specifier in specifiers
+                  if (resolved := resolve_import(source_path, specifier)) is not None
+              }
+          api_importers = {owner for owner, imports in graph.items() if api_path.resolve() in imports}
+          fixture_importers = {
+              owner for owner, imports in graph.items() if fixture_path.resolve() in imports
+          }
+          factory_importers = {owner for owner, imports in graph.items() if factory_path.resolve() in imports}
+          require(
+              api_importers == {factory_path.resolve()},
+              f"Only the call-list factory may import API list transport: {sorted(map(str, api_importers))}",
+          )
+          require(
+              fixture_importers == {factory_path.resolve()},
+              "Only the call-list factory may import fixture list transport: "
+              f"{sorted(map(str, fixture_importers))}",
+          )
+          require(
+              factory_importers == {page_path.resolve()},
+              f"Only the server calls page may import the list factory: {sorted(map(str, factory_importers))}",
+          )
+          api_pending = [api_path.resolve()]
+          api_descendants = set()
+          while api_pending:
+              candidate = api_pending.pop()
+              if candidate in api_descendants:
+                  continue
+              api_descendants.add(candidate)
+              require(
+                  candidate not in {fixture_path.resolve(), legacy_fixture_path.resolve()},
+                  f"API call-list import graph reaches fixture provider code: {candidate}",
+              )
+              candidate_source = candidate.read_text(encoding="utf-8")
+              require(
+                  "fixtures/" not in candidate_source.replace("\\", "/"),
+                  f"API call-list import graph reaches raw fixture data: {candidate}",
+              )
+              api_pending.extend(graph.get(candidate, ()))
+          server_paths = {api_path.resolve(), factory_path.resolve()}
+          client_roots = {
+              path.resolve() for path in production_paths
+              if re.match(r"^\s*[\"']use client[\"'];", path.read_text(encoding="utf-8"))
+          }
+          for client_root in client_roots:
+              pending = [client_root]
+              visited = set()
+              while pending:
+                  candidate = pending.pop()
+                  if candidate in visited:
+                      continue
+                  visited.add(candidate)
+                  require(
+                      candidate not in server_paths,
+                      f"Client import graph reaches private call-list module: {client_root} -> {candidate}",
+                  )
+                  pending.extend(graph.get(candidate, ()))
+
+          provider_tests = {path.name for path in provider_root.glob("*call-list*.test.ts")}
+          require(
+              provider_tests == {
+                  "call-list-query.test.ts", "call-list-adapter.test.ts",
+                  "fixture-call-list-provider.test.ts",
+                  "api-call-list-provider.server.test.ts", "call-list-provider.server.test.ts",
+              },
+              f"Call-list provider test set is not exact: {sorted(provider_tests)}",
+          )
+          provider_test_source = "\n".join(
+              path.read_text(encoding="utf-8") for path in provider_root.glob("*call-list*.test.ts")
+          )
+          require(
+              all(marker in provider_test_source for marker in (
+                  "LIST_API_HAS_NO_DATASET_METADATA", "NOT_EXPOSED", "AVAILABLE",
+                  "redirect", "application/jsonp", "400", "404", "500",
+                  "REALTIME", "DELAYED", "EOD", "unsafe", "out-of-range",
+                  "callId", "provider-event", "ticker", "from", "to",
+                  "eventTime", "processingTime", "capturedAt",
+                  "accepts only server order", "deterministic requested order",
+                  "callId ascending as the equal-primary tie break",
+                  "uses exact case-sensitive", "nanosecond",
+                  "captured after the fixture dataset asOf",
+                  "older non-first returned page rather than dataset-latest calls",
+                  "explicit DEMO publication guard",
+                  "toHaveBeenCalledTimes(1)", "not.toHaveBeenCalled",
+              )),
+              "Call-list tests must mutation-sensitively cover one transport read, no fixture "
+              "fallback, DEMO, filters, server-order preservation, and page negatives",
+          )
+          page_test_path = web_root / "app/calls/page.test.tsx"
+          require(page_test_path.is_file(), "Missing calls-page tests")
+          page_test_source = page_test_path.read_text(encoding="utf-8")
+          require(
+              all(marker in page_test_source for marker in (
+                  "LIST_API_HAS_NO_DATASET_METADATA", "NOT_EXPOSED", "AVAILABLE",
+                  "애널리스트 콜", "Analyst calls", "NA", "returnedPageEvidence",
+                  "performs exactly one successful page read",
+                  "distinguishes an English out-of-range page",
+              )),
+              "Calls-page tests must lock both locales and honest evidence states",
+          )
+          e2e_path = Path("apps/web/e2e/call-list-api.spec.ts")
+          require(e2e_path.is_file(), "Missing call-list API Playwright source")
+          e2e_source = e2e_path.read_text(encoding="utf-8")
+          require(
+              all(marker in e2e_source for marker in (
+                  "/calls", "demo-call-002", "LIST_API_HAS_NO_DATASET_METADATA",
+                  "browserApiRequests", 'page.on("request"', "collectRuntimeErrors",
+                  "expectNoPageOverflow", "expectVisibleKeyboardFocus",
+                  "const ticker", "const koreanButton", "const sourceLink",
+              )),
+              "Call-list E2E must cover list evidence, server isolation, focus, and overflow",
+          )
+          require(
+              e2e_source.count('page.keyboard.press("Tab")') >= 3,
+              "Call-list E2E must prove three sequential keyboard adjacencies",
+          )
+
+          expected_schemas = {
+              "analyst-call-revision.schema.json", "analyst-call.schema.json",
+              "call-context.schema.json", "call-outcome.schema.json", "event-context.schema.json",
+              "macro-observation.schema.json", "macro-snapshot.schema.json", "market-board.schema.json",
+              "market-map.schema.json", "market-snapshot.schema.json", "market-treemap.schema.json",
+              "scoring-methodology.schema.json", "source-document.schema.json", "source-reference.schema.json",
+          }
+          expected_fixtures = {
+              "analyst-call-revisions.json", "analyst-calls.json", "call-contexts.json",
+              "call-outcomes.json", "manifest.json", "market-board.json",
+              "market-map-nasdaq100.json", "market-map.json", "market-snapshots.json",
+              "market-treemap-nasdaq100.json", "market-treemap-sp500.json",
+              "master-data.json", "timeline-nvda.json",
+          }
+          expected_migrations = {
+              "V1__baseline.sql", "V2__analyst_calls.sql", "V3__analyst_call_revisions.sql",
+              "V4__call_outcomes.sql", "V5__call_contexts.sql",
+          }
+          require({path.name for path in Path("schemas").glob("*.json")} == expected_schemas,
+                  "Call-list consumer must not change schemas")
+          require({path.name for path in Path("fixtures/v1").glob("*.json")} == expected_fixtures,
+                  "Call-list consumer must not change fixtures")
+          require(
+              {path.name for path in Path("apps/api/src/main/resources/db/migration").glob("*.sql")}
+              == expected_migrations,
+              "Call-list consumer must not change Flyway",
+          )
+          openapi_source = Path("contracts/openapi.yaml").read_text(encoding="utf-8")
+          openapi_paths = set(re.findall(r"^  (/[^\n]+):\s*$", openapi_source, re.MULTILINE))
+          require(
+              openapi_paths == {
+                  "/v1/calls", "/v1/calls/{id}", "/v1/calls/{id}/revisions",
+                  "/v1/calls/{id}/outcomes", "/v1/calls/{id}/context",
+              },
+              "Call-list consumer must use the unchanged five-path OpenAPI contract",
+          )
+          protected_paths = sorted(
+              {
+                  Path("contracts/openapi.yaml"),
+                  *Path("schemas").glob("*.json"),
+                  *Path("fixtures/v1").glob("*.json"),
+                  *(
+                      path for path in Path("apps/api/src/main").rglob("*")
+                      if path.is_file()
+                  ),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          protected_digest = hashlib.sha256()
+          for protected_path in protected_paths:
+              protected_digest.update(protected_path.as_posix().encode("utf-8"))
+              protected_digest.update(b"\0")
+              protected_digest.update(
+                  protected_path.read_bytes().replace(b"\r\n", b"\n")
+              )
+              protected_digest.update(b"\0")
+          require(
+              len(protected_paths) == 117
+              and protected_digest.hexdigest()
+              == "51da0627166d747579ead5a99671ec71bacfaa2cc0956013e04b4a5535e10c10",
+              "Call-list consumer must not modify OpenAPI, schemas, fixtures, or API production",
+          )
+          workflow_source = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+          integration_start = workflow_source.index("\n  call-audit-integration:\n")
+          integration_end = workflow_source.index("\n  api:\n", integration_start)
+          integration_source = workflow_source[integration_start:integration_end]
+          require(
+              all(marker in integration_source for marker in (
+                  "call-audit-integration:", "postgres:17-alpine",
+                  "CALL_AUDIT_PROVIDER: api", "API_BASE_URL: http://localhost:8080",
+                  "call-list-api.spec.ts", "SERVER_TOMCAT_ACCESSLOG_BUFFERED: 'false'",
+                  "SERVER_TOMCAT_ACCESSLOG_PATTERN: '%m %U%q %s'",
+                  "access_lines = {line.strip()", "required - access_lines",
+                  "GET /v1/calls?dataMode=DEMO&page=0&size=25&sort=eventTime&order=desc 200",
+                  "GET /v1/calls?assetId=asset-nvda&ticker=nvda&institutionId=inst-gs&analystId=analyst-demo-b&direction=BULLISH&status=ACTIVE&dataMode=DEMO&from=2026-08-11T00%3A00%3A00.000Z&to=2026-08-12T00%3A00%3A00.000Z&page=0&size=1&sort=capturedAt&order=asc 200",
+                  "GET /v1/calls?dataMode=DEMO&page=0&size=1&sort=eventTime&order=desc 200",
+                  "GET /v1/calls?dataMode=DEMO&page=1&size=1&sort=eventTime&order=desc 200",
+                  "GET /v1/calls?ticker=TSLA&dataMode=DEMO&page=0&size=1&sort=eventTime&order=desc 200",
+              )),
+              "CI must exercise the real PostgreSQL/Spring/Next API-mode call list",
+          )
+
+          print(
+              "Validated one-read DEMO call-list providers, closed page/filter/order semantics, "
+              "honest metadata states, reverse client isolation, and unchanged backend contracts"
           )
           PYTHON
 
@@ -5765,7 +6225,7 @@ jobs:
           SERVER_TOMCAT_ACCESSLOG_DIRECTORY: logs
           SERVER_TOMCAT_ACCESSLOG_PREFIX: call_audit_access
           SERVER_TOMCAT_ACCESSLOG_SUFFIX: .log
-          SERVER_TOMCAT_ACCESSLOG_PATTERN: '%m %U %s'
+          SERVER_TOMCAT_ACCESSLOG_PATTERN: '%m %U%q %s'
         run: |
           java -jar apps/api/target/wall-street-receipts-api-0.0.1-SNAPSHOT.jar \
             > "${RUNNER_TEMP}/call-audit-api.log" 2>&1 &
@@ -5779,7 +6239,7 @@ jobs:
           cat "${RUNNER_TEMP}/call-audit-api.log"
           exit 1
 
-      - name: Exercise real Spring call-audit transport through Next
+      - name: Exercise real Spring call-list and call-audit transports through Next
         env:
           CI: 'true'
           CALL_AUDIT_PROVIDER: api
@@ -5787,9 +6247,9 @@ jobs:
           NEXT_PUBLIC_DATA_MODE: DEMO
         run: >-
           pnpm --dir apps/web exec playwright test call-revisions.spec.ts
-          --project=chromium-1280
+          call-list-api.spec.ts --project=chromium-1280
 
-      - name: Verify Next requested all three real API resources
+      - name: Verify Next requested the real list and all audit resources
         shell: bash
         run: |
           python <<'PYTHON'
@@ -5801,18 +6261,24 @@ jobs:
           if not logs:
               raise SystemExit(f"Spring access log is missing under {log_root}")
           access = "\n".join(path.read_text(encoding="utf-8") for path in logs)
+          access_lines = {line.strip() for line in access.splitlines() if line.strip()}
           required = {
-              "GET /v1/calls/demo-call-002 200",
-              "GET /v1/calls/demo-call-002/context 200",
-              "GET /v1/calls/demo-call-002/revisions 200",
-              "GET /v1/calls/demo-call-001 200",
-              "GET /v1/calls/demo-call-001/context 200",
-              "GET /v1/calls/demo-call-001/revisions 200",
+              "GET /v1/calls?dataMode=DEMO&page=0&size=25&sort=eventTime&order=desc 200",
+              "GET /v1/calls?assetId=asset-nvda&ticker=nvda&institutionId=inst-gs&analystId=analyst-demo-b&direction=BULLISH&status=ACTIVE&dataMode=DEMO&from=2026-08-11T00%3A00%3A00.000Z&to=2026-08-12T00%3A00%3A00.000Z&page=0&size=1&sort=capturedAt&order=asc 200",
+              "GET /v1/calls?dataMode=DEMO&page=0&size=1&sort=eventTime&order=desc 200",
+              "GET /v1/calls?dataMode=DEMO&page=1&size=1&sort=eventTime&order=desc 200",
+              "GET /v1/calls?ticker=TSLA&dataMode=DEMO&page=0&size=1&sort=eventTime&order=desc 200",
+              "GET /v1/calls/demo-call-002- 200",
+              "GET /v1/calls/demo-call-002/context- 200",
+              "GET /v1/calls/demo-call-002/revisions- 200",
+              "GET /v1/calls/demo-call-001- 200",
+              "GET /v1/calls/demo-call-001/context- 200",
+              "GET /v1/calls/demo-call-001/revisions- 200",
           }
-          missing = sorted(marker for marker in required if marker not in access)
+          missing = sorted(required - access_lines)
           if missing:
               raise SystemExit(f"Next did not exercise the complete Spring audit: {missing}\n{access}")
-          print("Verified populated and known-empty detail/context/revision reads through Spring")
+          print("Verified list plus populated and known-empty detail/context/revision reads through Spring")
           PYTHON
 
       - name: Print integration logs on failure

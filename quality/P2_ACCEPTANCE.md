@@ -1037,6 +1037,161 @@ specific visibility, cross-endpoint snapshot tokens, streaming, polling,
 revision writes, source-document expansion, and list/dashboard API migration
 require separate reviewed contracts.
 
+## Coherent analyst-call list API boundary
+
+Status: complete for this private `/calls` consumer slice. Broader P2 work,
+P3 lifecycle/scoring, P5 licensed provider publication, and P8 historical
+materialization remain open.
+
+- This slice connects only the existing server-rendered `GET /calls` product
+  route to the existing Spring `GET /v1/calls` read. It adds no API path,
+  OpenAPI field, canonical schema, fixture, manifest member, Flyway migration,
+  Spring class, persistence query, mutation, polling, or browser-side fetch.
+- The list and detail routes share the exact `CALL_AUDIT_PROVIDER=fixture|api`
+  selector and private `API_BASE_URL`. This prevents a documented local stack
+  from silently using API detail with a fixture list or vice versa. Missing
+  selector input remains deterministic fixture mode for isolated tests; the
+  checked-in local example explicitly selects API mode. Unsupported input and
+  every API failure fail closed without fixture fallback.
+- `CallListProvider` owns one page-scoped read. API mode makes exactly one
+  `GET /v1/calls` request with `Accept: application/json`, `cache: no-store`,
+  redirect rejection, no credentials/body/user headers, and the exact supported
+  scalar query. It always applies `dataMode=DEMO` as the explicit P2 phase
+  boundary. The browser never receives or calls `API_BASE_URL`.
+- The existing list API returns only the closed `{items,page}` response. It does
+  not expose fixture `generatedAt`, dataset provenance, disclaimer, or complete
+  filter facets. API mode therefore returns exact dataset-evidence state
+  `NOT_EXPOSED / LIST_API_HAS_NO_DATASET_METADATA` with null dataset as-of,
+  source, and disclaimer. The UI renders those values as `NA` and explains the
+  boundary; it never imports fixture metadata or derives dataset coverage from
+  one returned page.
+- Returned-page evidence is separate and carries exact scope
+  `RETURNED_PAGE`. It may contain only the maximum returned call's `capturedAt`
+  and the sorted distinct returned call `provenanceId` values. An empty page
+  yields null and an empty list. Neither is
+  relabelled as dataset as-of, API response time, market freshness, full
+  coverage, provider health, or publication status.
+- Fixture mode may expose its exact existing dataset as-of/source/disclaimer in
+  an `AVAILABLE` dataset-evidence variant, but it uses the same page contract,
+  page-only evidence calculation, DEMO guard, filter semantics, and UI. API mode
+  never imports or falls back to that variant.
+- Because the API has no facet endpoint, asset, institution, and analyst filters
+  are exact opaque-ID text inputs. Ticker remains the documented case-
+  insensitive ticker input; direction and original-event status use closed
+  canonical vocabularies; mode is fixed to DEMO. The UI does not present
+  current-page values as a complete suggestion catalog.
+- Browser date inputs accept only real Gregorian `YYYY-MM-DD` values. `from`
+  becomes inclusive `00:00:00.000Z`; the through date becomes the next day's
+  exclusive `00:00:00.000Z`. The page does not claim to mirror every wider
+  `Instant.parse` spelling accepted directly by Spring. The typed server
+  provider nevertheless preserves Spring-compatible offset instants with up to
+  nanosecond precision and rejects offsets outside Java's `ZoneOffset` range;
+  the response adapter remains independently locked to canonical UTC `Z`
+  instants at no more than microsecond precision. Recognized duplicate
+  scalar inputs, invalid dates/identifiers/tickers/enums/ranges/pages/sizes, and
+  a non-DEMO mode are rejected rather than dropped, normalized, or clamped.
+- API item adaptation is closed at the root, item, call, identity, source,
+  page, and sort boundaries. It preserves explicit nulls and raw order, checks
+  canonical joins and per-record chronology, requires call/document/reference
+  DEMO independently, and never folds revisions into the immutable original
+  status. A list 404, redirect, network error, non-200, non-JSON, malformed JSON,
+  wrong/extra field, unsafe integer, invalid page invariant, duplicate identity,
+  or ordering violation is an error, never an empty result or partial page.
+
+## Coherent analyst-call list API contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-CL01 | One page provider | `/calls` performs one `CallListProvider.list` read. API and fixture are explicit page-wide modes selected by the same exact selector as detail; the route imports neither transport nor raw fixture metadata. |
+| P2-CL02 | Exact private transport | API mode uses only private `API_BASE_URL` and one exact GET list request with JSON acceptance, no-store caching, redirect rejection, fixed DEMO phase filter, and no browser credentials/body/retry/fallback. |
+| P2-CL03 | Query fidelity | Opaque IDs are exact and case-sensitive, ticker follows the API's case-insensitive contract, enums retain exact case, filters combine with AND, `from` is inclusive, `to` is exclusive, page is zero-based, size is 1..100, and defaults are page 0/size 25/eventTime/desc. Every returned item must satisfy every effective AND filter. Invalid or duplicate recognized inputs are not silently normalized, discarded, defaulted, or clamped. |
+| P2-CL04 | Closed response | Root is exactly `{items,page}`; each item has exactly call/institution/analyst/asset/source and no snapshot; all nested required keys and explicit nulls are preserved. Unknown, missing, extra, mistyped, or invalid values fail the complete page. |
+| P2-CL05 | Canonical joins and DEMO guard | Every call joins its institution, nullable analyst, asset, source reference, and source document exactly. Call, source document, and source reference are independently DEMO; later real/delayed/EOD data cannot enter this P2 page through internally consistent payloads. |
+| P2-CL06 | Page invariants | Response number/size/sort/order echo the request; safe integers, totals, total pages, first/last, and item cardinality agree. Empty matches and out-of-range pages remain distinct valid 200 pages, including the echoed out-of-range number and `last=true`. |
+| P2-CL07 | Deterministic order | The adapter preserves server order and verifies the selected primary sort direction with `callId ASC` for equal primary values. It never resorts by translated text, target, status, revision state, or current time. |
+| P2-CL08 | Honest evidence states | API dataset evidence has exact availability NOT_EXPOSED with null metadata. Fixture dataset evidence has exact availability AVAILABLE, and its dataset `asOf` cannot precede any returned call `capturedAt`. Returned-page evidence has exact scope RETURNED_PAGE and derives capture/provenance only from returned calls; empty page evidence remains null/empty. This fixture coherence check is not promoted to API metadata, completeness, or coverage. |
+| P2-CL09 | Empty versus failure | A valid 200 `items:[]` renders the localized response-bounded empty state. Configuration, network, redirect, HTTP, media, JSON, shape, join, mode, page, or ordering failure renders the recoverable route error and exposes no partial rows or fixture fallback. |
+| P2-CL10 | Backend and canonical isolation | Existing five OpenAPI paths, list response shape/query semantics, Spring sources, V1-V5 migrations, 14 schemas, 13 fixtures, and manifest membership remain unchanged. This is a private web consumer slice, not a new backend or provider-publication contract. |
+
+## Coherent analyst-call list web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-CLW01 | Korean-default and English ledger | Both locales render the same ordered canonical rows, IDs, enums, UTC values, numbers, nulls, source titles, links, totals, and page state. Only labels, explanations, and accessible names change. |
+| P2-CLW02 | Filter form truth | Identity fields are labelled exact-ID text inputs, ticker remains text, direction/status remain canonical selects, and data mode is fixed DEMO. No full-universe facet or current/live filter claim is shown. |
+| P2-CLW03 | Dataset metadata boundary | API mode visibly renders dataset as-of/source as `NA` and explains that the existing list API does not expose dataset metadata. Page-only capture/provenance is labelled as returned-page evidence, never dataset freshness or coverage. |
+| P2-CLW04 | Pagination and URLs | Provider page 0 renders as human page 1. Previous/next URLs preserve only validated scalar filters and exact sorting/size values. Empty and out-of-range pages do not fabricate substitute rows. |
+| P2-CLW05 | Server-only responsive runtime | At 1440, 1280, and 390 pixels populated, filtered, empty, and paginated states remain keyboard-operable and locally contained with no page overflow, hydration warning, console error, or page error. The browser makes no request to the API origin. |
+| P2-CLW06 | Regression boundary | Call detail keeps its coherent detail/context/revision provider. Dashboard, S&P history, maps, and other routes retain their current providers; list migration does not turn HTTP-delivered DEMO fixtures into live, licensed, complete, or current evidence. |
+
+## Coherent analyst-call list API verification
+
+- Query tests cover every scalar, defaults, fixed DEMO injection, exact
+  encoding/order, case-sensitive IDs, ticker case behavior, genuine leap-day and
+  invalid-date conversion, exclusive through-date, duplicate recognized values,
+  optional-filter empty-string omission, whitespace/malformed nonempty values,
+  required-control present-empty failure, page/size bounds, enum case, and
+  from/to range failure. Direct typed-provider tests separately cover valid
+  offset/nanosecond bounds and invalid Java offsets without weakening canonical
+  response-instant validation.
+- Adapter tests cover closed positive items with every nullable branch, all
+  canonical joins, one-at-a-time nested DEMO mutations, chronology/numeric/URL/
+  date/enum failures, duplicate call/provider-event identities, all three sort
+  fields and both orders, equal-primary `callId ASC`, no silent reordering, and
+  one-at-a-time response-row mismatches for every effective ID/ticker/direction/
+  status/DEMO/from/to AND filter.
+- Page tests cover valid empty, out-of-range echo, unsafe integers, totals/page/
+  cardinality/first/last divergence, API NOT_EXPOSED versus fixture AVAILABLE,
+  AVAILABLE `asOf` versus latest returned capture, and exact empty returned-page
+  evidence.
+- Transport/factory tests cover exact fixture/API/default/unsupported selection,
+  one private request, normalized base URL, every query field, no-store/JSON/
+  redirect options, and network/400/404/500/media/JSON/shape failure without a
+  fallback or second request.
+- Korean/English page tests cover populated, filtered, empty, paginated, dataset-
+  metadata-not-exposed, page-evidence, loading, and recoverable-error states with
+  unchanged canonical finance evidence.
+- Responsive Playwright exercises the list at 1440, 1280, and 390 pixels,
+  keyboard focus, exact filter/pagination URLs, populated/empty containment,
+  runtime errors, and browser-to-API request isolation.
+- The existing PostgreSQL 17 -> packaged Spring -> Next integration job runs the
+  list spec in exact API mode and proves the server made all five expected list
+  GETs while the browser did not call port 8080. The existing detail/context/
+  revision six-path proof remains intact.
+- Repository CI locks the exact list provider/adapter/factory/page source graph,
+  dataset-evidence union, test matrix, shared selector, one-fetch transport, and
+  unchanged canonical/backend sets.
+
+Observed closure on the final tree:
+
+- ESLint and non-incremental TypeScript passed. Focused call-list Vitest passed
+  162/162 across eight files; the full suite passed 515/515 across 41 files; and
+  the Next 16.2.11 production build completed 12/12 page-data generation for the
+  existing 11 dynamic routes.
+- Targeted call-list Playwright passed 3/3 at 1440, 1280, and 390 pixels, six
+  related legacy checks passed 6/6, and the retry-free full suite passed 69/69
+  across the same widths.
+- Maven verification passed 223/223 with no failures, errors, or skips,
+  including PostgreSQL 17.10 migration coverage at 4/4 with no skips. Compose
+  configuration validation passed.
+- The PostgreSQL -> packaged Spring -> Next API-mode run passed 2/2 browser
+  tests and exact full-line Tomcat evidence passed 11/11: five list queries and
+  six detail/context/revision reads. Queryless `%q` values are the observed `-`
+  placeholder; matching is exact line membership, not a path substring.
+- All 18 embedded repository Python blocks passed syntax and execution against
+  14 schemas and 32 canonical records. SnakeYAML 2.5, `git diff --check`, the
+  protected source sets, and generated-file cleanup passed. Independent review
+  reported zero blockers, zero HIGH findings, and zero known false positives.
+
+## Coherent analyst-call list API deferred work
+
+Dataset metadata/facet endpoints, cross-request snapshot tokens, dashboard/API
+migration, commercial provider ingestion, entitlements, licensing, rights,
+freshness/health, polling/streaming, saved filters, exports, user preferences,
+and current/effective lifecycle projection remain separate reviewed work. This
+slice is still synthetic DEMO evidence delivered through Spring/PostgreSQL, not
+a live or production market-data connection.
+
 ## Local gate
 
 Run from a clean feature branch before integration:
