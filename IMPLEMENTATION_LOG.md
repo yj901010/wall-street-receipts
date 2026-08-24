@@ -3737,6 +3737,143 @@ ADR-028 locks WSR Economic Activity V1 and exact point-in-time provider-node map
   and redistribution rights. Only then may a reviewed adapter introduce named
   scoped credentials through untracked local/CI/deployment stores, never chat
   or Git.
-- The next slice is independently typed basis-frozen sector assignment against
-  these exact taxonomy and mapping-policy identities. Actual provider mapping
-  data remains blocked until provider selection and rights approval.
+- ADR-029 is the subsequent independently typed basis-frozen sector-assignment
+  slice against these exact taxonomy and mapping-policy identities. Actual
+  provider mapping data remains blocked until provider selection and rights
+  approval.
+
+## P3 — Point-in-time explicit WSR sector assignment V1
+
+Status: the twenty-second disconnected P3 contract is complete with its exact
+seven-file production policy surface and one 134-invocation golden. Focused and
+full API, repository CI, YAML, Compose, mutation, baseline, and patch-hygiene
+verification are **PASS**. No actual provider mapping set or data, reference
+index, return, lifecycle, persistence, provider, API, database, or product
+publication is introduced.
+
+ADR-029 freezes WSR sector assignment to explicit point-in-time membership and mapped provider-node evidence.
+
+### Scope
+
+- Add an independently typed sector-assignment policy, classification evidence,
+  provider membership evidence, reusable ADR-028 mapping evidence, immutable
+  complete request, sealed resolution, and deterministic selector.
+- Bind every request and result to one complete original/correction
+  `OutcomeBasis`, canonical asset ID, microsecond `evaluationAsOf`, and
+  caller-attested mapping-set ID/version/hash. Freeze membership and mapping at
+  the exact `basis.eventTime`; originals and corrections never share or float
+  current membership.
+- Apply sector V1 only to explicitly classified equities. Preserve primary
+  venue, sourced country, and currency evidence without using country/currency
+  as scope. A coherent non-equity with no membership is the sole intentional
+  `NON_EQUITY`; visible non-equity membership is a conflict.
+- Require exact membership provider/scheme/revision/node identity and an exact
+  ADR-028 mapping row using the locked taxonomy/mapping-policy hashes, a
+  recorded provider definition, and one of the twelve assignable WSR leaves.
+- Add no actual mapping set, issuer membership fixture, schema, manifest,
+  OpenAPI path, migration, database behavior, provider adapter, API/resource,
+  reference index, calculation, or web behavior.
+
+### Locked policy decisions
+
+- Policy
+  `POINT_IN_TIME_EXPLICIT_WSR_ECONOMIC_ACTIVITY_SECTOR_ASSIGNMENT_V1` has one
+  exact 9307-byte single-line ASCII/UTF-8 definition and SHA-256
+  `52d9f705a3a8a965a6fca79d36bd94ed8836642f1a2c4e5f29a878d0a267311c`.
+  Definition bytes are defensive and every resolution context echoes the
+  digest.
+- The policy requires ADR-028 taxonomy `wsr-economic-activity` version `1.0.0`
+  and hash
+  `820ce3ea264d67312fe4f2efe346631a81d74248e9a7f041793d65d8ef0d62ae`,
+  its exact twelve ordered assignable nodes, and mapping-policy hash
+  `ba12a277d5ffe266af1745b98948a1e2206494ac31904f31a419d973d5067e77`.
+- Evidence is visible only when both PIT timestamps are not after
+  `evaluationAsOf`. Future evidence cannot affect output, reason, conflict, or
+  cardinality. All effective intervals are start-inclusive/end-exclusive at
+  the exact basis event with an explicit open-ended variant.
+- Exact provider identity uses case-sensitive unnormalized Unicode code-point
+  equality. Provider labels and definitions are preserved evidence only;
+  labels cannot match, and `Mapped` requires `Recorded` definition evidence.
+- The exact result variants are `Resolved`, `NotApplicable`, and `Unavailable`.
+  There is one N/A reason and exactly 36 unavailable reasons in ADR-029 order:
+  five classification, ten membership, and twenty-one mapping reasons.
+  Any visible known mismatch precedes multiplicity, unequal dispositions
+  conflict before ambiguity, and any multiple visible rows with the same
+  disposition are ambiguous—including distinct rows with the same mapped
+  target or not-mapped reason. A single not-mapped row maps to its exact closed
+  unavailable reason.
+- The selector echoes and row-matches the caller-supplied mapping-set identity
+  but does not calculate its manifest hash or attest full entry-to-manifest
+  correlation. This contract therefore does not claim an actual mapping set.
+- Ticker/name/current master, latest or nearest row, provider preference,
+  label matching, silent deduplication, P2 labels, unknown/other/unclassified
+  nodes, and fallback remain forbidden.
+
+### Module and file boundary
+
+`com.wallstreetreceipts.api.domain.outcome.sectorassignment` contains exactly:
+
+- `SectorAssignmentPolicyVersion.java`
+- `SectorAssetClassificationEvidence.java`
+- `SectorMembershipEvidence.java`
+- `SectorMappingEvidence.java`
+- `SectorAssignmentRequest.java`
+- `SectorAssignmentResolution.java`
+- `SectorAssignmentSelector.java`
+
+The matching source-local test surface contains only
+`SectorAssignmentSelectorGoldenTest.java`, required to execute exactly 134
+golden invocations. No benchmark-assignment type is imported or reused, and no
+production type outside the package consumes this disconnected result.
+
+### Routes, lifecycle, and publication
+
+- None. No controller, application service, provider, repository, scheduler,
+  schema, fixture, manifest, OpenAPI, Flyway, database, API, resource, or web
+  surface consumes or publishes sector assignment.
+- A resolved WSR node establishes no provider-published sector reference
+  index, price level, divisor continuity, return, sector alpha, readiness,
+  methodology activation, canonical outcome status, completeness, retry,
+  persistence, aggregation, ranking, or publication. Existing DEMO
+  comparative metrics remain null.
+
+### Verification
+
+- Exact canonical definition extraction, 9307-byte length, SHA-256, 36-reason
+  order, seven-plus-one source surface, reverse isolation, and four-document
+  marker parity: **PASS**.
+- Focused `SectorAssignmentSelectorGoldenTest` 134/134 and full API Maven
+  verification: **PASS** — full regression is 1248/1248 with zero failures,
+  errors, or skips including Docker/PostgreSQL/Flyway integration.
+- All repository CI Python bodies, workflow YAML, Compose, marker/policy/test-
+  cardinality mutations, current protected baselines, ADR-028 195/198 legacy
+  replay, `git diff --check`, and user-owned `apps/web/next-env.d.ts`
+  preservation: **PASS** — 34/34 embedded bodies compile, 33/33 locally
+  executable bodies pass, SnakeYAML parses exactly four jobs, Compose validates,
+  all three mutations exit nonzero and are restored. Current production is
+  exactly 202 files with SHA-256
+  `b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899`;
+  current API-test/web is 199 files with SHA-256
+  `59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293`.
+  Excluding the exact ADR-029 seven-plus-one surface reproduces ADR-028
+  production at 195 files /
+  `562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640`
+  and test/web at 198 files /
+  `0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e`.
+  The user-owned file remains unstaged and unchanged by this slice.
+
+### External-data and next-slice boundary
+
+- This disconnected source-local policy requires no API key, account, paid
+  plan, domain, provider license, environment secret, or network access.
+- No actual provider mapping set or non-DEMO membership may be created until P5
+  selects a provider and documents historical classification, storage,
+  display, derived-crosswalk, cache, and redistribution rights. GICS/ICB need
+  express written commercial rights before credentials. Public SIC/NAICS use
+  requires independent source, applicability, and crosswalk review; a future
+  SEC adapter needs a compliant named `User-Agent` but no API key. Scoped
+  credentials may then enter untracked local/CI/deployment stores only, never
+  chat or Git.
+- The next reviewed work is independent benchmark/sector reference-level pair
+  evidence. A resolved WSR node alone cannot select a provider-published sector
+  price index or make `sectorReturn` non-null.

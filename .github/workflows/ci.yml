@@ -3841,9 +3841,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 195
+              len(protected_paths) == 202
               and protected_digest.hexdigest()
-              == "562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640",
+              == "b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899",
               "Call-outcome audit consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           api_main_source = "\n".join(
@@ -4476,9 +4476,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 195
+              len(protected_paths) == 202
               and protected_digest.hexdigest()
-              == "562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640",
+              == "b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899",
               "Call-list consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           workflow_source = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -5831,6 +5831,34 @@ jobs:
               ).resolve(): {
                   "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
               },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/sectorassignment/"
+                  "SectorAssetClassificationEvidence.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/sectorassignment/"
+                  "SectorMembershipEvidence.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/sectorassignment/"
+                  "SectorAssignmentRequest.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/sectorassignment/"
+                  "SectorAssignmentResolution.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
           })
           all_horizon_type_markers = {
               path.stem for path in horizon_dir.glob("*.java")
@@ -6890,6 +6918,34 @@ jobs:
                   api_main_dir
                   / "com/wallstreetreceipts/api/domain/outcome/benchmarkassignment/"
                   "BenchmarkAssignmentResolution.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/sectorassignment/"
+                  "SectorAssetClassificationEvidence.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/sectorassignment/"
+                  "SectorMembershipEvidence.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/sectorassignment/"
+                  "SectorAssignmentRequest.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/sectorassignment/"
+                  "SectorAssignmentResolution.java"
               ).resolve(): {
                   "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
               },
@@ -11459,6 +11515,14 @@ jobs:
               "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
               "benchmarkassignment"
           )
+          sector_assignment_main_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorassignment"
+          )
+          sector_assignment_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorassignment"
+          )
           approved_benchmark_main_files = {
               "BenchmarkAssignmentPolicyVersion.java",
               "BenchmarkAssetClassificationEvidence.java",
@@ -11481,12 +11545,38 @@ jobs:
           approved_benchmark_paths = (
               approved_benchmark_main_paths | approved_benchmark_test_paths
           )
+          approved_sector_main_files = {
+              "SectorAssignmentPolicyVersion.java",
+              "SectorAssetClassificationEvidence.java",
+              "SectorMembershipEvidence.java",
+              "SectorMappingEvidence.java",
+              "SectorAssignmentRequest.java",
+              "SectorAssignmentResolution.java",
+              "SectorAssignmentSelector.java",
+          }
+          approved_sector_test_files = {
+              "SectorAssignmentSelectorGoldenTest.java",
+          }
+          approved_sector_main_paths = {
+              (sector_assignment_main_dir / name).resolve()
+              for name in approved_sector_main_files
+          }
+          approved_sector_test_paths = {
+              (sector_assignment_test_dir / name).resolve()
+              for name in approved_sector_test_files
+          }
+          approved_sector_paths = (
+              approved_sector_main_paths | approved_sector_test_paths
+          )
+          approved_comparative_paths = (
+              approved_benchmark_paths | approved_sector_paths
+          )
           for java_root in (
               Path("apps/api/src/main/java"),
               Path("apps/api/src/test/java"),
           ):
               for java_path in java_root.rglob("*.java"):
-                  if java_path.resolve() in approved_benchmark_paths:
+                  if java_path.resolve() in approved_comparative_paths:
                       continue
                   normalized_path = re.sub(
                       r"[^a-z0-9]", "", java_path.as_posix().lower()
@@ -11547,7 +11637,9 @@ jobs:
           comparative_foundation_protected_paths = [
               path
               for path in protected_paths
-              if path.resolve() not in approved_benchmark_main_paths
+              if path.resolve() not in (
+                  approved_benchmark_main_paths | approved_sector_main_paths
+              )
           ]
           protected_digest = hashlib.sha256()
           for protected_path in comparative_foundation_protected_paths:
@@ -11587,7 +11679,9 @@ jobs:
           comparative_foundation_decision_only_paths = [
               path
               for path in decision_only_paths
-              if path.resolve() not in approved_benchmark_test_paths
+              if path.resolve() not in (
+                  approved_benchmark_test_paths | approved_sector_test_paths
+              )
           ]
           decision_only_digest = hashlib.sha256()
           for decision_only_path in comparative_foundation_decision_only_paths:
@@ -11653,6 +11747,30 @@ jobs:
               "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
               "benchmarkassignment"
           )
+          sector_assignment_production_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorassignment"
+          )
+          sector_assignment_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorassignment"
+          )
+          sector_assignment_production_files = {
+              "SectorAssignmentPolicyVersion.java",
+              "SectorAssetClassificationEvidence.java",
+              "SectorMembershipEvidence.java",
+              "SectorMappingEvidence.java",
+              "SectorAssignmentRequest.java",
+              "SectorAssignmentResolution.java",
+              "SectorAssignmentSelector.java",
+          }
+          sector_assignment_production_paths = {
+              (sector_assignment_production_dir / name).resolve()
+              for name in sector_assignment_production_files
+          }
+          sector_assignment_golden_resolved = (
+              sector_assignment_test_dir / "SectorAssignmentSelectorGoldenTest.java"
+          ).resolve()
           production_files = {
               "BenchmarkAssignmentPolicyVersion.java",
               "BenchmarkAssetClassificationEvidence.java",
@@ -12096,13 +12214,15 @@ jobs:
               protected_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 195
+              len(protected_paths) == 202
               and protected_digest.hexdigest()
-              == "562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640",
+              == "b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899",
               "Benchmark-assignment protected production baseline changed",
           )
           legacy_protected_paths = [
-              path for path in protected_paths if path.resolve() not in approved_paths
+              path for path in protected_paths
+              if path.resolve() not in approved_paths
+              and path.resolve() not in sector_assignment_production_paths
           ]
           legacy_protected_digest = hashlib.sha256()
           for path in legacy_protected_paths:
@@ -12145,14 +12265,16 @@ jobs:
               test_web_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               test_web_digest.update(b"\0")
           require(
-              len(test_web_paths) == 198
+              len(test_web_paths) == 199
               and test_web_digest.hexdigest()
-              == "0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e",
+              == "59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293",
               "Benchmark-assignment API-test/web baseline changed",
           )
           golden_resolved = golden_path.resolve()
           legacy_test_web_paths = [
-              path for path in test_web_paths if path.resolve() != golden_resolved
+              path for path in test_web_paths
+              if path.resolve() != golden_resolved
+              and path.resolve() != sector_assignment_golden_resolved
           ]
           legacy_test_web_digest = hashlib.sha256()
           for path in legacy_test_web_paths:
@@ -12552,6 +12674,44 @@ jobs:
               mapping["mappingPolicyVersion"],
               *(leaf["nodeId"] for leaf in leaves),
           }
+          sector_assignment_main_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorassignment"
+          )
+          sector_assignment_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorassignment"
+          )
+          approved_sector_main_files = {
+              "SectorAssignmentPolicyVersion.java",
+              "SectorAssetClassificationEvidence.java",
+              "SectorMembershipEvidence.java",
+              "SectorMappingEvidence.java",
+              "SectorAssignmentRequest.java",
+              "SectorAssignmentResolution.java",
+              "SectorAssignmentSelector.java",
+          }
+          approved_sector_test_files = {
+              "SectorAssignmentSelectorGoldenTest.java",
+          }
+          require(
+              {path.name for path in sector_assignment_main_dir.glob("*.java")}
+              == approved_sector_main_files
+              and {path.name for path in sector_assignment_test_dir.glob("*.java")}
+              == approved_sector_test_files,
+              "ADR-028 may be consumed only by the exact ADR-029 source-local slice",
+          )
+          approved_sector_main_paths = {
+              (sector_assignment_main_dir / name).resolve()
+              for name in approved_sector_main_files
+          }
+          approved_sector_test_paths = {
+              (sector_assignment_test_dir / name).resolve()
+              for name in approved_sector_test_files
+          }
+          approved_sector_paths = (
+              approved_sector_main_paths | approved_sector_test_paths
+          )
           product_paths = [Path("contracts/openapi.yaml")]
           product_paths += list(Path("schemas").glob("*.json"))
           product_paths += list(Path("fixtures/v1").glob("*.json"))
@@ -12562,6 +12722,8 @@ jobs:
               for path in root.rglob("*") if path.is_file()
           ]
           for product_path in product_paths:
+              if product_path.resolve() in approved_sector_paths:
+                  continue
               try:
                   source = product_path.read_text(encoding="utf-8")
               except UnicodeDecodeError:
@@ -12594,6 +12756,637 @@ jobs:
               },
               key=lambda path: path.as_posix(),
           )
+          legacy_protected_paths = [
+              path for path in protected_paths
+              if path.resolve() not in approved_sector_main_paths
+          ]
+          protected_digest = hashlib.sha256()
+          for path in legacy_protected_paths:
+              protected_digest.update(path.as_posix().encode("utf-8"))
+              protected_digest.update(b"\0")
+              protected_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
+              protected_digest.update(b"\0")
+          require(
+              len(legacy_protected_paths) == 195
+              and protected_digest.hexdigest()
+              == "562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640",
+              "ADR-028 baseline changed outside the exact ADR-029 production slice",
+          )
+
+          test_web_paths = sorted(
+              {
+                  *(
+                      path for path in Path("apps/api/src/test").rglob("*")
+                      if path.is_file()
+                  ),
+                  *(
+                      path
+                      for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                      for path in root.rglob("*") if path.is_file()
+                  ),
+                  *(
+                      path for path in Path("apps/web").glob("*")
+                      if path.is_file() and path.name != "next-env.d.ts"
+                  ),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          legacy_test_web_paths = [
+              path for path in test_web_paths
+              if path.resolve() not in approved_sector_test_paths
+          ]
+          test_web_digest = hashlib.sha256()
+          for path in legacy_test_web_paths:
+              test_web_digest.update(path.as_posix().encode("utf-8"))
+              test_web_digest.update(b"\0")
+              test_web_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
+              test_web_digest.update(b"\0")
+          require(
+              len(legacy_test_web_paths) == 198
+              and test_web_digest.hexdigest()
+              == "0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e",
+              "ADR-028 baseline changed outside the exact ADR-029 golden",
+          )
+
+          outcomes = json.loads(
+              Path("fixtures/v1/call-outcomes.json").read_text(encoding="utf-8")
+          )
+          comparative_metrics = (
+              "benchmarkReturn", "sectorReturn", "alpha", "sectorAlpha",
+          )
+          require(
+              len(outcomes["outcomes"]) == 4
+              and all(
+                  outcome[metric] is None
+                  for outcome in outcomes["outcomes"]
+                  for metric in comparative_metrics
+              ),
+              "ADR-028 taxonomy decision must not publish comparative metrics",
+          )
+
+          print(
+              "Validated provider-neutral WSR Economic Activity V1, exact canonical "
+              "taxonomy and PIT provider-node mapping-policy bytes, closed leaf "
+              "targets, deterministic future mapping sets, licensing isolation, "
+              "runtime firewall, and no product publication"
+          )
+          PYTHON
+
+      - name: Guard point-in-time explicit WSR sector assignment
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def reject_duplicate_keys(pairs):
+              result = {}
+              for key, value in pairs:
+                  require(key not in result, f"Duplicate canonical JSON key: {key}")
+                  result[key] = value
+              return result
+
+          def normalized_hash(path):
+              return hashlib.sha256(
+                  path.read_bytes().replace(b"\r\n", b"\n")
+              ).hexdigest()
+
+          def enum_values(source, enum_name):
+              match = re.search(
+                  rf"(?:public\s+)?enum\s+{re.escape(enum_name)}\s*\{{"
+                  r"(?P<body>.*?)\}",
+                  source,
+                  flags=re.DOTALL,
+              )
+              require(match is not None, f"Missing enum {enum_name}")
+              return re.findall(
+                  r"\b[A-Z][A-Z0-9_]+\b",
+                  match.group("body").split(";", 1)[0],
+              )
+
+          production_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorassignment"
+          )
+          test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorassignment"
+          )
+          production_files = {
+              "SectorAssignmentPolicyVersion.java",
+              "SectorAssetClassificationEvidence.java",
+              "SectorMembershipEvidence.java",
+              "SectorMappingEvidence.java",
+              "SectorAssignmentRequest.java",
+              "SectorAssignmentResolution.java",
+              "SectorAssignmentSelector.java",
+          }
+          test_files = {"SectorAssignmentSelectorGoldenTest.java"}
+          require(
+              {path.name for path in production_dir.glob("*.java")}
+              == production_files,
+              "Sector-assignment production package must contain exactly seven files",
+          )
+          require(
+              {path.name for path in test_dir.glob("*.java")} == test_files,
+              "Sector-assignment test package must contain exactly one golden",
+          )
+
+          sources = {
+              name: (production_dir / name).read_text(encoding="utf-8")
+              for name in production_files
+          }
+          expected_source_hashes = {
+              "SectorAssetClassificationEvidence.java":
+                  "4f31638bcd53986dd2eaa9c04e284125173658424699112579e9c269538a1527",
+              "SectorAssignmentPolicyVersion.java":
+                  "b436360680bdbe4f5436d345fe97cfcb4276b4aa339d1d39ea98580f556b9fdf",
+              "SectorAssignmentRequest.java":
+                  "5816e95e2bd3ef4cec65f50923cbf086e2bae6519e660a8a6fe9ffa0b833852a",
+              "SectorAssignmentResolution.java":
+                  "18bc7ccf4c8431fcbe8f3f92c4984a83c24891607cac19cdcbbf6b94f3fb4718",
+              "SectorAssignmentSelector.java":
+                  "0f67b9568c8407697b2f38c7edf00296085627fd361b01c95921d34d0157f8db",
+              "SectorMappingEvidence.java":
+                  "32de66811e0e3da88f5457cc5cfdb4978b57a13bca759abfee74aa71deba79a2",
+              "SectorMembershipEvidence.java":
+                  "ff466993e1c5d2a3b9a0536a9764ec1877499ce1230f00be1add6a9a569f2e4b",
+          }
+          for name, expected_hash in expected_source_hashes.items():
+              require(
+                  normalized_hash(production_dir / name) == expected_hash,
+                  f"Sector-assignment exact source changed: {name}",
+              )
+
+          adr_path = Path(
+              "decisions/ADR-029-point-in-time-explicit-wsr-sector-assignment-v1.md"
+          )
+          marker = (
+              "ADR-029 freezes WSR sector assignment to explicit point-in-time "
+              "membership and mapped provider-node evidence."
+          )
+          required_docs = (
+              adr_path,
+              Path("README.md"),
+              Path("quality/P3_ACCEPTANCE.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+          )
+          docs = {}
+          for doc_path in required_docs:
+              require(doc_path.is_file(), f"Missing ADR-029 contract doc: {doc_path}")
+              doc_source = doc_path.read_text(encoding="utf-8")
+              docs[doc_path] = doc_source
+              require(
+                  doc_source.count(marker) == 1,
+                  f"ADR-029 marker must occur exactly once: {doc_path}",
+              )
+          adr = docs[adr_path]
+          require(
+              adr.startswith(
+                  "# ADR-029 — Point-in-Time Explicit WSR Sector Assignment V1\n"
+              )
+              and "- Status: Accepted" in adr
+              and "- Date: 2026-08-24" in adr,
+              "ADR-029 title, accepted status, or date changed",
+          )
+
+          definition_matches = re.findall(
+              r"```text\r?\n(?P<body>.*?)\r?\n```",
+              adr,
+              flags=re.DOTALL,
+          )
+          definitions = [body for body in definition_matches if body.startswith("{")]
+          require(
+              len(definitions) == 1,
+              "ADR-029 must contain exactly one canonical JSON definition",
+          )
+          definition = definitions[0]
+          policy_hash = (
+              "52d9f705a3a8a965a6fca79d36bd94ed8836642f1a2c4e5f29a878d0a267311c"
+          )
+          require(
+              definition.isascii()
+              and "\n" not in definition
+              and "\r" not in definition
+              and definition == definition.strip()
+              and len(definition.encode("utf-8")) == 9307
+              and hashlib.sha256(definition.encode("utf-8")).hexdigest()
+              == policy_hash
+              and adr.count("- Bytes: `9307`") == 1
+              and adr.count(f"- SHA-256: `{policy_hash}`") == 1,
+              "ADR-029 canonical definition bytes, length, hash, or metadata changed",
+          )
+          policy = json.loads(
+              definition,
+              object_pairs_hook=reject_duplicate_keys,
+          )
+          require(
+              json.dumps(policy, ensure_ascii=True, separators=(",", ":"))
+              == definition,
+              "ADR-029 canonical JSON is not minimally serialized",
+          )
+          policy_source = sources["SectorAssignmentPolicyVersion.java"]
+          require(
+              policy_source.count(definition) == 1
+              and policy_source.count(policy_hash) == 1
+              and "canonicalDefinitionUtf8()" in policy_source
+              and "StandardCharsets.UTF_8" in policy_source,
+              "Sector-assignment Java policy bytes/hash boundary changed",
+          )
+          require(
+              enum_values(policy_source, "SectorAssignmentPolicyVersion") == [
+                  "POINT_IN_TIME_EXPLICIT_WSR_ECONOMIC_ACTIVITY_SECTOR_ASSIGNMENT_V1"
+              ],
+              "Sector-assignment policy enum changed",
+          )
+
+          taxonomy_hash = (
+              "820ce3ea264d67312fe4f2efe346631a81d74248e9a7f041793d65d8ef0d62ae"
+          )
+          mapping_policy_hash = (
+              "ba12a277d5ffe266af1745b98948a1e2206494ac31904f31a419d973d5067e77"
+          )
+          closed_leaf_ids = [
+              "wsr-sector-digital-systems",
+              "wsr-sector-connectivity-media",
+              "wsr-sector-health-bioscience",
+              "wsr-sector-financial-risk-services",
+              "wsr-sector-consumer-essentials",
+              "wsr-sector-consumer-choice-commerce",
+              "wsr-sector-production-mobility",
+              "wsr-sector-energy-systems",
+              "wsr-sector-materials-resource-processing",
+              "wsr-sector-essential-networks",
+              "wsr-sector-property-built-environment",
+              "wsr-sector-diversified-operations",
+          ]
+          classification_fields = [
+              "classificationEvidenceId", "providerEventId", "basis", "assetId",
+              "assetType", "primaryVenueId", "primaryVenueCountryCode", "currency",
+              "classificationSourceId", "classificationSourceRevision",
+              "provenanceId", "effectiveInterval", "availableAt", "capturedAt",
+          ]
+          membership_fields = [
+              "membershipEvidenceId", "providerEventId", "basis", "assetId",
+              "assetType", "primaryVenueId", "primaryVenueCountryCode", "currency",
+              "providerId", "providerSchemeId", "providerSchemeRevision",
+              "providerNodeId", "providerNodeLabel", "membershipSourceId",
+              "membershipSourceRevision", "provenanceId", "effectiveInterval",
+              "availableAt", "capturedAt",
+          ]
+          mapping_fields = [
+              "mappingEvidenceId", "providerEventId", "mappingPolicyVersion",
+              "mappingPolicyDefinitionHash", "mappingSetId", "mappingSetVersion",
+              "mappingSetDefinitionHash", "taxonomyId", "taxonomyVersion",
+              "taxonomyDefinitionHash", "providerId", "providerSchemeId",
+              "providerSchemeRevision", "providerNodeId", "providerNodeLabel",
+              "providerNodeDefinition", "mappingDisposition", "mappingSourceId",
+              "mappingSourceRevision", "provenanceId", "effectiveInterval",
+              "availableAt", "capturedAt",
+          ]
+          request_fields = [
+              "policyVersion", "basis", "assetId", "evaluationAsOf",
+              "mappingSetId", "mappingSetVersion", "mappingSetDefinitionHash",
+              "classificationCandidates", "membershipCandidates",
+              "mappingCandidates",
+          ]
+          context_fields = [
+              "policyVersion", "policyDefinitionHash", "basis", "assetId",
+              "evaluationAsOf", "mappingSetId", "mappingSetVersion",
+              "mappingSetDefinitionHash",
+          ]
+          unavailable_reasons = [
+              "CLASSIFICATION_MISSING_AS_OF",
+              "CLASSIFICATION_BASIS_MISMATCH",
+              "CLASSIFICATION_ASSET_MISMATCH",
+              "CLASSIFICATION_EFFECTIVE_INTERVAL_MISMATCH",
+              "CLASSIFICATION_AMBIGUOUS",
+              "MEMBERSHIP_MISSING_AS_OF",
+              "MEMBERSHIP_BASIS_MISMATCH",
+              "MEMBERSHIP_ASSET_MISMATCH",
+              "MEMBERSHIP_ASSET_TYPE_MISMATCH",
+              "MEMBERSHIP_PRIMARY_VENUE_MISMATCH",
+              "MEMBERSHIP_PRIMARY_VENUE_COUNTRY_MISMATCH",
+              "MEMBERSHIP_CURRENCY_MISMATCH",
+              "MEMBERSHIP_EFFECTIVE_INTERVAL_MISMATCH",
+              "OUT_OF_SCOPE_MEMBERSHIP_CONFLICT",
+              "MEMBERSHIP_AMBIGUOUS",
+              "MAPPING_MISSING_AS_OF",
+              "MAPPING_SET_ID_MISMATCH",
+              "MAPPING_SET_VERSION_MISMATCH",
+              "MAPPING_SET_DEFINITION_HASH_MISMATCH",
+              "MAPPING_POLICY_VERSION_MISMATCH",
+              "MAPPING_POLICY_DEFINITION_HASH_MISMATCH",
+              "MAPPING_TAXONOMY_ID_MISMATCH",
+              "MAPPING_TAXONOMY_VERSION_MISMATCH",
+              "MAPPING_TAXONOMY_DEFINITION_HASH_MISMATCH",
+              "MAPPING_PROVIDER_ID_MISMATCH",
+              "MAPPING_PROVIDER_SCHEME_ID_MISMATCH",
+              "MAPPING_PROVIDER_SCHEME_REVISION_MISMATCH",
+              "MAPPING_PROVIDER_NODE_ID_MISMATCH",
+              "MAPPING_EFFECTIVE_INTERVAL_MISMATCH",
+              "MAPPING_MAPPED_DEFINITION_REQUIRED",
+              "MAPPING_CANONICAL_NODE_NOT_ASSIGNABLE",
+              "MAPPING_CONFLICT",
+              "MAPPING_AMBIGUOUS",
+              "MAPPING_NOT_MAPPED_NO_CANONICAL_EQUIVALENT",
+              "MAPPING_NOT_MAPPED_PROVIDER_NODE_TOO_BROAD",
+              "MAPPING_NOT_MAPPED_PROVIDER_DEFINITION_UNAVAILABLE",
+          ]
+          require(
+              policy["policyVersion"]
+              == "POINT_IN_TIME_EXPLICIT_WSR_ECONOMIC_ACTIVITY_SECTOR_ASSIGNMENT_V1"
+              and policy["requiredTaxonomyId"] == "wsr-economic-activity"
+              and policy["requiredTaxonomyVersion"] == "1.0.0"
+              and policy["requiredTaxonomyDefinitionHash"] == taxonomy_hash
+              and policy["closedAssignableCanonicalNodeIds"] == closed_leaf_ids
+              and policy["requiredMappingPolicyVersion"]
+              == "POINT_IN_TIME_EXPLICIT_PROVIDER_NODE_TO_WSR_ECONOMIC_ACTIVITY_V1"
+              and policy["requiredMappingPolicyDefinitionHash"]
+              == mapping_policy_hash,
+              "Sector-assignment ADR-028 taxonomy or mapping-policy binding changed",
+          )
+          require(
+              policy["classificationEvidenceFields"] == classification_fields
+              and policy["membershipEvidenceFields"] == membership_fields
+              and policy["mappingEvidenceFields"] == mapping_fields
+              and policy["requestFields"] == request_fields
+              and policy["resolutionContextFields"] == context_fields
+              and policy["resultVariants"] == {
+                  "Resolved": [
+                      "context", "classificationEvidence", "membershipEvidence",
+                      "mappingEvidence",
+                  ],
+                  "NotApplicable": [
+                      "context", "classificationEvidence", "reason",
+                  ],
+                  "Unavailable": ["context", "reason"],
+              },
+              "Sector-assignment evidence, request, context, or result shape changed",
+          )
+          require(
+              policy["providerNodeDefinitionVariants"]
+              == {"Recorded": ["value", "languageTag"], "NotPublished": []}
+              and policy["mappingDispositionVariants"]
+              == {"Mapped": ["canonicalNodeId"], "NotMapped": ["reason"]}
+              and policy["notMappedReasons"] == [
+                  "NO_CANONICAL_EQUIVALENT", "PROVIDER_NODE_TOO_BROAD",
+                  "PROVIDER_DEFINITION_UNAVAILABLE",
+              ]
+              and policy["notApplicableReasons"] == ["NON_EQUITY"]
+              and policy["unavailableReasons"] == unavailable_reasons,
+              "Sector-assignment variants or reason order changed",
+          )
+          required_policy_scalars = {
+              "pitPredicate":
+                  "availableAt<=evaluationAsOf&&capturedAt<=evaluationAsOf",
+              "futureEvidenceRule":
+                  "INVISIBLE_TO_ALL_OUTPUT_REASON_CONFLICT_AND_CARDINALITY",
+              "effectiveIntervalBoundary": "START_INCLUSIVE_END_EXCLUSIVE",
+              "providerIdentityComparison":
+                  "EXACT_CASE_SENSITIVE_UNNORMALIZED_UNICODE_CODE_POINT_EQUALITY",
+              "providerIdentityValidation":
+                  "NON_NULL_NON_EMPTY_NO_STRIP_NORMALIZATION_OR_CASE_FOLD",
+              "inScopePredicate": "selectedClassification.assetType==EQUITY",
+              "countryCurrencyApplicabilityRole":
+                  "PRESERVED_EVIDENCE_ONLY_NOT_SCOPE",
+              "mappingSetIdentityBoundary":
+                  "CALLER_SUPPLIED_IDENTITY_ECHOED_AND_ROW_MATCHED_SELECTOR_DOES_"
+                  "NOT_COMPUTE_MANIFEST_HASH_OR_ATTEST_ENTRY_MANIFEST_CORRELATION",
+              "mappedDefinitionRequirement":
+                  "MAPPED_REQUIRES_RECORDED_PROVIDER_NODE_DEFINITION",
+              "equalDuplicateRule": "AMBIGUOUS_NO_DEDUPLICATION",
+              "candidateOrderRule": "ORDER_INDEPENDENT",
+              "mappingSetManifestVerification":
+                  "ABSENT_CALLER_ATTESTED_SEPARATE_BOUNDARY",
+              "lifecycleMapping": "ABSENT",
+              "calculatorInvocation": "ABSENT",
+              "providerIntegration": "ABSENT",
+              "actualProviderMappingSet": "ABSENT",
+              "fallbackBehavior": "ABSENT",
+          }
+          require(
+              all(policy[key] == value
+                  for key, value in required_policy_scalars.items())
+              and policy["providerIdentity"] == [
+                  "providerId", "providerSchemeId", "providerSchemeRevision",
+                  "providerNodeId",
+              ]
+              and policy["evaluationPrecedence"][-1] == "RESOLVE",
+              "Sector-assignment PIT, identity, attestation, or firewall changed",
+          )
+
+          mapping_source = sources["SectorMappingEvidence.java"]
+          resolution_source = sources["SectorAssignmentResolution.java"]
+          selector_source = sources["SectorAssignmentSelector.java"]
+          classification_source = sources[
+              "SectorAssetClassificationEvidence.java"
+          ]
+          membership_source = sources["SectorMembershipEvidence.java"]
+          request_source = sources["SectorAssignmentRequest.java"]
+          require(
+              enum_values(mapping_source, "NotMappedReason") == [
+                  "NO_CANONICAL_EQUIVALENT", "PROVIDER_NODE_TOO_BROAD",
+                  "PROVIDER_DEFINITION_UNAVAILABLE",
+              ]
+              and enum_values(resolution_source, "NotApplicableReason")
+              == ["NON_EQUITY"]
+              and enum_values(resolution_source, "UnavailableReason")
+              == unavailable_reasons,
+              "Sector-assignment Java reason vocabularies changed",
+          )
+
+          compact_sources = {
+              name: re.sub(r"\s+", "", source)
+              for name, source in sources.items()
+          }
+          require(
+              "publicsealedinterfaceEffectiveIntervalEnd"
+              "permitsOpenEnded,EndsAtExclusive"
+              in compact_sources["SectorAssetClassificationEvidence.java"]
+              and "publicrecordOpenEnded()implementsEffectiveIntervalEnd"
+              in compact_sources["SectorAssetClassificationEvidence.java"]
+              and "publicrecordEndsAtExclusive(Instantvalue)"
+              "implementsEffectiveIntervalEnd"
+              in compact_sources["SectorAssetClassificationEvidence.java"]
+              and "publicsealedinterfaceProviderNodeDefinition"
+              "permitsRecorded,NotPublished"
+              in compact_sources["SectorMappingEvidence.java"]
+              and "publicsealedinterfaceMappingDispositionpermitsMapped,NotMapped"
+              in compact_sources["SectorMappingEvidence.java"]
+              and "publicsealedinterfaceSectorAssignmentResolution"
+              "permitsSectorAssignmentResolution.Resolved,"
+              "SectorAssignmentResolution.NotApplicable,"
+              "SectorAssignmentResolution.Unavailable"
+              in compact_sources["SectorAssignmentResolution.java"],
+              "Sector-assignment sealed interval, mapping, or result surface changed",
+          )
+          require(
+              "evaluationAsOf.isBefore(basis.eventTime())" in request_source
+              and "List.copyOf(classificationCandidates)" in request_source
+              and "List.copyOf(membershipCandidates)" in request_source
+              and "List.copyOf(mappingCandidates)" in request_source
+              and "!availableAt.isAfter(evaluationAsOf)"
+              in compact_sources["SectorAssignmentSelector.java"]
+              and "!capturedAt.isAfter(evaluationAsOf)"
+              in compact_sources["SectorAssignmentSelector.java"]
+              and "!instant.isBefore(startsAtInclusive)" in classification_source
+              and "instant.isBefore(((EndsAtExclusive)end).value())"
+              in compact_sources["SectorAssetClassificationEvidence.java"],
+              "Sector-assignment request immutability, PIT filter, or interval changed",
+          )
+          gate_positions = [selector_source.find(reason)
+                            for reason in unavailable_reasons]
+          require(
+              all(position >= 0 for position in gate_positions)
+              and gate_positions == sorted(gate_positions)
+              and len(set(gate_positions)) == len(gate_positions),
+              "Sector-assignment selector gate precedence changed",
+          )
+          selector_compact = compact_sources["SectorAssignmentSelector.java"]
+          require(
+              "mappings.stream().skip(1).anyMatch(candidate->"
+              "!candidate.mappingDisposition().equals("
+              "first.mappingDisposition()))" in selector_compact
+              and "mappings.size()>1" in selector_compact
+              and "first.mappingDisposition()instanceofNotMappednotMapped"
+              in selector_compact
+              and selector_source.find("MAPPING_CONFLICT")
+              < selector_source.find("MAPPING_AMBIGUOUS")
+              < selector_source.find(
+                  "MAPPING_NOT_MAPPED_NO_CANONICAL_EQUIVALENT"
+              )
+              and "providerNodeLabel()" not in selector_source,
+              "Sector-assignment conflict, ambiguity, not-mapped, or label rule changed",
+          )
+          provider_identity_helper = re.search(
+              r"static void requireProviderIdentityText\(.*?\n    \}",
+              classification_source,
+              flags=re.DOTALL,
+          )
+          require(
+              provider_identity_helper is not None
+              and ".isEmpty()" in provider_identity_helper.group(0)
+              and not any(token in provider_identity_helper.group(0) for token in (
+                  ".strip", "Normalizer", "toLowerCase", "toUpperCase", ".isBlank",
+              ))
+              and all(
+                  f"candidate.{field}().equals(membership.{field}())"
+                  in selector_compact
+                  for field in (
+                      "providerId", "providerSchemeId", "providerSchemeRevision",
+                      "providerNodeId",
+                  )
+              ),
+              "Provider identity must remain exact, unnormalized, and label-free",
+          )
+
+          basis_consumers = {
+              name for name, source in sources.items() if "OutcomeBasis" in source
+          }
+          require(
+              basis_consumers == {
+                  "SectorAssetClassificationEvidence.java",
+                  "SectorMembershipEvidence.java",
+                  "SectorAssignmentRequest.java",
+                  "SectorAssignmentResolution.java",
+              }
+              and "OutcomeBasis" not in mapping_source
+              and all(
+                  "domain.outcome.benchmarkassignment" not in source
+                  for source in sources.values()
+              ),
+              "Sector assignment must own exactly four basis consumers and no benchmark type",
+          )
+          forbidden_source_tokens = (
+              "org.springframework", "jakarta.", "com.fasterxml.jackson",
+              "java.sql", "java.net", ".infrastructure.", ".application.",
+              "Repository", "HttpClient", "WebClient", "Clock", "Random",
+              "double", "float", "OutcomeEvaluationStatus", "CallOutcome",
+              "AssetReturn", "BenchmarkAssignment", "BenchmarkReturn",
+              "SectorReturn", "MarketSnapshot",
+          )
+          for name, source in sources.items():
+              require(
+                  not any(token in source for token in forbidden_source_tokens),
+                  f"Sector-assignment source crosses its pure boundary: {name}",
+              )
+
+          api_main_dir = Path("apps/api/src/main/java")
+          approved_paths = {
+              (production_dir / name).resolve() for name in production_files
+          }
+          type_markers = tuple(name.removesuffix(".java") for name in production_files)
+          for other_path in api_main_dir.rglob("*.java"):
+              if other_path.resolve() in approved_paths:
+                  continue
+              other_source = other_path.read_text(encoding="utf-8")
+              require(
+                  "domain.outcome.sectorassignment" not in other_source
+                  and not any(
+                      re.search(rf"\b{re.escape(type_name)}\b", other_source)
+                      for type_name in type_markers
+                  ),
+                  f"Sector-assignment leaf must not be reverse-wired: {other_path}",
+              )
+
+          golden_path = test_dir / "SectorAssignmentSelectorGoldenTest.java"
+          golden = golden_path.read_text(encoding="utf-8")
+          require(
+              normalized_hash(golden_path)
+              == "3ee8bc735a4c49183a12fb77ff6d0b8cdfd0af6edc493c7b584921fd851e29f7",
+              "Sector-assignment golden exact source changed",
+          )
+          required_golden_methods = (
+              "canonicalPolicyDefinitionHasExactUtf8BytesIndependentHashAndDefensiveReads",
+              "publicPolicyEvidenceRequestAndResultSurfacesRemainExactlyClosed",
+              "resolvesEveryClosedCanonicalLeaf",
+              "resolvesOneExactOriginalAssignmentAtInclusivePitAndIntervalBoundaries",
+              "correctionBasisIsAnIndependentCompleteIdentityNotAnEventTimeShortcut",
+              "effectiveIntervalsAreStartInclusiveEndExclusiveAndExplicitlyOpenEnded",
+              "futureClassificationCandidatesAreIdenticalToAbsentAndInvisibleToReasoning",
+              "futureMembershipCandidatesAreIdenticalToAbsentAndInvisibleToReasoning",
+              "futureMappingCandidatesAreIdenticalToAbsentAndInvisibleToReasoning",
+              "everyVisibleClassificationMismatchUsesItsExactReason",
+              "everyVisibleMembershipMismatchUsesItsExactReason",
+              "everyVisibleCommonMappingMismatchUsesItsExactReason",
+              "unequalVisibleMappingDispositionsAreConflictsBeforeAmbiguity",
+              "providerIdentityIsExactRawUnicodeWhileLabelsRemainPreservedNonKeys",
+              "callerAttestedMappingSetIdentityIsEchoedButItsDigestIsNotRecomputed",
+              "requestDefensivelyCopiesListsAndRejectsEveryMissingPublicInput",
+              "directResultConstructorsRejectMissingFutureAndContradictoryComponents",
+              "replayIsIndependentOfInputOrderJvmDefaultsAndPriorCalls",
+          )
+          require(
+              all(method in golden for method in required_golden_methods)
+              and len(re.findall(r"(?m)^\s+@Test\s*$", golden)) == 25
+              and len(re.findall(r"(?m)^\s+@ParameterizedTest(?:\(|\s*$)", golden))
+              == 16
+              and "CANONICAL_LEAVES" in golden
+              and "MAPPING_SET_HASH" in golden
+              and "TimeZone.setDefault" in golden
+              and "Locale.setDefault" in golden,
+              "Sector-assignment 134-vector golden contract changed",
+          )
+
+          protected_paths = sorted(
+              {
+                  Path("contracts/openapi.yaml"),
+                  *Path("schemas").glob("*.json"),
+                  *Path("fixtures/v1").glob("*.json"),
+                  *(
+                      path for path in Path("apps/api/src/main").rglob("*")
+                      if path.is_file()
+                  ),
+              },
+              key=lambda path: path.as_posix(),
+          )
           protected_digest = hashlib.sha256()
           for path in protected_paths:
               protected_digest.update(path.as_posix().encode("utf-8"))
@@ -12601,12 +13394,11 @@ jobs:
               protected_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 195
+              len(protected_paths) == 202
               and protected_digest.hexdigest()
-              == "562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640",
-              "ADR-028 decision must preserve the protected production baseline",
+              == "b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899",
+              "Sector-assignment protected production baseline changed",
           )
-
           test_web_paths = sorted(
               {
                   *(
@@ -12632,11 +13424,35 @@ jobs:
               test_web_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               test_web_digest.update(b"\0")
           require(
-              len(test_web_paths) == 198
+              len(test_web_paths) == 199
               and test_web_digest.hexdigest()
-              == "0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e",
-              "ADR-028 decision must preserve the API-test/web baseline",
+              == "59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293",
+              "Sector-assignment API-test/web baseline changed",
           )
+
+          product_paths = [Path("contracts/openapi.yaml")]
+          product_paths += list(Path("schemas").glob("*.json"))
+          product_paths += list(Path("fixtures/v1").glob("*.json"))
+          product_paths += [
+              path for root in (
+                  Path("apps/api/src/main/resources"),
+                  Path("apps/web/src"), Path("apps/web/e2e"),
+              )
+              for path in root.rglob("*") if path.is_file()
+          ]
+          runtime_markers = (
+              policy["policyVersion"], "domain.outcome.sectorassignment",
+          )
+          for product_path in product_paths:
+              try:
+                  product_source = product_path.read_text(encoding="utf-8")
+              except UnicodeDecodeError:
+                  continue
+              require(
+                  not any(runtime_marker in product_source
+                          for runtime_marker in runtime_markers),
+                  f"Sector assignment must not be published in product data: {product_path}",
+              )
 
           outcomes = json.loads(
               Path("fixtures/v1/call-outcomes.json").read_text(encoding="utf-8")
@@ -12651,14 +13467,14 @@ jobs:
                   for outcome in outcomes["outcomes"]
                   for metric in comparative_metrics
               ),
-              "ADR-028 taxonomy decision must not publish comparative metrics",
+              "Sector assignment must not publish comparative metrics",
           )
 
           print(
-              "Validated provider-neutral WSR Economic Activity V1, exact canonical "
-              "taxonomy and PIT provider-node mapping-policy bytes, closed leaf "
-              "targets, deterministic future mapping sets, licensing isolation, "
-              "runtime firewall, and no product publication"
+              "Validated exact point-in-time WSR sector assignment, independent "
+              "classification/membership/mapping evidence, closed ADR-028 taxonomy "
+              "binding, 36-reason precedence, caller-attested mapping-set isolation, "
+              "134-vector golden, reverse firewall, and no product publication"
           )
           PYTHON
 
@@ -17825,6 +18641,16 @@ jobs:
           actual = {key: suite.attrib.get(key, "0") for key in expected};
           sys.exit(f"BenchmarkAssignmentSelectorGoldenTest runtime cardinality changed: {actual}") if actual != expected else None;
           print("Verified BenchmarkAssignmentSelectorGoldenTest runtime cardinality: 84/84")'
+
+      - name: Guard sector-assignment golden runtime cardinality
+        working-directory: apps/api
+        run: >-
+          python -c 'import sys; import xml.etree.ElementTree as ET;
+          suite = ET.parse("target/surefire-reports/TEST-com.wallstreetreceipts.api.domain.outcome.sectorassignment.SectorAssignmentSelectorGoldenTest.xml").getroot();
+          expected = {"tests": "134", "failures": "0", "errors": "0", "skipped": "0"};
+          actual = {key: suite.attrib.get(key, "0") for key in expected};
+          sys.exit(f"SectorAssignmentSelectorGoldenTest runtime cardinality changed: {actual}") if actual != expected else None;
+          print("Verified SectorAssignmentSelectorGoldenTest runtime cardinality: 134/134")'
 
       - name: Guard favorable-extreme golden runtime cardinality
         working-directory: apps/api
