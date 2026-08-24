@@ -466,10 +466,11 @@ reference calendar/source/venue identity, and index divisor-continuity proof.
 They use separate calculator/result types, must apply ADR-017's exact one-
 subtraction/one scale-12 `HALF_EVEN` division, and never reuse the asset share-
 basis adjustment types. Current DEMO outcome values remain null. ADR-027 now
-implements benchmark assignment; the provider-neutral sector taxonomy decision
-comes next, followed by sector assignment, reference-level pairs, return
-calculators and readiness. Raw-window coverage precedes MFE/MAE, alpha and
-sector alpha come last, and lifecycle composition remains separate.
+implements benchmark assignment and ADR-028 locks the provider-neutral sector
+taxonomy and mapping decision. Basis-frozen sector assignment comes next,
+followed by reference-level pairs, return calculators and readiness. Raw-window
+coverage precedes MFE/MAE, alpha and sector alpha come last, and lifecycle
+composition remains separate.
 
 ADR-027 selects benchmark assignment only from explicit point-in-time evidence frozen at the outcome basis event.
 The disconnected V1 selector accepts only complete source-identified
@@ -492,6 +493,29 @@ treemap can create an assignment, and no schema, fixture, API, database,
 provider, or web runtime consumes this leaf. It requires no API key, account,
 license, secret, or network access; non-DEMO use remains blocked on P5 provider
 selection and storage/display/derived-data/redistribution rights.
+
+ADR-028 locks WSR Economic Activity V1 and exact point-in-time provider-node mapping semantics.
+The decision-only `wsr-economic-activity` taxonomy is version `1.0.0`: one
+unassignable root and twelve closed, single-level economic-activity leaves.
+There is no `UNKNOWN`, `OTHER`, or unclassified member; missing, conflicting,
+ambiguous, future, or unmapped evidence remains unavailable. Diversified
+Operations requires explicit evidence of no single represented primary
+activity and is never a fallback. The exact 3824-byte taxonomy definition has
+SHA-256 `820ce3ea264d67312fe4f2efe346631a81d74248e9a7f041793d65d8ef0d62ae`.
+
+Provider nodes map only through policy
+`POINT_IN_TIME_EXPLICIT_PROVIDER_NODE_TO_WSR_ECONOMIC_ACTIVITY_V1`. Its exact
+4395-byte definition has SHA-256
+`ba12a277d5ffe266af1745b98948a1e2206494ac31904f31a419d973d5067e77`.
+Provider scheme revision and node ID establish identity; labels remain evidence
+and cannot drive raw, normalized, or fuzzy matching. Both PIT timestamps must
+be visible, the mapping interval contains the exact basis event with start-
+inclusive/end-exclusive semantics, and duplicates, overlap, or conflicting
+targets fail closed. No actual provider mapping set, membership, reference
+index, sector assignment, or return is claimed yet. This decision needs no API
+key or account; real data remains blocked on provider selection and documented
+historical, storage, display, derived-crosswalk, cache, and redistribution
+rights.
 
 ## Repository layout
 

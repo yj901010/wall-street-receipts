@@ -3619,7 +3619,124 @@ ADR-027 selects benchmark assignment only from explicit point-in-time evidence f
   storage, display, derived-data, and redistribution rights. Named scoped
   secrets may then be introduced only through approved local/CI/deployment
   stores, never chat or Git.
-- The next step is a product decision for the provider-neutral WSR sector
-  taxonomy: taxonomy ID/version, canonical bytes/hash, closed node IDs, and
-  exact provider-to-canonical mapping semantics. Sector assignment code remains
-  blocked until that approval is received.
+- ADR-028 records the received provider-neutral WSR sector-taxonomy product
+  decision: exact identity/version, canonical bytes/hash, closed node IDs, and
+  provider-to-canonical mapping semantics. Basis-frozen sector assignment is
+  the next separately reviewed implementation slice.
+
+## P3 — Provider-neutral WSR Economic Activity Taxonomy V1
+
+Status: product approval is received and the twenty-first disconnected P3
+contract is implemented as a decision-only taxonomy and mapping-policy slice.
+Repository verification is complete. No sector assignment, provider mapping
+set, reference index, return, lifecycle, persistence, provider, API, or product
+publication is introduced.
+
+ADR-028 locks WSR Economic Activity V1 and exact point-in-time provider-node mapping semantics.
+
+### Scope
+
+- Define `wsr-economic-activity` version `1.0.0` as one unassignable root and
+  exactly twelve ordered, assignable, single-level WSR economic-activity nodes.
+  Preserve original WSR IDs, English labels, and definitions without claiming
+  GICS, ICB, SIC, or NAICS equivalence.
+- Keep missing, conflicting, ambiguous, future, unsupported, and unmapped
+  evidence outside the taxonomy. There is no `UNKNOWN`, `OTHER`, or
+  unclassified node. Diversified Operations requires affirmative evidence that
+  no other V1 node represents one primary activity and is never a fallback.
+- Define exact provider-node identity, mapping evidence, closed disposition,
+  PIT visibility, effective interval, multiplicity, mapping-set
+  canonicalization, versioning, and no-inference semantics without inventing an
+  actual provider mapping row.
+- Add only ADR-028, README/P3/log documentation, and CI validation. Preserve
+  every Java, test, schema, fixture, manifest, OpenAPI, Flyway, resource,
+  provider, database, API, and web runtime surface.
+
+### Locked taxonomy and mapping decisions
+
+- The exact canonical taxonomy definition is one 3824-byte single-line
+  ASCII/UTF-8 sequence with SHA-256
+  `820ce3ea264d67312fe4f2efe346631a81d74248e9a7f041793d65d8ef0d62ae`.
+  Any node, order, label, definition, or semantic change requires a new
+  taxonomy version and hash.
+- Mapping policy
+  `POINT_IN_TIME_EXPLICIT_PROVIDER_NODE_TO_WSR_ECONOMIC_ACTIVITY_V1` is bound
+  to that exact taxonomy ID/version/hash. Its canonical definition is one
+  4395-byte single-line ASCII/UTF-8 sequence with SHA-256
+  `ba12a277d5ffe266af1745b98948a1e2206494ac31904f31a419d973d5067e77`.
+- Provider identity is the exact provider, scheme, scheme revision, and node ID
+  under case-sensitive, unnormalized Unicode code-point equality. Labels and
+  definitions remain preserved evidence, not matching keys. `Mapped` requires
+  a recorded provider definition and an exact closed assignable leaf target
+  under the locked taxonomy hash.
+- Mapping rows preserve 23 ordered fields spanning evidence/provider event,
+  policy/mapping-set/taxonomy identity and hashes, provider identity and source
+  label/definition, disposition, source/revision/provenance, interval, and both
+  PIT timestamps. Missing or closed `NotMapped` dispositions remain evidence
+  unavailable.
+- Visibility requires `availableAt <= evaluationAsOf` and
+  `capturedAt <= evaluationAsOf`; selection uses a start-inclusive/end-
+  exclusive interval at the exact original/correction `basis.eventTime`.
+  Future rows cannot affect output, reasons, conflict, or cardinality.
+- Equal duplicates and overlaps are ambiguous, disagreeing targets conflict,
+  and current/latest row, nearest interval, provider preference, label match,
+  silent deduplication/migration, P2 groupings, and fallback are forbidden.
+- A future mapping set locks exact manifest/entry orders, globally unique
+  evidence IDs, canonical UTC microsecond effective starts, unnormalized
+  Unicode code-point sort, exact entry-to-manifest identity/source correlation,
+  and SHA-256 with every self-referential `mappingSetDefinitionHash` occurrence
+  omitted before all populated copies are set to the computed digest. No
+  mapping set exists now.
+
+### Source, license, and publication boundary
+
+- P2 sector/industry strings remain synthetic DEMO presentation groupings and
+  cannot seed taxonomy, provider mapping, asset membership, or reference-index
+  assignment.
+- GICS and ICB remain isolated unless written S&P/MSCI or FTSE/LSEG terms grant
+  the required historical classification, storage, derived-crosswalk, cache,
+  display, and redistribution uses. Public methodology or attribution pages do
+  not create those entitlements.
+- SEC SIC may later supply public issuer-classification evidence; SEC EDGAR
+  data APIs need no API key but require compliant automated access. NAICS may
+  inform an independently reviewed mapping but is establishment-oriented and
+  cannot directly prove issuer membership.
+- Current DEMO benchmark/sector/alpha metrics remain null. A WSR node does not
+  prove a provider-published sector price index, and no return or outcome status
+  can be inferred from this decision.
+
+### Module, routes, and data
+
+- Production/test/module additions: none.
+- Routes, OpenAPI, migrations, schemas, fixtures, manifest, database behavior,
+  provider adapters, API resources, and web behavior: none.
+- Canonical provider mapping entries and issuer memberships: none.
+
+### Verification
+
+- Canonical JSON parse/minimal serialization, independent UTF-8 byte/hash
+  checks, exact node and mapping semantics, documentation marker parity,
+  runtime firewall, and protected 195/198 baselines: **PASS**. The dedicated
+  guard independently verifies the exact 3824/4395-byte definitions and both
+  locked hashes.
+- Complete API Maven regression, all embedded repository CI Python bodies,
+  workflow YAML, Compose, canonical/marker mutation rejection, patch hygiene,
+  and user-owned `apps/web/next-env.d.ts` preservation: **PASS**. Maven reports
+  1114 tests with zero failures, errors, or skips. All 33 embedded Python bodies
+  compile under optimization and all 32 locally executable bodies pass;
+  SnakeYAML parses four jobs; Compose validates; marker, taxonomy-byte, and
+  mapping-policy-byte mutations each fail closed and are restored; and
+  `git diff --check` remains clean without staging the user-owned file.
+
+### External-data and next-slice boundary
+
+- This decision requires no API key, account, paid plan, domain, provider
+  license, environment secret, or network access.
+- Before real mapping or membership data enters the system, P5 must select a
+  provider and document historical, storage, display, derived-crosswalk, cache,
+  and redistribution rights. Only then may a reviewed adapter introduce named
+  scoped credentials through untracked local/CI/deployment stores, never chat
+  or Git.
+- The next slice is independently typed basis-frozen sector assignment against
+  these exact taxonomy and mapping-policy identities. Actual provider mapping
+  data remains blocked until provider selection and rights approval.
