@@ -3841,9 +3841,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 173
+              len(protected_paths) == 177
               and protected_digest.hexdigest()
-              == "c3f6e8579d70c71b57ce855728e89513c9b0ba6f713ce120dfe9aee6469f4731",
+              == "86d2175f849a3f866858c07351fbc24137946c4a286362f0557a9e7dc6b71bbf",
               "Call-outcome audit consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           api_main_source = "\n".join(
@@ -4476,9 +4476,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 173
+              len(protected_paths) == 177
               and protected_digest.hexdigest()
-              == "c3f6e8579d70c71b57ce855728e89513c9b0ba6f713ce120dfe9aee6469f4731",
+              == "86d2175f849a3f866858c07351fbc24137946c4a286362f0557a9e7dc6b71bbf",
               "Call-list consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           workflow_source = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -5118,6 +5118,41 @@ jobs:
                   "TargetHitResult",
               },
           }
+          directional_win_orchestration_consumers = {
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/"
+                  "directionalwinorchestration/"
+                  "DirectionalWinOrchestrationPolicyVersion.java"
+              ).resolve(): set(),
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/"
+                  "directionalwinorchestration/"
+                  "DirectionalWinOrchestrationRequest.java"
+              ).resolve(): set(),
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/"
+                  "directionalwinorchestration/"
+                  "DirectionalWinOrchestrationResolution.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.calculation."
+                  "DirectionalWinResult",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/"
+                  "directionalwinorchestration/DirectionalWinOrchestrator.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.calculation."
+                  "DirectionalWinCalculator",
+                  "com.wallstreetreceipts.api.domain.outcome.calculation."
+                  "DirectionalWinInput",
+                  "com.wallstreetreceipts.api.domain.outcome.calculation."
+                  "DirectionalWinResult",
+              },
+          }
           calculation_markers = tuple(
               path.removesuffix(".java") for path in expected_production_files
           )
@@ -5210,6 +5245,41 @@ jobs:
                       and "DirectionalWinResult" not in consumer_code,
                       "Target-hit orchestration may consume only the exact primitive "
                       f"surface and invoke it only once in its orchestrator: {other_path}",
+                  )
+                  continue
+              if other_path.resolve() in directional_win_orchestration_consumers:
+                  consumer_code = without_comments_or_strings(other_source)
+                  calculation_imports = {
+                      imported
+                      for imported in re.findall(
+                          r"^import\s+([^;]+);",
+                          consumer_code,
+                          flags=re.MULTILINE,
+                      )
+                      if ".domain.outcome.calculation." in imported
+                  }
+                  expected_imports = directional_win_orchestration_consumers[
+                      other_path.resolve()
+                  ]
+                  is_orchestrator = (
+                      other_path.name == "DirectionalWinOrchestrator.java"
+                  )
+                  require(
+                      calculation_imports == expected_imports
+                      and (
+                          consumer_code.count(
+                              "DirectionalWinCalculator.calculate("
+                          ) == 1
+                          if is_orchestrator
+                          else "DirectionalWinCalculator.calculate("
+                              not in consumer_code
+                      )
+                      and "TargetHitCalculator" not in consumer_code
+                      and "TargetHitInput" not in consumer_code
+                      and "TargetHitResult" not in consumer_code,
+                      "Directional-win orchestration may consume only the exact "
+                      "primitive surface and invoke it only once in its "
+                      f"orchestrator: {other_path}",
                   )
                   continue
               require(
@@ -7071,13 +7141,70 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+          def scrub_java(source, strip_literals):
+              output = []
+              index = 0
+              state = "CODE"
+              quote = None
+              while index < len(source):
+                  current = source[index]
+                  following = source[index + 1] if index + 1 < len(source) else ""
+                  if state == "CODE":
+                      if current in {'"', "'"}:
+                          state = "STRING" if current == '"' else "CHAR"
+                          quote = current
+                          output.append(
+                              ('""' if current == '"' else "''")
+                              if strip_literals else current
+                          )
+                          index += 1
+                      elif current == "/" and following == "/":
+                          state = "LINE_COMMENT"
+                          index += 2
+                      elif current == "/" and following == "*":
+                          state = "BLOCK_COMMENT"
+                          index += 2
+                      else:
+                          output.append(current)
+                          index += 1
+                  elif state in {"STRING", "CHAR"}:
+                      if current == "\\" and following:
+                          if not strip_literals:
+                              output.extend((current, following))
+                          index += 2
+                      elif current == quote:
+                          if not strip_literals:
+                              output.append(current)
+                          state = "CODE"
+                          quote = None
+                          index += 1
+                      else:
+                          if not strip_literals:
+                              output.append(current)
+                          index += 1
+                  elif state == "LINE_COMMENT":
+                      if current in "\r\n":
+                          output.append(current)
+                          state = "CODE"
+                      index += 1
+                  elif current == "*" and following == "/":
+                      state = "CODE"
+                      index += 2
+                  else:
+                      if current in "\r\n":
+                          output.append(current)
+                      index += 1
+              require(
+                  state not in {"STRING", "CHAR", "BLOCK_COMMENT"},
+                  "Java source contains an unterminated lexical token",
+              )
+              return "".join(output)
+
           def without_comments(source):
-              source = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
-              return re.sub(r"//.*", "", source)
+              return scrub_java(source, False)
 
           def without_comments_or_strings(source):
-              source = without_comments(source)
-              return re.sub(r'"(?:\\.|[^"\\])*"', '""', source)
+              return scrub_java(source, True)
 
           def compact(source):
               return re.sub(r"\s+", "", source)
@@ -7371,6 +7498,12 @@ jobs:
               },
               (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
                "targeteligibility/TargetEligibilityResolver.java").resolve(): set(),
+              (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
+               "directionalwinorchestration/"
+               "DirectionalWinOrchestrationRequest.java").resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.direction."
+                  "CallDirectionPolarityPolicyVersion",
+              },
           }
           for other_path in api_main_dir.rglob("*.java"):
               if other_path.resolve() in policy_paths:
@@ -7404,7 +7537,7 @@ jobs:
                           marker for marker in policy_markers
                           if re.search(rf"\b{re.escape(marker)}\b", other_code)
                       ) == {"CallDirectionPolarityPolicyVersion"},
-                      "ADR-018 target eligibility may consume only the exact "
+                      "Approved PIT composition may consume only the exact "
                       f"direction-policy V1 identity: {other_path}",
                   )
                   continue
@@ -8477,6 +8610,35 @@ jobs:
                   "com.wallstreetreceipts.api.domain.outcome.routing."
                   "CalculatorSideRouting.DirectionalRoute",
               },
+              (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
+               "directionalwinorchestration/"
+               "DirectionalWinOrchestrationPolicyVersion.java").resolve(): set(),
+              (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
+               "directionalwinorchestration/"
+               "DirectionalWinOrchestrationRequest.java").resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting",
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.DirectionalRoute",
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.NonDirectionalRoute",
+              },
+              (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
+               "directionalwinorchestration/"
+               "DirectionalWinOrchestrationResolution.java").resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.DirectionalRoute",
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.NonDirectionalRoute",
+              },
+              (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
+               "directionalwinorchestration/"
+               "DirectionalWinOrchestrator.java").resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.DirectionalRoute",
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.NonDirectionalRoute",
+              },
           })
           for other_path in api_main_dir.rglob("*.java"):
               resolved = other_path.resolve()
@@ -8496,6 +8658,13 @@ jobs:
                   is_target_hit_orchestrator = (
                       other_path.name == "TargetHitOrchestrator.java"
                   )
+                  is_directional_win_orchestrator = (
+                      other_path.name == "DirectionalWinOrchestrator.java"
+                  )
+                  is_directional_win_resolution = (
+                      other_path.name
+                      == "DirectionalWinOrchestrationResolution.java"
+                  )
                   calculation_boundary_ok = (
                       (
                           other_logic.count("TargetHitCalculator.calculate(") == 1
@@ -8506,6 +8675,27 @@ jobs:
                           and "DirectionalWinResult" not in other_logic
                       )
                       if is_target_hit_orchestrator
+                      else (
+                          other_logic.count(
+                              "DirectionalWinCalculator.calculate("
+                          ) == 1
+                          and "DirectionalWinInput" in other_logic
+                          and "DirectionalWinResult" in other_logic
+                          and "TargetHitCalculator" not in other_logic
+                          and "TargetHitInput" not in other_logic
+                          and "TargetHitResult" not in other_logic
+                      )
+                      if is_directional_win_orchestrator
+                      else (
+                          "DirectionalWinResult" in other_logic
+                          and "DirectionalWinCalculator" not in other_logic
+                          and "DirectionalWinInput" not in other_logic
+                          and "TargetHitCalculator" not in other_logic
+                          and "TargetHitInput" not in other_logic
+                          and "TargetHitResult" not in other_logic
+                          and ".calculate(" not in other_logic
+                      )
+                      if is_directional_win_resolution
                       else not any(marker in other_logic for marker in (
                           "TargetHitCalculator", "TargetHitInput", "TargetHitResult",
                           "DirectionalWinCalculator", "DirectionalWinInput",
@@ -8518,7 +8708,7 @@ jobs:
                       and "CalculatorSideRouting.route(" not in other_logic
                       and "CalculatorSideAdapter" not in other_logic
                       and calculation_boundary_ok,
-                      "Approved eligibility/extreme policies may preserve only "
+                      "Approved composition policies may preserve only "
                       "the exact closed routing evidence "
                       f"without invoking a calculator: {other_path}",
                   )
@@ -8863,12 +9053,70 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+          def scrub_java(source, strip_literals):
+              output = []
+              index = 0
+              state = "CODE"
+              quote = None
+              while index < len(source):
+                  current = source[index]
+                  following = source[index + 1] if index + 1 < len(source) else ""
+                  if state == "CODE":
+                      if current in {'"', "'"}:
+                          state = "STRING" if current == '"' else "CHAR"
+                          quote = current
+                          output.append(
+                              ('""' if current == '"' else "''")
+                              if strip_literals else current
+                          )
+                          index += 1
+                      elif current == "/" and following == "/":
+                          state = "LINE_COMMENT"
+                          index += 2
+                      elif current == "/" and following == "*":
+                          state = "BLOCK_COMMENT"
+                          index += 2
+                      else:
+                          output.append(current)
+                          index += 1
+                  elif state in {"STRING", "CHAR"}:
+                      if current == "\\" and following:
+                          if not strip_literals:
+                              output.extend((current, following))
+                          index += 2
+                      elif current == quote:
+                          if not strip_literals:
+                              output.append(current)
+                          state = "CODE"
+                          quote = None
+                          index += 1
+                      else:
+                          if not strip_literals:
+                              output.append(current)
+                          index += 1
+                  elif state == "LINE_COMMENT":
+                      if current in "\r\n":
+                          output.append(current)
+                          state = "CODE"
+                      index += 1
+                  elif current == "*" and following == "/":
+                      state = "CODE"
+                      index += 2
+                  else:
+                      if current in "\r\n":
+                          output.append(current)
+                      index += 1
+              require(
+                  state not in {"STRING", "CHAR", "BLOCK_COMMENT"},
+                  "Java source contains an unterminated lexical token",
+              )
+              return "".join(output)
+
           def without_comments(source):
-              source = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
-              return re.sub(r"//.*", "", source)
+              return scrub_java(source, False)
 
           def without_comments_or_strings(source):
-              return re.sub(r'"(?:\\.|[^"\\])*"', '""', without_comments(source))
+              return scrub_java(source, True)
 
           def compact(source):
               return re.sub(r"\s+", "", source)
@@ -9600,6 +9848,11 @@ jobs:
                         {"CorporateActionContinuity",
                          "EndpointPriceAdjustmentBasis"}, set(),
               ),
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/directionalwinorchestration/"
+                    "DirectionalWinOrchestrationRequest.java")).resolve(): (
+                        {"EndpointPriceResolution"}, set(),
+              ),
           })
           for other_path in api_main_dir.rglob("*.java"):
               if other_path.resolve() in new_paths:
@@ -9867,12 +10120,70 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+          def scrub_java(source, strip_literals):
+              output = []
+              index = 0
+              state = "CODE"
+              quote = None
+              while index < len(source):
+                  current = source[index]
+                  following = source[index + 1] if index + 1 < len(source) else ""
+                  if state == "CODE":
+                      if current in {'"', "'"}:
+                          state = "STRING" if current == '"' else "CHAR"
+                          quote = current
+                          output.append(
+                              ('""' if current == '"' else "''")
+                              if strip_literals else current
+                          )
+                          index += 1
+                      elif current == "/" and following == "/":
+                          state = "LINE_COMMENT"
+                          index += 2
+                      elif current == "/" and following == "*":
+                          state = "BLOCK_COMMENT"
+                          index += 2
+                      else:
+                          output.append(current)
+                          index += 1
+                  elif state in {"STRING", "CHAR"}:
+                      if current == "\\" and following:
+                          if not strip_literals:
+                              output.extend((current, following))
+                          index += 2
+                      elif current == quote:
+                          if not strip_literals:
+                              output.append(current)
+                          state = "CODE"
+                          quote = None
+                          index += 1
+                      else:
+                          if not strip_literals:
+                              output.append(current)
+                          index += 1
+                  elif state == "LINE_COMMENT":
+                      if current in "\r\n":
+                          output.append(current)
+                          state = "CODE"
+                      index += 1
+                  elif current == "*" and following == "/":
+                      state = "CODE"
+                      index += 2
+                  else:
+                      if current in "\r\n":
+                          output.append(current)
+                      index += 1
+              require(
+                  state not in {"STRING", "CHAR", "BLOCK_COMMENT"},
+                  "Java source contains an unterminated lexical token",
+              )
+              return "".join(output)
+
           def without_comments(source):
-              source = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
-              return re.sub(r"//.*", "", source)
+              return scrub_java(source, False)
 
           def without_comments_or_strings(source):
-              return re.sub(r'"(?:\\.|[^"\\])*"', '""', without_comments(source))
+              return scrub_java(source, True)
 
           def compact(source):
               return re.sub(r"\s+", "", source)
@@ -10512,10 +10823,67 @@ jobs:
           new_markers = tuple(
               name.removesuffix(".java") for name in pair_files | asset_files
           )
+          directional_win_orchestration_consumers = {
+              (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
+               "directionalwinorchestration/"
+               "DirectionalWinOrchestrationPolicyVersion.java").resolve(): (
+                   set(), set(),
+              ),
+              (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
+               "directionalwinorchestration/"
+               "DirectionalWinOrchestrationRequest.java").resolve(): (
+                   {"AssetReturnPricePairResolution"},
+                   {"AssetReturnPolicyVersion", "AssetReturnResult"},
+              ),
+              (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
+               "directionalwinorchestration/"
+               "DirectionalWinOrchestrationResolution.java").resolve(): (
+                   set(), {"AssetReturnResult"},
+              ),
+              (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
+               "directionalwinorchestration/"
+               "DirectionalWinOrchestrator.java").resolve(): (
+                   set(), {"AssetReturnResult"},
+              ),
+          }
           for other_path in api_main_dir.rglob("*.java"):
               if other_path.resolve() in new_paths:
                   continue
               other_source = other_path.read_text(encoding="utf-8")
+              if other_path.resolve() in directional_win_orchestration_consumers:
+                  other_logic = without_comments_or_strings(other_source)
+                  actual_pair_references = {
+                      marker
+                      for marker in {
+                          name.removesuffix(".java") for name in pair_files
+                      }
+                      if re.search(rf"\b{re.escape(marker)}\b", other_logic)
+                  }
+                  actual_asset_references = {
+                      marker
+                      for marker in {
+                          name.removesuffix(".java") for name in asset_files
+                      }
+                      if re.search(rf"\b{re.escape(marker)}\b", other_logic)
+                  }
+                  expected_pair, expected_asset = (
+                      directional_win_orchestration_consumers[
+                          other_path.resolve()
+                      ]
+                  )
+                  require(
+                      actual_pair_references == expected_pair
+                      and actual_asset_references == expected_asset
+                      and "AssetReturnCalculator" not in other_logic
+                      and "AssetReturnInput" not in other_logic
+                      and "AssetReturnPricePairSelector" not in other_logic
+                      and "AssetReturnPricePairRequest" not in other_logic
+                      and "BasisPriceObservation" not in other_logic
+                      and "PricePairAdjustmentEvidence" not in other_logic,
+                      "Directional-win orchestration may consume only exact "
+                      f"supplied pair/return leaves: {other_path}",
+                  )
+                  continue
               require(
                   re.search(r"\\u+[0-9a-fA-F]{4}", other_source) is None
                   and "domain.outcome.pricepair" not in other_source
@@ -10540,9 +10908,9 @@ jobs:
           asset_golden_logic = compact(asset_golden_executable)
           require(
               hashlib.sha256(pair_golden_logic.encode("utf-8")).hexdigest()
-              == "8705bdbd738ced43ff8228a54b35ade37d73b82857a6bd9c162837bd8727ca80"
+              == "322a291d47cb8efc70609ce121be30ce23fb87b4ef21239639f5f05ce7e0c2e7"
               and hashlib.sha256(asset_golden_logic.encode("utf-8")).hexdigest()
-              == "a09d408993068c784032b0f887e97d61c9fe6123b9781e14b803a6e728241794",
+              == "d50c25fac98a1c87ba7d7e89560a8632dd8dfbb98e237b3f547433fdc8635b28",
               "Golden executable structure changed outside the locked V1 test surface",
           )
           compact_pair_golden = compact(pair_golden_code)
@@ -11409,6 +11777,18 @@ jobs:
                   "com.wallstreetreceipts.api.domain.outcome.targeteligibility."
                   "TargetEligibilityResolution",
               },
+              (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
+               "directionalwinorchestration/"
+               "DirectionalWinOrchestrationRequest.java").resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.targeteligibility."
+                  "BasisForecastTermsEvidence",
+              },
+              (api_main_dir / "com/wallstreetreceipts/api/domain/outcome/"
+               "directionalwinorchestration/"
+               "DirectionalWinOrchestrationResolution.java").resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.targeteligibility."
+                  "BasisForecastTermsEvidence",
+              },
           })
           for other_path in api_main_dir.rglob("*.java"):
               if other_path.resolve() in new_paths:
@@ -11441,8 +11821,11 @@ jobs:
                       and used_types == expected_types
                       and "TargetEligibilityResolver" not in other_logic
                       and "TargetEligibilityRequest" not in other_logic
-                      and "BasisForecastTermsEvidence" not in other_logic,
-                      "ADR-019 may consume only the exact ready target-eligibility "
+                      and (
+                          "BasisForecastTermsEvidence" not in other_logic
+                          or expected_types == {"BasisForecastTermsEvidence"}
+                      ),
+                      "Approved composition may consume only the exact target-eligibility "
                       f"V1 evidence: {other_path}",
                   )
                   continue
@@ -12992,6 +13375,528 @@ jobs:
           )
           PYTHON
 
+      - name: Guard supplied-leaf directional-win orchestration
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def scrub_java(source, strip_literals):
+              output = []
+              index = 0
+              state = "CODE"
+              quote = None
+              while index < len(source):
+                  current = source[index]
+                  following = source[index + 1] if index + 1 < len(source) else ""
+                  if state == "CODE":
+                      if current in {'"', "'"}:
+                          state = "STRING" if current == '"' else "CHAR"
+                          quote = current
+                          output.append(
+                              ('""' if current == '"' else "''")
+                              if strip_literals else current
+                          )
+                          index += 1
+                      elif current == "/" and following == "/":
+                          state = "LINE_COMMENT"
+                          index += 2
+                      elif current == "/" and following == "*":
+                          state = "BLOCK_COMMENT"
+                          index += 2
+                      else:
+                          output.append(current)
+                          index += 1
+                  elif state in {"STRING", "CHAR"}:
+                      if current == "\\" and following:
+                          if not strip_literals:
+                              output.extend((current, following))
+                          index += 2
+                      elif current == quote:
+                          if not strip_literals:
+                              output.append(current)
+                          state = "CODE"
+                          quote = None
+                          index += 1
+                      else:
+                          if not strip_literals:
+                              output.append(current)
+                          index += 1
+                  elif state == "LINE_COMMENT":
+                      if current in "\r\n":
+                          output.append(current)
+                          state = "CODE"
+                      index += 1
+                  elif current == "*" and following == "/":
+                      state = "CODE"
+                      index += 2
+                  else:
+                      if current in "\r\n":
+                          output.append(current)
+                      index += 1
+              require(
+                  state not in {"STRING", "CHAR", "BLOCK_COMMENT"},
+                  "Java source contains an unterminated lexical token",
+              )
+              return "".join(output)
+
+          def without_comments(source):
+              return scrub_java(source, False)
+
+          def without_comments_or_strings(source):
+              return scrub_java(source, True)
+
+          def compact(source):
+              return re.sub(r"\s+", "", source)
+
+          def java_string_constant(source, name):
+              match = re.search(
+                  rf"private\s+static\s+final\s+String\s+{name}\s*=\s*"
+                  r"(?P<body>.*?);",
+                  source,
+                  flags=re.DOTALL,
+              )
+              require(match is not None, f"Missing Java string constant {name}")
+              tokens = re.findall(r'"(?:\\.|[^"\\])*"', match.group("body"))
+              require(tokens, f"Java string constant {name} has no literal bytes")
+              return "".join(json.loads(token) for token in tokens)
+
+          production_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+              "outcome/directionalwinorchestration"
+          )
+          test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/"
+              "outcome/directionalwinorchestration"
+          )
+          production_files = {
+              "DirectionalWinOrchestrationPolicyVersion.java",
+              "DirectionalWinOrchestrationRequest.java",
+              "DirectionalWinOrchestrationResolution.java",
+              "DirectionalWinOrchestrator.java",
+          }
+          test_files = {"DirectionalWinOrchestratorGoldenTest.java"}
+          require(
+              {path.name for path in production_dir.glob("*.java")}
+              == production_files,
+              "Directional-win orchestration package must contain four files",
+          )
+          require(
+              {path.name for path in test_dir.glob("*.java")} == test_files,
+              "Directional-win orchestration package must contain one golden",
+          )
+
+          sources = {
+              name: (production_dir / name).read_text(encoding="utf-8")
+              for name in production_files
+          }
+          for name, source in sources.items():
+              require(
+                  "package com.wallstreetreceipts.api.domain.outcome."
+                  "directionalwinorchestration;" in source
+                  and re.search(r"\\u+[0-9a-fA-F]{4}", source) is None
+                  and '"""' not in source,
+                  f"Directional-win package or lexical boundary changed: {name}",
+              )
+
+          policy = sources["DirectionalWinOrchestrationPolicyVersion.java"]
+          definition = java_string_constant(policy, "CANONICAL_DEFINITION")
+          policy_hash = (
+              "51429c7601d4807162855f08c680d1e6bb7895f87fc108e141e5ad3a3ab25bcb"
+          )
+          definition_bytes = definition.encode("utf-8")
+          require(
+              len(definition_bytes) == 3699
+              and definition.isascii()
+              and definition.startswith(
+                  '{"policyVersion":'
+                  '"SUPPLIED_LEAF_DIRECTIONAL_WIN_ORCHESTRATION_V1",'
+              )
+              and definition.endswith('"publication":"ABSENT"}')
+              and definition == definition.strip()
+              and "\n" not in definition
+              and "\r" not in definition
+              and hashlib.sha256(definition_bytes).hexdigest() == policy_hash
+              and java_string_constant(policy, "DEFINITION_HASH") == policy_hash,
+              "Directional-win canonical bytes, length, or hash changed",
+          )
+          adr = Path(
+              "decisions/ADR-021-supplied-leaf-directional-win-orchestration.md"
+          ).read_text(encoding="utf-8")
+          require(
+              re.findall(r"```text\r?\n([^\r\n]+)\r?\n```", adr)
+              == [definition, policy_hash],
+              "ADR-021 canonical definition or digest drifted from Java",
+          )
+          for marker in (
+              '"requestFields":["policyVersion","termsEvidence",'
+              '"sideRouting","assetReturnResult"]',
+              '"requestPresence":'
+              '"ALL_FIELDS_NON_NULL_INCLUDING_NON_DIRECTIONAL_ASSET_RETURN"',
+              '"directionCorrelation":'
+              '"termsEvidence.direction==sideRouting.source.context.direction_'
+              'EXACT_CANONICAL_DIRECTION"',
+              '"basisCorrelation":',
+              '"assetCorrelation":',
+              '"termsVisibilityRule":'
+              '"termsEvidence.availableAt<=evaluationAsOf&&'
+              'termsEvidence.capturedAt<=evaluationAsOf"',
+              '"nestedReasonRule":"PRESERVE_EXACT_TYPED_ASSET_RETURN_'
+              'PRICE_PAIR_AND_ENDPOINT_RESOLUTIONS_WITHOUT_REASON_MAPPING"',
+              '"calculatorInvocation":"EXACTLY_ONCE_ONLY_FOR_DIRECTIONAL_'
+              'AND_ASSET_RETURN_AVAILABLE"',
+              '"zeroRule":"MISS_FOR_BOTH_SIDES"',
+              '"targetDispositionUse":"ABSENT"',
+              '"polarityResolverInvocation":"ABSENT"',
+              '"assetReturnCalculatorInvocation":"ABSENT"',
+              '"pricePairSelectorInvocation":"ABSENT"',
+              '"endpointSelectorInvocation":"ABSENT"',
+              '"methodologyActivation":"ABSENT"',
+              '"persistence":"ABSENT"',
+              '"publication":"ABSENT"',
+          ):
+              require(marker in definition, f"Missing directional boundary: {marker}")
+          require(
+              re.findall(
+                  r"\bSUPPLIED_LEAF_DIRECTIONAL_WIN_ORCHESTRATION_V1\b",
+                  re.search(
+                      r"enum\s+DirectionalWinOrchestrationPolicyVersion\s*"
+                      r"\{(?P<body>.*?)\}",
+                      without_comments(policy),
+                      flags=re.DOTALL,
+                  ).group("body").split(";", 1)[0],
+              ) == ["SUPPLIED_LEAF_DIRECTIONAL_WIN_ORCHESTRATION_V1"],
+              "Directional-win orchestration policy enum changed",
+          )
+
+          request = compact(without_comments(
+              sources["DirectionalWinOrchestrationRequest.java"]
+          ))
+          resolution = compact(without_comments(
+              sources["DirectionalWinOrchestrationResolution.java"]
+          ))
+          orchestrator = compact(without_comments(
+              sources["DirectionalWinOrchestrator.java"]
+          ))
+          require(
+              "publicrecordDirectionalWinOrchestrationRequest("
+              "DirectionalWinOrchestrationPolicyVersionpolicyVersion,"
+              "BasisForecastTermsEvidencetermsEvidence,"
+              "CalculatorSideRouting.ResultsideRouting,"
+              "AssetReturnResultassetReturnResult)" in request
+              and request.count("Objects.requireNonNull(") == 4
+              and "termsEvidence.direction()!=polarityContext.direction()" in request
+              and "!termsEvidence.basis().equals(horizonBasis)" in request
+              and "!termsEvidence.assetId().equals("
+              "endpointContext.binding().assetId())" in request
+              and "termsEvidence.availableAt().isAfter("
+              "endpointContext.evaluationAsOf())" in request
+              and "termsEvidence.capturedAt().isAfter("
+              "endpointContext.evaluationAsOf())" in request
+              and "REQUIRED_POLARITY_HASH" in request
+              and "REQUIRED_ASSET_RETURN_HASH" in request,
+              "Directional-win request shape or correlation changed",
+          )
+          for marker in (
+              "permitsDirectionalWinOrchestrationResolution.Available,"
+              "DirectionalWinOrchestrationResolution.NotApplicable,"
+              "DirectionalWinOrchestrationResolution.AssetReturnUnavailable",
+              "recordResolutionContext("
+              "DirectionalWinOrchestrationPolicyVersionpolicyVersion,"
+              "StringpolicyDefinitionHash)",
+              "recordAvailable(ResolutionContextcontext,"
+              "BasisForecastTermsEvidencetermsEvidence,"
+              "DirectionalRoutesideRouting,"
+              "AssetReturnResult.AvailableassetReturnResult,"
+              "DirectionalWinResult.AvailabledirectionalWinResult)"
+              "implementsDirectionalWinOrchestrationResolution",
+              "recordNotApplicable(ResolutionContextcontext,"
+              "BasisForecastTermsEvidencetermsEvidence,"
+              "NonDirectionalRoutesideRouting,"
+              "AssetReturnResultassetReturnResult)"
+              "implementsDirectionalWinOrchestrationResolution",
+              "recordAssetReturnUnavailable(ResolutionContextcontext,"
+              "BasisForecastTermsEvidencetermsEvidence,"
+              "DirectionalRoutesideRouting,"
+              "AssetReturnResult.UnavailableassetReturnResult)"
+              "implementsDirectionalWinOrchestrationResolution",
+          ):
+              require(marker in resolution, f"Directional result changed: {marker}")
+          require(
+              "publicfinalclassDirectionalWinOrchestrator" in orchestrator
+              and "privateDirectionalWinOrchestrator(){}" in orchestrator
+              and "publicstaticDirectionalWinOrchestrationResolutionorchestrate("
+              "DirectionalWinOrchestrationRequestrequest)" in orchestrator
+              and orchestrator.count("DirectionalWinCalculator.calculate(") == 1
+              and orchestrator.count("newDirectionalWinInput(") == 1
+              and "newDirectionalWinInput(directional.directionalWinSide(),"
+              "available.assetReturn())" in orchestrator
+              and "caseNonDirectionalRoutenonDirectional->"
+              "newDirectionalWinOrchestrationResolution.NotApplicable("
+              "context,request.termsEvidence(),nonDirectional,"
+              "request.assetReturnResult())" in orchestrator
+              and "caseAssetReturnResult.Unavailableunavailable->"
+              "newDirectionalWinOrchestrationResolution."
+              "AssetReturnUnavailable(context,request.termsEvidence(),"
+              "directional,unavailable)" in orchestrator
+              and "instanceofDirectionalWinResult.AvailabledirectionalWin"
+              in orchestrator
+              and "thrownewIllegalStateException(" in orchestrator,
+              "Directional branch preservation or primitive input changed",
+          )
+
+          expected_imports = {
+              "DirectionalWinOrchestrationPolicyVersion.java": {
+                  "java.nio.charset.StandardCharsets",
+              },
+              "DirectionalWinOrchestrationRequest.java": {
+                  "java.util.Objects",
+                  "com.wallstreetreceipts.api.domain.outcome.assetreturn."
+                  "AssetReturnPolicyVersion",
+                  "com.wallstreetreceipts.api.domain.outcome.assetreturn."
+                  "AssetReturnResult",
+                  "com.wallstreetreceipts.api.domain.outcome.direction."
+                  "CallDirectionPolarityPolicyVersion",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "EndpointPriceResolution",
+                  "com.wallstreetreceipts.api.domain.outcome.pricepair."
+                  "AssetReturnPricePairResolution",
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting",
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.DirectionalRoute",
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.NonDirectionalRoute",
+                  "com.wallstreetreceipts.api.domain.outcome.targeteligibility."
+                  "BasisForecastTermsEvidence",
+              },
+              "DirectionalWinOrchestrationResolution.java": {
+                  "java.util.Objects",
+                  "com.wallstreetreceipts.api.domain.outcome.assetreturn."
+                  "AssetReturnResult",
+                  "com.wallstreetreceipts.api.domain.outcome.calculation."
+                  "DirectionalWinResult",
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.DirectionalRoute",
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.NonDirectionalRoute",
+                  "com.wallstreetreceipts.api.domain.outcome.targeteligibility."
+                  "BasisForecastTermsEvidence",
+              },
+              "DirectionalWinOrchestrator.java": {
+                  "java.util.Objects",
+                  "com.wallstreetreceipts.api.domain.outcome.assetreturn."
+                  "AssetReturnResult",
+                  "com.wallstreetreceipts.api.domain.outcome.calculation."
+                  "DirectionalWinCalculator",
+                  "com.wallstreetreceipts.api.domain.outcome.calculation."
+                  "DirectionalWinInput",
+                  "com.wallstreetreceipts.api.domain.outcome.calculation."
+                  "DirectionalWinResult",
+                  "com.wallstreetreceipts.api.domain.outcome."
+                  "directionalwinorchestration."
+                  "DirectionalWinOrchestrationResolution.ResolutionContext",
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.DirectionalRoute",
+                  "com.wallstreetreceipts.api.domain.outcome.routing."
+                  "CalculatorSideRouting.NonDirectionalRoute",
+              },
+          }
+          forbidden_runtime = re.compile(
+              r"\b(?:Clock|UUID|Random|SecureRandom|System|Runtime|Thread|"
+              r"Process|ProcessBuilder|ClassLoader)\b|"
+              r"\bClass\s*\.\s*forName\s*\(|\.\s*now\s*\(|"
+              r"@(?:Component|Service|Repository|Controller)\b"
+          )
+          for name, source in sources.items():
+              logic = without_comments_or_strings(source)
+              imports = {
+                  re.sub(r"\s+", "", imported)
+                  for imported in re.findall(
+                      r"^import\s+([^;]+);", logic, flags=re.MULTILINE
+                  )
+              }
+              require(
+                  imports == expected_imports[name]
+                  and forbidden_runtime.search(logic) is None
+                  and "double" not in logic
+                  and "float" not in logic
+                  and "ObjectMapper" not in logic
+                  and "HttpClient" not in logic
+                  and "DataSource" not in logic
+                  and "org.springframework" not in logic,
+                  f"Directional orchestration import/runtime boundary changed: "
+                  f"{name} {imports}",
+              )
+
+          combined_logic = "\n".join(
+              without_comments_or_strings(source) for source in sources.values()
+          )
+          for forbidden in (
+              "CallDirectionPolarityResolver", "CallDirectionPolarityRequest",
+              "CalculatorSideRouting.route(", "CalculatorSideAdapter",
+              "AssetReturnCalculator", "AssetReturnInput",
+              "AssetReturnPricePairSelector", "AssetReturnPricePairRequest",
+              "EndpointPriceSelector", "EndpointPriceRequest",
+              "BasisPriceObservation", "PricePairAdjustmentEvidence",
+              "TargetEligibilityResolver", "TargetEligibilityRequest",
+              "AssetReturnResult.UnavailableReason",
+              "AssetReturnPricePairResolution.UnavailableReason",
+              "EndpointPriceResolution.UnavailableReason", ".reason()",
+              ".targetDisposition()", ".compareTo(", ".signum(", ".abs(",
+              ".setScale(", ".divide(", "CallOutcome", "ScoringMethodology",
+              "fingerprint", "@Service", "@Repository", "@Controller",
+          ):
+              require(
+                  forbidden not in combined_logic,
+                  f"Directional orchestration crosses its boundary: {forbidden}",
+              )
+
+          api_main_dir = Path("apps/api/src/main/java")
+          new_paths = {
+              (production_dir / name).resolve() for name in production_files
+          }
+          new_markers = tuple(name.removesuffix(".java") for name in production_files)
+          for other_path in api_main_dir.rglob("*.java"):
+              if other_path.resolve() in new_paths:
+                  continue
+              other_source = other_path.read_text(encoding="utf-8")
+              require(
+                  "domain.outcome.directionalwinorchestration" not in other_source
+                  and not any(marker in other_source for marker in new_markers),
+                  f"Directional-win orchestration must remain disconnected: {other_path}",
+              )
+
+          golden = (
+              test_dir / "DirectionalWinOrchestratorGoldenTest.java"
+          ).read_text(encoding="utf-8")
+          golden_logic = without_comments_or_strings(golden)
+          direction_source = re.search(
+              r"@EnumSource\s*\(\s*value\s*=\s*CallDirection\.class\s*,"
+              r"\s*names\s*=\s*\{(?P<body>.*?)\}\s*\)",
+              golden,
+              flags=re.DOTALL,
+          )
+          require(direction_source is not None, "Directional enum source changed")
+          require(
+              re.search(r"\\u+[0-9a-fA-F]{4}", golden) is None
+              and len(re.findall(r"@Test\b", golden_logic)) == 15
+              and len(re.findall(r"@ParameterizedTest\b", golden_logic)) == 4
+              and len(re.findall(r"@EnumSource\b", golden_logic)) == 1
+              and len(re.findall(r"@MethodSource\b", golden_logic)) == 3
+              and re.findall(
+                  r'"([A-Z][A-Z0-9_]*)"', direction_source.group("body")
+              ) == [
+                  "STRONG_BULLISH", "BULLISH", "BEARISH", "STRONG_BEARISH"
+              ]
+              and "@Disabled" not in golden_logic
+              and "Assumptions" not in golden_logic,
+              "Directional-win golden annotation boundary changed",
+          )
+          for marker in (
+              "canonicalDefinitionHasExactBytesHashAdrAndDefensiveReads",
+              "exactFileRecordSealedAndDisconnectedSurfacesAreStable",
+              "nullRootsAndRequiredFieldsFailClosed",
+              "exactCanonicalDirectionMustMatchNotOnlyItsPolarity",
+              "wholeBasisRevisionIdentityMustMatch",
+              "wholeBasisCallIdentityMustMatch",
+              "exactAssetIdentityMustMatch",
+              "futureTermsAvailabilityIsRejectedBeforeBranching",
+              "futureTermsCaptureIsRejectedBeforeBranching",
+              "visibilityEqualityAtEvaluationAsOfIsAccepted",
+              "equalButDistinctReplayRecordsAreAccepted",
+              "directResultConstructorsEnforceOnlyLocalPolicyAndTypedShape",
+              "originalAndCorrectionBasesComposeIndependently",
+              "sourceTargetDispositionIsIgnoredAndPreserved",
+              "compositionIsIndependentOfLocaleTimezoneAndPriorCalls",
+              "allCanonicalDirectionalRoutesUseTheirExactPreservedSide",
+              "strictSignComparisonMakesExactZeroAMissForBothSides",
+              "everyNestedUnavailableLeafIsPreservedWithoutReasonMapping",
+              "neutralPrecedencePreservesAnyCorrelatedReturnWithoutABoolean",
+              "allUnavailableLeaves", "neutralAssetReturnLeaves",
+          ):
+              require(marker in golden_logic, f"Missing directional golden: {marker}")
+          require(
+              "Arrays.stream(" in golden_logic
+              and "AssetReturnPricePairResolution.UnavailableReason.values()"
+              in golden_logic
+              and "EndpointPriceResolution.UnavailableReason.values()"
+              in golden_logic
+              and "OUTPUT_NOT_REPRESENTABLE" in golden_logic
+              and "ENDPOINT_NOT_REACHED_AS_OF" in golden_logic
+              and "isSameAs(assetReturn)" in compact(golden_logic)
+              and "Locale.setDefault" in golden_logic
+              and "TimeZone.setDefault" in golden_logic
+              and "finally" in golden_logic,
+              "Goldens must lock nested reasons, identity, neutral, and replay",
+          )
+
+          expected_schemas = {
+              "analyst-call-revision.schema.json", "analyst-call.schema.json",
+              "call-context.schema.json", "call-outcome.schema.json",
+              "event-context.schema.json", "macro-observation.schema.json",
+              "macro-snapshot.schema.json", "market-board.schema.json",
+              "market-map.schema.json", "market-snapshot.schema.json",
+              "market-treemap.schema.json", "scoring-methodology.schema.json",
+              "source-document.schema.json", "source-reference.schema.json",
+          }
+          expected_fixtures = {
+              "analyst-call-revisions.json", "analyst-calls.json",
+              "call-contexts.json", "call-outcomes.json", "manifest.json",
+              "market-board.json", "market-map-nasdaq100.json", "market-map.json",
+              "market-snapshots.json", "market-treemap-nasdaq100.json",
+              "market-treemap-sp500.json", "master-data.json", "timeline-nvda.json",
+          }
+          require(
+              {path.name for path in Path("schemas").glob("*.json")}
+              == expected_schemas
+              and {path.name for path in Path("fixtures/v1").glob("*.json")}
+              == expected_fixtures,
+              "Directional orchestration must preserve schemas and fixtures",
+          )
+          openapi = Path("contracts/openapi.yaml").read_text(encoding="utf-8")
+          require(
+              set(re.findall(r"^  (/[^\n]+):\s*$", openapi, re.MULTILINE))
+              == {
+                  "/v1/calls", "/v1/calls/{id}",
+                  "/v1/calls/{id}/revisions", "/v1/calls/{id}/outcomes",
+                  "/v1/calls/{id}/context",
+              }
+              and {path.name for path in Path(
+                  "apps/api/src/main/resources/db/migration"
+              ).glob("*.sql")} == {
+                  "V1__baseline.sql", "V2__analyst_calls.sql",
+                  "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
+                  "V5__call_contexts.sql",
+              },
+              "Directional orchestration must preserve OpenAPI and Flyway",
+          )
+          for web_path in Path("apps/web/src").rglob("*"):
+              if web_path.is_file() and web_path.suffix in {
+                  ".ts", ".tsx", ".js", ".jsx"
+              }:
+                  web_source = web_path.read_text(encoding="utf-8")
+                  require(
+                      "domain.outcome.directionalwinorchestration"
+                      not in web_source
+                      and not any(marker in web_source for marker in new_markers),
+                      f"Directional-win orchestration must not expand web: {web_path}",
+                  )
+
+          print(
+              "Validated exact correlated supplied-leaf directional-win "
+              "orchestration, all nested unavailable leaves, neutral precedence, "
+              "strict sign input, and no lifecycle or product publication"
+          )
+          PYTHON
+
       - name: Validate analyst-call revision lineage
         shell: bash
         run: |
@@ -13724,3 +14629,13 @@ jobs:
           actual = {key: suite.attrib.get(key, "0") for key in expected};
           sys.exit(f"TargetHitOrchestratorGoldenTest runtime cardinality changed: {actual}") if actual != expected else None;
           print("Verified TargetHitOrchestratorGoldenTest runtime cardinality: 55/55")'
+
+      - name: Guard directional-win orchestration golden runtime cardinality
+        working-directory: apps/api
+        run: >-
+          python -c 'import sys; import xml.etree.ElementTree as ET;
+          suite = ET.parse("target/surefire-reports/TEST-com.wallstreetreceipts.api.domain.outcome.directionalwinorchestration.DirectionalWinOrchestratorGoldenTest.xml").getroot();
+          expected = {"tests": "84", "failures": "0", "errors": "0", "skipped": "0"};
+          actual = {key: suite.attrib.get(key, "0") for key in expected};
+          sys.exit(f"DirectionalWinOrchestratorGoldenTest runtime cardinality changed: {actual}") if actual != expected else None;
+          print("Verified DirectionalWinOrchestratorGoldenTest runtime cardinality: 84/84")'

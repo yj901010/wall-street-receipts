@@ -2765,3 +2765,141 @@ methodology activation, persistence, provider, API, or product publication
   persistence, lifecycle/cancellation/latest-correction selection, scheduling,
   MFE/MAE, alpha/sector alpha, aggregation, ranking, API/UI publication, and
   production provider integration remain later reviewed P3/P5 work.
+
+## P3 — Supplied-leaf point-in-time directional-win orchestration
+
+Status: implementation and repository verification complete for one
+disconnected directional-win metric composition; the broader P3 scoring phase
+remains open with no canonical calculated outcome, methodology activation,
+persistence, provider, API, or product publication
+
+### Scope
+
+- Consume exactly four non-null fields: the orchestration policy, complete
+  `BasisForecastTermsEvidence`, complete `CalculatorSideRouting.Result`, and
+  complete `AssetReturnResult`. Keep the return leaf mandatory for neutral.
+- Validate the required polarity/asset-return policies and exact source
+  direction, whole-record basis, asset identity, and forecast availability and
+  capture at or before the nested endpoint evaluation as-of before selecting a
+  branch.
+- Preserve neutral as `NotApplicable` regardless of return availability and
+  preserve directional unavailable return evidence, including all 55 typed
+  return/price-pair/endpoint combinations, without inspecting or mapping a
+  reason.
+- Build the primitive input and invoke directional win exactly once only for a
+  directional route plus an available return. Add no producer replay, return
+  recalculation, target use, fallback, lifecycle inference, schema, fixture,
+  persistence, provider, API, or web behavior.
+
+### Locked contract decisions
+
+- ADR-021 owns `SUPPLIED_LEAF_DIRECTIONAL_WIN_ORCHESTRATION_V1`, its exact 3699
+  UTF-8 bytes, SHA-256
+  `51429c7601d4807162855f08c680d1e6bb7895f87fc108e141e5ad3a3ab25bcb`,
+  exact four-field all-non-null request, three typed result variants, required
+  ADR-011/017 versions and hashes, cross-leaf correlation, branch precedence,
+  exact primitive input, single invocation, invariant failure, attestation,
+  and no-publication boundaries.
+- Direction correlation uses the exact canonical source direction, so strong
+  and ordinary directions cannot substitute for one another merely because
+  they reduce to the same side. Basis correlation uses whole-record equality,
+  asset correlation uses the nested endpoint binding, and both forecast PIT
+  timestamps must be no later than the nested endpoint `evaluationAsOf`.
+- All policy and correlation checks happen before neutral branching. Neutral
+  takes precedence over available/unavailable return state and preserves the
+  complete terms, non-directional route, and complete return leaf without a
+  Boolean or calculator call.
+- Result variants are exactly `Available`, `NotApplicable`, and
+  `AssetReturnUnavailable`. Every result preserves supplied terms, routing, and
+  return records; Available additionally preserves the primitive Available
+  result. No outer reason enum, duplicate calculator input, or lifecycle state
+  is stored.
+- A directional unavailable return is preserved unchanged, including its typed
+  asset-return, price-pair, endpoint resolution, and endpoint reason chain.
+  Production never calls `.reason()`, maps endpoint-not-reached to Pending,
+  flattens, recalculates, or substitutes false/loss/generic unavailable.
+- Available input uses only `DirectionalRoute.directionalWinSide()` and the
+  exact original `AssetReturnResult.Available.assetReturn()`. The calculator is
+  invoked once: bullish requires `> 0`, bearish requires `< 0`, and zero is a
+  miss for both, with no rounding, rescaling, tolerance, absolute value,
+  percentage conversion, or target-disposition use.
+- A primitive Unavailable from complete directional/available inputs is an
+  internal invariant failure that emits no orchestration result. Public leaf
+  and result constructors attest only locally decidable policy, correlation,
+  and shape; orchestration does not re-attest producer request membership, PIT
+  filtering, candidate poisoning/cardinality, or producer invocation.
+- `Available` is a disconnected metric leaf, not canonical
+  `CallOutcome.CALCULATED`, `dataComplete`, an active methodology, input
+  fingerprint, persisted record, aggregate, ranking input, schedule, or product
+  value.
+
+### Module and file boundary
+
+- `com.wallstreetreceipts.api.domain.outcome.directionalwinorchestration` adds
+  exactly four production files:
+  `DirectionalWinOrchestrationPolicyVersion.java`,
+  `DirectionalWinOrchestrationRequest.java`,
+  `DirectionalWinOrchestrationResolution.java`, and
+  `DirectionalWinOrchestrator.java`.
+- The source-local test is exactly `DirectionalWinOrchestratorGoldenTest.java`
+  in the matching package and contains exactly 84 runtime vectors: 15 general
+  contract/correlation/PIT/replay checks, four directional source directions,
+  six strict sign boundaries, all 55 unavailable combinations, and four
+  neutral-precedence return states.
+- ADR-021, `quality/P3_ACCEPTANCE.md`, README, this log, repository CI reverse
+  allowlists, the dedicated guard, and API Surefire cardinality check own the
+  exact boundary.
+
+### Routes
+
+- None. No controller, application service, provider, repository, scheduler,
+  API response, canonical fixture adapter, or web route consumes or publishes
+  the orchestration result.
+
+### Verification
+
+- Focused source-local golden: PASS, 84/84
+  `DirectionalWinOrchestratorGoldenTest` vectors with zero failures, errors, or
+  skips.
+- Complete API Maven verification: PASS, 819/819 tests with zero failures,
+  errors, or skips. PostgreSQL Testcontainers/Flyway, H2/Spring/API tests, and
+  Spring Boot packaging all completed successfully.
+- Repository CI contract validation: PASS. The workflow contains exactly 28
+  embedded Python bodies; all 28 compile with optimized Python, all 27 locally
+  executable bodies pass, and the final cross-stack body remains syntax-
+  checked for execution by CI service jobs. The dedicated guard locks exact
+  reverse edges, 84/84 Surefire cardinality with explicit nonzero mismatch
+  exits, and both protected production baselines at 177 files / SHA-256
+  `86d2175f849a3f866858c07351fbc24137946c4a286362f0557a9e7dc6b71bbf`.
+- The six updated legacy reverse guards and the new dedicated guard pass. The
+  three affected Java scanners preserve comment-like text inside string and
+  character literals; their executable golden hashes are locked to the new
+  scanner output.
+- Workflow structure: PASS. SnakeYAML 2.5 parses exactly the four expected jobs
+  (`repository-contracts`, `web`, `call-audit-integration`, and `api`).
+- Compose configuration: PASS via `docker compose config --quiet`.
+- Repository patch hygiene: PASS via `git diff --check` after the final edits.
+- No web, browser, provider, or cross-stack result is claimed for this
+  disconnected implementation.
+
+### External-data boundary
+
+- This source-local composition requires no API key, account, paid plan,
+  domain, provider license, environment secret, or network access.
+- Before non-DEMO evidence enters a runtime pipeline, P5 must select analyst-
+  call, official-close, exchange-calendar, corporate-action, and asset/venue
+  reference providers and establish storage, display, derived-data, and
+  redistribution rights. Only then may a reviewed adapter introduce named,
+  scoped secrets through approved local/CI secret stores; secrets must never be
+  supplied in chat or committed to Git.
+
+### Deferred boundary
+
+- An explicit reviewed lifecycle/readiness policy must precede any promotion of
+  nested unavailable evidence to Pending, retry, cancellation, or scheduling.
+  This source-local orchestration deliberately preserves the leaf instead.
+- Leaf-producer receipts, request-membership proofs, raw intraday aggregation,
+  latest-correction/cancellation selection, canonical methodology activation,
+  input fingerprinting, append-only outcome persistence, MFE/MAE, alpha/sector
+  alpha, aggregation, ranking, scheduling, API/UI publication, and production
+  provider integration remain later reviewed P3/P5 work.

@@ -29,9 +29,14 @@ now selects one side-favorable value from a single PIT-visible, upstream-
 attested exact causal-window high/low pair. The fifteenth contract now composes
 the complete supplied eligibility and favorable-extreme branches, preserving
 pending, non-applicable, and both unavailable families exactly while invoking
-the pure target-hit calculator only for Ready plus Resolved. None is wired to fixtures,
-persistence, an API, a provider, or the web. The broader
-P3 scoring phase remains open.
+the pure target-hit calculator only for Ready plus Resolved. The sixteenth
+contract composes complete supplied forecast terms, calculator-side routing,
+and signed asset-return evidence. It validates exact direction, basis, asset,
+and point-in-time correlation before branch selection, preserves neutral and
+all unavailable return evidence, and invokes the pure directional-win
+calculator only for a directional route plus an available return. None is
+wired to fixtures, persistence, an API, a provider, or the web. The broader P3
+scoring phase remains open.
 Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
 maps, market publication state, recorded S&P call history, and the honest
@@ -332,6 +337,24 @@ SHA-256
 are locked by ADR-020. Its `Available` is a disconnected target-hit metric only,
 not a canonical calculated/data-complete outcome or active methodology.
 
+The completed sixteenth P3 slice accepts exactly four non-null request fields:
+its policy, complete basis/forecast terms evidence, complete calculator-side
+routing, and a complete signed asset-return result. The return leaf remains
+mandatory for neutral so another basis, asset, or evaluation time cannot be
+silently paired later. Before choosing a branch it verifies the exact canonical
+source direction, whole basis record, asset identity, and terms visibility at
+the return endpoint's `evaluationAsOf`. Neutral takes precedence and preserves
+all three supplied evidence leaves without a Boolean. A directional unavailable
+return preserves the exact typed return, price-pair, endpoint, and nested reason
+chain without interpretation; all 55 unavailable combinations remain distinct.
+Only a directional route plus an available return builds the primitive input
+from the preserved side and exact signed return, then invokes
+`DirectionalWinCalculator` once. The exact 3699-byte policy definition and
+SHA-256
+`51429c7601d4807162855f08c680d1e6bb7895f87fc108e141e5ad3a3ab25bcb`
+are locked by ADR-021. Its three results are `Available`, `NotApplicable`, and
+`AssetReturnUnavailable`; none is a canonical lifecycle or publication state.
+
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
 adapters before they reach the canonical domain.
@@ -344,8 +367,9 @@ prices,
 primary-venue closes, calendars, corporate actions, asset/venue reference data,
 target evidence, storage, display, derived outputs, and redistribution must be
 established. Only after that selection may a reviewed adapter introduce a named,
-scoped secret; this repository does not invent a vendor or environment-variable
-name in P3.
+scoped secret through approved local/CI secret stores; secrets must never be
+supplied in chat or committed to Git. This repository does not invent a vendor
+or environment-variable name in P3.
 
 ## Repository layout
 
