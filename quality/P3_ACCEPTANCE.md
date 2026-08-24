@@ -1170,11 +1170,77 @@ their complete typed source. It publishes no canonical lifecycle state.
   the dedicated ADR-024, affected reverse-reference, baseline, and exact 47/47
   cardinality guards pass.
 
+## Shared asset-return and directional-win readiness ownership boundary
+
+ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
+
+- ADR-025 is a decision-only ownership contract. It adds no executable policy,
+  canonical definition, digest, Java package, resolver, wrapper, or golden test
+  and does not rename or amend ADR-022.
+- A later aggregate consumes the exact complete ADR-022 resolution once and
+  accounts for two canonical metric meanings. A complete future aggregate has
+  10 metric meanings and nine readiness ownership inputs. Today only shared
+  ADR-022, target-error ADR-023, and target-hit ADR-024 readiness contracts
+  exist; the remaining inputs are deferred.
+- Directional ADR-021 `Available` contributes the exact preserved return and
+  Boolean. Neutral `NotApplicable` with an available return contributes the
+  exact return and typed intentional directional non-applicability, never
+  `false` and never an inference from JSON or Java null.
+- A directional unavailable return leaves both metric values unresolved. A
+  neutral `NotApplicable` with an unavailable return keeps directional win
+  intentionally not applicable while asset return remains awaiting or
+  evidence-unavailable, so the shared receipt is not settled.
+- The aggregate may inspect the preserved ADR-021 top-level source variant for
+  settled value/applicability projection. It must not repeat ADR-022 nested
+  reason classification, invoke any upstream producer, resolve the receipt
+  twice, flatten evidence, or accept a separately selected return.
+- No shared receipt variant directly selects a canonical outcome state. Later
+  lifecycle work must compose all 10 metric meanings, intentional non-
+  applicability, cancellation/latest-correction eligibility, methodology and
+  fingerprint identity, plus reviewed freshness and scheduling policy.
+
+## Shared readiness ownership contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-SRO01 | Decision-only surface | ADR-025 is the sole new architecture decision for this slice. It adds no Java production/test file, executable readiness policy, canonical policy definition/hash, schema, fixture, manifest, OpenAPI, Flyway, database, controller, provider, resource, or web source. |
+| P3-SRO02 | Unchanged ADR-022 identity | `DirectionalWinReadinessPolicyVersion` remains exactly `SUPPLIED_LEAF_DIRECTIONAL_WIN_READINESS_V1` with the unchanged 2353-byte ASCII/UTF-8 definition and SHA-256 `1eca77c5b4d43de7657281c161a8c50356cd90e1a18c6e9fd7f5b2c0142b7ec7`. Public names, source policy, result variants, branch mapping, and 118-vector golden contract do not change. |
+| P3-SRO03 | No competing receipt | No `assetreturnreadiness` package and no `AssetReturnReadiness` policy, request, resolution, resolver, alias, wrapper, delegated facade, or golden test exists. The ADR-017 `assetreturn` calculator/result package remains valid and unchanged. |
+| P3-SRO04 | One shared ownership input | Future aggregate composition accepts the exact complete ADR-022 resolution once as the single asset-return/directional-win ownership input. It may not accept two independently selected receipts, resolve the same source twice, or pair an ADR-021 directional result with another asset-return result. |
+| P3-SRO05 | Exact source co-identity | Both metric meanings derive from the one ADR-021 source already preserved by ADR-022, including its exact terms, route, basis, asset, evaluation-as-of, return, directional result or non-applicability, and nested evidence. No copy, fallback, cross-source pairing, or recalculation is permitted. |
+| P3-SRO06 | Directional settled projection | `Settled` preserving ADR-021 `Available` projects the exact `AssetReturnResult.Available.assetReturn()` and exact `DirectionalWinResult.Available.directionalWin()`. Neither value is rounded, rescaled, recomputed, or inferred. |
+| P3-SRO07 | Neutral settled projection | `Settled` preserving ADR-021 neutral `NotApplicable` projects the exact available asset return and typed intentional directional non-applicability. It never manufactures `false`, treats a null Boolean alone as proof, or omits the asset-return requirement. |
+| P3-SRO08 | Unavailable projection | Directional `AssetReturnUnavailable` leaves both values unresolved. Neutral `NotApplicable` with an unavailable return keeps directional win intentionally not applicable but leaves asset return unresolved; the shared outer receipt remains `AwaitingEndpoint` or `EvidenceUnavailable` exactly as ADR-022 classified it. |
+| P3-SRO09 | Classification ownership | Future consumers trust the supplied ADR-022 outer variant and may inspect only the preserved ADR-021 top-level variant for value/applicability projection. Exact nested reason inspection remains solely in `DirectionalWinReadinessResolver`; consumers add no flattening, alternate temporal rule, retry rule, or permanence inference. |
+| P3-SRO10 | Ten meanings and nine future inputs | A complete future aggregate evaluates exactly 10 canonical metric meanings through nine readiness ownership inputs: one shared ADR-022 receipt plus one input for each other eight meanings. Today only shared ADR-022, target-error ADR-023, and target-hit ADR-024 readiness contracts exist; all remaining inputs are deferred. Further sharing requires another accepted decision. |
+| P3-SRO11 | No double counting | The shared receipt must discharge both distinct metric checks without being duplicated as two mutable inputs or counted as only one meaning. `Settled` is necessary only for these two meanings and is never sufficient for whole-outcome completeness. |
+| P3-SRO12 | Lifecycle and product firewall | No direct `Settled`→`CALCULATED`, `AwaitingEndpoint`→`PENDING`, or `EvidenceUnavailable`→`INCOMPLETE` mapping exists. The decision sets no `dataComplete`, retry, freshness, cancellation, latest-correction, scheduling, methodology, fingerprint, persistence, aggregation, ranking, API/UI, provider-health, or publication behavior and requires no key, account, license, secret, or network. |
+| P3-SRO13 | Repository ownership guard | Repository validation locks the ADR-025 ownership marker, unchanged ADR-022 bytes/hash and source/test surface, absence of a standalone asset-return readiness surface, unchanged product/data files, and unchanged existing golden/API cardinalities with explicit nonzero mismatch exits. The protected baseline remains exactly 189 files with SHA-256 `bc251da006f897de69744ee8aec2400da5d18c38c2945aac03ec46063cc18721`. |
+
+## Required ownership documentation and negative checks
+
+- Confirm the ADR-025 decision, README summary, this gate, and implementation
+  log use the same sole-shared-receipt marker exactly once per document.
+- Reject any `assetreturnreadiness` path or `AssetReturnReadiness` symbol and
+  any change to ADR-022's 2353 canonical bytes, fixed digest, four production
+  files, one golden file, or exact 118/118 golden cardinality.
+- Confirm this docs-only ownership decision adds no production/test code and
+  leaves the protected production baseline and complete API test cardinality
+  unchanged.
+- Complete API Maven regression: **PASS** — `./mvnw.cmd -B -ntp verify` ran
+  1030 tests with 0 failures, 0 errors, and 0 skipped, then completed the build.
+- Repository CI ownership, reverse-reference, product/data-firewall, and
+  cardinality validation: **PASS** — all 31 embedded Python bodies compile
+  under optimization, all 30 locally executable bodies pass, and the final
+  cross-stack body remains syntax-checked for workflow service execution. The
+  ownership guard preserves the exact 118/118 ADR-022 golden contract and the
+  protected 189-file baseline/hash.
+
 ## Deferred work and implementation order
 
-1. Decide explicitly whether ADR-022 is the combined asset-return/directional-
-   win readiness receipt or whether a separate asset-return receipt is needed.
-   ADR-024 does not make that cross-metric ownership decision.
+1. ADR-025 completes the asset-return/directional-win readiness ownership
+   decision: consume ADR-022 once as one ownership input covering two metric
+   meanings; do not add a separate asset-return readiness receipt.
 2. Before benchmark or sector return contracts are designed, obtain explicit
    product approval for benchmark identity, sector taxonomy and point-in-time
    membership, price-versus-total-return basis, currency, venue, and corporate-

@@ -3258,16 +3258,16 @@ API, or product publication.
   adapter introduce named, scoped secrets through approved local/CI secret
   stores; secrets must never be supplied in chat or committed to Git.
 
-### Deferred boundary and post-ADR-024 order
+### Deferred boundary and post-ADR-025 order
 
 - ADR-024 readiness must not be mapped directly to
   `OutcomeEvaluationStatus`. A future reviewed canonical lifecycle policy must
   consider all 10 required metrics, intentional non-applicability, cancellation,
   and latest-correction eligibility before defining Pending/Incomplete mapping,
   retry/freshness, or scheduling.
-- First decide explicitly whether ADR-022 is the combined asset-return and
-  directional-win readiness receipt or whether a separate asset-return receipt
-  is required. ADR-024 makes no cross-metric ownership inference.
+- ADR-025 now assigns asset-return and directional-win readiness to one shared
+  ADR-022 receipt. A future aggregate must consume it once while accounting for
+  both metric meanings; no separate asset-return readiness receipt is planned.
 - Before benchmark or sector return contracts are implemented, request and
   receive explicit product approval for benchmark identity, sector taxonomy and
   point-in-time membership, price-versus-total-return basis, currency, venue,
@@ -3281,3 +3281,111 @@ API, or product publication.
   activation, input fingerprinting, append-only outcome persistence,
   aggregation, ranking, API/UI publication, and production provider integration
   remain later reviewed P3/P5 work.
+
+## P3 — Shared asset-return and directional-win readiness ownership
+
+Status: complete. The cross-metric ownership decision, documentation,
+repository guard, and full API regression are verified. This slice adds no
+executable policy or production/test code.
+
+### Scope
+
+- ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
+- Consume the exact complete `DirectionalWinReadinessResolution` once in a
+  future canonical aggregate while accounting for both metric meanings.
+- Preserve ADR-022's exact 2353-byte policy definition, SHA-256
+  `1eca77c5b4d43de7657281c161a8c50356cd90e1a18c6e9fd7f5b2c0142b7ec7`,
+  public types, branch mapping, source-local test, and result semantics.
+- For directional ADR-021 `Available`, project the exact preserved asset-return
+  decimal and directional-win Boolean. For neutral `NotApplicable` with an
+  available return, project the exact return and intentional directional non-
+  applicability without manufacturing `false`.
+- A directional unavailable return leaves both values unresolved. Neutral
+  `NotApplicable` with an unavailable return keeps directional win intentionally
+  not applicable while asset return remains awaiting or evidence-unavailable;
+  the shared receipt therefore remains unsettled.
+- Add no standalone `assetreturnreadiness` package, policy, request, result,
+  resolver, alias, facade, or golden test. The existing ADR-017 asset-return
+  calculator/result surface remains unchanged.
+
+### Locked ownership decisions
+
+- ADR-025 is a documentation and ownership contract, not a new versioned
+  classifier. It has no canonical policy definition, hash, resolver invocation,
+  or runtime result.
+- A complete future aggregate has 10 canonical metric meanings and nine
+  readiness ownership inputs: one shared ADR-022 receipt covers asset return
+  and directional win, while the other eight metric meanings retain distinct
+  ownership. Only ADR-022 shared readiness, ADR-023 target-error readiness, and
+  ADR-024 target-hit readiness exist today; the remaining inputs are deferred.
+- The aggregate may inspect the preserved ADR-021 top-level variant to extract
+  settled values or intentional non-applicability. It must not re-run nested
+  reason classification, select another return, invoke upstream producers,
+  flatten evidence, or duplicate the shared receipt as independently mutable
+  inputs.
+- `Settled` is necessary only for the two owned metric meanings and cannot prove
+  whole-outcome completeness. `AwaitingEndpoint` cannot alone prove canonical
+  pending/retry state, and `EvidenceUnavailable` cannot alone prove canonical
+  incomplete/permanent state.
+
+### Module and route boundary
+
+- The only new artifact is
+  `decisions/ADR-025-shared-asset-return-directional-win-readiness-ownership.md`
+  plus updates to README, P3 acceptance, this log, and repository ownership
+  validation. No Java package, test, schema, fixture, manifest, OpenAPI, Flyway,
+  database, controller, provider, API, resource, or web route is added.
+- Existing ADR-022 implementation and its exact 118-invocation golden remain
+  unchanged. No focused golden belongs to this decision-only slice.
+
+### Lifecycle and product/data firewall
+
+- No direct `Settled` to `CALCULATED`, `AwaitingEndpoint` to `PENDING`, or
+  `EvidenceUnavailable` to `INCOMPLETE` mapping is added. A later reviewed
+  policy must compose all 10 metric meanings, intentional non-applicability,
+  cancellation/latest-correction eligibility, methodology identity, input
+  fingerprinting, and freshness/scheduling rules.
+- No `CallOutcome` or `dataComplete` mutation, methodology activation,
+  persistence, aggregation, ranking, scheduling, API/UI publication, provider
+  behavior, or market-data observation is introduced.
+
+### Verification
+
+- Documentation consistency and repository patch hygiene: **PASS**. The exact
+  ownership marker occurs once in ADR-025, README, P3 acceptance, and this log;
+  `git diff --check` is clean.
+- Complete API Maven regression: **PASS**. `./mvnw.cmd -B -ntp verify` ran
+  1030 tests with 0 failures, 0 errors, and 0 skipped, then completed the build.
+- Repository CI ownership guard and affected reverse guards: **PASS**. All 31
+  embedded Python bodies compile under optimization and all 30 locally
+  executable bodies pass; the final cross-stack body remains syntax-checked
+  for workflow service execution.
+- The existing ADR-022 118/118 golden contract is unchanged; this decision-only
+  slice correctly adds no focused golden. The protected-production baseline
+  remains exactly 189 files with SHA-256
+  `bc251da006f897de69744ee8aec2400da5d18c38c2945aac03ec46063cc18721`,
+  and the workflow remains the exact four-job structure.
+- Compose configuration validation and workflow YAML parsing: **PASS**. No web,
+  browser, provider, network, or live cross-stack result is claimed.
+
+### External-data boundary
+
+- This ownership decision requires no API key, account, paid plan, domain,
+  provider license, environment secret, or network access.
+- Before non-DEMO evidence enters a runtime pipeline, P5 must select entitled
+  analyst-call, historical intraday or tick, official-close, exchange-calendar,
+  corporate-action, and asset/venue reference providers and establish storage,
+  display, derived-data, and redistribution rights. Scoped secrets may be
+  introduced only through approved local/CI secret stores, never chat or Git.
+
+### Deferred boundary
+
+- Benchmark and sector return work still requires explicit product approval of
+  benchmark identity, sector taxonomy and point-in-time membership, price-
+  versus-total-return basis, currency, venue, and corporate-action treatment.
+- After that approval, benchmark/sector evidence, calculation, and readiness
+  precede raw-window coverage and MFE/MAE. Alpha and sector alpha remain last.
+- Canonical lifecycle composition, methodology activation, input
+  fingerprinting, append-only persistence, aggregation, ranking, API/UI
+  publication, scheduling, and production provider integration remain later
+  reviewed work.
