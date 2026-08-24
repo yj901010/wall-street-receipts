@@ -2895,11 +2895,136 @@ persistence, provider, API, or product publication
 
 ### Deferred boundary
 
-- An explicit reviewed lifecycle/readiness policy must precede any promotion of
-  nested unavailable evidence to Pending, retry, cancellation, or scheduling.
-  This source-local orchestration deliberately preserves the leaf instead.
+- ADR-022 now adds only source-local directional-win readiness. A separate
+  canonical lifecycle policy must still precede any promotion to Pending or
+  Incomplete and any retry, cancellation, freshness, or scheduling behavior.
 - Leaf-producer receipts, request-membership proofs, raw intraday aggregation,
   latest-correction/cancellation selection, canonical methodology activation,
   input fingerprinting, append-only outcome persistence, MFE/MAE, alpha/sector
   alpha, aggregation, ranking, scheduling, API/UI publication, and production
   provider integration remain later reviewed P3/P5 work.
+
+## P3 — Supplied-leaf directional-win readiness classification
+
+Status: implementation, API verification, and repository CI verification are
+complete for one disconnected source-local readiness policy. The broader P3
+scoring phase remains open with no canonical outcome lifecycle, retry,
+scheduling, persistence, provider, API, or product publication.
+
+### Scope
+
+- Consume exactly two non-null fields: the readiness policy and one complete
+  supplied ADR-021 `DirectionalWinOrchestrationResolution` using the exact
+  required version and digest.
+- Extract only the `AssetReturnResult` already preserved by the source. Invoke
+  no polarity, routing, endpoint, price-pair, return, orchestration, or
+  directional-win producer and construct no competing leaf evidence.
+- Classify only ADR-021 `Available`, or neutral `NotApplicable` with an
+  available asset-return leaf, as `Settled`.
+- Classify only the exact nested chain `PRICE_PAIR_UNAVAILABLE` ->
+  `ENDPOINT_PRICE_UNAVAILABLE` -> `ENDPOINT_NOT_REACHED_AS_OF` as
+  `AwaitingEndpoint`.
+- Classify every other unavailable chain as `EvidenceUnavailable`, including
+  `BASIS_AND_ENDPOINT_PRICE_UNAVAILABLE` with a nested endpoint-not-reached
+  reason. Preserve the complete source object on every branch.
+- Add no canonical `CallOutcome` status, `dataComplete`, retry, freshness,
+  cancellation, latest-correction, scheduling, methodology, fingerprint,
+  persistence, aggregation, ranking, provider, API, or web behavior.
+
+### Locked contract decisions
+
+- ADR-022 owns `SUPPLIED_LEAF_DIRECTIONAL_WIN_READINESS_V1`, its exact 2353
+  UTF-8 bytes, SHA-256
+  `1eca77c5b4d43de7657281c161a8c50356cd90e1a18c6e9fd7f5b2c0142b7ec7`,
+  exact two-field all-non-null request, three result variants, required ADR-021
+  version/hash, branch precedence, nested endpoint-only chain, whole-source
+  preservation, single classification owner, and no-lifecycle boundaries.
+- Results are exactly `Settled(context,sourceResolution)`,
+  `AwaitingEndpoint(context,sourceResolution)`, and
+  `EvidenceUnavailable(context,sourceResolution)`. Context contains only the
+  readiness policy identity; no branch stores a flattened reason or copied
+  leaf.
+- Settled means only that this supplied asset-return dependency is available.
+  It does not claim that all outcome metrics exist, give neutral a directional-
+  win Boolean, or make a canonical calculated/data-complete outcome.
+- Awaiting requires all nested types and reasons to match the endpoint-only
+  chain. Waiting for an endpoint cannot repair a missing basis price, so the
+  compound basis-and-endpoint unavailable chain remains evidence-unavailable.
+- Exact nested reason inspection is owned only by
+  `DirectionalWinReadinessResolver`. Public result constructors delegate their
+  locally decidable classification check to the same resolver rule so direct
+  contradictory construction fails closed without duplicate decision logic.
+- Equal supplied records replay equally, but this policy does not attest the
+  original orchestration request, upstream producer execution, PIT candidate
+  membership/filtering, market truth, provider freshness, retryability, or
+  permanence.
+
+### Module and file boundary
+
+- `com.wallstreetreceipts.api.domain.outcome.directionalwinreadiness` adds
+  exactly four production files:
+  `DirectionalWinReadinessPolicyVersion.java`,
+  `DirectionalWinReadinessRequest.java`,
+  `DirectionalWinReadinessResolution.java`, and
+  `DirectionalWinReadinessResolver.java`.
+- The sole source-local test is exactly
+  `DirectionalWinReadinessResolverGoldenTest.java` in the matching package and
+  is required to execute exactly 118 invocations: six
+  contract/null/shape/replay/determinism checks, all 55 unavailable chains in
+  directional and neutral source shapes for 110 vectors, and two settled
+  source shapes.
+- ADR-022, `quality/P3_ACCEPTANCE.md`, README, this log, repository CI reverse
+  allowlists, the dedicated guard, and the API Surefire cardinality step own
+  the exact boundary.
+
+### Routes
+
+- None. No controller, application service, provider, repository, scheduler,
+  API response, canonical fixture adapter, or web route consumes or publishes
+  the readiness result.
+
+### Verification
+
+- Focused source-local golden: PASS, exactly 118/118
+  `DirectionalWinReadinessResolverGoldenTest` invocations with zero failures,
+  errors, or skips.
+- Complete API Maven verification: PASS, exactly 937/937 tests with zero
+  failures, errors, or skips. PostgreSQL Testcontainers/Flyway, H2/Spring/API
+  tests, and Spring Boot packaging completed successfully.
+- Repository CI contract validation: PASS. All 29 embedded Python bodies
+  compile under optimized Python, all 28 locally executable bodies pass, and
+  the final cross-stack body remains syntax-checked for workflow service
+  execution. The dedicated readiness guard, both protected-production
+  baselines at 181 files / SHA-256
+  `4b295246194dfe1a60d6e37380ad398393e8951be070e6e82b7852b151909e8c`,
+  six affected baseline/reverse/dependency guards, and the exact 118/118
+  Surefire XML cardinality check pass.
+- Workflow structure parsing: PASS via SnakeYAML 2.5 with exactly
+  `repository-contracts`, `web`, `call-audit-integration`, and `api` jobs.
+  `docker compose --env-file .env.example config --quiet` and final
+  `git diff --check` also pass.
+- No web, browser, provider, or cross-stack result is claimed for this
+  disconnected implementation.
+
+### External-data boundary
+
+- This source-local classification requires no API key, account, paid plan,
+  domain, provider license, environment secret, or network access.
+- Before non-DEMO evidence enters a runtime pipeline, P5 must select analyst-
+  call, official-close, exchange-calendar, corporate-action, and asset/venue
+  reference providers and establish storage, display, derived-data, and
+  redistribution rights. Only then may a reviewed adapter introduce named,
+  scoped secrets through approved local/CI secret stores; secrets must never be
+  supplied in chat or committed to Git.
+
+### Deferred boundary
+
+- ADR-022 readiness must not be mapped directly to
+  `OutcomeEvaluationStatus`. A separate reviewed canonical lifecycle policy
+  must define metric completeness, Pending/Incomplete mapping, retry/freshness,
+  cancellation and latest-correction eligibility, and scheduling.
+- Leaf-producer receipts, request-membership proofs, raw intraday aggregation,
+  canonical methodology activation, input fingerprinting, append-only outcome
+  persistence, MFE/MAE, benchmark/sector return evidence, alpha/sector alpha,
+  aggregation, ranking, API/UI publication, and production provider
+  integration remain later reviewed P3/P5 work.
