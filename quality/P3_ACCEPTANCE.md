@@ -10,7 +10,9 @@ open. The mechanical calculator-side adapter slice is also complete. The
 disconnected calculator-side routing-evidence slice is also complete. The
 point-in-time official endpoint-price selector, target-error calculation,
 basis-event/endpoint price-pair selector, and signed asset-return calculation
-leaves are also complete; no runtime outcome or product surface is published.
+leaves are also complete. Point-in-time target-hit input eligibility is now
+complete through readiness for later full-window evidence only; no calculator,
+runtime outcome, or product surface is published.
 
 ## Pure target-hit slice boundary
 
@@ -689,15 +691,81 @@ leaves are also complete; no runtime outcome or product surface is published.
   locks formula/imports/reverse isolation, no downstream calculator invocation,
   and unchanged product/data surfaces.
 
+## Point-in-time target-hit input eligibility boundary
+
+- The resolver consumes caller-supplied basis forecast terms, one complete
+  ADR-013 calculator-side route when known, nullable normalized ADR-015 target
+  evidence, one ADR-010 strict-horizon resolution, catalog PIT evidence, and an
+  explicit evaluation as-of. It obtains none of them.
+- A known `TargetDisposition.Present` requires target evidence. A known
+  `TargetDisposition.Absent` is explicit not-applicable evidence only when no
+  normalized target is PIT-visible; visible normalized target is an explicit
+  conflict. Null/future source terms are missing evidence and can never be
+  reinterpreted as target absence.
+- Exact original/correction basis, source direction/route, normalized target
+  basis/currency, horizon, and catalog identity are required. Future evidence
+  is filtered before any identity, reason, or readiness decision.
+- Readiness means only that a later full-window selector may seek the favorable
+  high or low. This slice selects no market observation, invokes no calculator,
+  and publishes no metric or outcome.
+
+## Point-in-time target eligibility contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-TI01 | Exact file/package surface | Production package `com.wallstreetreceipts.api.domain.outcome.targeteligibility` contains exactly `TargetEligibilityPolicyVersion.java`, `BasisForecastTermsEvidence.java`, `TargetEligibilityRequest.java`, `TargetEligibilityResolution.java`, and `TargetEligibilityResolver.java`. Tests add exactly `TargetEligibilityResolverGoldenTest.java`; no calculator, orchestrator, provider, controller, repository, or helper is added. |
+| P3-TI02 | Exact policy identity | `TargetEligibilityPolicyVersion` contains exactly `POINT_IN_TIME_TARGET_HIT_INPUT_READINESS_V1`. Its canonical definition is the exact ADR-018 single-line 3862-byte ASCII/UTF-8 sequence and fixed lowercase SHA-256 `a6b4c9f4e4d29b5f1a9b0c300e2d7b9505318c708dfb0ad0e88f71324cf65465`. It locks complete field lists, PIT rules, identity/evaluation precedence, selected evidence, branch clearing, variants, reasons, and no-inference boundaries. Returned bytes are defensive and every context echoes the digest. |
+| P3-TI03 | Source terms evidence | `BasisForecastTermsEvidence` preserves exact evidence/provider-event identity, `OutcomeBasis`, asset, source `CallDirection`, sealed `TargetDisposition`, available/captured times, and provenance. `TargetDisposition.Present` contains positive exact `NUMERIC(38,12)` source target, currency, and nullable target date; `TargetDisposition.Absent` is an empty affirmative no-target record. Times are microsecond precise and ordered from basis event through availability and capture. |
+| P3-TI04 | PIT invisibility | Terms, normalized target, and catalog evidence are usable only when every applicable availability/capture timestamp is `<= evaluationAsOf`. Future evidence is removed before all identity and reason gates and is absent from returned evidence. Full-result equality proves null equals future for each nullable evidence input. |
+| P3-TI05 | Exact basis and route | Terms basis must equal the complete ADR-010 horizon basis. A known route must preserve the exact ADR-011 V1 source direction from the same visible terms; route absence and direction mismatch are distinct unavailable reasons. No call-ID-only match, string/ordinal mapping, default side, or route reconstruction exists. |
+| P3-TI06 | Explicit target semantics | Known directional `TargetDisposition.Present` terms require known normalized `TargetPriceEvidence` with exact basis, asset, and currency. Known `TargetDisposition.Absent` plus a PIT-visible normalized target is `TARGET_STATE_CONFLICT` immediately after route identity and before all not-applicable branches; the complete conflicting target is preserved. An absent target with null/future normalized evidence becomes `TARGET_ABSENT`, never missing or conflict. A non-null source target date on the directional-present path becomes `TARGET_DATE_SEMANTICS_UNSUPPORTED`; V1 performs no expiry, timezone conversion, window shortening, or default-duration inference. Source and normalized target values are preserved separately with no numeric-equality inference, and previous target is not an input. |
+| P3-TI07 | Neutral applicability | A non-directional ADR-013 route becomes `NON_DIRECTIONAL`; absent target plus non-directional route becomes `TARGET_ABSENT_AND_NON_DIRECTIONAL` only when no normalized target is PIT-visible. Visible contradictory target evidence takes `TARGET_STATE_CONFLICT` precedence. Neither not-applicable branch constructs a calculator side or Boolean, and neither is false, miss, loss, incomplete, or cancelled. |
+| P3-TI08 | Horizon readiness | After earlier applicability and target/catalog gates pass, a resolved strict horizon whose endpoint close is after `evaluationAsOf` is exactly `Pending(HORIZON_NOT_REACHED_AS_OF)` and equality is ready; an incomplete strict horizon preserves exact `FIRST_ELIGIBLE_SESSION_MISSING` or `HORIZON_ENDPOINT_SESSION_MISSING` evidence. No guessed endpoint, alternate calendar, prior close, or readiness fallback exists. |
+| P3-TI09 | Catalog evidence | Ready and pending branches require PIT-visible catalog evidence whose calendar ID/revision exactly matches the strict-horizon context. Missing/future and mismatched catalog evidence remain separate unavailable states; no latest revision or provider preference is inferred. |
+| P3-TI10 | Closed result | `TargetEligibilityResolution` permits exactly `ReadyForWindowEvidence`, `Pending`, `NotApplicable`, and `Unavailable`. Context contains exact policy identity, complete strict-horizon resolution, and evaluation as-of. Branch evidence contains only the visible terms, route, target, and catalog selected for that branch. Direct constructors enforce only their locally decidable policy, visibility, completeness, and reason/evidence consistency; the resolver owns reason correctness for the complete request. |
+| P3-TI11 | Resolver ownership and determinism | Equal requests produce equal results regardless of clock, locale, timezone, input decimal scale where valid, environment, thread, random state, or prior calls. Public constructors own local invariants only; the resolver alone attests PIT filtering, precedence, cross-evidence identity, and readiness. |
+| P3-TI12 | No calculation or lifecycle inference | The slice does not invoke target-hit, directional-win, asset-return, or target-error; select a high/low/bar/price; infer previous target, target-date expiry, latest correction, cancellation, or outcome completeness; activate a methodology; fingerprint; persist; aggregate; rank; or publish. Existing schemas, fixtures, manifest, OpenAPI, Flyway, database, API/provider behavior, and web source remain unchanged. |
+| P3-TI13 | External-data boundary | No key, account, paid plan, domain, license, named secret, or network access is needed. Before P5 supplies non-DEMO forecast terms, targets, calendars, or window observations, the selected vendor's historical entitlements and display/storage/derived/redistribution rights must be established; only then may a reviewed adapter define a scoped secret. |
+
+## Required target eligibility golden and negative tests
+
+- Lock the exact canonical policy bytes, length, independent SHA-256, fixed
+  returned digest, defensive bytes, five-type file surface, record components,
+  modifiers, sealed variants, and exact reason enum orders.
+- Cover original and correction bases; every canonical source direction and
+  exact directional/non-directional route; present and absent dispositions;
+  absent plus neutral; resolved reached, resolved unreached, and both incomplete
+  horizon reasons; and exact catalog identity.
+- Prove full-result equality for null versus future terms, target, and catalog
+  evidence using both PIT timestamps and one-microsecond boundaries. Future
+  wrong or otherwise decisive evidence must not leak into context, branch
+  evidence, or reason selection.
+- Cross `TargetDisposition.Absent` with null, future, and PIT-visible normalized
+  target evidence for both directional and neutral routes. Null/future must
+  retain exact not-applicable results; visible target must preserve the complete
+  conflicting record and return `TARGET_STATE_CONFLICT` before every
+  not-applicable reason.
+- Mutate basis, route direction, target basis, asset, currency, calendar ID/revision,
+  target date, reason, nested horizon reason, and each branch component. Null,
+  contradictory present/absent state, invalid identity/time, nonpositive or
+  nonrepresentable source target, and wrong policy/hash must fail closed.
+- Replay under changed locale/default timezone and restore globals in `finally`;
+  repository CI locks source imports/reverse edges, no calculator/orchestrator
+  invocation, and unchanged product/data surfaces.
+
 ## Deferred work and implementation order
 
-1. Invoke calculators only through a later orchestrator consuming the closed
-   routing evidence, after target eligibility, window inclusivity, point-in-time
-   input identity, and unavailable-state composition are locked.
-2. Add MFE/MAE after full-window completeness and bullish/bearish sign rules;
+1. Add a versioned full-window high/low selector that consumes only
+   `ReadyForWindowEvidence` and locks window inclusivity, complete point-in-time
+   observation identity, adjustment continuity, missing/ambiguity precedence,
+   and exact favorable-extreme selection.
+2. Invoke calculators only through a later orchestrator after that selector
+   exists; preserve not-applicable, pending, unavailable, and nested leaf
+   reasons without recalculation or fallback.
+3. Add MFE/MAE after full-window completeness and bullish/bearish sign rules;
    add alpha/sector alpha last, after benchmark/sector identity and corporate-
    action-adjusted return policy exist.
-3. Persist or expose a non-null metric only with a canonical versioned input
+4. Persist or expose a non-null metric only with a canonical versioned input
    fixture, reproducible methodology definition/hash, input fingerprint, golden
    test, append-only lineage, and schema/domain/database completeness matrix.
 

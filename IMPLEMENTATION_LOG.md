@@ -2396,3 +2396,116 @@ API, or product publication
   evidence, MFE/MAE, alpha/sector alpha, cancellation eligibility, canonical
   methodology activation, input fingerprints, append-only persistence,
   aggregation, ranking, and UI publication remain later reviewed P3/P5 work.
+
+## P3 — Point-in-time target-hit input eligibility
+
+Status: complete for one disconnected readiness policy; the broader P3 scoring
+phase remains open, with no calculator, orchestrator, persistence, provider,
+API, or product publication
+
+### Scope
+
+- Bind one exact original/correction basis to source-attested forecast terms,
+  the preserved ADR-013 route, nullable normalized target evidence, one ADR-010
+  strict-horizon resolution, catalog PIT evidence, and evaluation as-of.
+- Distinguish source-attested target absence, neutral direction, an unreached
+  horizon, missing/mismatched evidence, and full readiness to seek window
+  evidence. None becomes a Boolean miss/loss or an inferred cancellation.
+- Filter future terms, target, and catalog evidence before identity or reason
+  selection. Require exact basis, asset, source direction/route, normalized
+  target basis/asset/currency, and catalog ID/revision without latest-revision,
+  FX, or fallback behavior.
+- Fail closed for a non-null target date on the directional-present path because
+  V1 defines no target-date expiry or window semantics. Target absence without
+  PIT-visible normalized target evidence, or a non-directional route with
+  present source terms, reaches not-applicable first. Do not consume previous
+  target or infer current terms from a later correction.
+- Add no window high/low selector, target-hit or other calculator invocation,
+  calculator orchestration, methodology activation, fingerprint, schema,
+  fixture, manifest member, OpenAPI path, Flyway migration, database row,
+  provider adapter, controller, repository, scheduler, API behavior, or web
+  source.
+
+### Locked contract decisions
+
+- ADR-018 owns `POINT_IN_TIME_TARGET_HIT_INPUT_READINESS_V1`, its exact 3862
+  UTF-8 bytes, SHA-256
+  `a6b4c9f4e4d29b5f1a9b0c300e2d7b9505318c708dfb0ad0e88f71324cf65465`,
+  source terms/target disposition semantics, PIT invisibility, exact
+  basis/route/target/catalog identities, readiness and
+  no-inference boundaries, four result branches, and exact reason order.
+- `BasisForecastTermsEvidence.TargetDisposition.Present` contains a positive
+  exact `NUMERIC(38,12)` source target, currency, and nullable target date.
+  Empty `TargetDisposition.Absent` is affirmative source evidence rather than
+  a substitute for null/future normalized target data. Source and normalized
+  target values remain separate with no numeric-equality inference. A visible
+  normalized target contradicting source-attested absence becomes
+  `TARGET_STATE_CONFLICT` after route identity and before not-applicable; the
+  conflicting record is preserved. Future target evidence remains invisible
+  and null-equivalent, so it cannot create a conflict.
+- `ReadyForWindowEvidence` means only that a later policy may select an exact
+  full-window favorable extreme. `Pending` preserves
+  `HORIZON_NOT_REACHED_AS_OF`; `NotApplicable` distinguishes target absence,
+  non-directional route, and their combination; `Unavailable` preserves exact
+  evidence and nested ADR-010 horizon failures.
+- Target date is preserved but unsupported when present. Previous target,
+  latest correction, cancellation eligibility, window completeness, and
+  product outcome status are not inputs and are never inferred.
+- Public constructors own local consistency only. Only
+  `TargetEligibilityResolver` attests PIT filtering, precedence, cross-evidence
+  identity, endpoint readiness, and the returned branch.
+
+### Module and file boundary
+
+- `com.wallstreetreceipts.api.domain.outcome.targeteligibility` adds exactly
+  five production files: `TargetEligibilityPolicyVersion.java`,
+  `BasisForecastTermsEvidence.java`, `TargetEligibilityRequest.java`,
+  `TargetEligibilityResolution.java`, and `TargetEligibilityResolver.java`.
+- The source-local test is exactly `TargetEligibilityResolverGoldenTest.java`
+  in the matching package.
+- ADR-018, `quality/P3_ACCEPTANCE.md`, README, this log, and the repository CI
+  extension own canonical identity, exact shape, PIT/precedence/equality,
+  reverse-graph, and unchanged-publication boundaries.
+
+### Routes
+
+- None. No controller, application service, calculator orchestrator, provider,
+  repository, scheduler, API response, canonical fixture adapter, or web route
+  consumes the eligibility result.
+
+### Verification
+
+- Focused source-local golden: PASS, 39/39
+  `TargetEligibilityResolverGoldenTest` tests with zero failures, errors, or
+  skips.
+- Full API Maven verification: PASS, 638/638 tests with zero failures, errors,
+  or skips; PostgreSQL Testcontainers/Flyway migration coverage passed and the
+  Spring Boot jar was repackaged successfully.
+- Repository workflow verification: PASS, all 24 locally executable embedded
+  Python guard bodies passed with the CI-pinned `jsonschema==4.23.0`; all 25
+  embedded Python bodies compile. The remaining cross-stack body was syntax
+  checked but not executed in this disconnected slice.
+- Compose configuration and `git diff --check`: PASS.
+- No web, browser, provider, or cross-stack result is claimed for this
+  disconnected implementation.
+
+### External-data boundary
+
+- This source-local policy requires no API key, account, paid plan, domain,
+  vendor license, environment secret, or network access.
+- P5 owns provider selection. Before non-DEMO terms, targets, calendars, or
+  window observations enter the contracts, historical entitlements and
+  display, storage, derived-data, and redistribution rights must be established.
+  Only then may a reviewed adapter define a named, scoped secret.
+
+### Deferred boundary
+
+- An exact PIT full-window high/low selector comes next. It must lock session
+  inclusivity, complete observation identity, source/revision, adjustment and
+  continuity, missing/ambiguity precedence, and favorable-extreme selection.
+- Only after that selector exists may a reviewed orchestrator invoke target hit
+  and the already completed leaves while preserving not-applicable, pending,
+  unavailable, and nested reasons without recalculation or fallback.
+- MFE/MAE, alpha/sector alpha, cancellation eligibility, canonical methodology
+  activation, input fingerprints, append-only persistence, aggregation,
+  ranking, and UI publication remain later reviewed P3/P5 work.

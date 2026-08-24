@@ -21,8 +21,11 @@ official primary-venue endpoint close, followed by exact target error using the
 actual endpoint price as denominator with scale-12 half-even rounding; then a
 point-in-time pair of the exact source-recorded basis-event price and that
 official endpoint close, followed by signed asset return using the basis price
-as denominator. None is wired to fixtures, persistence, an API, a provider, or
-the web. The broader
+as denominator. The thirteenth disconnected contract now proves point-in-time
+target-hit input readiness across exact basis terms, closed direction routing,
+normalized target evidence, the strict horizon, and catalog evidence without
+selecting a window extreme or invoking a calculator. None is wired to fixtures,
+persistence, an API, a provider, or the web. The broader
 P3 scoring phase remains open.
 Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
@@ -266,11 +269,30 @@ rounding occurs. The exact 1011-byte policy definition and SHA-256
 are locked by ADR-017. No asset return is written into the canonical outcome
 fixtures or exposed by a product route.
 
+The completed thirteenth P3 slice makes target-hit input applicability and
+readiness explicit. One `BasisForecastTermsEvidence` record binds the exact
+original/correction basis to its source direction and an explicit present or
+absent target disposition. Known target absence is not missing evidence;
+neutral direction is not a miss or loss. Terms, normalized target, route,
+strict horizon, and calendar evidence must be point-in-time visible and match
+exactly. Source-attested absence plus a visible normalized target is explicit
+`TARGET_STATE_CONFLICT` before not-applicable; a future target stays invisible
+and null-equivalent. An unreached resolved endpoint is
+pending, incomplete horizon reasons are preserved, and a directional present
+target with a non-null target date fails closed because V1 defines no expiry
+semantics. `ReadyForWindowEvidence` means only that the next selector may seek
+a full-window high or low. It is not a target hit and invokes no calculator,
+orchestrator, persistence, or product surface. No latest-correction or
+cancellation eligibility is inferred. The
+exact 3862-byte policy definition and SHA-256
+`a6b4c9f4e4d29b5f1a9b0c300e2d7b9505318c708dfb0ad0e88f71324cf65465`
+are locked by ADR-018.
+
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
 adapters before they reach the canonical domain.
 
-These four disconnected leaves require no API key, provider account, paid plan,
+These disconnected leaves require no API key, provider account, paid plan,
 domain, vendor license, or network access. Real-data integration remains the P5
 boundary: before any non-DEMO value enters them, a provider must be selected and
 credentials plus contractual rights for historical event-time/intraday prices,
