@@ -3841,9 +3841,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 189
+              len(protected_paths) == 195
               and protected_digest.hexdigest()
-              == "bc251da006f897de69744ee8aec2400da5d18c38c2945aac03ec46063cc18721",
+              == "562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640",
               "Call-outcome audit consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           api_main_source = "\n".join(
@@ -4476,9 +4476,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 189
+              len(protected_paths) == 195
               and protected_digest.hexdigest()
-              == "bc251da006f897de69744ee8aec2400da5d18c38c2945aac03ec46063cc18721",
+              == "562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640",
               "Call-list consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           workflow_source = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -5802,6 +5802,36 @@ jobs:
                   "SessionCloseHorizonResolution",
               },
           })
+          target_eligibility_horizon_references.update({
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/benchmarkassignment/"
+                  "BenchmarkAssetClassificationEvidence.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/benchmarkassignment/"
+                  "BenchmarkAssignmentEvidence.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/benchmarkassignment/"
+                  "BenchmarkAssignmentRequest.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/benchmarkassignment/"
+                  "BenchmarkAssignmentResolution.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+          })
           all_horizon_type_markers = {
               path.stem for path in horizon_dir.glob("*.java")
           }
@@ -6832,6 +6862,36 @@ jobs:
                "favorableextreme/FavorableExtremeSelector.java").resolve(): {
                   "com.wallstreetreceipts.api.domain.outcome.horizon."
                   "SessionCloseHorizonResolution",
+              },
+          })
+          target_eligibility_horizon_references.update({
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/benchmarkassignment/"
+                  "BenchmarkAssetClassificationEvidence.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/benchmarkassignment/"
+                  "BenchmarkAssignmentEvidence.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/benchmarkassignment/"
+                  "BenchmarkAssignmentRequest.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+              },
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/benchmarkassignment/"
+                  "BenchmarkAssignmentResolution.java"
+              ).resolve(): {
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
               },
           })
           endpoint_request_path = (
@@ -11391,11 +11451,43 @@ jobs:
               r"(?:Assignment|PricePair|Return)\w*\b|"
               r"\bComparativeReference(?:Assignment|PricePair|Return)\w*\b"
           )
+          benchmark_assignment_main_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkassignment"
+          )
+          benchmark_assignment_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkassignment"
+          )
+          approved_benchmark_main_files = {
+              "BenchmarkAssignmentPolicyVersion.java",
+              "BenchmarkAssetClassificationEvidence.java",
+              "BenchmarkAssignmentEvidence.java",
+              "BenchmarkAssignmentRequest.java",
+              "BenchmarkAssignmentResolution.java",
+              "BenchmarkAssignmentSelector.java",
+          }
+          approved_benchmark_test_files = {
+              "BenchmarkAssignmentSelectorGoldenTest.java",
+          }
+          approved_benchmark_main_paths = {
+              (benchmark_assignment_main_dir / name).resolve()
+              for name in approved_benchmark_main_files
+          }
+          approved_benchmark_test_paths = {
+              (benchmark_assignment_test_dir / name).resolve()
+              for name in approved_benchmark_test_files
+          }
+          approved_benchmark_paths = (
+              approved_benchmark_main_paths | approved_benchmark_test_paths
+          )
           for java_root in (
               Path("apps/api/src/main/java"),
               Path("apps/api/src/test/java"),
           ):
               for java_path in java_root.rglob("*.java"):
+                  if java_path.resolve() in approved_benchmark_paths:
+                      continue
                   normalized_path = re.sub(
                       r"[^a-z0-9]", "", java_path.as_posix().lower()
                   )
@@ -11452,8 +11544,13 @@ jobs:
               },
               key=lambda path: path.as_posix(),
           )
+          comparative_foundation_protected_paths = [
+              path
+              for path in protected_paths
+              if path.resolve() not in approved_benchmark_main_paths
+          ]
           protected_digest = hashlib.sha256()
-          for protected_path in protected_paths:
+          for protected_path in comparative_foundation_protected_paths:
               protected_digest.update(protected_path.as_posix().encode("utf-8"))
               protected_digest.update(b"\0")
               protected_digest.update(
@@ -11461,7 +11558,7 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 189
+              len(comparative_foundation_protected_paths) == 189
               and protected_digest.hexdigest()
               == "bc251da006f897de69744ee8aec2400da5d18c38c2945aac03ec46063cc18721",
               "ADR-026 decision-only foundation must preserve the protected "
@@ -11487,8 +11584,13 @@ jobs:
               },
               key=lambda path: path.as_posix(),
           )
+          comparative_foundation_decision_only_paths = [
+              path
+              for path in decision_only_paths
+              if path.resolve() not in approved_benchmark_test_paths
+          ]
           decision_only_digest = hashlib.sha256()
-          for decision_only_path in decision_only_paths:
+          for decision_only_path in comparative_foundation_decision_only_paths:
               decision_only_digest.update(
                   decision_only_path.as_posix().encode("utf-8")
               )
@@ -11498,7 +11600,7 @@ jobs:
               )
               decision_only_digest.update(b"\0")
           require(
-              len(decision_only_paths) == 197
+              len(comparative_foundation_decision_only_paths) == 197
               and decision_only_digest.hexdigest()
               == "12fb3dbacd830f86ca0790284e2a2833d0314bcf56291337d7698d40720ca45d",
               "ADR-026 decision-only foundation must preserve the exact API test "
@@ -11510,6 +11612,567 @@ jobs:
               "signed basis-denominator scale-12 HALF_EVEN asset return, closed "
               "unavailability, decision-only comparative reference-return foundations, "
               "and no provider or product publication"
+          )
+          PYTHON
+
+      - name: Guard point-in-time explicit benchmark assignment
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def normalized_hash(path):
+              return hashlib.sha256(
+                  path.read_bytes().replace(b"\r\n", b"\n")
+              ).hexdigest()
+
+          def enum_values(source, enum_name):
+              match = re.search(
+                  rf"\benum\s+{re.escape(enum_name)}\s*\{{(?P<body>.*?)\}}",
+                  source,
+                  flags=re.DOTALL,
+              )
+              require(match is not None, f"Missing enum {enum_name}")
+              return re.findall(
+                  r"\b[A-Z][A-Z0-9_]+\b",
+                  match.group("body").split(";", 1)[0],
+              )
+
+          production_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkassignment"
+          )
+          test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkassignment"
+          )
+          production_files = {
+              "BenchmarkAssignmentPolicyVersion.java",
+              "BenchmarkAssetClassificationEvidence.java",
+              "BenchmarkAssignmentEvidence.java",
+              "BenchmarkAssignmentRequest.java",
+              "BenchmarkAssignmentResolution.java",
+              "BenchmarkAssignmentSelector.java",
+          }
+          test_files = {"BenchmarkAssignmentSelectorGoldenTest.java"}
+          require(
+              {path.name for path in production_dir.glob("*.java")}
+              == production_files,
+              "Benchmark-assignment production package must contain exactly six files",
+          )
+          require(
+              {path.name for path in test_dir.glob("*.java")} == test_files,
+              "Benchmark-assignment test package must contain exactly one golden",
+          )
+
+          sources = {
+              name: (production_dir / name).read_text(encoding="utf-8")
+              for name in production_files
+          }
+          expected_source_hashes = {
+              "BenchmarkAssetClassificationEvidence.java":
+                  "77e575f4af7863802f27feeaa29161745dca6213edde8827f2040d994852e23e",
+              "BenchmarkAssignmentEvidence.java":
+                  "698c1b3cded8496d6c15409f07aeec26e0fe8398c6fe81c4beafabfa2d65e725",
+              "BenchmarkAssignmentPolicyVersion.java":
+                  "26d524e98b4658245140cc85bc2a1a038953df16f0a00224a43ce772c06cfa8f",
+              "BenchmarkAssignmentRequest.java":
+                  "86316a345372010c85c028adf0db513588b7480d34b7035e414877fe675b02bf",
+              "BenchmarkAssignmentResolution.java":
+                  "982ed0dfc15fdec280d483551579d0c936ae49b290afa186ad566d9628828192",
+              "BenchmarkAssignmentSelector.java":
+                  "1fa9715c93d03e3c3121ee29bcfe6dd20c28127aba7ac750fdc7c38f0ab84034",
+          }
+          for name, expected_hash in expected_source_hashes.items():
+              require(
+                  normalized_hash(production_dir / name) == expected_hash,
+                  f"Benchmark-assignment exact source changed: {name}",
+              )
+
+          adr_path = Path(
+              "decisions/ADR-027-point-in-time-explicit-benchmark-assignment-v1.md"
+          )
+          marker = (
+              "ADR-027 selects benchmark assignment only from explicit point-in-time "
+              "evidence frozen at the outcome basis event."
+          )
+          required_docs = (
+              adr_path,
+              Path("README.md"),
+              Path("quality/P3_ACCEPTANCE.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+          )
+          docs = {}
+          for doc_path in required_docs:
+              require(doc_path.is_file(), f"Missing ADR-027 contract doc: {doc_path}")
+              doc_source = doc_path.read_text(encoding="utf-8")
+              docs[doc_path] = doc_source
+              require(
+                  doc_source.count(marker) == 1,
+                  f"ADR-027 marker must occur exactly once: {doc_path}",
+              )
+          adr = docs[adr_path]
+          require(
+              adr.startswith(
+                  "# ADR-027 — Point-in-Time Explicit Benchmark Assignment V1\n"
+              )
+              and "- Status: Accepted" in adr
+              and "- Date: 2026-08-24" in adr,
+              "ADR-027 title, accepted status, or date changed",
+          )
+
+          definition_matches = re.findall(
+              r"```text\r?\n(?P<body>.*?)\r?\n```", adr, flags=re.DOTALL
+          )
+          definitions = [body for body in definition_matches if body.startswith("{")]
+          require(
+              len(definitions) == 1,
+              "ADR-027 must contain one canonical JSON definition block",
+          )
+          definition = definitions[0]
+          policy_hash = (
+              "7318514c2f50eda16b2d7ef35bc68d00d6a8b18a0f09f77130525fca2f32da69"
+          )
+          require(
+              len(definition.encode("ascii")) == 4261
+              and hashlib.sha256(definition.encode("utf-8")).hexdigest()
+              == policy_hash
+              and "\n" not in definition
+              and "\r" not in definition
+              and definition == definition.strip(),
+              "ADR-027 canonical definition bytes, length, or hash changed",
+          )
+          policy_source = sources["BenchmarkAssignmentPolicyVersion.java"]
+          require(
+              definition in policy_source
+              and policy_source.count(definition) == 1
+              and policy_source.count(policy_hash) == 1
+              and "canonicalDefinitionUtf8()" in policy_source
+              and "StandardCharsets.UTF_8" in policy_source,
+              "Benchmark-assignment Java policy bytes/hash boundary changed",
+          )
+          require(
+              enum_values(policy_source, "BenchmarkAssignmentPolicyVersion")
+              == ["POINT_IN_TIME_EXPLICIT_US_EQUITY_ASSET_SPX_ASSIGNMENT_V1"],
+              "Benchmark-assignment policy enum changed",
+          )
+
+          assignment_source = sources["BenchmarkAssignmentEvidence.java"]
+          resolution_source = sources["BenchmarkAssignmentResolution.java"]
+          selector_source = sources["BenchmarkAssignmentSelector.java"]
+          classification_source = sources[
+              "BenchmarkAssetClassificationEvidence.java"
+          ]
+          request_source = sources["BenchmarkAssignmentRequest.java"]
+          require(
+              enum_values(assignment_source, "BenchmarkReferenceKind") == [
+                  "PROVIDER_PUBLISHED_PRICE_INDEX",
+                  "PROVIDER_PUBLISHED_TOTAL_RETURN_INDEX",
+                  "NON_PROVIDER_PUBLISHED_PRICE_INDEX",
+                  "UNKNOWN",
+              ],
+              "Benchmark reference-kind vocabulary changed",
+          )
+          not_applicable_reasons = [
+              "NON_EQUITY",
+              "NON_US_PRIMARY_VENUE",
+              "NON_USD_CURRENCY",
+              "NON_US_PRIMARY_VENUE_AND_NON_USD_CURRENCY",
+          ]
+          unavailable_reasons = [
+              "CLASSIFICATION_MISSING_AS_OF",
+              "CLASSIFICATION_BASIS_MISMATCH",
+              "CLASSIFICATION_ASSET_MISMATCH",
+              "CLASSIFICATION_EFFECTIVE_INTERVAL_MISMATCH",
+              "CLASSIFICATION_AMBIGUOUS",
+              "ASSIGNMENT_MISSING_AS_OF",
+              "ASSIGNMENT_BASIS_MISMATCH",
+              "ASSIGNMENT_ASSET_MISMATCH",
+              "ASSIGNMENT_ASSET_TYPE_MISMATCH",
+              "ASSIGNMENT_PRIMARY_VENUE_MISMATCH",
+              "ASSIGNMENT_PRIMARY_VENUE_COUNTRY_MISMATCH",
+              "ASSIGNMENT_CURRENCY_MISMATCH",
+              "ASSIGNMENT_EFFECTIVE_INTERVAL_MISMATCH",
+              "OUT_OF_SCOPE_ASSIGNMENT_CONFLICT",
+              "BENCHMARK_ASSET_ID_MISMATCH",
+              "BENCHMARK_ASSET_TYPE_MISMATCH",
+              "BENCHMARK_CURRENCY_MISMATCH",
+              "BENCHMARK_REFERENCE_KIND_MISMATCH",
+              "ASSIGNMENT_AMBIGUOUS",
+          ]
+          require(
+              enum_values(resolution_source, "NotApplicableReason")
+              == not_applicable_reasons,
+              "Benchmark-assignment non-applicable reason order changed",
+          )
+          require(
+              enum_values(resolution_source, "UnavailableReason")
+              == unavailable_reasons,
+              "Benchmark-assignment unavailable reason order changed",
+          )
+
+          compact_sources = {
+              name: re.sub(r"\s+", "", source)
+              for name, source in sources.items()
+          }
+          require(
+              "publicsealedinterfaceEffectiveIntervalEnd"
+              "permitsOpenEnded,EndsAtExclusive" in compact_sources[
+                  "BenchmarkAssetClassificationEvidence.java"
+              ]
+              and "publicrecordOpenEnded()implementsEffectiveIntervalEnd"
+              in compact_sources["BenchmarkAssetClassificationEvidence.java"]
+              and "publicrecordEndsAtExclusive(Instantvalue)"
+              "implementsEffectiveIntervalEnd" in compact_sources[
+                  "BenchmarkAssetClassificationEvidence.java"
+              ]
+              and "!instant.isBefore(startsAtInclusive)" in classification_source
+              and "instant.isBefore(((EndsAtExclusive)end).value())"
+              in compact_sources["BenchmarkAssetClassificationEvidence.java"],
+              "Explicit start-inclusive/end-exclusive interval surface changed",
+          )
+          require(
+              "evaluationAsOf.isBefore(basis.eventTime())" in request_source
+              and "List.copyOf(classificationCandidates)" in request_source
+              and "List.copyOf(assignmentCandidates)" in request_source
+              and "candidate.availableAt(),candidate.capturedAt(),"
+              "request.evaluationAsOf()" in compact_sources[
+                  "BenchmarkAssignmentSelector.java"
+              ]
+              and "!availableAt.isAfter(evaluationAsOf)"
+              in compact_sources["BenchmarkAssignmentSelector.java"]
+              and "!capturedAt.isAfter(evaluationAsOf)"
+              in compact_sources["BenchmarkAssignmentSelector.java"],
+              "Benchmark-assignment request immutability or PIT filter changed",
+          )
+          classification_gate_order = [
+              "CLASSIFICATION_MISSING_AS_OF",
+              "CLASSIFICATION_BASIS_MISMATCH",
+              "CLASSIFICATION_ASSET_MISMATCH",
+              "CLASSIFICATION_EFFECTIVE_INTERVAL_MISMATCH",
+              "CLASSIFICATION_AMBIGUOUS",
+          ]
+          assignment_gate_order = unavailable_reasons[5:]
+          for label, order in (
+              ("classification", classification_gate_order),
+              ("assignment", assignment_gate_order),
+          ):
+              positions = [
+                  selector_source.find(reason)
+                  for reason in order
+              ]
+              require(
+                  all(position >= 0 for position in positions)
+                  and positions == sorted(positions),
+                  f"Benchmark-assignment {label} gate precedence changed",
+              )
+          require(
+              'REQUIRED_BENCHMARK_ASSET_ID = "asset-spx"' in selector_source
+              and 'Currency.getInstance("USD")' in selector_source
+              and "candidate.benchmarkAssetType() != AssetType.INDEX"
+              in selector_source
+              and "BenchmarkReferenceKind.PROVIDER_PUBLISHED_PRICE_INDEX"
+              in compact_sources["BenchmarkAssignmentSelector.java"]
+              and "assignments.size() > 1" in selector_source
+              and "classifications.size() > 1" in selector_source,
+              "Exact asset-spx scope, price-index kind, or ambiguity boundary changed",
+          )
+
+          forbidden_source_tokens = (
+              "org.springframework", "jakarta.", "com.fasterxml.jackson",
+              "java.sql", "java.net", ".infrastructure.", ".application.",
+              "Repository", "Provider", "HttpClient", "WebClient", "Clock",
+              "Random", "double", "float", "OutcomeEvaluationStatus",
+              "CallOutcome", "AssetReturnCalculator", "BenchmarkReturn",
+              "SectorReturn", "MarketSnapshot",
+          )
+          for name, source in sources.items():
+              require(
+                  not any(token in source for token in forbidden_source_tokens),
+                  f"Benchmark-assignment source crosses its pure boundary: {name}",
+              )
+          basis_consumers = {
+              name for name, source in sources.items() if "OutcomeBasis" in source
+          }
+          require(
+              basis_consumers == {
+                  "BenchmarkAssetClassificationEvidence.java",
+                  "BenchmarkAssignmentEvidence.java",
+                  "BenchmarkAssignmentRequest.java",
+                  "BenchmarkAssignmentResolution.java",
+              }
+              and all(
+                  imported
+                  == "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis"
+                  for source in sources.values()
+                  for imported in re.findall(
+                      r"^import\s+([^;]*\.domain\.outcome\.horizon\.[^;]+);",
+                      source,
+                      flags=re.MULTILINE,
+                  )
+              ),
+              "Only four exact ADR-027 types may consume OutcomeBasis",
+          )
+
+          api_main_dir = Path("apps/api/src/main/java")
+          approved_paths = {
+              (production_dir / name).resolve() for name in production_files
+          }
+          type_markers = tuple(name.removesuffix(".java") for name in production_files)
+          for other_path in api_main_dir.rglob("*.java"):
+              if other_path.resolve() in approved_paths:
+                  continue
+              other_source = other_path.read_text(encoding="utf-8")
+              require(
+                  "domain.outcome.benchmarkassignment" not in other_source
+                  and not any(
+                      re.search(rf"\b{re.escape(marker_name)}\b", other_source)
+                      for marker_name in type_markers
+                  ),
+                  f"Benchmark-assignment leaf must not be reverse-wired: {other_path}",
+              )
+
+          golden_path = test_dir / "BenchmarkAssignmentSelectorGoldenTest.java"
+          golden = golden_path.read_text(encoding="utf-8")
+          require(
+              normalized_hash(golden_path)
+              == "cc04d1ecbb16fa9a49cf57d0b968305d528d50fe1f23e7e43f9fad28c43912e1",
+              "Benchmark-assignment golden exact source changed",
+          )
+          required_golden_methods = (
+              "canonicalPolicyDefinitionHasExactUtf8BytesIndependentHashAndDefensiveReads",
+              "publicPolicyEvidenceRequestAndResultSurfacesRemainExactlyClosed",
+              "resolvesOneExactOriginalAssignmentAtInclusivePitAndIntervalBoundaries",
+              "correctionBasisIsAnIndependentCompleteIdentityNotAnEventTimeShortcut",
+              "effectiveIntervalsAreStartInclusiveEndExclusiveAndExplicitlyOpenEnded",
+              "futureClassificationCandidatesAreIdenticalToAbsentAndInvisibleToReasoning",
+              "futureAssignmentCandidatesAreIdenticalToAbsentAndInvisibleToReasoning",
+              "exactPitTimestampEqualityIsVisibleForBothEvidenceKinds",
+              "everyVisibleClassificationMismatchUsesItsExactReason",
+              "classificationMismatchPrecedenceIsInputOrderIndependent",
+              "exactVisibleClassificationDuplicatesAreAmbiguousWithoutDeduplication",
+              "everyNonEquityAssetTypeIsNotApplicableWithoutAnAssignment",
+              "equityOutsideV1ScopeUsesTheExactThreeWayNotApplicableTruthTable",
+              "everyOutOfScopeStateWithAVisibleCoherentAssignmentFailsClosed",
+              "missingVisibleAssignmentDistinguishesExpectedEvidenceFromIntentionalScope",
+              "everyVisibleAssignmentCoherenceMismatchUsesItsExactReason",
+              "everyVisibleBenchmarkTargetMismatchUsesItsExactReason",
+              "assignmentMismatchPrecedenceIsInputOrderIndependent",
+              "exactVisibleAssignmentDuplicatesAreAmbiguousWithoutDeduplication",
+              "everyClassificationMismatchPoisonsValidDuplicatesBeforeAmbiguity",
+              "everyAssignmentMismatchPoisonsValidDuplicatesBeforeAmbiguity",
+              "requestDefensivelyCopiesListsAndRejectsEveryMissingPublicInput",
+              "directResultConstructorsRejectMissingFutureAndContradictoryComponents",
+              "replayIsIndependentOfInputOrderJvmDefaultsAndPriorCalls",
+          )
+          require(
+              all(method in golden for method in required_golden_methods)
+              and len(re.findall(r"(?m)^\s*@Test\s*$", golden)) == 18
+              and len(re.findall(r"(?m)^\s*@ParameterizedTest", golden)) == 13
+              and len(re.findall(r"(?m)^\s*@MethodSource", golden)) == 5
+              and "MessageDigest.getInstance(\"SHA-256\")" in golden
+              and "Locale.setDefault" in golden
+              and "TimeZone.setDefault" in golden
+              and "finally" in golden
+              and "@Disabled" not in golden
+              and "Assumptions" not in golden,
+              "Benchmark-assignment golden coverage or anti-disable boundary changed",
+          )
+
+          expected_schemas = {
+              "analyst-call-revision.schema.json", "analyst-call.schema.json",
+              "call-context.schema.json", "call-outcome.schema.json",
+              "event-context.schema.json", "macro-observation.schema.json",
+              "macro-snapshot.schema.json", "market-board.schema.json",
+              "market-map.schema.json", "market-snapshot.schema.json",
+              "market-treemap.schema.json", "scoring-methodology.schema.json",
+              "source-document.schema.json", "source-reference.schema.json",
+          }
+          expected_fixtures = {
+              "analyst-call-revisions.json", "analyst-calls.json",
+              "call-contexts.json", "call-outcomes.json", "manifest.json",
+              "market-board.json", "market-map-nasdaq100.json", "market-map.json",
+              "market-snapshots.json", "market-treemap-nasdaq100.json",
+              "market-treemap-sp500.json", "master-data.json", "timeline-nvda.json",
+          }
+          require(
+              {path.name for path in Path("schemas").glob("*.json")}
+              == expected_schemas
+              and {path.name for path in Path("fixtures/v1").glob("*.json")}
+              == expected_fixtures,
+              "Benchmark-assignment slice must preserve schemas and fixtures",
+          )
+          manifest = json.loads(
+              Path("fixtures/v1/manifest.json").read_text(encoding="utf-8")
+          )
+          require(
+              [entry["path"] for entry in manifest["files"]] == [
+                  "master-data.json", "analyst-calls.json",
+                  "analyst-call-revisions.json", "call-outcomes.json",
+                  "call-contexts.json", "market-snapshots.json", "market-map.json",
+                  "market-map-nasdaq100.json", "market-treemap-sp500.json",
+                  "market-treemap-nasdaq100.json", "timeline-nvda.json",
+                  "market-board.json",
+              ],
+              "Benchmark-assignment slice must preserve manifest membership/order",
+          )
+          openapi_source = Path("contracts/openapi.yaml").read_text(encoding="utf-8")
+          require(
+              set(re.findall(r"^  (/[^\n]+):\s*$", openapi_source, re.MULTILINE))
+              == {
+                  "/v1/calls", "/v1/calls/{id}", "/v1/calls/{id}/revisions",
+                  "/v1/calls/{id}/outcomes", "/v1/calls/{id}/context",
+              }
+              and {
+                  path.name
+                  for path in Path(
+                      "apps/api/src/main/resources/db/migration"
+                  ).glob("*.sql")
+              } == {
+                  "V1__baseline.sql", "V2__analyst_calls.sql",
+                  "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
+                  "V5__call_contexts.sql",
+              },
+              "Benchmark-assignment slice must preserve OpenAPI and Flyway",
+          )
+          outcomes = json.loads(
+              Path("fixtures/v1/call-outcomes.json").read_text(encoding="utf-8")
+          )
+          metrics = (
+              "assetReturn", "benchmarkReturn", "sectorReturn", "alpha",
+              "sectorAlpha", "mfe", "mae", "targetHit", "directionalWin",
+              "targetError",
+          )
+          require(
+              len(outcomes["methodologies"]) == 2
+              and all(
+                  methodology["status"] == "MODEL_ONLY"
+                  for methodology in outcomes["methodologies"]
+              )
+              and len(outcomes["outcomes"]) == 4
+              and all(
+                  outcome[metric] is None
+                  for outcome in outcomes["outcomes"]
+                  for metric in metrics
+              ),
+              "Benchmark-assignment evidence must not publish outcomes",
+          )
+
+          for web_root in (Path("apps/web/src"), Path("apps/web/e2e")):
+              for web_path in web_root.rglob("*"):
+                  if not web_path.is_file():
+                      continue
+                  web_source = web_path.read_text(encoding="utf-8")
+                  require(
+                      "benchmarkassignment" not in web_path.as_posix().lower()
+                      and "domain.outcome.benchmarkassignment" not in web_source
+                      and not any(marker_name in web_source for marker_name in type_markers),
+                      f"Benchmark-assignment leaf must not expand web: {web_path}",
+                  )
+
+          protected_paths = sorted(
+              {
+                  Path("contracts/openapi.yaml"),
+                  *Path("schemas").glob("*.json"),
+                  *Path("fixtures/v1").glob("*.json"),
+                  *(
+                      path for path in Path("apps/api/src/main").rglob("*")
+                      if path.is_file()
+                  ),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          protected_digest = hashlib.sha256()
+          for path in protected_paths:
+              protected_digest.update(path.as_posix().encode("utf-8"))
+              protected_digest.update(b"\0")
+              protected_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
+              protected_digest.update(b"\0")
+          require(
+              len(protected_paths) == 195
+              and protected_digest.hexdigest()
+              == "562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640",
+              "Benchmark-assignment protected production baseline changed",
+          )
+          legacy_protected_paths = [
+              path for path in protected_paths if path.resolve() not in approved_paths
+          ]
+          legacy_protected_digest = hashlib.sha256()
+          for path in legacy_protected_paths:
+              legacy_protected_digest.update(path.as_posix().encode("utf-8"))
+              legacy_protected_digest.update(b"\0")
+              legacy_protected_digest.update(
+                  path.read_bytes().replace(b"\r\n", b"\n")
+              )
+              legacy_protected_digest.update(b"\0")
+          require(
+              len(legacy_protected_paths) == 189
+              and legacy_protected_digest.hexdigest()
+              == "bc251da006f897de69744ee8aec2400da5d18c38c2945aac03ec46063cc18721",
+              "ADR-026 protected baseline changed outside exact ADR-027 files",
+          )
+
+          test_web_paths = sorted(
+              {
+                  *(
+                      path for path in Path("apps/api/src/test").rglob("*")
+                      if path.is_file()
+                  ),
+                  *(
+                      path
+                      for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                      for path in root.rglob("*")
+                      if path.is_file()
+                  ),
+                  *(
+                      path for path in Path("apps/web").glob("*")
+                      if path.is_file() and path.name != "next-env.d.ts"
+                  ),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          test_web_digest = hashlib.sha256()
+          for path in test_web_paths:
+              test_web_digest.update(path.as_posix().encode("utf-8"))
+              test_web_digest.update(b"\0")
+              test_web_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
+              test_web_digest.update(b"\0")
+          require(
+              len(test_web_paths) == 198
+              and test_web_digest.hexdigest()
+              == "0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e",
+              "Benchmark-assignment API-test/web baseline changed",
+          )
+          golden_resolved = golden_path.resolve()
+          legacy_test_web_paths = [
+              path for path in test_web_paths if path.resolve() != golden_resolved
+          ]
+          legacy_test_web_digest = hashlib.sha256()
+          for path in legacy_test_web_paths:
+              legacy_test_web_digest.update(path.as_posix().encode("utf-8"))
+              legacy_test_web_digest.update(b"\0")
+              legacy_test_web_digest.update(
+                  path.read_bytes().replace(b"\r\n", b"\n")
+              )
+              legacy_test_web_digest.update(b"\0")
+          require(
+              len(legacy_test_web_paths) == 197
+              and legacy_test_web_digest.hexdigest()
+              == "12fb3dbacd830f86ca0790284e2a2833d0314bcf56291337d7698d40720ca45d",
+              "ADR-026 test/web baseline changed outside exact ADR-027 golden",
+          )
+
+          print(
+              "Validated exact point-in-time explicit benchmark assignment, PIT-first "
+              "basis-frozen evidence, closed applicability and unavailable precedence, "
+              "asset-spx price-index scope, reverse isolation, and no product publication"
           )
           PYTHON
 
@@ -16666,6 +17329,16 @@ jobs:
           APP_ENV: test
           DATA_MODE: DEMO
         run: ./mvnw -B -ntp verify
+
+      - name: Guard benchmark-assignment golden runtime cardinality
+        working-directory: apps/api
+        run: >-
+          python -c 'import sys; import xml.etree.ElementTree as ET;
+          suite = ET.parse("target/surefire-reports/TEST-com.wallstreetreceipts.api.domain.outcome.benchmarkassignment.BenchmarkAssignmentSelectorGoldenTest.xml").getroot();
+          expected = {"tests": "84", "failures": "0", "errors": "0", "skipped": "0"};
+          actual = {key: suite.attrib.get(key, "0") for key in expected};
+          sys.exit(f"BenchmarkAssignmentSelectorGoldenTest runtime cardinality changed: {actual}") if actual != expected else None;
+          print("Verified BenchmarkAssignmentSelectorGoldenTest runtime cardinality: 84/84")'
 
       - name: Guard favorable-extreme golden runtime cardinality
         working-directory: apps/api

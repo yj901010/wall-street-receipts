@@ -1310,8 +1310,8 @@ ADR-026 locks benchmark and sector returns to explicit point-in-time reference a
 2. ADR-026 records the received comparative-return approval and exact
    assignment, PIT, applicability, price-index, currency, continuity, and
    no-inference foundation without adding executable policy.
-3. Add the independently typed benchmark assignment evidence, exact PIT
-   selector, policy definition/hash, and golden matrix first.
+3. ADR-027 implements the independently typed benchmark assignment evidence,
+   exact PIT selector, policy definition/hash, and golden matrix.
 4. Define/version the provider-neutral WSR sector taxonomy and explicit
    provider mappings, then add basis-frozen sector assignment evidence.
 5. Add independent benchmark/sector reference-level pair evidence, calculators,
@@ -1336,3 +1336,73 @@ ADR-026 locks benchmark and sector returns to explicit point-in-time reference a
 Leaderboard aggregates, sample confidence, ranking publication, schedulers,
 provider integration, historical bars, and real/licensed market data remain
 outside this slice.
+
+## Point-in-time explicit benchmark assignment V1 boundary
+
+ADR-027 selects benchmark assignment only from explicit point-in-time evidence frozen at the outcome basis event.
+
+- The selector consumes only one exact V1 policy, `OutcomeBasis`, asset ID,
+  `evaluationAsOf`, and complete immutable classification and assignment
+  candidate lists. It performs no current-state, provider, repository, ticker,
+  name, venue, universe, map, or treemap lookup.
+- Evidence is visible only when both `availableAt` and `capturedAt` are not
+  after `evaluationAsOf`. Future candidates are identical to absent evidence
+  before identity, applicability, reason, or cardinality is evaluated.
+- One visible classification must match the request basis and asset and contain
+  `basis.eventTime` in an explicit start-inclusive/end-exclusive interval.
+  Open-ended membership is a sealed value, never null or an invented date.
+- Non-equity and known non-US/USD equities are intentional typed
+  non-applicability only without a visible assignment. In-scope US/USD equity
+  requires exactly one coherent `asset-spx`/INDEX/USD/provider-published price-
+  index assignment; every visible mismatch fails closed before ambiguity.
+- The source-local result is assignment evidence only. It establishes no
+  price level, return, alpha, methodology activation, canonical lifecycle,
+  persistence, retry, provider health, API response, or publication.
+
+## Point-in-time explicit benchmark assignment V1 contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-BA01 | Exact source surface | Package `com.wallstreetreceipts.api.domain.outcome.benchmarkassignment` contains exactly `BenchmarkAssignmentPolicyVersion`, `BenchmarkAssetClassificationEvidence`, `BenchmarkAssignmentEvidence`, `BenchmarkAssignmentRequest`, `BenchmarkAssignmentResolution`, and `BenchmarkAssignmentSelector`, plus exactly one source-local `BenchmarkAssignmentSelectorGoldenTest`. No helper, service, controller, repository, provider, scheduler, resource, or web file is added. |
+| P3-BA02 | Exact policy identity | Policy enum contains only `POINT_IN_TIME_EXPLICIT_US_EQUITY_ASSET_SPX_ASSIGNMENT_V1`. ADR-027 locks the exact single-line 4261-byte ASCII/UTF-8 definition and SHA-256 `7318514c2f50eda16b2d7ef35bc68d00d6a8b18a0f09f77130525fca2f32da69`; returned definition bytes are defensive and every result context echoes the digest. |
+| P3-BA03 | Exact request identity | Request fields are exactly policy, complete `OutcomeBasis`, canonical asset ID, microsecond `evaluationAsOf`, and immutable non-null classification/assignment candidate lists. `evaluationAsOf < basis.eventTime` and any null list/member fail closed. Original and correction bases remain independent. |
+| P3-BA04 | Complete classification evidence | Classification preserves evidence/provider-event identity, basis, asset/type, primary venue, sourced uppercase ISO 3166-1 alpha-2 country, ISO currency, source ID/revision, provenance, explicit effective interval, `availableAt`, and `capturedAt`. Canonical text is nonblank and trimmed; `availableAt <= capturedAt`. |
+| P3-BA05 | Complete assignment evidence | Assignment independently preserves the same basis/classification identity plus mapping source/revision/provenance, explicit interval, benchmark ID/type/currency, the closed four-value reference kind, and PIT timestamps. It is not inferred from or collapsed into classification evidence. |
+| P3-BA06 | Explicit interval | Membership is exactly start-inclusive/end-exclusive at `basis.eventTime`. End is sealed as `OpenEnded` or `EndsAtExclusive(value)`; finite end must strictly follow start, equality with start is invalid, equality with end is outside, and all instants are microsecond-safe. |
+| P3-BA07 | PIT filter-first | Both `availableAt <= evaluationAsOf` and `capturedAt <= evaluationAsOf` are required. Future exact, invalid, conflicting, or duplicate candidates are invisible to output and all reasoning; PIT equality is visible. No clock, processing time, current time, or freshness inference exists. |
+| P3-BA08 | Classification selection | Visible candidates are checked in fixed order for missing, basis mismatch, asset mismatch, effective-interval mismatch, then ambiguity. Any visible mismatch poisons the candidate set; equal duplicates are ambiguous and input order cannot affect the result. |
+| P3-BA09 | Closed applicability | Non-equity maps to `NON_EQUITY`. Equity country/currency truth is exactly `NON_US_PRIMARY_VENUE`, `NON_USD_CURRENCY`, or `NON_US_PRIMARY_VENUE_AND_NON_USD_CURRENCY`; non-equity dominates country/currency. Missing/conflicting classification is unavailable, never intentional N/A. |
+| P3-BA10 | Exact assignment scope | In scope means exactly `AssetType.EQUITY`, country `US`, and currency USD. With no visible assignment it returns `ASSIGNMENT_MISSING_AS_OF`; an out-of-scope classification with no assignment is N/A. Visible assignments first pass the common basis/asset/type/venue/country/currency/interval coherence gates; any coherent visible assignment for an out-of-scope classification is `OUT_OF_SCOPE_ASSIGNMENT_CONFLICT`. |
+| P3-BA11 | Exact reference | A resolved mapping coheres with classification basis, asset/type, primary venue/country, currency, and interval and names exactly `asset-spx`, `AssetType.INDEX`, USD, and `PROVIDER_PUBLISHED_PRICE_INDEX`. Total-return, non-provider-published, and unknown kinds cannot resolve. |
+| P3-BA12 | Fixed assignment precedence | The 14 assignment gates run in ADR-027 order from missing/coherence through out-of-scope conflict, benchmark ID/type/currency/kind, and ambiguity. Known visible mismatch precedes duplicate ambiguity; no deduplication, filtering toward valid evidence, latest revision, provider preference, or fallback exists. |
+| P3-BA13 | Exact result | Resolution is sealed as exactly `Resolved(context,classificationEvidence,assignmentEvidence)`, `NotApplicable(context,classificationEvidence,reason)`, or `Unavailable(context,reason)`. Selected evidence objects are preserved exactly; unavailable adds no guessed evidence. Public resolved/N/A constructors enforce local consistency, while only the selector attests PIT membership, whole-candidate precedence, and cardinality. |
+| P3-BA14 | No inference | Ticker, issuer name, exchange-like text, current master data, `MarketSnapshot.spx`, P2 `sp500`, maps/treemaps, current/latest row, nearest interval, provider preference, and fallback cannot create or repair an assignment. |
+| P3-BA15 | Pure reverse boundary | Production imports only required Java value types, `PersistentInstant`, `AssetType`, and exact `OutcomeBasis`. Only classification evidence, assignment evidence, request, and resolution may reference `OutcomeBasis`; no session/horizon selector, price, calculator, framework, JSON, persistence, repository, provider, network, scheduler, `Clock`, locale-dependent decision, random, or floating-point dependency is permitted. No production file outside the six-file package references the new types. |
+| P3-BA16 | Product and lifecycle firewall | Schemas, canonical fixtures, manifest, OpenAPI, Flyway, database, API/provider behavior, resources, and web source remain unchanged. Existing DEMO benchmark/sector/alpha metrics remain null. No result maps directly to `OutcomeEvaluationStatus`, `dataComplete`, retry, permanence, cancellation, freshness, scheduling, methodology activation, aggregation, ranking, or publication. |
+| P3-BA17 | External boundary | The disconnected policy needs no API key, account, paid plan, provider license, secret, or network. Before non-DEMO evidence is supplied, P5 must select entitled classification/venue/currency/benchmark-mapping sources and establish storage, display, derived-data, and redistribution rights. |
+| P3-BA18 | Repository CI contract | CI locks exact ADR/README/acceptance/log marker parity, the six-production-file/one-test surface, policy bytes/hash, reason orders, PIT/interval/precedence boundaries, exact 84/84 golden cardinality with nonzero mismatch exit, reverse isolation, null DEMO publication, 195-file protected baseline SHA-256 `562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640`, and 198-file test/web baseline SHA-256 `0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e`. The ADR-026-era baselines remain independently reproducible by excluding exactly the ADR-027 six-plus-one files. |
+
+## Required benchmark-assignment golden and verification checks
+
+- Exercise exactly 84 `BenchmarkAssignmentSelectorGoldenTest` invocations
+  across 31 test methods:
+  canonical policy bytes/hash/defensive reads, closed public surfaces, original
+  and correction identity, finite/open interval boundaries, PIT equality and
+  future invisibility, every classification and assignment reason/precedence
+  branch, scope truth table, ambiguity, defensive lists, constructor
+  rejection, evidence preservation, and locale/time-zone/input-order replay.
+- Focused source-local golden: **PASS** — Surefire reports exactly 84 tests,
+  zero failures, zero errors, and zero skipped.
+- Complete API Maven regression: **PASS** — full `verify` reports exactly
+  1114 tests with zero failures, zero errors, and zero skipped, and Spring Boot
+  repackage completes.
+- Repository CI Python execution, workflow YAML parsing, Compose validation,
+  mutation rejection, and patch hygiene: **PASS**. All 32 embedded Python
+  bodies compile under optimization, all 31 locally executable bodies pass,
+  and the final cross-stack body remains syntax-checked for service execution.
+  SnakeYAML parses the exact four jobs, Compose configuration is valid, and
+  `git diff --check` is clean. A temporary README marker mutation produces the
+  required nonzero ADR-027 guard exit and is removed before final validation.
+- Sector taxonomy identity/version, canonical node bytes/hash, and provider-to-
+  canonical mapping policy are the next explicit product-decision boundary;
+  no sector assignment code may precede that approval.
