@@ -511,11 +511,47 @@ Provider scheme revision and node ID establish identity; labels remain evidence
 and cannot drive raw, normalized, or fuzzy matching. Both PIT timestamps must
 be visible, the mapping interval contains the exact basis event with start-
 inclusive/end-exclusive semantics, and duplicates, overlap, or conflicting
-targets fail closed. No actual provider mapping set, membership, reference
-index, sector assignment, or return is claimed yet. This decision needs no API
-key or account; real data remains blocked on provider selection and documented
+targets fail closed. ADR-028 itself introduced no actual provider mapping set,
+membership, reference index, executable assignment policy, or return. This
+decision needs no API key or account; real data remains blocked on provider
+selection and documented historical, storage, display, derived-crosswalk,
+cache, and redistribution rights.
+
+ADR-029 freezes WSR sector assignment to explicit point-in-time membership and mapped provider-node evidence.
+The disconnected V1 selector adds exactly seven independently typed production
+files and one 134-invocation source-local golden. It consumes one complete
+original/correction basis, explicit classification and provider membership,
+the caller-attested mapping-set ID/version/hash, and exact ADR-028 mapping rows.
+Future evidence is removed before all reasons and cardinality; both membership
+and mapping use start-inclusive/end-exclusive intervals at the exact basis
+event. Country and currency remain preserved evidence, while sector V1 applies
+to equities and uses the sole intentional N/A reason `NON_EQUITY`.
+
+The exact 9307-byte assignment-policy definition has SHA-256
+`52d9f705a3a8a965a6fca79d36bd94ed8836642f1a2c4e5f29a878d0a267311c`
+and binds ADR-028's exact taxonomy and mapping-policy hashes, twelve assignable
+leaves, 36 unavailable reasons, and fixed fail-closed precedence. The selector
+classifies any multiple visible same-disposition mapping rows as ambiguous,
+including distinct rows with the same target or not-mapped reason. It
+echoes and row-matches the caller-supplied mapping-set identity but does not
+calculate a manifest hash or attest entry-to-manifest correlation. It adds no
+actual provider set or data, fixture, schema, API, database, reference index,
+return, or web behavior. No API key or account is needed; non-DEMO membership,
+mapping sets, and adapters remain blocked until provider selection and written
 historical, storage, display, derived-crosswalk, cache, and redistribution
-rights.
+rights. Verification passes: focused 134/134 and full API 1248/1248; all 34
+workflow Python bodies compile and 33 locally executable bodies pass;
+SnakeYAML retains four jobs; Compose validates; marker, policy-byte, and runtime
+cardinality mutations each exit nonzero and are restored; current and legacy
+baselines plus patch hygiene pass. Current production is exactly 202 files /
+`b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899`;
+current API-test/web is 199 files /
+`59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293`.
+Excluding ADR-029's seven-plus-one surface reproduces ADR-028 production at
+195 files / `562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640`
+and test/web at 198 files /
+`0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e`,
+while the user-owned `apps/web/next-env.d.ts` remains untouched.
 
 ## Repository layout
 

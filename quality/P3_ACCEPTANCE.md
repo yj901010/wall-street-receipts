@@ -1474,7 +1474,102 @@ ADR-028 locks WSR Economic Activity V1 and exact point-in-time provider-node map
   SnakeYAML retains four jobs; Compose validates; marker, taxonomy-byte, and
   mapping-policy-byte mutations each exit nonzero and are restored; and
   `git diff --check` is clean without staging the user-owned file.
-- Basis-frozen sector assignment is the next implementation slice. An actual
-  provider mapping set remains blocked until provider selection and historical,
-  storage, display, derived-crosswalk, cache, and redistribution rights are
-  documented.
+- ADR-029 now implements the separately reviewed basis-frozen sector-assignment
+  policy. An actual provider mapping set remains blocked until provider
+  selection and historical, storage, display, derived-crosswalk, cache, and
+  redistribution rights are documented.
+
+## Point-in-time explicit WSR sector assignment V1 boundary
+
+ADR-029 freezes WSR sector assignment to explicit point-in-time membership and mapped provider-node evidence.
+
+- The selector consumes only the exact V1 policy, one complete
+  original/correction `OutcomeBasis`, canonical asset ID, microsecond
+  `evaluationAsOf`, a caller-attested mapping-set ID/version/hash, and complete
+  immutable classification, membership, and mapping candidate lists.
+- Classification, membership, and mapping evidence are independently typed.
+  Membership preserves exact provider/scheme/revision/node identity and the
+  mapping row preserves all 23 ADR-028 fields; no benchmark-assignment type is
+  shared, imported, cast, or reused.
+- Both PIT timestamps must be visible before any identity, reason, conflict,
+  or cardinality decision. Membership and mapping are frozen at the exact basis
+  event under start-inclusive/end-exclusive intervals with explicit open ends.
+- Equity is the exact sector V1 scope. Country and currency remain required
+  evidence but are not scope gates. A coherent non-equity with no membership
+  is intentional `NON_EQUITY`; any visible non-equity membership conflicts.
+- Resolution requires one coherent membership and one exact mapped ADR-028
+  row using the locked taxonomy and mapping-policy hashes and one of the twelve
+  assignable WSR leaves. Missing, not-mapped, invalid, future, duplicate, or
+  conflicting evidence remains typed unavailable.
+- The request/result echoes and row-matches a caller-attested mapping-set
+  identity. The selector neither computes its manifest digest nor attests full
+  entry-to-manifest correlation; no real provider mapping set exists here.
+- The exact executable policy has 36 unavailable reasons in ADR-029 order and
+  a 9307-byte canonical definition with SHA-256
+  `52d9f705a3a8a965a6fca79d36bd94ed8836642f1a2c4e5f29a878d0a267311c`.
+- This source-local result is assignment evidence only. It proves no sector
+  reference index, level, return, alpha, readiness, lifecycle state,
+  persistence, API response, or product publication.
+
+## Point-in-time explicit WSR sector assignment V1 contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-SA01 | Exact source surface | Package `com.wallstreetreceipts.api.domain.outcome.sectorassignment` contains exactly `SectorAssignmentPolicyVersion`, `SectorAssetClassificationEvidence`, `SectorMembershipEvidence`, `SectorMappingEvidence`, `SectorAssignmentRequest`, `SectorAssignmentResolution`, and `SectorAssignmentSelector`, plus exactly one source-local `SectorAssignmentSelectorGoldenTest`. No helper, service, controller, repository, provider, scheduler, resource, or web file is added. |
+| P3-SA02 | Exact policy identity | The policy enum contains only `POINT_IN_TIME_EXPLICIT_WSR_ECONOMIC_ACTIVITY_SECTOR_ASSIGNMENT_V1`. Its canonical definition is exactly 9307 single-line ASCII/UTF-8 bytes with SHA-256 `52d9f705a3a8a965a6fca79d36bd94ed8836642f1a2c4e5f29a878d0a267311c`; returned bytes are defensive and every result context echoes the digest. |
+| P3-SA03 | Exact ADR-028 binding | The policy requires taxonomy `wsr-economic-activity` version `1.0.0`, definition hash `820ce3ea264d67312fe4f2efe346631a81d74248e9a7f041793d65d8ef0d62ae`, the exact twelve ordered assignable leaves, and mapping policy `POINT_IN_TIME_EXPLICIT_PROVIDER_NODE_TO_WSR_ECONOMIC_ACTIVITY_V1` with hash `ba12a277d5ffe266af1745b98948a1e2206494ac31904f31a419d973d5067e77`. Root, unknown, other, unclassified, and new IDs fail closed. |
+| P3-SA04 | Exact request identity | Request fields are exactly policy, complete basis, asset ID, microsecond `evaluationAsOf`, mapping-set ID/version/hash, and immutable non-null classification, membership, and mapping candidate lists. Evaluation before `basis.eventTime`, null lists/members, noncanonical mapping-set text, and non-lowercase-64-hex hash fail locally. |
+| P3-SA05 | Complete classification evidence | Classification preserves evidence/provider-event identity, basis, asset/type, primary venue, sourced uppercase ISO country, ISO currency, source/revision/provenance, explicit interval, `availableAt`, and `capturedAt`. It remains independent of benchmark evidence. |
+| P3-SA06 | Complete membership evidence | Membership preserves the classification coherence fields plus exact provider, scheme, scheme revision, node ID and source label, membership source/revision/provenance, explicit interval, and both PIT timestamps. Provider identity is non-null/non-empty with no stripping, normalization, or case folding; label is preserved evidence only. |
+| P3-SA07 | Exact mapping evidence | Mapping preserves ADR-028's exact 23 ordered fields, `Recorded(value, languageTag)` or `NotPublished`, and `Mapped(canonicalNodeId)` or `NotMapped(reason)`. Not-mapped reasons remain exactly `NO_CANONICAL_EQUIVALENT`, `PROVIDER_NODE_TOO_BROAD`, and `PROVIDER_DEFINITION_UNAVAILABLE`. |
+| P3-SA08 | Explicit intervals | Classification, membership, and mapping intervals are start-inclusive/end-exclusive at `basis.eventTime`; end is exactly `OpenEnded` or `EndsAtExclusive(value)`. Finite end follows start, equality with the start is invalid, equality with the end is outside, and all instants are microsecond-safe. |
+| P3-SA09 | PIT filter first | Visibility requires both `availableAt <= evaluationAsOf` and `capturedAt <= evaluationAsOf`. Future exact, invalid, conflicting, and duplicate rows are invisible to output and every reason, conflict, and cardinality gate. PIT equality is visible. |
+| P3-SA10 | Classification selection | Visible classification candidates are checked in fixed order for missing, basis mismatch, asset mismatch, interval mismatch, then ambiguity. Any mismatch poisons the set, equal duplicates remain ambiguous, and input order cannot change the result. |
+| P3-SA11 | Exact applicability | Only `AssetType.EQUITY` is in scope. Venue country and currency remain required preserved evidence but do not affect scope. With no membership, a coherent non-equity yields only `NotApplicable(NON_EQUITY)` and an equity yields `MEMBERSHIP_MISSING_AS_OF`; a visible non-equity membership is `OUT_OF_SCOPE_MEMBERSHIP_CONFLICT`. |
+| P3-SA12 | Membership selection | Every visible membership must cohere exactly with selected classification basis, asset/type, primary venue/country, currency, and interval before the non-equity conflict and ambiguity gates. Exactly one membership may proceed; no filter-to-valid, deduplication, latest row, or provider preference exists. |
+| P3-SA13 | Caller-attested mapping-set boundary | Request and context own mapping-set ID/version/hash and every visible mapping row must match them. The selector does not calculate a manifest hash, attest global evidence-ID uniqueness, verify sorting, or prove entry-to-manifest correlation; those remain an ADR-028 caller/provider boundary. Test-only values do not create a real mapping set. |
+| P3-SA14 | Exact provider mapping | Mapping provider ID, scheme ID, scheme revision, and node ID must exactly equal selected membership under case-sensitive unnormalized Unicode code-point equality. Raw, normalized, or fuzzy labels cannot match or repair identity. |
+| P3-SA15 | Exact mapped target | A resolved row carries the required mapping-policy and taxonomy identities/hashes, contains the basis event, has a `Recorded` provider definition, and maps to exactly one closed assignable leaf. Missing mapping and invalid policy, set, taxonomy, provider, interval, definition, or target evidence fail closed. |
+| P3-SA16 | Conflict, ambiguity, and not-mapped | Unequal visible dispositions—including different mapped targets, mapped versus not-mapped, or different not-mapped reasons—produce `MAPPING_CONFLICT`. Any multiple visible rows with the same disposition produce `MAPPING_AMBIGUOUS`, including exact duplicates, distinct rows mapped to the same target, and distinct not-mapped rows carrying the same reason. Conflict precedes ambiguity, which precedes the three single-row not-mapped unavailable outcomes. |
+| P3-SA17 | Exact 36 unavailable reasons | `UnavailableReason` order is exactly ADR-029 and the canonical definition: five classification reasons, ten membership reasons, and twenty-one mapping reasons from `CLASSIFICATION_MISSING_AS_OF` through `MAPPING_NOT_MAPPED_PROVIDER_DEFINITION_UNAVAILABLE`. Selector evaluation follows the matching fixed sequence before `RESOLVE`; enum ordinal/name parsing is absent. |
+| P3-SA18 | Exact result | Resolution variants are exactly `Resolved(context,classificationEvidence,membershipEvidence,mappingEvidence)`, `NotApplicable(context,classificationEvidence,reason)`, and `Unavailable(context,reason)`. Selected records are preserved exactly; unavailable adds no guessed evidence. Only the selector attests request membership, PIT filtering, whole-set precedence, conflict, and cardinality. |
+| P3-SA19 | No inference or fallback | Ticker, issuer name, current master data, current/latest row, nearest interval, provider preference, raw/normalized/fuzzy label matching, silent deduplication, P2 map/treemap labels, unknown/other/unclassified nodes, and fallback cannot create or repair an assignment. |
+| P3-SA20 | Pure reverse boundary | Production imports only required deterministic JDK value types, `PersistentInstant`, `AssetType`, and exact `OutcomeBasis`. No benchmark package, price, calculator, JSON mapper, Spring, persistence, repository, provider, network, scheduler, `Clock`, locale-dependent decision, random, or floating-point dependency is allowed. No production file outside the seven-file package references the new types. |
+| P3-SA21 | Product and lifecycle firewall | Schemas, canonical fixtures, manifest, OpenAPI, Flyway, database, API/provider behavior, resources, and web source remain unchanged. DEMO comparative metrics remain null. No result maps directly to outcome status, completeness, retry, permanence, cancellation, freshness, scheduling, methodology activation, aggregation, ranking, or publication. |
+| P3-SA22 | External boundary | The disconnected policy needs no API key, account, paid plan, domain, provider license, secret, or network. Actual mappings, membership evidence, or adapters remain blocked until provider selection and historical, storage, display, derived-crosswalk, cache, and redistribution rights are documented. GICS/ICB require written commercial rights. Public SIC/NAICS use requires independent source, applicability, and crosswalk review; a future SEC adapter needs a compliant named `User-Agent` but no API key. |
+| P3-SA23 | Repository CI contract | CI must lock four-document marker parity, exact seven-production-file/one-test surface, policy JSON bytes/hash and field/reason order, 134/134 golden cardinality, reverse isolation, null DEMO publication, current production at exactly 202 files / SHA-256 `b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899`, current API-test/web at 199 files / `59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293`, and independent replay of ADR-028 production at 195 files / `562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640` and test/web at 198 files / `0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e` by excluding exactly the new seven-plus-one files. |
+
+## Required sector-assignment golden and verification checks
+
+- Exercise exactly 134 `SectorAssignmentSelectorGoldenTest` invocations:
+  canonical bytes/hash/defensive reads, closed public surfaces, original and
+  correction identity, finite/open interval boundaries, PIT equality and
+  future invisibility, equity/non-equity truth, every classification,
+  membership, and mapping reason/precedence branch, exact provider identity,
+  all twelve leaves, conflict/ambiguity/not-mapped behavior, mapping-set echo,
+  evidence preservation, constructor rejection, defensive lists, and
+  locale/time-zone/input-order replay: **PASS** — exactly 134 invocations with
+  zero failures, errors, or skips.
+- Focused source-local golden and complete API Maven verification:
+  **PASS** — focused 134/134 and full API 1248/1248, with zero failures,
+  errors, or skips including Docker/PostgreSQL/Flyway integration.
+- Repository CI Python execution, workflow YAML parsing, Compose validation,
+  marker/policy/cardinality mutation rejection, current and ADR-028 legacy
+  baseline replay, patch hygiene, and preservation of the user-owned
+  `apps/web/next-env.d.ts`: **PASS** — all 34 embedded Python bodies compile,
+  all 33 locally executable bodies pass, SnakeYAML retains four jobs, Compose
+  validates, all three mutations exit nonzero and are restored, both baseline
+  families replay, and the user-owned file remains unstaged and unchanged by
+  this slice. Current production is 202 files /
+  `b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899`;
+  current API-test/web is 199 files /
+  `59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293`.
+  Excluding the exact ADR-029 seven-plus-one surface reproduces ADR-028
+  production at 195 files /
+  `562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640`
+  and test/web at 198 files /
+  `0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e`.
+- No actual provider mapping set, non-DEMO membership, canonical fixture,
+  schema, API, database, provider adapter, reference index, return, or web
+  behavior may appear in this slice. Provider selection and rights approval
+  remain prerequisites for real data.
