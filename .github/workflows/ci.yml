@@ -3841,9 +3841,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 216
+              len(protected_paths) == 220
               and protected_digest.hexdigest()
-              == "45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d",
+              == "cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9",
               "Call-outcome audit consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           api_main_source = "\n".join(
@@ -4476,9 +4476,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 216
+              len(protected_paths) == 220
               and protected_digest.hexdigest()
-              == "45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d",
+              == "cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9",
               "Call-list consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           workflow_source = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -11576,6 +11576,14 @@ jobs:
               "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
               "sectorreferencepair"
           )
+          benchmark_return_main_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturn"
+          )
+          benchmark_return_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturn"
+          )
           approved_benchmark_main_files = {
               "BenchmarkAssignmentPolicyVersion.java",
               "BenchmarkAssetClassificationEvidence.java",
@@ -11661,12 +11669,38 @@ jobs:
               (sector_reference_test_dir / name).resolve()
               for name in approved_sector_reference_test_files
           }
+          approved_benchmark_return_main_files = {
+              "BenchmarkReturnPolicyVersion.java",
+              "BenchmarkReturnInput.java",
+              "BenchmarkReturnResult.java",
+              "BenchmarkReturnCalculator.java",
+          }
+          approved_benchmark_return_test_files = {
+              "BenchmarkReturnCalculatorGoldenTest.java",
+          }
+          approved_benchmark_return_main_paths = {
+              (benchmark_return_main_dir / name).resolve()
+              for name in approved_benchmark_return_main_files
+          }
+          approved_benchmark_return_test_paths = {
+              (benchmark_return_test_dir / name).resolve()
+              for name in approved_benchmark_return_test_files
+          }
+          require(
+              {path.name for path in benchmark_return_main_dir.glob("*.java")}
+              == approved_benchmark_return_main_files
+              and {path.name for path in benchmark_return_test_dir.glob("*.java")}
+              == approved_benchmark_return_test_files,
+              "ADR-026 benchmark-return consumer must remain the exact ADR-031 slice",
+          )
           approved_comparative_paths = (
               approved_benchmark_paths | approved_sector_paths
               | approved_benchmark_reference_main_paths
               | approved_benchmark_reference_test_paths
               | approved_sector_reference_main_paths
               | approved_sector_reference_test_paths
+              | approved_benchmark_return_main_paths
+              | approved_benchmark_return_test_paths
           )
           for java_root in (
               Path("apps/api/src/main/java"),
@@ -11738,6 +11772,7 @@ jobs:
                   approved_benchmark_main_paths | approved_sector_main_paths
                   | approved_benchmark_reference_main_paths
                   | approved_sector_reference_main_paths
+                  | approved_benchmark_return_main_paths
               )
           ]
           protected_digest = hashlib.sha256()
@@ -11782,6 +11817,7 @@ jobs:
                   approved_benchmark_test_paths | approved_sector_test_paths
                   | approved_benchmark_reference_test_paths
                   | approved_sector_reference_test_paths
+                  | approved_benchmark_return_test_paths
               )
           ]
           decision_only_digest = hashlib.sha256()
@@ -11921,6 +11957,28 @@ jobs:
           sector_reference_golden_resolved = (
               sector_reference_test_dir
               / "SectorReferenceLevelPairSelectorGoldenTest.java"
+          ).resolve()
+          benchmark_return_production_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturn"
+          )
+          benchmark_return_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturn"
+          )
+          benchmark_return_production_files = {
+              "BenchmarkReturnPolicyVersion.java",
+              "BenchmarkReturnInput.java",
+              "BenchmarkReturnResult.java",
+              "BenchmarkReturnCalculator.java",
+          }
+          benchmark_return_production_paths = {
+              (benchmark_return_production_dir / name).resolve()
+              for name in benchmark_return_production_files
+          }
+          benchmark_return_golden_resolved = (
+              benchmark_return_test_dir
+              / "BenchmarkReturnCalculatorGoldenTest.java"
           ).resolve()
           production_files = {
               "BenchmarkAssignmentPolicyVersion.java",
@@ -12390,9 +12448,9 @@ jobs:
               protected_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 216
+              len(protected_paths) == 220
               and protected_digest.hexdigest()
-              == "45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d",
+              == "cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9",
               "Benchmark-assignment protected production baseline changed",
           )
           legacy_protected_paths = [
@@ -12401,6 +12459,7 @@ jobs:
               and path.resolve() not in sector_assignment_production_paths
               and path.resolve() not in benchmark_reference_production_paths
               and path.resolve() not in sector_reference_production_paths
+              and path.resolve() not in benchmark_return_production_paths
           ]
           legacy_protected_digest = hashlib.sha256()
           for path in legacy_protected_paths:
@@ -12443,9 +12502,9 @@ jobs:
               test_web_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               test_web_digest.update(b"\0")
           require(
-              len(test_web_paths) == 201
+              len(test_web_paths) == 202
               and test_web_digest.hexdigest()
-              == "fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f",
+              == "12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273",
               "Benchmark-assignment API-test/web baseline changed",
           )
           golden_resolved = golden_path.resolve()
@@ -12455,6 +12514,7 @@ jobs:
               and path.resolve() != sector_assignment_golden_resolved
               and path.resolve() != benchmark_reference_golden_resolved
               and path.resolve() != sector_reference_golden_resolved
+              and path.resolve() != benchmark_return_golden_resolved
           ]
           legacy_test_web_digest = hashlib.sha256()
           for path in legacy_test_web_paths:
@@ -12959,6 +13019,38 @@ jobs:
               (sector_reference_test_dir / name).resolve()
               for name in sector_reference_test_files
           }
+          benchmark_return_main_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturn"
+          )
+          benchmark_return_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturn"
+          )
+          benchmark_return_main_files = {
+              "BenchmarkReturnPolicyVersion.java",
+              "BenchmarkReturnInput.java",
+              "BenchmarkReturnResult.java",
+              "BenchmarkReturnCalculator.java",
+          }
+          benchmark_return_test_files = {
+              "BenchmarkReturnCalculatorGoldenTest.java",
+          }
+          benchmark_return_main_paths = {
+              (benchmark_return_main_dir / name).resolve()
+              for name in benchmark_return_main_files
+          }
+          benchmark_return_test_paths = {
+              (benchmark_return_test_dir / name).resolve()
+              for name in benchmark_return_test_files
+          }
+          require(
+              {path.name for path in benchmark_return_main_dir.glob("*.java")}
+              == benchmark_return_main_files
+              and {path.name for path in benchmark_return_test_dir.glob("*.java")}
+              == benchmark_return_test_files,
+              "ADR-028 future comparative consumer must remain exact ADR-031",
+          )
           approved_sector_paths |= (
               sector_reference_main_paths | sector_reference_test_paths
           )
@@ -13011,6 +13103,7 @@ jobs:
               if path.resolve() not in approved_sector_main_paths
               and path.resolve() not in benchmark_reference_main_paths
               and path.resolve() not in sector_reference_main_paths
+              and path.resolve() not in benchmark_return_main_paths
           ]
           protected_digest = hashlib.sha256()
           for path in legacy_protected_paths:
@@ -13048,6 +13141,7 @@ jobs:
               if path.resolve() not in approved_sector_test_paths
               and path.resolve() not in benchmark_reference_test_paths
               and path.resolve() not in sector_reference_test_paths
+              and path.resolve() not in benchmark_return_test_paths
           ]
           test_web_digest = hashlib.sha256()
           for path in legacy_test_web_paths:
@@ -13686,9 +13780,9 @@ jobs:
               protected_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 216
+              len(protected_paths) == 220
               and protected_digest.hexdigest()
-              == "45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d",
+              == "cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9",
               "Sector-assignment protected production baseline changed",
           )
           test_web_paths = sorted(
@@ -13716,9 +13810,9 @@ jobs:
               test_web_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               test_web_digest.update(b"\0")
           require(
-              len(test_web_paths) == 201
+              len(test_web_paths) == 202
               and test_web_digest.hexdigest()
-              == "fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f",
+              == "12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273",
               "Sector-assignment API-test/web baseline changed",
           )
 
@@ -14490,6 +14584,39 @@ jobs:
               "ADR-030 sector golden must replay all twelve closed ADR-028 leaves",
           )
 
+          benchmark_return_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturn"
+          )
+          benchmark_return_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturn"
+          )
+          benchmark_return_files = {
+              "BenchmarkReturnPolicyVersion.java",
+              "BenchmarkReturnInput.java",
+              "BenchmarkReturnResult.java",
+              "BenchmarkReturnCalculator.java",
+          }
+          benchmark_return_test_files = {
+              "BenchmarkReturnCalculatorGoldenTest.java",
+          }
+          require(
+              {path.name for path in benchmark_return_dir.glob("*.java")}
+              == benchmark_return_files
+              and {path.name for path in benchmark_return_test_dir.glob("*.java")}
+              == benchmark_return_test_files,
+              "ADR-030 may be consumed only by the exact ADR-031 source-local slice",
+          )
+          benchmark_return_paths = {
+              (benchmark_return_dir / name).resolve()
+              for name in benchmark_return_files
+          }
+          benchmark_return_golden_path = (
+              benchmark_return_test_dir
+              / "BenchmarkReturnCalculatorGoldenTest.java"
+          ).resolve()
+
           api_main_dir = Path("apps/api/src/main/java")
           new_production_paths = {
               (benchmark_dir / name).resolve() for name in benchmark_files
@@ -14500,11 +14627,37 @@ jobs:
               name.removesuffix(".java")
               for name in benchmark_files | sector_files
           )
+          allowed_benchmark_return_edges = {
+              (benchmark_return_dir / "BenchmarkReturnPolicyVersion.java").resolve():
+                  set(),
+              (benchmark_return_dir / "BenchmarkReturnInput.java").resolve(): {
+                  "BenchmarkReferenceLevelPairPolicyVersion",
+                  "BenchmarkReferenceLevelPairResolution",
+              },
+              (benchmark_return_dir / "BenchmarkReturnResult.java").resolve(): {
+                  "BenchmarkReferenceLevelPairResolution",
+              },
+              (benchmark_return_dir / "BenchmarkReturnCalculator.java").resolve(): {
+                  "BenchmarkReferenceLevelPairResolution",
+              },
+          }
           for path in api_main_dir.rglob("*.java"):
               if path.resolve() in new_production_paths:
                   continue
               source = path.read_text(encoding="utf-8")
               logic = java_logic(source)
+              if path.resolve() in benchmark_return_paths:
+                  actual_edges = {
+                      marker_name for marker_name in type_markers
+                      if re.search(rf"\b{re.escape(marker_name)}\b", logic)
+                  }
+                  require(
+                      "domain.outcome.sectorreferencepair" not in source
+                      and actual_edges
+                          == allowed_benchmark_return_edges[path.resolve()],
+                      f"ADR-031 benchmark-return consumer edge changed: {path}",
+                  )
+                  continue
               require(
                   "domain.outcome.benchmarkreferencepair" not in source
                   and "domain.outcome.sectorreferencepair" not in source
@@ -14524,19 +14677,21 @@ jobs:
               key=lambda path: path.as_posix(),
           )
           require(
-              len(protected_paths) == 216
+              len(protected_paths) == 220
               and digest(protected_paths)
-              == "45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d",
+              == "cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9",
               "ADR-030 current protected production baseline changed",
           )
           legacy_protected_paths = [
               path for path in protected_paths
-              if path.resolve() not in new_production_paths
+              if path.resolve() not in (
+                  new_production_paths | benchmark_return_paths
+              )
           ]
           require(
               {path.resolve() for path in protected_paths}
               - {path.resolve() for path in legacy_protected_paths}
-              == new_production_paths
+              == new_production_paths | benchmark_return_paths
               and len(legacy_protected_paths) == 202
               and digest(legacy_protected_paths)
               == "b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899",
@@ -14555,13 +14710,14 @@ jobs:
               key=lambda path: path.as_posix(),
           )
           require(
-              len(test_web_paths) == 201
+              len(test_web_paths) == 202
               and digest(test_web_paths)
-              == "fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f",
+              == "12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273",
               "ADR-030 current API-test/web baseline changed",
           )
           new_test_paths = {
               benchmark_golden_path.resolve(), sector_golden_path.resolve(),
+              benchmark_return_golden_path,
           }
           legacy_test_web_paths = [
               path for path in test_web_paths
@@ -14623,6 +14779,589 @@ jobs:
               "anchor, PIT/interval/identity/currency/divisor gates, 200/220 golden "
               "matrices, reverse isolation, current baselines, ADR-029 replay, and "
               "no product publication"
+          )
+          PYTHON
+
+      - name: Guard signed benchmark reference return
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def reject_duplicate_keys(pairs):
+              result = {}
+              for key, value in pairs:
+                  require(key not in result, f"Duplicate canonical JSON key: {key}")
+                  result[key] = value
+              return result
+
+          def normalized_hash(path):
+              return hashlib.sha256(
+                  path.read_bytes().replace(b"\r\n", b"\n")
+              ).hexdigest()
+
+          def digest(paths):
+              result = hashlib.sha256()
+              for path in sorted(paths, key=lambda value: value.as_posix()):
+                  result.update(path.as_posix().encode("utf-8"))
+                  result.update(b"\0")
+                  result.update(path.read_bytes().replace(b"\r\n", b"\n"))
+                  result.update(b"\0")
+              return result.hexdigest()
+
+          def enum_values(source, enum_name):
+              match = re.search(
+                  rf"(?:public\s+)?enum\s+{re.escape(enum_name)}\s*\{{"
+                  r"(?P<body>.*?)\}",
+                  source,
+                  flags=re.DOTALL,
+              )
+              require(match is not None, f"Missing enum {enum_name}")
+              return re.findall(
+                  r"\b[A-Z][A-Z0-9_]+\b",
+                  match.group("body").split(";", 1)[0],
+              )
+
+          def record_fields(source, record_name):
+              match = re.search(
+                  rf"(?:public\s+)?record\s+{re.escape(record_name)}\s*\("
+                  r"(?P<body>.*?)\)\s*(?:implements\s+[^\{]+)?\{",
+                  source,
+                  flags=re.DOTALL,
+              )
+              require(match is not None, f"Missing record {record_name}")
+              return re.findall(
+                  r"\b([a-z][A-Za-z0-9_]*)\s*(?:,|$)",
+                  match.group("body"),
+                  flags=re.MULTILINE,
+              )
+
+          def java_definition(source):
+              match = re.search(
+                  r"private static final String CANONICAL_DEFINITION\s*=\s*"
+                  r"(?P<body>.*?)\s*;\s*private static final String DEFINITION_HASH",
+                  source,
+                  flags=re.DOTALL,
+              )
+              require(match is not None, "Missing Java canonical definition")
+              literals = re.findall(r'"(?:\\.|[^"\\])*"', match.group("body"))
+              return "".join(json.loads(literal) for literal in literals)
+
+          def java_logic(source):
+              return re.sub(
+                  r'//.*?$|/\*.*?\*/|"(?:\\.|[^"\\])*"',
+                  "",
+                  source,
+                  flags=re.MULTILINE | re.DOTALL,
+              )
+
+          marker = (
+              "ADR-031 calculates a signed benchmark price-index return from one "
+              "complete ADR-030 benchmark reference-level-pair receipt using the "
+              "exact basis-level denominator."
+          )
+          adr_path = Path(
+              "decisions/ADR-031-signed-benchmark-reference-return.md"
+          )
+          marker_paths = (
+              adr_path,
+              Path("README.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+              Path("quality/P3_ACCEPTANCE.md"),
+          )
+          for path in marker_paths:
+              require(path.is_file(), f"Missing ADR-031 contract document: {path}")
+              require(
+                  path.read_text(encoding="utf-8").count(marker) == 1,
+                  f"ADR-031 marker must occur exactly once: {path}",
+              )
+          adr_source = adr_path.read_text(encoding="utf-8")
+          require(
+              adr_source.startswith(
+                  "# ADR-031 — Signed Benchmark Reference Return\n\n"
+                  "- Status: Accepted\n- Date: 2026-08-24\n"
+              ),
+              "ADR-031 title, accepted status, or date changed",
+          )
+
+          production_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturn"
+          )
+          test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturn"
+          )
+          production_files = {
+              "BenchmarkReturnPolicyVersion.java",
+              "BenchmarkReturnInput.java",
+              "BenchmarkReturnResult.java",
+              "BenchmarkReturnCalculator.java",
+          }
+          test_files = {"BenchmarkReturnCalculatorGoldenTest.java"}
+          require(
+              {path.name for path in production_dir.glob("*.java")}
+              == production_files,
+              "ADR-031 production surface must remain exactly four files",
+          )
+          require(
+              {path.name for path in test_dir.glob("*.java")} == test_files,
+              "ADR-031 test surface must remain exactly one source-local golden",
+          )
+          sources = {
+              name: (production_dir / name).read_text(encoding="utf-8")
+              for name in production_files
+          }
+          expected_source_hashes = {
+              "BenchmarkReturnCalculator.java":
+                  "6148f637d61e935436a8d63eb2a1e7e56b7305fb0285c22a079cab964a4f907d",
+              "BenchmarkReturnInput.java":
+                  "1beb17f64d95d07737a70e062c290d0095d181abf7a7ed1ce719ca45f546aa78",
+              "BenchmarkReturnPolicyVersion.java":
+                  "282260c5b32b20a3c094d283f00e12b99685abdedebdbf03fd2966ca1ba58f6e",
+              "BenchmarkReturnResult.java":
+                  "ac27526add5c3d551be66a39c2076e2a5ad5d5bab6b4a0185ee173545e1aa7b8",
+          }
+          require(
+              set(sources) == set(expected_source_hashes)
+              and all(
+                  normalized_hash(production_dir / name) == expected
+                  for name, expected in expected_source_hashes.items()
+              ),
+              "ADR-031 exact normalized production source changed",
+          )
+
+          policy_source = sources["BenchmarkReturnPolicyVersion.java"]
+          definition = java_definition(policy_source)
+          expected_policy_hash = (
+              "96d0aab8e8e784b80a12b16c99f6ba8c5f44eff7a342fd14c075b944a0a7de79"
+          )
+          pair_hash = (
+              "2394b535c1061d32c647504a303b6f1e4ec2fe88e6017d9ff335d12087a5f73d"
+          )
+          blocks = re.findall(r"```text\n(\{[^\n]*\})\n```", adr_source)
+          require(
+              len(blocks) == 1 and blocks[0] == definition,
+              "ADR-031 must preserve its formula and one exact canonical policy block",
+          )
+          policy = json.loads(definition, object_pairs_hook=reject_duplicate_keys)
+          require(
+              len(definition.encode("ascii")) == 2832
+              and hashlib.sha256(definition.encode("ascii")).hexdigest()
+                  == expected_policy_hash
+              and re.search(
+                  rf'private static final String DEFINITION_HASH\s*=\s*'
+                  rf'"{expected_policy_hash}"',
+                  policy_source,
+              )
+              and enum_values(
+                  policy_source, "BenchmarkReturnPolicyVersion"
+              ) == [
+                  "SIGNED_BENCHMARK_BASIS_LEVEL_DENOMINATOR_SCALE_12_HALF_EVEN_V1"
+              ]
+              and definition.count(pair_hash) == 1,
+              "ADR-031 canonical 2832 bytes, hash, enum, or required pair hash changed",
+          )
+          expected_variants = {
+              "Available": ["context", "benchmarkReturn"],
+              "NotApplicable": ["context"],
+              "AssignmentUnavailable": ["context"],
+              "EndpointAnchorUnavailable": ["context"],
+              "EvidenceUnavailable": ["context"],
+              "OutputUnavailable": ["context", "reason"],
+          }
+          require(
+              policy["requiredReferenceLevelPairPolicyDefinitionHash"] == pair_hash
+              and policy["resultContextFields"] == [
+                  "policyVersion", "policyDefinitionHash",
+                  "referenceLevelPairResolution",
+              ]
+              and policy["resultVariants"] == expected_variants
+              and policy["outputUnavailableReasons"]
+                  == ["OUTPUT_NOT_REPRESENTABLE"]
+              and policy["branchMapping"] == {
+                  "Resolved": "CALCULATE",
+                  "NotApplicable": "NotApplicable",
+                  "AssignmentUnavailable": "AssignmentUnavailable",
+                  "EndpointAnchorUnavailable": "EndpointAnchorUnavailable",
+                  "EvidenceUnavailable": "EvidenceUnavailable",
+              }
+              and policy["nestedReasonRule"]
+                  == "PRESERVE_COMPLETE_PAIR_RECEIPT_NO_MAPPING_DUPLICATION_OR_FLATTENING",
+              "ADR-031 exact context, six variants, branch map, or nested reason rule changed",
+          )
+          require(
+              policy["formula"] == "(endpoint-basis)/basis"
+              and policy["operandSources"] == {
+                  "basis": "RESOLVED_BASIS_LEVEL_OBSERVATION_LEVEL",
+                  "endpoint": "RESOLVED_ENDPOINT_LEVEL_OBSERVATION_LEVEL",
+              }
+              and policy["numerator"]
+                  == "ENDPOINT_MINUS_BASIS_REFERENCE_LEVEL"
+              and policy["denominator"] == "BASIS_REFERENCE_LEVEL"
+              and policy["subtractionCount"] == 1
+              and policy["divisionCount"] == 1
+              and policy["divisionScale"] == 12
+              and policy["roundingMode"] == "HALF_EVEN"
+              and policy["operationOrder"] == [
+                  "SUBTRACT_BASIS_FROM_ENDPOINT_EXACTLY",
+                  "DIVIDE_NUMERATOR_BY_BASIS_AT_SCALE_12_HALF_EVEN",
+              ]
+              and policy["intermediateRounding"] == "ABSENT"
+              and policy["secondRounding"] == "ABSENT"
+              and policy["inputBoundary"]
+                  == "POSITIVE_NUMERIC_38_12_PROVIDER_PUBLISHED_PRICE_INDEX_LEVEL_PAIR"
+              and policy["outputBoundary"]
+                  == "SIGNED_NUMERIC_38_12_AT_LEAST_NEGATIVE_ONE"
+              and policy["providerReturnFieldUse"] == "ABSENT"
+              and policy["assetReturnResultReuse"] == "FORBIDDEN"
+              and policy["sectorReturnResultReuse"] == "FORBIDDEN"
+              and policy["reflectionOrClassTokenUse"] == "ABSENT",
+              "ADR-031 formula, decimal, isolation, or source boundary changed",
+          )
+
+          input_source = sources["BenchmarkReturnInput.java"]
+          result_source = sources["BenchmarkReturnResult.java"]
+          calculator_source = sources["BenchmarkReturnCalculator.java"]
+          require(
+              record_fields(input_source, "BenchmarkReturnInput") == [
+                  "policyVersion", "referenceLevelPairResolution",
+              ]
+              and record_fields(result_source, "CalculationContext") == [
+                  "policyVersion", "policyDefinitionHash",
+                  "referenceLevelPairResolution",
+              ]
+              and all(
+                  record_fields(result_source, name) == fields
+                  for name, fields in expected_variants.items()
+              )
+              and enum_values(result_source, "OutputUnavailableReason")
+                  == ["OUTPUT_NOT_REPRESENTABLE"],
+              "ADR-031 public record fields or sole output reason changed",
+          )
+          permitted = re.search(
+              r"sealed interface BenchmarkReturnResult\s+permits(?P<body>.*?)\{",
+              result_source,
+              flags=re.DOTALL,
+          )
+          require(
+              permitted is not None
+              and re.findall(r"BenchmarkReturnResult\.([A-Z][A-Za-z]+)",
+                             permitted.group("body"))
+                  == list(expected_variants),
+              "ADR-031 sealed result variant order changed",
+          )
+          require(
+              input_source.count(pair_hash) == 1
+              and sum(source.count(pair_hash) for source in sources.values()) == 2,
+              "ADR-031 required ADR-030 policy identity must remain exact",
+          )
+
+          calculator_logic = re.sub(r"\s+", "", java_logic(calculator_source))
+          formula_tokens = (
+              "BigDecimalbasis=resolved.basisLevelObservation().level();",
+              "BigDecimalendpoint=resolved.endpointLevelObservation().level();",
+              "BigDecimalnumerator=endpoint.subtract(basis);",
+              "benchmarkReturn=numerator.divide(basis,OUTPUT_SCALE,"
+              "RoundingMode.HALF_EVEN);",
+          )
+          positions = [calculator_logic.find(token) for token in formula_tokens]
+          require(
+              all(position >= 0 for position in positions)
+              and positions == sorted(positions)
+              and calculator_logic.count("endpoint.subtract(basis)") == 1
+              and calculator_logic.count("numerator.divide(") == 1
+              and "endpoint.divide(" not in calculator_logic
+              and ".subtract(BigDecimal.ONE)" not in calculator_logic
+              and "ratio.subtract(" not in calculator_logic
+              and "OUTPUT_SCALE=12" in calculator_logic
+              and "OUTPUT_PRECISION=38" in calculator_logic
+              and "benchmarkReturn.compareTo(BigDecimal.ONE.negate())<0"
+                  in calculator_logic
+              and "benchmarkReturn.scale()!=OUTPUT_SCALE" in calculator_logic
+              and "benchmarkReturn.precision()>OUTPUT_PRECISION"
+                  in calculator_logic,
+              "ADR-031 must subtract exactly before its sole scale-12 HALF_EVEN division",
+          )
+          branch_positions = [
+              calculator_logic.find(
+                  f"caseBenchmarkReferenceLevelPairResolution.{name}"
+              )
+              for name in (
+                  "NotApplicable", "AssignmentUnavailable",
+                  "EndpointAnchorUnavailable", "EvidenceUnavailable", "Resolved",
+              )
+          ]
+          require(
+              all(position >= 0 for position in branch_positions)
+              and branch_positions == sorted(branch_positions)
+              and calculator_logic.count(
+                  "input.referenceLevelPairResolution()"
+              ) == 2,
+              "ADR-031 calculator branch propagation or complete receipt context changed",
+          )
+          all_logic = "\n".join(java_logic(source) for source in sources.values())
+          imported_outcome_packages = {
+              match.group(1)
+              for match in re.finditer(
+                  r"com\.wallstreetreceipts\.api\.domain\.outcome\.([a-z]+)",
+                  all_logic,
+              )
+          }
+          require(
+              imported_outcome_packages
+                  <= {"benchmarkreferencepair", "benchmarkreturn"}
+              and "AssetReturn" not in all_logic
+              and "SectorReturn" not in all_logic
+              and "BenchmarkAssignment" not in all_logic
+              and "EndpointPrice" not in all_logic
+              and "OutcomeBasis" not in all_logic
+              and ".reason()" not in all_logic
+              and "BenchmarkReferenceLevelPairResolution.UnavailableReason"
+                  not in all_logic
+              and "BenchmarkReferenceLevelPairResolution.EndpointAnchorUnavailableReason"
+                  not in all_logic
+              and not re.search(
+                  r"\b(?:Class|Clock|Random|MathContext|double|float)\b|\.class\b|"
+                  r"\bisInstance\s*\(|java\.lang\.reflect",
+                  all_logic,
+              ),
+              "ADR-031 must remain a no-reflection independently typed pure pair consumer",
+          )
+
+          golden_path = test_dir / "BenchmarkReturnCalculatorGoldenTest.java"
+          golden = golden_path.read_text(encoding="utf-8")
+          golden_logic = re.sub(r"\s+", "", java_logic(golden))
+          golden_compact = re.sub(r"\s+", "", golden)
+          required_methods = (
+              "canonicalPolicyDefinitionHasStableExactUtf8BytesAndIndependentSha256",
+              "calculatesSignedPositiveNegativeAndZeroReturnsWithBasisLevelDenominator",
+              "scaleEquivalentLevelsProduceEqualExactScaleTwelveResults",
+              "roundsTheSingleDivisionAtPositiveAndNegativeExactHalfEvenTies",
+              "allowsRoundedNegativeOneForPositiveProviderPublishedLevels",
+              "acceptsExactPrecision38OutputAndTypesRoundedPrecision39AsUnavailable",
+              "propagatesEveryEvidenceReasonOnlyInsideTheCompletePairReceipt",
+              "propagatesEveryEndpointAnchorReasonOnlyInsideTheCompletePairReceipt",
+              "propagatesEveryAssignmentReasonOnlyInsideTheCompletePairReceipt",
+              "propagatesEveryNotApplicableTruthTableBranchOnlyInsideThePairReceipt",
+              "directResultConstructorsEnforceExactPairBranchAndOutputBoundary",
+              "rejectsEveryNullInputContextAndResultComponent",
+              "closesPublicSurfaceAndReplaysWithoutLocaleOrTimezoneDependence",
+          )
+          require(
+              normalized_hash(golden_path)
+                  == "80c8e7dcdf6b4ee3daf980dc3c3d2aa54e4446620af2fc0985173fddf5ab3c90"
+              and all(method in golden for method in required_methods)
+              and len(re.findall(r"(?m)^\s+@Test\s*$", golden)) == 7
+              and len(re.findall(
+                  r"(?m)^\s+@ParameterizedTest(?:\(|\s*$)", golden
+              )) == 6
+              and len(re.findall(r"(?m)^\s+@EnumSource\(", golden)) == 3
+              and len(re.findall(r"(?m)^\s+@MethodSource\(", golden)) == 3
+              and "@EnumSource(BenchmarkReferenceLevelPairResolution.UnavailableReason.class)"
+                  in golden
+              and "@EnumSource(BenchmarkReferenceLevelPairResolution.EndpointAnchorUnavailableReason.class)"
+                  in golden
+              and "@EnumSource(BenchmarkAssignmentResolution.UnavailableReason.class)"
+                  in golden
+              and golden_logic.count("isSameAs(pair)") == 6
+              and 'Arguments.of("positive","100","120","0.200000000000")'
+                  in golden_compact
+              and 'Arguments.of("negative","120","100","-0.166666666667")'
+                  in golden_compact
+              and 'Arguments.of("asymmetric-reverse","3","2","-0.333333333333")'
+                  in golden_compact
+              and 'Arguments.of("positive-even-stays-even","2.000000000001",'
+                  '"0.000000000000")' in golden_compact
+              and 'Arguments.of("positive-odd-to-even","2.000000000003",'
+                  '"0.000000000002")' in golden_compact
+              and 'Arguments.of("negative-even-stays-even","1.999999999999",'
+                  '"0.000000000000")' in golden_compact
+              and 'Arguments.of("negative-odd-to-even","1.999999999997",'
+                  '"-0.000000000002")' in golden_compact
+              and 'newBigDecimal("-1.000000000000")' in golden_compact
+              and '"99999999999999999999999998.999999999999"'
+                  in golden_compact
+              and "Locale.setDefault" in golden
+              and "TimeZone.setDefault" in golden
+              and "finally" in golden_logic
+              and "newBenchmarkReturnResult.NotApplicable(resolvedContext)"
+                  in golden_logic
+              and "newBenchmarkReturnResult.AssignmentUnavailable(resolvedContext)"
+                  in golden_logic
+              and "newBenchmarkReturnResult.EndpointAnchorUnavailable(resolvedContext)"
+                  in golden_logic
+              and "ObjectMapper" not in golden
+              and "ClassPathResource" not in golden,
+              "ADR-031 source-local 95-vector golden contract changed",
+          )
+
+          new_production_paths = {
+              (production_dir / name).resolve() for name in production_files
+          }
+          type_markers = tuple(
+              name.removesuffix(".java") for name in production_files
+          )
+          for path in Path("apps/api/src/main/java").rglob("*.java"):
+              if path.resolve() in new_production_paths:
+                  continue
+              source = path.read_text(encoding="utf-8")
+              logic = java_logic(source)
+              require(
+                  "domain.outcome.benchmarkreturn" not in source
+                  and not any(re.search(rf"\b{re.escape(name)}\b", logic)
+                              for name in type_markers),
+                  f"ADR-031 benchmark-return leaf must not be reverse-wired: {path}",
+              )
+
+          protected_paths = sorted(
+              {
+                  Path("contracts/openapi.yaml"),
+                  *Path("schemas").glob("*.json"),
+                  *Path("fixtures/v1").glob("*.json"),
+                  *(path for path in Path("apps/api/src/main").rglob("*")
+                    if path.is_file()),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          require(
+              len(protected_paths) == 220
+              and digest(protected_paths)
+                  == "cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9",
+              "ADR-031 current protected production baseline changed",
+          )
+          adr030_protected_paths = [
+              path for path in protected_paths
+              if path.resolve() not in new_production_paths
+          ]
+          require(
+              {path.resolve() for path in protected_paths}
+              - {path.resolve() for path in adr030_protected_paths}
+                  == new_production_paths
+              and len(adr030_protected_paths) == 216
+              and digest(adr030_protected_paths)
+                  == "45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d",
+              "ADR-030 protected baseline changed outside exact ADR-031 production",
+          )
+          adr030_production_paths = {
+              path.resolve()
+              for package_name in (
+                  "benchmarkreferencepair", "sectorreferencepair",
+              )
+              for path in Path(
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                  f"outcome/{package_name}"
+              ).glob("*.java")
+          }
+          adr029_protected_paths = [
+              path for path in adr030_protected_paths
+              if path.resolve() not in adr030_production_paths
+          ]
+          require(
+              len(adr030_production_paths) == 14
+              and len(adr029_protected_paths) == 202
+              and digest(adr029_protected_paths)
+                  == "b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899",
+              "ADR-029 protected baseline changed outside ADR-030/031 production",
+          )
+
+          test_web_paths = sorted(
+              {
+                  *(path for path in Path("apps/api/src/test").rglob("*")
+                    if path.is_file()),
+                  *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                    for path in root.rglob("*") if path.is_file()),
+                  *(path for path in Path("apps/web").glob("*")
+                    if path.is_file() and path.name != "next-env.d.ts"),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          require(
+              len(test_web_paths) == 202
+              and digest(test_web_paths)
+                  == "12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273",
+              "ADR-031 current API-test/web baseline changed",
+          )
+          adr030_test_web_paths = [
+              path for path in test_web_paths if path.resolve() != golden_path.resolve()
+          ]
+          require(
+              len(adr030_test_web_paths) == 201
+              and digest(adr030_test_web_paths)
+                  == "fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f",
+              "ADR-030 test/web baseline changed outside exact ADR-031 golden",
+          )
+          adr030_golden_paths = {
+              Path(
+                  "apps/api/src/test/java/com/wallstreetreceipts/api/domain/"
+                  f"outcome/{package_name}/{class_name}.java"
+              ).resolve()
+              for package_name, class_name in (
+                  ("benchmarkreferencepair",
+                   "BenchmarkReferenceLevelPairSelectorGoldenTest"),
+                  ("sectorreferencepair",
+                   "SectorReferenceLevelPairSelectorGoldenTest"),
+              )
+          }
+          adr029_test_web_paths = [
+              path for path in adr030_test_web_paths
+              if path.resolve() not in adr030_golden_paths
+          ]
+          require(
+              len(adr029_test_web_paths) == 199
+              and digest(adr029_test_web_paths)
+                  == "59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293",
+              "ADR-029 test/web baseline changed outside ADR-030/031 goldens",
+          )
+
+          product_paths = [Path("contracts/openapi.yaml")]
+          product_paths += list(Path("schemas").glob("*.json"))
+          product_paths += list(Path("fixtures/v1").glob("*.json"))
+          product_paths += [
+              path for root in (
+                  Path("apps/api/src/main/resources"),
+                  Path("apps/web/src"),
+                  Path("apps/web/e2e"),
+              )
+              for path in root.rglob("*") if path.is_file()
+          ]
+          runtime_markers = (
+              "SIGNED_BENCHMARK_BASIS_LEVEL_DENOMINATOR_SCALE_12_HALF_EVEN_V1",
+              "domain.outcome.benchmarkreturn",
+              "BenchmarkReturnCalculator",
+              "BenchmarkReturnResult",
+          )
+          for path in product_paths:
+              try:
+                  source = path.read_text(encoding="utf-8")
+              except UnicodeDecodeError:
+                  continue
+              require(
+                  not any(marker_name in source for marker_name in runtime_markers),
+                  f"ADR-031 benchmark return must not be published: {path}",
+              )
+          outcomes = json.loads(
+              Path("fixtures/v1/call-outcomes.json").read_text(encoding="utf-8")
+          )
+          require(
+              all(outcome["benchmarkReturn"] is None
+                  for outcome in outcomes["outcomes"]),
+              "ADR-031 must not publish a benchmark return",
+          )
+
+          print(
+              "Validated ADR-031 exact 4+1 surface, 2832 canonical bytes, "
+              "subtraction-before-division scale-12 HALF_EVEN formula, exact six-way "
+              "complete-receipt propagation, 53/3 nested reason replay, 95-vector "
+              "golden, reverse isolation, current baselines, ADR-030/029 replay, "
+              "and no product publication"
           )
           PYTHON
 
@@ -19819,6 +20558,16 @@ jobs:
           actual = {key: suite.attrib.get(key, "0") for key in expected};
           sys.exit(f"SectorReferenceLevelPairSelectorGoldenTest runtime cardinality changed: {actual}") if actual != expected else None;
           print("Verified SectorReferenceLevelPairSelectorGoldenTest runtime cardinality: 220/220")'
+
+      - name: Guard benchmark return golden runtime cardinality
+        working-directory: apps/api
+        run: >-
+          python -c 'import sys; import xml.etree.ElementTree as ET;
+          suite = ET.parse("target/surefire-reports/TEST-com.wallstreetreceipts.api.domain.outcome.benchmarkreturn.BenchmarkReturnCalculatorGoldenTest.xml").getroot();
+          expected = {"tests": "95", "failures": "0", "errors": "0", "skipped": "0"};
+          actual = {key: suite.attrib.get(key, "0") for key in expected};
+          sys.exit(f"BenchmarkReturnCalculatorGoldenTest runtime cardinality changed: {actual}") if actual != expected else None;
+          print("Verified BenchmarkReturnCalculatorGoldenTest runtime cardinality: 95/95")'
 
       - name: Guard favorable-extreme golden runtime cardinality
         working-directory: apps/api

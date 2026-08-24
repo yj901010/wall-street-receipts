@@ -468,8 +468,10 @@ subtraction/one scale-12 `HALF_EVEN` division, and never reuse the asset share-
 basis adjustment types. Current DEMO outcome values remain null. ADR-027
 implements benchmark assignment, ADR-028 locks the provider-neutral sector
 taxonomy and mapping decision, and ADR-029 implements basis-frozen sector
-assignment. ADR-030 now adds the two independent reference-level pairs.
-Separate return calculators and source-local readiness come next. Raw-window
+assignment. ADR-030 now adds the two independent reference-level pairs, and
+ADR-031 adds the independently typed benchmark return calculator. The sector
+return calculator comes next; source-local readiness follows only after both
+calculators are independently reviewed. Raw-window
 coverage precedes MFE/MAE, alpha and sector alpha come last, and lifecycle
 composition remains separate.
 
@@ -645,6 +647,73 @@ README-marker, benchmark-policy-byte, and benchmark expected-cardinality 201
 mutations all exit 1 and are restored; the cardinality gate observes actual
 200. `git diff --check` is clean, and the user-owned
 `apps/web/next-env.d.ts` remains preserved and unstaged: **PASS**.
+
+ADR-031 calculates a signed benchmark price-index return from one complete ADR-030 benchmark reference-level-pair receipt using the exact basis-level denominator.
+The disconnected leaf adds exactly `BenchmarkReturnPolicyVersion`,
+`BenchmarkReturnInput`, `BenchmarkReturnResult`, and
+`BenchmarkReturnCalculator` under the source-local `benchmarkreturn` package,
+plus one `BenchmarkReturnCalculatorGoldenTest`. Its sole policy is
+`SIGNED_BENCHMARK_BASIS_LEVEL_DENOMINATOR_SCALE_12_HALF_EVEN_V1`, with an exact
+2832-byte ASCII/UTF-8 definition and SHA-256
+`96d0aab8e8e784b80a12b16c99f6ba8c5f44eff7a342fd14c075b944a0a7de79`.
+The input and every result context preserve the complete ADR-030 benchmark
+reference-level-pair resolution using hash
+`2394b535c1061d32c647504a303b6f1e4ec2fe88e6017d9ff335d12087a5f73d`.
+
+The result keeps six exact branches: `Available`, `NotApplicable`,
+`AssignmentUnavailable`, `EndpointAnchorUnavailable`, `EvidenceUnavailable`,
+and `OutputUnavailable`. Upstream typed receipts and their reasons are retained
+without copying, mapping, duplication, or flattening; only a resolved pair can
+be calculated. The calculator reads the selected basis and endpoint
+provider-published index levels and performs exactly one subtraction followed
+by one scale-12 `HALF_EVEN` division as `(endpoint-basis)/basis`. Output is a
+signed decimal ratio in `NUMERIC(38,12)`, rounded `-1.000000000000` is valid,
+and nonrepresentable output has the sole local reason
+`OUTPUT_NOT_REPRESENTABLE`. Provider-return fields, percent conversion,
+float/double conversion, intermediate or second rounding, alternate
+denominators, asset-return reuse, sector-return reuse, and fallback are absent.
+
+ADR-031 adds no provider data, selector, readiness, lifecycle, methodology,
+schema, fixture, manifest, OpenAPI, Flyway, database, controller, repository,
+adapter, API, or web behavior. Existing DEMO comparative metrics remain null.
+No API key, account, license, secret, or network is needed. Real use remains
+blocked on ADR-030's approved benchmark product/feed, exact-time historical
+coverage, calendar/divisor evidence, and storage, display, derived-data, and
+redistribution rights; credentials may follow those approvals only through
+untracked secret stores.
+
+ADR-031 verification passes the exact 2832-byte policy/hash and four-plus-one
+surface. Focused golden verification is 95/95 with normalized source SHA-256
+`80c8e7dcdf6b4ee3daf980dc3c3d2aa54e4446620af2fc0985173fddf5ab3c90`;
+full API Maven verification is 1763/1763 with zero failures, errors, or skips
+and `BUILD SUCCESS`, including Testcontainers PostgreSQL 17.10 and Flyway. The
+dedicated guard/runtime gate passes; all 36 workflow Python heredocs compile
+and all 29 locally runnable bodies pass. Six `jsonschema`-dependent bodies are
+syntax-only because the bundled local runtime lacks that module, and the final
+cross-stack integration-log body is syntax-only by design. SnakeYAML 2.5
+retains exactly four jobs and Compose validates.
+
+Current protected production is 220 files /
+`cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9`;
+API-test/web is 202 /
+`12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273`.
+Exact ADR-031 exclusion replays ADR-030 at production 216 /
+`45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d`
+and test/web 201 /
+`fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f`;
+the downstream replay retains ADR-029 production 202 /
+`b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899`
+and test/web 199 /
+`59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293`.
+Independent reviews have no remaining P0/P1/P2 finding after two golden gaps
+were corrected, and `apps/web/next-env.d.ts` remains preserved. Deliberate
+README-marker and canonical `percentConversion`-byte mutations make the guard
+exit 1; changing expected runtime count from 95 to 94 while actual remains 95
+makes its gate exit 1. All mutations are restored, the final dedicated guard
+passes, `git diff --check` is clean, and marker parity remains one per document:
+**PASS**. The independent sector
+reference-return calculator is next; readiness, lifecycle integration,
+canonical publication, MFE/MAE, alpha, and sector alpha remain later work.
 
 ## Repository layout
 

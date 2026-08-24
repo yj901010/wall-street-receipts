@@ -1679,3 +1679,90 @@ ADR-030 resolves benchmark and sector reference-level pairs independently from e
   level/calendar/divisor data, schema, API, database, adapter, return
   calculator, readiness, or web behavior may appear in this slice. Provider
   selection and written rights approval remain prerequisites for real data.
+
+## Signed benchmark reference return V1 boundary
+
+ADR-031 calculates a signed benchmark price-index return from one complete ADR-030 benchmark reference-level-pair receipt using the exact basis-level denominator.
+
+- The input accepts only the exact ADR-031 policy and one complete ADR-030
+  benchmark reference-level-pair resolution using policy hash
+  `2394b535c1061d32c647504a303b6f1e4ec2fe88e6017d9ff335d12087a5f73d`.
+  It accepts no extracted level, provider return, basis, endpoint, assignment,
+  horizon, venue, currency, or cutoff.
+- Every result context preserves that exact complete receipt. The six result
+  variants mirror resolved, intentional N/A, assignment unavailable,
+  endpoint-anchor unavailable, evidence unavailable, and local output
+  unavailability without mapping or duplicating nested reasons.
+- Only a resolved pair is calculated. The exact arithmetic is one
+  `endpoint.subtract(basis)` followed by one scale-12 `HALF_EVEN` division by
+  the positive basis level. Intermediate/second rounding, percent conversion,
+  float/double conversion, provider return fields, alternate denominators,
+  shared generic helpers, asset/sector return reuse, and fallback are absent.
+- Output is a signed decimal ratio with exact scale 12, precision at most 38,
+  and lower boundary -1 inclusive after rounding. Nonrepresentable output uses
+  only `OUTPUT_NOT_REPRESENTABLE`; missing evidence never becomes zero, false,
+  loss, or N/A.
+- This is a deterministic disconnected leaf. It does not select evidence,
+  establish readiness or lifecycle, mutate an outcome, publish a metric, or
+  add provider, persistence, API, database, fixture, schema, or web behavior.
+
+## Signed benchmark reference return V1 contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-BRR01 | Exact source surface | Package `com.wallstreetreceipts.api.domain.outcome.benchmarkreturn` contains exactly `BenchmarkReturnPolicyVersion`, `BenchmarkReturnInput`, `BenchmarkReturnResult`, and `BenchmarkReturnCalculator`, plus exactly one source-local `BenchmarkReturnCalculatorGoldenTest`. No helper, selector, readiness, service, controller, repository, provider, scheduler, resource, or web file is added. |
+| P3-BRR02 | Exact policy identity | The enum contains only `SIGNED_BENCHMARK_BASIS_LEVEL_DENOMINATOR_SCALE_12_HALF_EVEN_V1`. Its canonical definition is exactly 2832 single-line ASCII/UTF-8 bytes with SHA-256 `96d0aab8e8e784b80a12b16c99f6ba8c5f44eff7a342fd14c075b944a0a7de79`; returned bytes are defensive and every result context echoes the digest. |
+| P3-BRR03 | Exact upstream contract | Input accepts one complete `BenchmarkReferenceLevelPairResolution` using only `POINT_IN_TIME_EXACT_BENCHMARK_PRICE_INDEX_LEVEL_PAIR_V1` and definition hash `2394b535c1061d32c647504a303b6f1e4ec2fe88e6017d9ff335d12087a5f73d`. All five upstream variants are handled exhaustively without a default. |
+| P3-BRR04 | Complete receipt context | Input and `CalculationContext` fields are exactly policy identity plus the complete benchmark reference-level-pair resolution. Results retain the same supplied receipt; no level-only, direct basis/horizon, endpoint, assignment, currency, venue, provider-return, or cutoff input exists. |
+| P3-BRR05 | Six exact result variants | Results are exactly `Available(context,benchmarkReturn)`, `NotApplicable(context)`, `AssignmentUnavailable(context)`, `EndpointAnchorUnavailable(context)`, `EvidenceUnavailable(context)`, and `OutputUnavailable(context,reason)`. Output reason enum contains only `OUTPUT_NOT_REPRESENTABLE`. |
+| P3-BRR06 | Exact branch propagation | Pair N/A, assignment unavailable, endpoint-anchor unavailable, and evidence unavailable propagate to their same-named result variant before calculation. Their complete nested receipts and reasons remain in context with no copied reason field, mapping, duplication, or flattening. Only a resolved pair may produce `Available` or `OutputUnavailable`. |
+| P3-BRR07 | Exact operands and formula | Operands come only from the resolved pair's selected `basisLevelObservation.level` and `endpointLevelObservation.level`. Formula is exactly `(endpoint-basis)/basis`: one exact subtraction first, followed by one division using the positive basis reference level. Provider-return fields and reconstructed/free-standing levels are forbidden. |
+| P3-BRR08 | Exact rounding and units | The sole division uses scale 12 and `RoundingMode.HALF_EVEN`. Output unit is a signed decimal ratio. There is no `MathContext`, operand rescale, intermediate or second rounding, percent conversion, tolerance, float/double conversion, alternate denominator, or fallback. |
+| P3-BRR09 | Numeric boundary | Upstream levels are positive exact `NUMERIC(38,12)`. Available output has exact scale 12, precision at most 38, and is at least -1; rounded exact `-1.000000000000` is valid. Arithmetic or rounded precision overflow is typed `OutputUnavailable(OUTPUT_NOT_REPRESENTABLE)` rather than clipped or approximated. |
+| P3-BRR10 | Constructor attestation | Public constructors enforce null safety, exact policy/hash, exact source variant, closed output reason, scale, precision, and lower bound. They do not claim calculator invocation or recompute the formula; only `BenchmarkReturnCalculator.calculate` attests the required operation sequence. |
+| P3-BRR11 | Independent type/import firewall | Production imports only JDK types and ADR-030 `benchmarkreferencepair` types. It does not import, cast, reflect on, or reuse asset-return, asset price-pair, sector reference-pair/return, assignment, endpoint-observation, horizon, lifecycle, persistence, API, or web types. No reflection, class token, shared generic return helper, or reverse wiring exists. |
+| P3-BRR12 | Determinism and golden matrix | Formula signs, asymmetric basis denominator, scale-equivalent levels, positive/negative half-even ties, rounded -1, precision 38/39 boundary, every 53 evidence reason, all three anchor reasons, all 19 assignment-unavailable reasons, all four N/A truth-table branches, constructors, nulls, exact public shape, same-receipt identity, locale/time-zone replay, canonical bytes, and policy hash are covered. Focused verification passes 95/95 with zero failures, errors, or skips; normalized golden-source SHA-256 is `80c8e7dcdf6b4ee3daf980dc3c3d2aa54e4446620af2fc0985173fddf5ab3c90`. |
+| P3-BRR13 | Lifecycle and product firewall | The leaf invokes no pair selector, readiness, methodology, fingerprint, lineage, status/completeness, retry, persistence, aggregation, ranking, or publication. Schemas, canonical fixtures, manifest, OpenAPI, Flyway, database, controller, repository, provider adapter, API, and web behavior remain unchanged; DEMO `benchmarkReturn`, `sectorReturn`, `alpha`, and `sectorAlpha` remain null. |
+| P3-BRR14 | External boundary | No API key, account, plan, license, secret, or network is needed. Before non-DEMO use, P5 must approve the exact benchmark index product/feed, exact-time historical level coverage, calendar/divisor evidence, and storage/cache, display, derived-data, and redistribution rights. Scoped credentials follow written approval and remain outside chat and Git. |
+| P3-BRR15 | Repository CI contract | The dedicated guard/runtime gate locks four-document marker parity, exact four-plus-one surface, exact policy bytes/hash/fields/variants, operation order, closed reason, runtime golden cardinality, source/import/reverse isolation, and null DEMO publication. Current protected production is 220 / `cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9`; test/web is 202 / `12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273`. Exact ADR-031 exclusion replays ADR-030 production 216 / `45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d` and test/web 201 / `fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f`; downstream replay retains ADR-029 production 202 / `b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899` and test/web 199 / `59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293`. README-marker and canonical `percentConversion`-byte mutations each make the guard exit 1; expected runtime 94 against actual 95 makes its gate exit 1. All mutations are restored, final guard passes, `git diff --check` is clean, and marker parity remains exactly one per document. |
+
+## Required signed benchmark reference return verification checks
+
+- Exact 2832-byte canonical extraction/hash, four-plus-one source surface,
+  field/variant/reason order, operation-order and dependency firewalls, reverse
+  isolation, null DEMO publication, and four-document marker parity:
+  **PASS**. Independent reviews report no remaining P0/P1/P2 finding after two
+  golden-coverage gaps were corrected.
+- Focused `BenchmarkReturnCalculatorGoldenTest` passes 95/95 with zero
+  failures, errors, or skips and normalized source SHA-256
+  `80c8e7dcdf6b4ee3daf980dc3c3d2aa54e4446620af2fc0985173fddf5ab3c90`.
+  Full API Maven verification passes 1763/1763 with zero failures, errors, or
+  skips and `BUILD SUCCESS`, including Testcontainers PostgreSQL 17.10 and
+  Flyway: **PASS**.
+- The dedicated ADR-031 guard/runtime gate passes. All 36/36 workflow Python
+  heredoc bodies syntax-compile and all 29/29 locally runnable bodies pass. Six
+  `jsonschema`-dependent bodies are syntax-only because the bundled local
+  runtime lacks `jsonschema`; the final cross-stack integration-log body is
+  syntax-only by design. SnakeYAML 2.5 parses exactly four jobs and Compose
+  config validates: **PASS**.
+- Current protected production 220 /
+  `cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9`
+  and test/web 202 /
+  `12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273`
+  pass. Exact ADR-031 exclusion replays ADR-030 production 216 /
+  `45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d`
+  and test/web 201 /
+  `fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f`;
+  downstream replay retains ADR-029 production 202 /
+  `b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899`
+  and test/web 199 /
+  `59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293`:
+  **PASS**. The user-owned `apps/web/next-env.d.ts` remains preserved.
+- Deliberate README-marker and canonical `percentConversion`-byte mutations
+  each make the dedicated guard exit 1; expected runtime count 94 against
+  actual 95 makes its gate exit 1. All mutations are restored. The final guard
+  passes, final `git diff --check` is clean, and marker parity remains exactly
+  one per contract document: **PASS**.
+- The independent sector reference-return calculator is the next reviewed
+  slice. Readiness, lifecycle integration, canonical publication, MFE/MAE,
+  alpha, and sector alpha remain later work.
