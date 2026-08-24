@@ -21,10 +21,12 @@ official primary-venue endpoint close, followed by exact target error using the
 actual endpoint price as denominator with scale-12 half-even rounding; then a
 point-in-time pair of the exact source-recorded basis-event price and that
 official endpoint close, followed by signed asset return using the basis price
-as denominator. The thirteenth disconnected contract now proves point-in-time
+as denominator. The thirteenth disconnected contract proves point-in-time
 target-hit input readiness across exact basis terms, closed direction routing,
 normalized target evidence, the strict horizon, and catalog evidence without
-selecting a window extreme or invoking a calculator. None is wired to fixtures,
+selecting a window extreme or invoking a calculator. The fourteenth contract
+now selects one side-favorable value from a single PIT-visible, upstream-
+attested exact causal-window high/low pair. None is wired to fixtures,
 persistence, an API, a provider, or the web. The broader
 P3 scoring phase remains open.
 Delivered P2 work includes
@@ -280,13 +282,34 @@ exactly. Source-attested absence plus a visible normalized target is explicit
 and null-equivalent. An unreached resolved endpoint is
 pending, incomplete horizon reasons are preserved, and a directional present
 target with a non-null target date fails closed because V1 defines no expiry
-semantics. `ReadyForWindowEvidence` means only that the next selector may seek
-a full-window high or low. It is not a target hit and invokes no calculator,
+semantics. `ReadyForWindowEvidence` means only that the completed ADR-019
+selector may seek a full-window high or low. It is not a target hit and invokes
+no calculator,
 orchestrator, persistence, or product surface. No latest-correction or
 cancellation eligibility is inferred. The
 exact 3862-byte policy definition and SHA-256
 `a6b4c9f4e4d29b5f1a9b0c300e2d7b9505318c708dfb0ad0e88f71324cf65465`
 are locked by ADR-018.
+
+The completed fourteenth P3 slice consumes only complete ADR-018 readiness,
+one nullable PIT asset/primary-venue/currency/source binding, and caller-
+supplied full-window high/low candidates. Its economic interval is exactly the
+primary-venue regular-session observations in the ordered strict-horizon
+sessions with `observation.time > basis.eventTime` and
+`observation.time <= endpointSession.closesAt`. This excludes a first
+session's pre-call prices and includes the endpoint-close boundary without
+reinterpreting that close as the favorable extreme. Future binding and
+candidate evidence is invisible before every identity and cardinality gate;
+known invalid candidates poison selection, and multiple fully valid candidates
+are ambiguous even when equal. Exactly one attested pair resolves to its
+stored high for bullish or stored low for bearish, preserving the original
+decimal without rounding or rescaling. `EXACT_CAUSAL_WINDOW_SESSION_UNION` is
+an upstream completeness attestation: this slice does not aggregate per-
+session bars, verify raw ticks, resolve no-trade/halts/auctions/bar-straddles/correction
+sequences, invoke a calculator, or use the ADR-014 endpoint close as a fallback.
+The exact 4633-byte policy definition and SHA-256
+`e3a0e93030c8f09ae5398bf6df0f2e28eec14b0a31f5bea240fc78f2412c2463`
+are locked by ADR-019.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
@@ -295,7 +318,8 @@ adapters before they reach the canonical domain.
 These disconnected leaves require no API key, provider account, paid plan,
 domain, vendor license, or network access. Real-data integration remains the P5
 boundary: before any non-DEMO value enters them, a provider must be selected and
-credentials plus contractual rights for historical event-time/intraday prices,
+credentials plus contractual rights for historical event-time/intraday or tick
+prices,
 primary-venue closes, calendars, corporate actions, asset/venue reference data,
 target evidence, storage, display, derived outputs, and redistribution must be
 established. Only after that selection may a reviewed adapter introduce a named,
