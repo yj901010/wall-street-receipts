@@ -1312,8 +1312,10 @@ ADR-026 locks benchmark and sector returns to explicit point-in-time reference a
    no-inference foundation without adding executable policy.
 3. ADR-027 implements the independently typed benchmark assignment evidence,
    exact PIT selector, policy definition/hash, and golden matrix.
-4. Define/version the provider-neutral WSR sector taxonomy and explicit
-   provider mappings, then add basis-frozen sector assignment evidence.
+4. ADR-028 defines and versions the provider-neutral WSR sector taxonomy and
+   exact provider-mapping policy without claiming a provider mapping set. Add
+   basis-frozen sector assignment evidence next; create actual mappings only
+   after provider selection and rights approval.
 5. Add independent benchmark/sector reference-level pair evidence, calculators,
    and source-local readiness in that order. Keep DEMO outcome values null
    until dedicated canonical evidence and reproducibility contracts exist.
@@ -1403,6 +1405,76 @@ ADR-027 selects benchmark assignment only from explicit point-in-time evidence f
   SnakeYAML parses the exact four jobs, Compose configuration is valid, and
   `git diff --check` is clean. A temporary README marker mutation produces the
   required nonzero ADR-027 guard exit and is removed before final validation.
-- Sector taxonomy identity/version, canonical node bytes/hash, and provider-to-
-  canonical mapping policy are the next explicit product-decision boundary;
-  no sector assignment code may precede that approval.
+- ADR-028 now owns the sector taxonomy identity/version, canonical node
+  bytes/hash, and provider-to-canonical mapping-policy decision. No sector
+  assignment code, actual provider mapping set, or reference index is part of
+  the benchmark-assignment slice.
+
+## Provider-neutral WSR Economic Activity V1 boundary
+
+ADR-028 locks WSR Economic Activity V1 and exact point-in-time provider-node mapping semantics.
+
+- `wsr-economic-activity` version `1.0.0` is an original WSR single-level
+  taxonomy with one unassignable root and exactly twelve closed assignable
+  leaves. It makes no GICS, ICB, SIC, or NAICS equivalence claim.
+- Assignment means the primary operating activity as explicitly evidenced.
+  `UNKNOWN`, `OTHER`, and unclassified nodes do not exist. Diversified
+  Operations requires affirmative no-single-primary-activity evidence and is
+  never a missing/conflict fallback.
+- Provider-node identity is exact provider, scheme, scheme revision, and node
+  ID. Labels and definitions remain preserved evidence; raw, normalized, and
+  fuzzy text matching are forbidden.
+- Mapping evidence is PIT-visible only when both timestamps are not after
+  `evaluationAsOf`, and its start-inclusive/end-exclusive interval must contain
+  the exact original/correction basis event. Future evidence is absent for all
+  reasons, conflict, and cardinality decisions.
+- Missing and explicit not-mapped dispositions are unavailable. Equal
+  duplicates and overlapping visible rows are ambiguous; disagreeing targets
+  conflict. No current/latest row, nearest interval, provider preference,
+  silent deduplication, automatic migration, P2 label, or fallback may repair
+  a mapping.
+- No provider, provider mapping set, issuer membership, sector reference index,
+  sector assignment, return, readiness, API, or product publication is added.
+
+## Provider-neutral WSR Economic Activity V1 contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-ST01 | Exact decision-only surface | ADR-028, README, this acceptance gate, implementation log, and repository CI are the only intended changes. No Java production/test file, package, schema, fixture, manifest entry, OpenAPI, Flyway, database, provider, resource, API, or web behavior is added. |
+| P3-ST02 | Exact taxonomy identity | Taxonomy ID is `wsr-economic-activity`, version is `1.0.0`, kind is provider-neutral single-level economic activity, and assignment criterion is `PRIMARY_OPERATING_ACTIVITY_AS_EXPLICITLY_EVIDENCED`. |
+| P3-ST03 | Exact closed node set | Root `wsr-sector-root` is unassignable. The twelve leaf IDs, labels, definitions, and order are exactly ADR-028; IDs and labels are unique. V1 adds no industry hierarchy. |
+| P3-ST04 | No missing-value node | `UNKNOWN`, `OTHER`, and unclassified members are absent. Missing, conflicting, ambiguous, future, unsupported, or unmapped evidence is unavailable rather than a taxonomy node, zero, or inferred value. |
+| P3-ST05 | Diversified is affirmative | `wsr-sector-diversified-operations` requires explicit source evidence of materially diversified operations with no single primary activity represented by another V1 node. It is never a catch-all or fallback. |
+| P3-ST06 | Exact taxonomy bytes | ADR-028 contains exactly one canonical single-line 3824-byte ASCII/UTF-8 taxonomy definition with SHA-256 `820ce3ea264d67312fe4f2efe346631a81d74248e9a7f041793d65d8ef0d62ae`. Any semantic, node, order, label, or definition change requires a new version and hash. |
+| P3-ST07 | Exact mapping-policy identity | Policy is exactly `POINT_IN_TIME_EXPLICIT_PROVIDER_NODE_TO_WSR_ECONOMIC_ACTIVITY_V1`, bound to taxonomy `wsr-economic-activity` `1.0.0` and definition hash `820ce3ea264d67312fe4f2efe346631a81d74248e9a7f041793d65d8ef0d62ae`. Its canonical 4395-byte ASCII/UTF-8 definition has SHA-256 `ba12a277d5ffe266af1745b98948a1e2206494ac31904f31a419d973d5067e77`. |
+| P3-ST08 | Complete mapping evidence | The exact 23-field order preserves mapping/provider event identity, policy and mapping-set versions/hashes, taxonomy version/hash, provider scheme revision/node label/definition, disposition, source/revision/provenance, effective interval, `availableAt`, and `capturedAt`. |
+| P3-ST09 | Exact provider and target identity | Mapping identity is `(providerId, providerSchemeId, providerSchemeRevision, providerNodeId)` with case-sensitive unnormalized Unicode code-point equality. Labels are preserved evidence only and cannot be an identity, raw/normalized/fuzzy matching key, or inferred equivalence. `Mapped` requires a recorded provider-node definition and an exact taxonomy ID/version/hash plus one closed assignable leaf ID; root or unknown IDs fail closed. |
+| P3-ST10 | Closed disposition | Disposition is exactly `Mapped(canonicalNodeId)` or `NotMapped(reason)`. Not-mapped reasons are exactly `NO_CANONICAL_EQUIVALENT`, `PROVIDER_NODE_TOO_BROAD`, and `PROVIDER_DEFINITION_UNAVAILABLE`; missing and not-mapped both remain unavailable. |
+| P3-ST11 | Exact PIT and interval | Mapping evidence requires `availableAt <= capturedAt`; visibility requires both timestamps `<= evaluationAsOf`. The effective interval is start-inclusive/end-exclusive at `basis.eventTime` with an explicit open-ended variant. Future evidence cannot affect output, reason, conflict, or cardinality. |
+| P3-ST12 | Fail-closed multiplicity | Many provider nodes may map to one WSR node, but one identity has one applicable disposition. Equal duplicates are ambiguous without deduplication; disagreeing targets conflict; overlapping visible rows are ambiguous or conflicting. |
+| P3-ST13 | Versioned mapping set | Future mapping sets use the exact manifest/entry field orders, globally unique evidence IDs, canonical UTC microsecond effective starts, and case-sensitive unnormalized Unicode code-point sort. Entries must correlate exactly to manifest identity/source fields. SHA-256 omits every `mappingSetDefinitionHash` occurrence to avoid self-reference, then every populated occurrence must equal the digest. Any other byte change requires a new mapping-set version/hash; silent migration is forbidden. No actual mapping set is claimed now. |
+| P3-ST14 | No synthetic or proprietary inference | P2 map/treemap labels, ticker, issuer name, current/latest row, nearest interval, provider preference, label matching, and fallback cannot create or repair a mapping. GICS/ICB code, hierarchy, definition, membership, or equivalence is absent without expressly entitled provider evidence. |
+| P3-ST15 | Reference and lifecycle firewall | A canonical node does not prove a provider-published sector price index. Sector assignment, reference evidence, return calculation, readiness, outcome lifecycle, persistence, retry, aggregation, ranking, and publication remain later independently reviewed contracts; DEMO comparative metrics remain null. |
+| P3-ST16 | External boundary | This decision needs no API key, account, paid plan, license, secret, or network. P5 must select a provider and establish historical, storage, display, derived-crosswalk, cache, and redistribution rights before real mappings or scoped credentials exist. |
+| P3-ST17 | Repository CI contract | CI locks four-document marker parity, exact canonical JSON bytes/hashes and semantic fields, absence of runtime/provider data, and unchanged production and test/web baselines: 195 files / `562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640` and 198 files / `0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e`. |
+
+## Required WSR taxonomy documentation and negative checks
+
+- Canonical taxonomy/mapping-policy JSON parse, minimal serialization, exact
+  ASCII/UTF-8 byte lengths and SHA-256 values, node/field/reason order, PIT and
+  interval rules, source-license boundaries, four-document marker parity, and
+  unchanged production/test/web baselines: **PASS**. The dedicated ADR-028
+  guard independently verifies the exact 3824/4395-byte definitions and both
+  locked hashes while preserving the 195/198 protected file baselines.
+- Complete API regression, all repository CI Python bodies, workflow YAML,
+  Compose configuration, marker/definition mutation rejection, patch hygiene,
+  and user-owned `apps/web/next-env.d.ts` preservation: **PASS**. Maven reports
+  1114 tests with zero failures, errors, or skips; all 33 embedded Python bodies
+  compile under optimization and all 32 locally executable bodies pass;
+  SnakeYAML retains four jobs; Compose validates; marker, taxonomy-byte, and
+  mapping-policy-byte mutations each exit nonzero and are restored; and
+  `git diff --check` is clean without staging the user-owned file.
+- Basis-frozen sector assignment is the next implementation slice. An actual
+  provider mapping set remains blocked until provider selection and historical,
+  storage, display, derived-crosswalk, cache, and redistribution rights are
+  documented.
