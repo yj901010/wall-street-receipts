@@ -26,7 +26,10 @@ target-hit input readiness across exact basis terms, closed direction routing,
 normalized target evidence, the strict horizon, and catalog evidence without
 selecting a window extreme or invoking a calculator. The fourteenth contract
 now selects one side-favorable value from a single PIT-visible, upstream-
-attested exact causal-window high/low pair. None is wired to fixtures,
+attested exact causal-window high/low pair. The fifteenth contract now composes
+the complete supplied eligibility and favorable-extreme branches, preserving
+pending, non-applicable, and both unavailable families exactly while invoking
+the pure target-hit calculator only for Ready plus Resolved. None is wired to fixtures,
 persistence, an API, a provider, or the web. The broader
 P3 scoring phase remains open.
 Delivered P2 work includes
@@ -310,6 +313,24 @@ sequences, invoke a calculator, or use the ADR-014 endpoint close as a fallback.
 The exact 4633-byte policy definition and SHA-256
 `e3a0e93030c8f09ae5398bf6df0f2e28eec14b0a31f5bea240fc78f2412c2463`
 are locked by ADR-019.
+
+The completed fifteenth P3 slice accepts only the complete supplied ADR-018
+eligibility result and, for Ready, one complete supplied ADR-019 favorable-
+extreme result with whole-record-equal readiness. Non-ready branches reject
+stale downstream evidence; Ready rejects an omitted selector result because
+ADR-019 already represents missing evidence through an explicit Unavailable
+branch. Pending, all three non-applicable reasons, all 14 eligibility
+unavailable reasons (including the nested horizon reason), and all 22 favorable-
+extreme unavailable reasons remain their original typed leaf records and never
+become false or a loss. Only Ready plus matching Resolved builds the primitive
+input from the preserved routed side, normalized target evidence, and selected
+extreme, then invokes `TargetHitCalculator` exactly once. Source target terms,
+direction reinterpretation, high/low reselection, endpoint-close fallback,
+rounding, and rescaling are absent. The exact 3082-byte policy definition and
+SHA-256
+`b91bf68958e42ad003b80973c74f9acc2dad8e4629f6a1905798df98aa8b5348`
+are locked by ADR-020. Its `Available` is a disconnected target-hit metric only,
+not a canonical calculated/data-complete outcome or active methodology.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider

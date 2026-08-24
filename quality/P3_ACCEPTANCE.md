@@ -12,7 +12,9 @@ point-in-time official endpoint-price selector, target-error calculation,
 basis-event/endpoint price-pair selector, and signed asset-return calculation
 leaves are also complete. Point-in-time target-hit input eligibility and the
 PIT attested causal-window favorable-extreme selector are now complete; no
-calculator orchestration, runtime outcome, or product surface is published.
+runtime outcome or product surface is published. The supplied-leaf target-hit
+orchestration is also complete: it invokes the primitive only for exact Ready
+plus Resolved while keeping every other typed leaf branch unchanged.
 
 ## Pure target-hit slice boundary
 
@@ -814,12 +816,70 @@ calculator orchestration, runtime outcome, or product surface is published.
   original decimal-scale preservation, contradictory direct results, and
   deterministic replay under changed locale/timezone with restoration.
 
+## Supplied-leaf target-hit orchestration boundary
+
+- The request consumes only the orchestration policy and complete supplied
+  ADR-018/ADR-019 resolutions. It supplies no competing as-of, horizon, side,
+  target, extreme, high/low pair, or Boolean and does not rerun either leaf
+  producer.
+- Ready requires a non-null favorable resolution with whole-record-equal
+  readiness. Every non-ready eligibility branch requires null favorable
+  evidence. Missing market evidence belongs in ADR-019 Unavailable; an omitted
+  ADR-019 result or stale downstream result is malformed composition.
+- Pending, NotApplicable, eligibility Unavailable, and favorable-extreme
+  Unavailable are preserved as their exact typed leaf records. No reason is
+  inspected, mapped, flattened, or converted to a Boolean.
+- Only Ready plus matching Resolved builds `TargetHitInput` from the preserved
+  route side, normalized target evidence, and selected favorable value and
+  invokes the existing pure calculator exactly once.
+- `Available` is one disconnected target-hit metric result. It is not canonical
+  outcome `CALCULATED`, `dataComplete`, methodology activation, persistence, or
+  publication.
+
+## Supplied-leaf target-hit orchestration contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-TO01 | Exact source surface | Package `com.wallstreetreceipts.api.domain.outcome.targethitorchestration` contains exactly the policy, request, resolution, and orchestrator production files plus exactly one source-local golden test. No controller, service, repository, provider, DTO, or helper is added. |
+| P3-TO02 | Exact policy identity | Policy enum contains only `POINT_IN_TIME_TARGET_HIT_ORCHESTRATION_V1`. ADR-020 locks the exact single-line 3082-byte ASCII/UTF-8 definition and SHA-256 `b91bf68958e42ad003b80973c74f9acc2dad8e4629f6a1905798df98aa8b5348`; every context echoes it and returned bytes are defensive. |
+| P3-TO03 | Exact request and leaf versions | Request fields are exactly policy, `TargetEligibilityResolution`, and conditional `FavorableExtremeResolution`. Eligibility must be ADR-018 V1/hash and favorable evidence, when permitted, ADR-019 V1/hash. No raw requests or alternate inputs exist. |
+| P3-TO04 | Conditional topology | Ready requires non-null favorable evidence whose nested readiness is whole-record equal. Pending/NotApplicable/Unavailable require null favorable evidence. Ready-null, non-ready-non-null, wrong policy/hash, or mismatched readiness fails construction rather than falling back or being ignored. |
+| P3-TO05 | Exact result variants | Resolution permits exactly `Available`, `Pending`, `NotApplicable`, `EligibilityUnavailable`, and `FavorableExtremeUnavailable`. Context contains only orchestration version/hash. Each non-available branch retains the original complete typed leaf; Available retains the supplied Resolved leaf and primitive Available result. No outer reason enum or duplicate calculator input is stored. |
+| P3-TO06 | Branch preservation | The one pending reason, all three not-applicable reasons, all 14 eligibility unavailable reasons and nested horizon reasons, and all 22 favorable-extreme unavailable reasons remain unchanged. The orchestrator never calls `.reason()` and never creates false, loss, zero, primitive missing-input, or generic unavailable substitutes. |
+| P3-TO07 | Exact calculator input | Resolved side is exactly `DirectionalRoute.targetHitSide()`, target exactly normalized `TargetPriceEvidence.target()`, and favorable extreme exactly `FavorableExtreme.value()`. Source target terms, CallDirection reinterpretation, high/low reselection, and endpoint close are absent. |
+| P3-TO08 | Single inclusive comparison | `TargetHitCalculator.calculate` has exactly one production callsite outside its owner, only inside the Ready+Resolved branch. Bullish remains `>=`, bearish `<=`, equality is a hit, and no tolerance, rounding, rescaling, conversion, alternate formula, or second invocation exists. |
+| P3-TO09 | Primitive invariant | Complete Ready+Resolved inputs cannot produce primitive Unavailable. If the primitive violates that contract, orchestration fails with an internal invariant violation and emits no evidence result; it never treats a programming error as market-data unavailability. |
+| P3-TO10 | Attestation boundary | Supplied public leaf records prove local consistency only. Orchestration attests their policy/correlation, exact composition, calculator input, and invocation; it does not claim leaf request membership, PIT filtering, producer invocation, candidate poisoning/cardinality, or raw-data verification. |
+| P3-TO11 | Determinism and replay | Whole-record equality permits equal-but-distinct reconstructed readiness. Results are independent of clock, locale, timezone, environment, prior calls, and valid decimal scale; original nested records and decimal values remain unmodified. |
+| P3-TO12 | Lifecycle firewall | `Available` does not create or mutate `CallOutcome`, `OutcomeEvaluationStatus`, `dataComplete`, methodology status/definition, input fingerprint, cancellation lineage, persistence, aggregation, ranking, or scheduling. Both fixture methodologies remain `MODEL_ONLY`; four canonical outcomes remain PENDING/INCOMPLETE with all metrics null. |
+| P3-TO13 | Product/data firewall | No schema, fixture, manifest, OpenAPI, Flyway, database, API/provider behavior, JSON golden, resource, or web source changes. No endpoint-price fallback or raw window aggregation is added. |
+| P3-TO14 | External-data boundary | No key, account, paid plan, domain, license, named secret, or network access is needed. Before real evidence is admitted, P5 must establish historical intraday/tick, calendar, corporate-action, asset/venue, storage, display, derived-data, and redistribution entitlements and then introduce only a reviewed scoped secret. |
+
+## Required target-hit orchestration golden and negative tests
+
+- Lock canonical bytes/hash, four-file/one-test surfaces, record components,
+  sealed variants, exact imports, one primitive callsite, and no resolver or
+  selector callsite.
+- Execute exactly 55 vectors: 12 general boundary/negative tests, four source
+  directions, all three not-applicable reasons, all 14 eligibility unavailable
+  reasons, and all 22 favorable-extreme unavailable reasons.
+- Cover bullish and bearish equality/hit/miss boundaries, strong-direction
+  routing, a source target deliberately different from the normalized target,
+  original/correction identity, exact nested object preservation, equal-but-
+  distinct readiness replay, and mismatched composition rejection.
+- Prove deterministic locale/default-timezone replay with restoration in
+  `finally`; full API verification and CI reverse scans lock unchanged fixtures,
+  methodology/outcome lifecycle, schemas, database, API, and web surfaces.
+- Reverse scans must lex Java comments, strings, and character literals as
+  distinct states so comment markers inside literals cannot hide executable
+  code. Runtime-cardinality mismatches must exit nonzero even when Python
+  assertions are optimized away.
+
 ## Deferred work and implementation order
 
-1. Add a reviewed orchestrator that consumes eligibility and favorable-extreme
-   resolutions, invokes the existing pure target-hit calculator only for the
-   exact resolved branch, and preserves pending, not-applicable, unavailable,
-   and nested reasons without recalculation or fallback.
+1. Add the parallel reviewed directional-win orchestration over the existing
+   complete polarity/routing and signed asset-return leaves, preserving neutral
+   and nested price-pair/return unavailability without lifecycle publication.
 2. Add provider-side raw intraday/tick aggregation only after versioning
    no-trade, halt, auction, bar-straddle, correction-sequence, and raw-coverage
    proof semantics. P5 must first establish entitled historical intraday/tick,
