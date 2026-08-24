@@ -2642,3 +2642,126 @@ persistence, provider, API, or product publication
 - MFE/MAE, alpha/sector alpha, cancellation eligibility, canonical methodology
   activation, input fingerprints, append-only persistence, aggregation,
   ranking, scheduling, and UI publication remain later reviewed P3/P5 work.
+
+## P3 — Supplied-leaf point-in-time target-hit orchestration
+
+Status: complete for one disconnected target-hit metric composition; the
+broader P3 scoring phase remains open, with no canonical calculated outcome,
+methodology activation, persistence, provider, API, or product publication
+
+### Scope
+
+- Consume one complete supplied ADR-018 eligibility resolution and, only for
+  Ready, one complete supplied ADR-019 favorable-extreme resolution. Accept no
+  competing as-of, horizon, side, target, high/low, extreme, or Boolean.
+- Preserve Pending, NotApplicable, eligibility Unavailable, and favorable-
+  extreme Unavailable as exact typed leaf records. Build the primitive input
+  and invoke target hit exactly once only for whole-record-matching Ready plus
+  Resolved.
+- Add no resolver/selector replay, source-target substitution, direction
+  reinterpretation, high/low reselection, endpoint-close fallback, rounding,
+  raw aggregation, schema, fixture, persistence, provider, API, or web behavior.
+
+### Locked contract decisions
+
+- ADR-020 owns `POINT_IN_TIME_TARGET_HIT_ORCHESTRATION_V1`, its exact 3082
+  UTF-8 bytes, SHA-256
+  `b91bf68958e42ad003b80973c74f9acc2dad8e4629f6a1905798df98aa8b5348`,
+  exact three-field request, five typed result variants, required ADR-018/019
+  versions and hashes, conditional evidence topology, whole-record equality,
+  branch preservation, exact primitive input, single invocation, invariant-
+  failure, attestation, and no-publication boundaries.
+- Ready requires one non-null favorable resolution; the nested readiness must
+  equal the supplied eligibility record. Every non-ready branch requires a
+  null favorable result. ADR-019 Unavailable owns missing market evidence, so
+  omission of the complete selector result is malformed composition rather
+  than a new financial-data reason.
+- Result variants are exactly `Available`, `Pending`, `NotApplicable`,
+  `EligibilityUnavailable`, and `FavorableExtremeUnavailable`. The four non-
+  calculation meanings preserve the supplied typed leaf object directly; no
+  reason inspection, outer enum, mapping, flattening, false, loss, or primitive
+  missing-input substitute exists.
+- Available input uses only `DirectionalRoute.targetHitSide()`, normalized
+  `TargetPriceEvidence.target()`, and the selector's exact
+  `FavorableExtreme.value()`. Source terms can carry a numerically different
+  source target without changing the calculation target.
+- `TargetHitCalculator.calculate` has one new production callsite and runs once
+  only inside Ready plus Resolved. Equality remains a hit on both sides. A
+  primitive Unavailable from complete inputs is an internal invariant failure
+  that emits no orchestration result.
+- Public leaf and orchestration result constructors attest local consistency
+  only. This contract attests supplied policy/correlation, exact composition,
+  primitive input, and invocation; it does not re-attest leaf request
+  membership, PIT filtering, producer invocation, candidate poisoning or
+  cardinality, or raw-data completeness.
+- `Available` is a disconnected target-hit metric leaf, not canonical
+  `CallOutcome.CALCULATED`, `dataComplete`, an active methodology, fingerprint,
+  persisted record, aggregate, ranking input, schedule, or product value.
+
+### Module and file boundary
+
+- `com.wallstreetreceipts.api.domain.outcome.targethitorchestration` adds
+  exactly four production files:
+  `TargetHitOrchestrationPolicyVersion.java`,
+  `TargetHitOrchestrationRequest.java`,
+  `TargetHitOrchestrationResolution.java`, and `TargetHitOrchestrator.java`.
+- The source-local test is exactly `TargetHitOrchestratorGoldenTest.java` in the
+  matching package.
+- ADR-020, `quality/P3_ACCEPTANCE.md`, README, this log, the repository CI
+  reverse allowlists, dedicated guard, and API runtime-cardinality check own
+  the exact boundary.
+
+### Routes
+
+- None. No controller, application service, provider, repository, scheduler,
+  API response, canonical fixture adapter, or web route consumes or publishes
+  the orchestration result.
+
+### Verification
+
+- Focused source-local golden: PASS, 55/55
+  `TargetHitOrchestratorGoldenTest` tests with zero failures, errors, or skips.
+- Full API Maven verification: PASS, 735/735 tests with zero failures, errors,
+  or skips. PostgreSQL Testcontainers/Flyway migration coverage passed and the
+  Spring Boot jar was repackaged successfully.
+- Repository CI contract validation: PASS. All 27 embedded Python bodies
+  compiled, all 26 locally runnable bodies passed, and the final Tomcat cross-
+  stack body was syntax-checked but intentionally not executed without its CI-
+  produced runtime logs. The dedicated ADR-020 guard, both protected
+  production baselines at 173 files / SHA-256
+  `c3f6e8579d70c71b57ce855728e89513c9b0ba6f713ce120dfe9aee6469f4731`,
+  and the API job's exact 55/55 Surefire XML cardinality check passed.
+- Java-aware lexical scanners now remove comments and literals in one stateful
+  pass, so comment markers inside strings cannot hide executable calculator or
+  runtime tokens from the orchestration reverse allowlists. An adversarial
+  `"https://..."` followed by calculator/runtime code remained visible.
+- Surefire cardinality gates use explicit mismatch exits rather than Python
+  assertions. Both 42/42 and 55/55 checks passed under `python -O`, and an
+  intentional mismatched count still exited nonzero in optimized mode.
+- SnakeYAML 2.5 parsed the exact four workflow jobs; Compose configuration and
+  `git diff --check` passed.
+- No web, browser, provider, or cross-stack result is claimed for this
+  disconnected implementation.
+
+### External-data boundary
+
+- This source-local composition requires no API key, account, paid plan,
+  domain, vendor license, environment secret, or network access.
+- Before non-DEMO leaf evidence enters a runtime pipeline, P5 must select a
+  provider and establish entitlements for historical intraday/tick data,
+  exchange calendars, corporate actions, asset/venue reference data, storage,
+  display, derived-data creation, and redistribution. Only then may a reviewed
+  adapter introduce a named scoped secret through approved local/CI secret
+  stores; secrets must never enter chat or Git.
+
+### Deferred boundary
+
+- The recommended next source-local slice is parallel directional-win
+  orchestration over the completed polarity/routing and signed asset-return
+  leaves, preserving neutral and nested price-pair/return unavailability with
+  no canonical lifecycle publication. It also requires no provider credential.
+- Leaf-producer receipts, request-membership proofs, raw intraday aggregation,
+  canonical methodology activation, input fingerprinting, append-only outcome
+  persistence, lifecycle/cancellation/latest-correction selection, scheduling,
+  MFE/MAE, alpha/sector alpha, aggregation, ranking, API/UI publication, and
+  production provider integration remain later reviewed P3/P5 work.
