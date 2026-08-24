@@ -14,7 +14,11 @@ leaves are also complete. Point-in-time target-hit input eligibility and the
 PIT attested causal-window favorable-extreme selector are now complete; no
 runtime outcome or product surface is published. The supplied-leaf target-hit
 orchestration is also complete: it invokes the primitive only for exact Ready
-plus Resolved while keeping every other typed leaf branch unchanged.
+plus Resolved while keeping every other typed leaf branch unchanged. The
+supplied-leaf directional-win orchestration is now complete: it correlates all
+four non-null supplied fields before branching, preserves neutral and all
+unavailable return meanings, and invokes the primitive only for directional
+plus available return evidence.
 
 ## Pure target-hit slice boundary
 
@@ -875,11 +879,80 @@ plus Resolved while keeping every other typed leaf branch unchanged.
   code. Runtime-cardinality mismatches must exit nonzero even when Python
   assertions are optimized away.
 
+## Supplied-leaf directional-win orchestration boundary
+
+- The request contains exactly four non-null fields: orchestration policy,
+  complete `BasisForecastTermsEvidence`, complete
+  `CalculatorSideRouting.Result`, and complete `AssetReturnResult`. The return
+  leaf is mandatory even for neutral; no competing direction, basis, asset,
+  evaluation time, return, or Boolean is accepted.
+- Required polarity and asset-return versions/digests and exact source
+  direction, whole-record basis, asset identity, and forecast availability and
+  capture at or before the nested endpoint `evaluationAsOf` are validated
+  before any branch selection. Strong and ordinary directions cannot be
+  substituted merely because they reduce to the same calculator side.
+- Neutral takes precedence over return availability and becomes
+  `NotApplicable`, preserving complete terms, non-directional routing, and the
+  complete return leaf without a Boolean or calculator call.
+- A directional unavailable return becomes `AssetReturnUnavailable` and
+  preserves the exact return, price-pair, endpoint, and typed nested reasons.
+  All 55 unavailable combinations remain uninterpreted; no reason becomes
+  Pending, false, loss, or a generic unavailable state.
+- Only directional plus available return evidence builds
+  `DirectionalWinInput` from the preserved routed side and exact signed return,
+  then invokes the existing pure calculator exactly once. Bullish requires
+  strictly positive, bearish strictly negative, and zero is a miss for both.
+- `Available` is one disconnected metric leaf, not canonical outcome
+  `CALCULATED`, `dataComplete`, methodology activation, persistence, scheduling,
+  aggregation, ranking, API behavior, or publication.
+
+## Supplied-leaf directional-win orchestration contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-DWO01 | Exact source surface | Package `com.wallstreetreceipts.api.domain.outcome.directionalwinorchestration` contains exactly `DirectionalWinOrchestrationPolicyVersion`, `DirectionalWinOrchestrationRequest`, `DirectionalWinOrchestrationResolution`, and `DirectionalWinOrchestrator` plus exactly one source-local golden test. No controller, service, repository, provider, DTO, or helper is added. |
+| P3-DWO02 | Exact policy identity | Policy enum contains only `SUPPLIED_LEAF_DIRECTIONAL_WIN_ORCHESTRATION_V1`. ADR-021 locks the exact single-line 3699-byte ASCII/UTF-8 definition and SHA-256 `51429c7601d4807162855f08c680d1e6bb7895f87fc108e141e5ad3a3ab25bcb`; every context echoes it and returned bytes are defensive. |
+| P3-DWO03 | Exact all-present request | Request components are exactly policy, `BasisForecastTermsEvidence termsEvidence`, `CalculatorSideRouting.Result sideRouting`, and `AssetReturnResult assetReturnResult`. Every field is non-null on every branch, including neutral; no conditional omission or alternate input exists. |
+| P3-DWO04 | Required leaf policy and correlation | Routing carries ADR-011 V1/hash and return carries ADR-017 V1/hash. Terms direction equals the exact canonical routing source direction, terms basis equals the full nested return basis record, terms asset equals the nested endpoint binding asset, and both terms PIT timestamps are at or before the endpoint evaluation as-of. Every mismatch fails before neutral precedence. |
+| P3-DWO05 | Exact result variants | Resolution permits exactly `Available`, `NotApplicable`, and `AssetReturnUnavailable`. Context contains only orchestration version/hash. Every branch preserves terms, routing, and return; only Available also carries primitive `DirectionalWinResult.Available`. No outer reason enum or duplicate primitive input is stored. |
+| P3-DWO06 | Neutral precedence | `NonDirectionalRoute` plus either available or unavailable return always becomes `NotApplicable`, preserving the entire supplied return leaf. It never emits a Boolean, invokes the primitive, or reclassifies return evidence. |
+| P3-DWO07 | Unavailable preservation | Directional plus any of the 55 asset-return, price-pair, and endpoint unavailable combinations becomes `AssetReturnUnavailable` with exact object identity/value and nested reasons. Production does not call `.reason()`, map endpoint-not-reached to Pending, flatten, recalculate, or fall back. |
+| P3-DWO08 | Exact calculator input and invocation | Only directional plus `AssetReturnResult.Available` builds `DirectionalWinInput(DirectionalRoute.directionalWinSide(), available.assetReturn())`. `DirectionalWinCalculator.calculate` has exactly one orchestration callsite and is invoked exactly once; no polarity resolver, routing producer, return calculator, price-pair selector, or endpoint selector is called. |
+| P3-DWO09 | Strict signed comparison | Bullish is true only for return `> 0`; bearish only for return `< 0`; zero is false for both. The exact supplied `BigDecimal` is preserved without rounding, rescaling, tolerance, absolute value, percentage conversion, or target-disposition use. |
+| P3-DWO10 | Primitive invariant | Complete directional and available-return evidence cannot yield primitive Unavailable. If that contract changes, orchestration fails closed with an internal invariant error and emits no evidence result or fallback. |
+| P3-DWO11 | Attestation and replay | Public leaf/result construction proves only local consistency. Orchestration attests supplied policy/correlation, composition, exact primitive input, and invocation, not original request membership, producer execution, PIT filtering, or candidate cardinality. Equal-but-distinct records replay equally independent of clock, locale, timezone, prior calls, and valid decimal scale. |
+| P3-DWO12 | Lifecycle firewall | No unavailable reason is promoted to Pending/retry/scheduling. Available does not create or mutate `CallOutcome`, status, `dataComplete`, methodology definition/status, fingerprint, cancellation/latest-correction lineage, persistence, aggregation, or ranking. |
+| P3-DWO13 | Product/data and CI firewall | No schema, canonical fixture, manifest, JSON golden, OpenAPI, Flyway, database, API/provider behavior, resource, or web source changes. Repository CI locks 177 protected production files at SHA-256 `86d2175f849a3f866858c07351fbc24137946c4a286362f0557a9e7dc6b71bbf`, exact reverse edges, the dedicated policy guard, and exact 84/84 Surefire cardinality with explicit nonzero mismatch exits. |
+| P3-DWO14 | External-data boundary | No API key, account, paid plan, domain, provider license, named secret, or network access is needed. Before non-DEMO use, P5 must select analyst-call, official-close, exchange-calendar, corporate-action, and asset/venue reference providers; establish storage, display, derived-data, and redistribution rights; then introduce only reviewed scoped secrets through approved local/CI secret stores, never chat or Git. |
+
+## Required directional-win orchestration golden and negative tests
+
+- Execute exactly 84 vectors: 15 contract/correlation/PIT/replay checks, all
+  four directional source directions, six strict sign boundaries, all 55
+  unavailable asset-return/price-pair/endpoint combinations, and four neutral-
+  precedence return states.
+- Lock canonical bytes/hash, the four-production-file/one-test surface, record
+  components, sealed variants, all-non-null request topology, exact reverse
+  imports/calls, one primitive callsite, and absence of producer replay or
+  reason inspection.
+- Reject every wrong policy/hash, exact direction, basis, asset, and future
+  terms timestamp before branching. Accept equal PIT boundaries and equal-but-
+  distinct reconstructed evidence while preserving original records and
+  decimal values.
+- Cover positive/negative/zero on both sides, neutral with available and
+  unavailable returns, original/correction bases, target-disposition
+  irrelevance, null roots, malformed direct result shapes, and deterministic
+  locale/default-timezone replay with restoration in `finally`.
+- Full API verification reaches exactly 819/819 tests. Repository CI contains
+  28 embedded Python bodies: all 28 compile under optimized Python, the 27
+  locally executable bodies pass, and the final cross-stack body remains
+  syntax-checked here for execution by the workflow's service jobs.
+
 ## Deferred work and implementation order
 
-1. Add the parallel reviewed directional-win orchestration over the existing
-   complete polarity/routing and signed asset-return leaves, preserving neutral
-   and nested price-pair/return unavailability without lifecycle publication.
+1. Add an explicit reviewed lifecycle/readiness policy before promoting any
+   nested unavailable reason to Pending, retry, cancellation, or scheduling;
+   this source-local orchestration deliberately makes no such inference.
 2. Add provider-side raw intraday/tick aggregation only after versioning
    no-trade, halt, auction, bar-straddle, correction-sequence, and raw-coverage
    proof semantics. P5 must first establish entitled historical intraday/tick,
