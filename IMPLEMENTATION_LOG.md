@@ -2281,3 +2281,118 @@ provider, API, or product publication
   cancellation eligibility, calculator orchestration, canonical methodology
   activation, input fingerprints, append-only persistence, aggregation,
   ranking, and UI publication remain later reviewed P3/P5 work.
+
+## P3 — Point-in-time basis/endpoint price pair and signed asset return
+
+Status: complete for these two disconnected policy leaves; the broader P3
+scoring phase remains open, with no runtime outcome, persistence, provider,
+API, or product publication
+
+### Scope
+
+- Select one source-recorded price at the exact original/correction basis event
+  and bind it to one complete ADR-014 official endpoint-price resolution.
+- Filter basis-price and independent adjustment evidence by both `availableAt`
+  and `capturedAt` against the endpoint context's `evaluationAsOf` before any
+  identity, mismatch, or cardinality reasoning.
+- Require exact basis, asset, primary venue, currency, price source/revision,
+  basis and endpoint observation/provider-event links, coverage endpoints, and
+  split/reverse-split endpoint-share/dividend-unadjusted semantics. Preserve
+  explicit missing, mismatch, continuity, ambiguity, and nested endpoint
+  unavailability instead of prior close, nearest price, interpolation, dedupe,
+  FX, or fallback.
+- Calculate signed asset return from one complete pair as exactly
+  `(endpoint-basis)/basis`, with one subtraction and one scale-12 `HALF_EVEN`
+  division. Preserve exact pair unavailability and return explicit output
+  overflow rather than clipping, another scale, or zero.
+- Add no calculator orchestration, directional-win/target-hit invocation,
+  methodology activation, fingerprint, schema, fixture, manifest member,
+  OpenAPI path, Flyway migration, database row, provider adapter, controller,
+  repository, scheduler, API behavior, or web source.
+
+### Locked contract decisions
+
+- ADR-016 owns
+  `SOURCE_RECORDED_BASIS_EVENT_TO_OFFICIAL_ENDPOINT_PRICE_PAIR_V1`, its exact
+  4655 UTF-8 bytes, SHA-256
+  `895e4bc97ebb3a92b80f2c58e2d28abb94440eeca963046ee755fa98825f4887`,
+  source-recorded basis-event semantics, PIT filtering, missing truth table,
+  fixed two-stage mismatch/cardinality precedence, exact observation links and
+  coverage, price/action basis, and 24 unavailable reasons.
+- ADR-017 owns `SIGNED_BASIS_DENOMINATOR_SCALE_12_HALF_EVEN_V1`, its exact 1011
+  UTF-8 bytes, SHA-256
+  `e5e61c4adcd6567bfc76f73114499578f09de2254dc39a2553f3c0e2eaf03486`,
+  signed basis-denominator formula, one-division half-even rounding, scale-12
+  output, exact -1 lower boundary, overflow behavior, and two unavailable
+  reasons.
+- The pair request requires the exact ADR-014 endpoint V1 policy/hash. The
+  return input requires the exact ADR-016 pair V1 policy/hash. No later version
+  may be silently accepted as equivalent.
+- Public constructors own only locally decidable consistency. Only
+  `AssetReturnPricePairSelector` attests request membership, PIT filtering,
+  precedence, and cardinality; only `AssetReturnCalculator` attests the signed
+  formula and one permitted rounding step.
+
+### Module and file boundary
+
+- `com.wallstreetreceipts.api.domain.outcome.pricepair` adds exactly seven
+  production files: `BasisPriceField.java`, `BasisPriceObservation.java`,
+  `PricePairAdjustmentEvidence.java`,
+  `AssetReturnPricePairPolicyVersion.java`,
+  `AssetReturnPricePairRequest.java`,
+  `AssetReturnPricePairResolution.java`, and
+  `AssetReturnPricePairSelector.java`.
+- `com.wallstreetreceipts.api.domain.outcome.assetreturn` adds exactly four
+  production files: `AssetReturnPolicyVersion.java`, `AssetReturnInput.java`,
+  `AssetReturnResult.java`, and `AssetReturnCalculator.java`.
+- Source-local tests are exactly `AssetReturnPricePairSelectorGoldenTest.java`
+  and `AssetReturnCalculatorGoldenTest.java` in their matching packages.
+- ADR-016, ADR-017, `quality/P3_ACCEPTANCE.md`, README, this log, and a
+  mutation-sensitive repository CI extension own canonical bytes/hashes,
+  exact-shape, PIT/precedence/equality, formula/decimal, reverse-graph, and
+  unchanged-publication boundaries.
+
+### Routes
+
+- None. No controller, application service, provider, repository, scheduler,
+  API response, canonical fixture adapter, or web route invokes either leaf.
+
+### Verification
+
+- Focused source-local goldens: PASS, 191/191 tests
+  (`AssetReturnPricePairSelectorGoldenTest` 153/153 and
+  `AssetReturnCalculatorGoldenTest` 38/38), with zero failures, errors, or
+  skips.
+- The dedicated pair/return guard and the affected explicit-anchor,
+  strict-close, and endpoint/target reverse guards passed. All 24 embedded
+  workflow Python blocks passed syntax compilation.
+- SnakeYAML 2.5 parsed the four-job workflow, Compose configuration validation
+  passed, and `git diff --check` passed.
+- Full API Maven verification: PASS, 599/599 tests with zero failures, errors,
+  or skips. `PostgreSqlMigrationTest` passed 4/4 through Testcontainers, and
+  application JAR repackage completed successfully.
+- Repository-local workflow runtime blocks 1–23 passed 23/23 after loading the
+  workflow-pinned `jsonschema[format-nongpl]==4.23.0` into a temporary local
+  dependency path. Block 24 is the existing cross-stack Spring/Next access-log
+  verifier and was intentionally not run because neither service was launched
+  for this disconnected slice; no cross-stack result is claimed.
+- No web, browser, provider, or cross-stack result is claimed for this
+  disconnected implementation.
+
+### External-data boundary
+
+- This source-local implementation requires no API key, account, paid plan,
+  domain, vendor license, environment secret, or network access.
+- P5 owns provider selection. Before non-DEMO evidence enters these contracts,
+  the selected vendor must grant historical event-time/intraday price
+  entitlement; exchange-calendar, asset/venue/reference, and corporate-action
+  rights; and explicit display, storage, derived-data, and redistribution
+  terms. Only then may a reviewed adapter define one named, scoped secret. This
+  P3 slice invents neither vendor nor environment-variable name.
+
+### Deferred boundary
+
+- Calculator orchestration and target eligibility, full-window high/low
+  evidence, MFE/MAE, alpha/sector alpha, cancellation eligibility, canonical
+  methodology activation, input fingerprints, append-only persistence,
+  aggregation, ranking, and UI publication remain later reviewed P3/P5 work.

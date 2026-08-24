@@ -8,7 +8,8 @@ call-direction polarity policy slice is also complete. None publishes a
 calculated outcome or completes the broader P3 scoring phase, which remains
 open. The mechanical calculator-side adapter slice is also complete. The
 disconnected calculator-side routing-evidence slice is also complete. The
-point-in-time official endpoint-price selector and target-error calculation
+point-in-time official endpoint-price selector, target-error calculation,
+basis-event/endpoint price-pair selector, and signed asset-return calculation
 leaves are also complete; no runtime outcome or product surface is published.
 
 ## Pure target-hit slice boundary
@@ -586,17 +587,117 @@ leaves are also complete; no runtime outcome or product surface is published.
   locks exact files/imports, formula/rounding markers, reverse isolation, no
   runtime invocation, and unchanged canonical product surfaces.
 
+## Point-in-time basis-event/endpoint price-pair slice boundary
+
+- The selector consumes one complete ADR-014 endpoint-price resolution plus
+  caller-supplied basis-price and independent adjustment-evidence candidates.
+  It obtains no price, calendar, action, reference, or provider data itself.
+- Basis price means the exact source-recorded price at the original/correction
+  `OutcomeBasis.eventTime`, not prior close, nearest price, interpolation, or a
+  derived session price. Endpoint remains the official ADR-014 close.
+- Both prices share exact asset, primary venue, currency, source/revision, and
+  split/reverse-split endpoint-share/dividend-unadjusted basis. Independent
+  adjustment evidence binds the two observation/provider-event identities and
+  exact time coverage.
+- Basis and adjustment evidence are filtered by both `availableAt` and
+  `capturedAt` before identity, mismatch, or cardinality reasoning. Future
+  evidence cannot alter a result.
+- The leaf resolves exactly one known basis and one known adjustment record or
+  returns explicit unavailable evidence. It calculates no return and publishes
+  no fixture, API, database, provider, or web value.
+
+## Point-in-time price-pair contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-PP01 | Exact file/package surface | Production package `com.wallstreetreceipts.api.domain.outcome.pricepair` contains exactly `BasisPriceField.java`, `BasisPriceObservation.java`, `PricePairAdjustmentEvidence.java`, `AssetReturnPricePairPolicyVersion.java`, `AssetReturnPricePairRequest.java`, `AssetReturnPricePairResolution.java`, and `AssetReturnPricePairSelector.java`. Tests add exactly matching `AssetReturnPricePairSelectorGoldenTest.java`; no provider/controller/repository/helper file is added. |
+| P3-PP02 | Exact policy identity | `AssetReturnPricePairPolicyVersion` contains exactly `SOURCE_RECORDED_BASIS_EVENT_TO_OFFICIAL_ENDPOINT_PRICE_PAIR_V1`. Its canonical definition is the exact ADR-016 single-line 4655-byte ASCII/UTF-8 sequence and fixed lowercase SHA-256 `895e4bc97ebb3a92b80f2c58e2d28abb94440eeca963046ee755fa98825f4887`. It locks the complete basis-observation and adjustment-evidence field lists plus selected full-record preservation. Returned bytes are defensive and every context echoes the digest. |
+| P3-PP03 | Exact endpoint input | Request accepts only one complete ADR-014 endpoint resolution using `OFFICIAL_PRIMARY_VENUE_CLOSE_SPLIT_ADJUSTED_V1` and hash `37e37aba9302d77366cef4129f77a82b7ccb2f1937bfffc0315ea8d0bc6b1f76`, plus immutable non-null copies of both candidate lists. No raw endpoint, horizon inference, provider, clock, or fallback field exists. |
+| P3-PP04 | Basis evidence | `BasisPriceObservation` contains exact observation/provider-event identity, `OutcomeBasis`, asset, venue, currency, price-source ID/revision, provenance, `BasisPriceField`, adjustment basis, continuity, observed/available/captured times, and price. Identities are canonical, times are microsecond precision with `observedAt <= availableAt <= capturedAt`, and price is positive exact `NUMERIC(38,12)` without replacing or rescaling the stored value. |
+| P3-PP05 | Adjustment evidence | `PricePairAdjustmentEvidence` contains exact evidence/provider-event identity, basis, asset, primary venue, currency, adjustment-source ID/revision, provenance, both observation/provider-event links, coverage bounds, adjustment basis, continuity, available/captured times. It requires `coverageStartsAt <= coverageEndsAt <= availableAt <= capturedAt`. |
+| P3-PP06 | PIT and missing truth table | `evaluationAsOf` is inherited from the endpoint context. Each candidate is known only when both PIT timestamps are `<= evaluationAsOf`, with future rows filtered first. Missing basis plus unavailable endpoint yields `BASIS_AND_ENDPOINT_PRICE_UNAVAILABLE` and exact nested endpoint reason; basis-only missing yields `BASIS_PRICE_MISSING_AS_OF`; endpoint-only missing yields `ENDPOINT_PRICE_UNAVAILABLE` and the exact reason. Full-result equality proves empty equals all-future and known exact evidence is unchanged by future exact/wrong/duplicate evidence. |
+| P3-PP07 | Basis precedence/cardinality | Known basis candidates are checked in exact order for basis, asset, primary venue, currency, source ID/revision, exact basis-event time, exact source-recorded field, adjustment basis, and continuity. All known rows participate in gates; exactly one valid row resolves and repeated/same or distinct valid rows are `BASIS_PRICE_AMBIGUOUS`. No dedupe, alias, tolerance, preference, or fallback exists. |
+| P3-PP08 | Adjustment precedence/cardinality | After one basis resolves, known adjustment candidates are checked in exact order for basis, asset, venue, currency, basis observation/provider-event link, endpoint observation/provider-event link, exact coverage, adjustment basis, and continuity. Exactly one resolves; zero is `ADJUSTMENT_EVIDENCE_MISSING_AS_OF`, and same/distinct duplicates are `ADJUSTMENT_EVIDENCE_AMBIGUOUS`. |
+| P3-PP09 | Exact price/identity semantics | Basis field is exactly `SOURCE_RECORDED_BASIS_EVENT_PRICE`; `INDICATIVE_OR_OTHER` is unavailable. Asset/primary venue/currency and endpoint binding price source/revision match exactly with no FX. Adjustment is exactly split/reverse-split to endpoint-share basis and dividend-unadjusted; only continuous split/reverse-split lineage is accepted. Observation and provider-event links plus coverage endpoints match exactly. Prior close, nearest price, interpolation, unsupported-action inference, and fallback are absent. |
+| P3-PP10 | Closed result and constructor ownership | `AssetReturnPricePairResolution` permits exactly `Resolved(context,basisObservation,adjustmentEvidence)` and `Unavailable(context,reason,endpointReason)` with the 24 ADR-016 reasons in exact order. Context contains only exact policy identity and the complete endpoint resolution. Public constructors validate locally decidable consistency; only `AssetReturnPricePairSelector` attests request membership, PIT filtering, precedence, and cardinality. |
+| P3-PP11 | Determinism, purity, and reverse graph | Equal requests replay equally regardless of clock, locale, timezone, input order where precedence is invariant, environment, thread, or random state. Production imports only deterministic Java and exact horizon/observation domain types. Only the seven pair types consume raw basis/adjustment candidates or invoke `select`; only the later four ADR-017 types consume the pair resolution. No target/directional calculator, provider, repository, framework, JSON, reflection, network, scheduler, or mutable global state is present. |
+| P3-PP12 | No product publication/external credential | Existing 14 schemas, 13 fixture files and manifest order, five OpenAPI paths, five Flyway migrations, methodology/outcome rows, API/controller/repository/database behavior, and web source remain unchanged. No API key, account, paid plan, vendor license, named secret, or network access is required. P5 owns the chosen vendor's historical event-time/intraday price entitlement, calendar/reference/corporate-action rights, display/storage/derived/redistribution terms, adapter, and only then a scoped secret. |
+
+## Required price-pair golden and negative tests
+
+- Assert exact canonical bytes, length 4655, independently recomputed SHA-256,
+  fixed digest, defensive byte copies, exact seven-type surface, enum order,
+  record components, sealed variants, and all 24 reason values.
+- Cross basis/endpoint missing states and preserve every nested ADR-014 reason.
+  Full-result equality—not reason-only equality—proves empty/all-future equality
+  and that future exact, wrong, and duplicate basis or adjustment candidates
+  cannot affect a known result.
+- Mutation-sensitive vectors cover every basis and adjustment mismatch in exact
+  precedence, multi-mismatch rows in reversed list order, missing candidates,
+  same-object and distinct ambiguity, and exact selected evidence preservation.
+- Cover original and correction basis identity/event time, one-microsecond PIT
+  boundaries for both timestamps, exact observation/provider links and coverage,
+  every disallowed basis field/adjustment/continuity value, positive numeric
+  maximum, invalid scale/precision/nonpositive price, canonical identities,
+  time order, immutable copies, and contradictory direct result construction.
+- Replay under changed locale/default timezone restores state in `finally`;
+  repository CI locks exact imports/reverse edges, no inference/provider/runtime
+  wiring, and unchanged product surfaces.
+
+## Signed asset-return slice boundary
+
+- The calculator consumes one complete ADR-016 price-pair resolution and never
+  selects a price, adjustment record, calendar, horizon, or source.
+- Formula is exactly `(endpoint-basis)/basis`, using basis price as denominator
+  and exactly one scale-12 `HALF_EVEN` division. Output is a signed decimal
+  ratio, not a percent.
+- Pair unavailability preserves the exact nested reason. Output overflow is
+  explicit unavailable evidence; exact -1 is valid and below -1 is invalid.
+- The disconnected leaf invokes no directional/target calculator, methodology,
+  persistence, API, provider, or web publication.
+
+## Signed asset-return contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-AR01 | Exact file/package surface | Production package `com.wallstreetreceipts.api.domain.outcome.assetreturn` contains exactly `AssetReturnPolicyVersion.java`, `AssetReturnInput.java`, `AssetReturnResult.java`, and `AssetReturnCalculator.java`. Tests add exactly matching `AssetReturnCalculatorGoldenTest.java`; no orchestrator/provider/controller/repository/helper file is added. |
+| P3-AR02 | Exact policy identity | `AssetReturnPolicyVersion` contains exactly `SIGNED_BASIS_DENOMINATOR_SCALE_12_HALF_EVEN_V1`. Its canonical definition is the exact ADR-017 single-line 1011-byte ASCII/UTF-8 sequence and fixed lowercase SHA-256 `e5e61c4adcd6567bfc76f73114499578f09de2254dc39a2553f3c0e2eaf03486`. Returned bytes are defensive and every calculation context echoes the digest. |
+| P3-AR03 | Exact pair input | Input contains only policy version and one ADR-016 pair resolution using `SOURCE_RECORDED_BASIS_EVENT_TO_OFFICIAL_ENDPOINT_PRICE_PAIR_V1` and exact hash `895e4bc97ebb3a92b80f2c58e2d28abb94440eeca963046ee755fa98825f4887`. It has no raw price, side, call, target, horizon, provider, clock, or fallback field. |
+| P3-AR04 | Unavailability composition | Any unavailable pair returns `PRICE_PAIR_UNAVAILABLE` with the exact nested pair reason. A missing/ambiguous/mismatched pair is never zero, -1, false, loss, or `OUTPUT_NOT_REPRESENTABLE`; a resolved pair never carries a pair reason. |
+| P3-AR05 | Exact formula | Complete pair computes exactly `endpoint.subtract(basis).divide(basis, 12, HALF_EVEN)`: one subtraction, basis as the sole denominator, and exactly one division/rounding. There is no absolute value, target/endpoint denominator, percent conversion, intermediate or second rounding, tolerance, float/double, or fallback. |
+| P3-AR06 | Signed decimal boundary | Available output has exact scale 12, precision at most 38, and value at least -1. Exact -1, zero, positive and negative values, scale-equivalent inputs, and both half-even tie parities are locked. Rounded precision-39 output becomes `OUTPUT_NOT_REPRESENTABLE`; it is not clipped or rescaled. |
+| P3-AR07 | Closed result and constructor ownership | `AssetReturnResult` permits exactly `Available(context,assetReturn)` and `Unavailable(context,reason,pricePairReason)`, with reasons exactly `PRICE_PAIR_UNAVAILABLE`, `OUTPUT_NOT_REPRESENTABLE` in order. Context contains only exact policy identity and complete pair resolution. Public constructors enforce local state/hash/reason/decimal invariants; only the calculator attests formula execution. |
+| P3-AR08 | Determinism and purity | Equal input returns equal output regardless of clock, locale, timezone, original valid decimal scale, environment, thread, random state, or prior calls. Production imports only BigDecimal/rounding/Objects and exact price-pair/endpoint types; no directional-win, target-hit/error, provider, repository, JSON, framework, persistence, reflection, network, scheduler, or mutable global state exists. |
+| P3-AR09 | Exact reverse graph | Only the four asset-return production types consume the ADR-017 policy/result/input surface. They may consume only exact ADR-016 policy/resolution plus the nested endpoint resolution needed to read a resolved endpoint price. No existing calculator or product runtime invokes `AssetReturnCalculator.calculate` or consumes `AssetReturnResult`. |
+| P3-AR10 | No publication/external credential | No schema, fixture, manifest, JSON golden, OpenAPI, Flyway, database, API/controller/repository/provider behavior, methodology activation, fingerprint, outcome mutation, or web source is added. The leaf needs no key/account/license/network access; P5 owns real evidence acquisition and rights before runtime integration. |
+
+## Required signed asset-return golden and negative tests
+
+- Assert exact canonical bytes, length 1011, independently recomputed SHA-256,
+  fixed digest, defensive byte copies, exact four-type surface, enum/reason order,
+  record components, sealed variants, modifiers, and private calculator
+  constructor.
+- Propagate every one of the 24 pair unavailable reasons with full nested-reason
+  equality. Direct constructors reject contradictory resolved/unavailable state,
+  wrong hash/version, missing components, wrong nested reason, scale other than
+  12, precision above 38, and value below -1.
+- Formula vectors cover endpoint above/equal/below basis, exact -1 boundary,
+  scale-equivalent inputs, asymmetric denominator evidence, exact one divide,
+  scale 12, both half-even tie parities, precision-38 adjacent success, and a
+  rounded precision-39 unavailable result.
+- Locale/default-timezone replay restores globals in `finally`; repository CI
+  locks formula/imports/reverse isolation, no downstream calculator invocation,
+  and unchanged product/data surfaces.
+
 ## Deferred work and implementation order
 
-1. Add asset return only after a separately versioned price-pair, split/action
-   continuity, basis, currency, and unavailable-state contract is approved.
-2. Invoke calculators only through a later orchestrator consuming the closed
+1. Invoke calculators only through a later orchestrator consuming the closed
    routing evidence, after target eligibility, window inclusivity, point-in-time
    input identity, and unavailable-state composition are locked.
-3. Add MFE/MAE after full-window completeness and bullish/bearish sign rules;
+2. Add MFE/MAE after full-window completeness and bullish/bearish sign rules;
    add alpha/sector alpha last, after benchmark/sector identity and corporate-
    action-adjusted return policy exist.
-4. Persist or expose a non-null metric only with a canonical versioned input
+3. Persist or expose a non-null metric only with a canonical versioned input
    fixture, reproducible methodology definition/hash, input fingerprint, golden
    test, append-only lineage, and schema/domain/database completeness matrix.
 
