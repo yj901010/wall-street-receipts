@@ -468,12 +468,11 @@ subtraction/one scale-12 `HALF_EVEN` division, and never reuse the asset share-
 basis adjustment types. Current DEMO outcome values remain null. ADR-027
 implements benchmark assignment, ADR-028 locks the provider-neutral sector
 taxonomy and mapping decision, and ADR-029 implements basis-frozen sector
-assignment. ADR-030 now adds the two independent reference-level pairs, and
-ADR-031 adds the independently typed benchmark return calculator. The sector
-return calculator comes next; source-local readiness follows only after both
-calculators are independently reviewed. Raw-window
-coverage precedes MFE/MAE, alpha and sector alpha come last, and lifecycle
-composition remains separate.
+assignment. ADR-030 now adds the two independent reference-level pairs,
+ADR-031 adds the independently typed benchmark return calculator, and ADR-032
+adds the independently typed sector return calculator. Source-local readiness
+comes next as its own reviewed slice. Raw-window coverage precedes MFE/MAE,
+alpha and sector alpha come last, and lifecycle composition remains separate.
 
 ADR-027 selects benchmark assignment only from explicit point-in-time evidence frozen at the outcome basis event.
 The disconnected V1 selector accepts only complete source-identified
@@ -711,9 +710,77 @@ README-marker and canonical `percentConversion`-byte mutations make the guard
 exit 1; changing expected runtime count from 95 to 94 while actual remains 95
 makes its gate exit 1. All mutations are restored, the final dedicated guard
 passes, `git diff --check` is clean, and marker parity remains one per document:
-**PASS**. The independent sector
-reference-return calculator is next; readiness, lifecycle integration,
-canonical publication, MFE/MAE, alpha, and sector alpha remain later work.
+**PASS**. ADR-032 now supplies the independent sector reference-return
+calculator. Comparative readiness is next; lifecycle integration, canonical
+publication, MFE/MAE, alpha, and sector alpha remain later work.
+
+ADR-032 calculates a signed sector price-index return from one complete ADR-030 sector reference-level-pair receipt using the exact basis-level denominator.
+The disconnected leaf adds exactly `SectorReturnPolicyVersion`,
+`SectorReturnInput`, `SectorReturnResult`, and `SectorReturnCalculator` under
+the independently typed `sectorreturn` package, plus one source-local
+`SectorReturnCalculatorGoldenTest`. Its sole policy is
+`SIGNED_SECTOR_BASIS_LEVEL_DENOMINATOR_SCALE_12_HALF_EVEN_V1`; the exact
+2817-byte ASCII/UTF-8 definition has SHA-256
+`5aecd42c32ba69f0d21ab6e1ee1e3128cd31584724a6f46e176acd470204d0f7`.
+Input and result contexts retain the complete ADR-030 sector pair using policy
+hash `4224648ba01104fd3e96319158c7d6b42da472e9aa6f2ab22ef9fccf43da7e4a`.
+
+The six result branches are `Available`, `NotApplicable`,
+`AssignmentUnavailable`, `EndpointAnchorUnavailable`, `EvidenceUnavailable`,
+and `OutputUnavailable`. The same complete typed pair receipt is preserved;
+nested reasons are not copied, mapped, duplicated, or flattened. Only a
+resolved pair is calculated. The calculator reads its selected basis and
+endpoint provider-published price-index levels, performs exactly one exact
+subtraction, and divides once by the positive basis at scale 12 with
+`HALF_EVEN`. Output is a signed `NUMERIC(38,12)` decimal ratio, rounded exact
+`-1.000000000000` is valid, and nonrepresentable output uses only
+`OUTPUT_NOT_REPRESENTABLE`. Provider-return fields, percent conversion,
+float/double conversion, intermediate or second rounding, alternate
+denominators, asset-return reuse, benchmark-return reuse, and fallback are
+absent.
+
+ADR-032 adds no provider data, selector, readiness, lifecycle, methodology,
+fingerprint, lineage, schema, fixture, manifest, OpenAPI, Flyway, database,
+controller, repository, adapter, persistence, API, or web behavior. Existing
+DEMO comparative metrics remain null. No API key, account, paid plan, provider
+license, named secret, or network access is needed, and this slice has no
+credential. Before non-DEMO use, P5 must approve the exact sector-index
+product/feed; rights to create and use the exact WSR canonical-node-to-selected
+provider-published sector price-index binding; exact-time historical levels and
+revisions; reference-calendar identity, revision, and source; divisor and
+methodology continuity; and storage, cache, display, derived-return, and
+redistribution rights. Publisher and redistributor require separate review when
+they differ. Assignment or classification rights alone do not grant index
+rights. Only after provider/product and written-rights approval may a scoped
+credential enter untracked local, CI, and deployment secret stores; it must
+never be placed in chat or Git.
+
+Focused golden verification is 112/112 with zero failures, errors, or skips;
+the normalized golden-source SHA-256 is
+`6047b29c8c338893bf2fdeaa9a5fef83ec20cb4f5e11acb77d82b48d8752b129`.
+The protected production baseline is 224 files / SHA-256
+`bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055`,
+and exact ADR-032 production exclusion reproduces ADR-031 at 220 files /
+`cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9`.
+API-test/web is 203 files /
+`5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce`;
+exact golden exclusion replays ADR-031 at 202 /
+`12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273`.
+Full API Maven verification passes 1875/1875 with zero failures, errors, or
+skips and `BUILD SUCCESS`, including Testcontainers PostgreSQL 17.10 and
+Flyway. The dedicated guard/runtime gate passes; 37/37 workflow Python bodies
+syntax-compile and all 30/30 locally runnable bodies pass. Six
+`jsonschema`/`referencing` bodies and the final cross-stack body remain
+syntax-only for their documented local dependency/runtime boundaries.
+SnakeYAML retains four jobs and Compose validates. README-marker, canonical
+policy-byte, and runtime 112-to-111 mutations each fail and are restored. Web
+lint, 569/569 Vitest tests, production build, marker parity, and diff hygiene
+pass; independent review has no remaining P0/P1/P2 finding. The user-owned
+`apps/web/next-env.d.ts` remains preserved.
+
+Source-local comparative readiness is the next independent slice. Lifecycle,
+methodology/fingerprint, lineage, persistence, API/UI publication, raw-window
+coverage, MFE/MAE, alpha, and sector alpha remain later work.
 
 ## Repository layout
 
