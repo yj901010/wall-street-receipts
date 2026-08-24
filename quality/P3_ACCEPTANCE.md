@@ -18,7 +18,10 @@ plus Resolved while keeping every other typed leaf branch unchanged. The
 supplied-leaf directional-win orchestration is now complete: it correlates all
 four non-null supplied fields before branching, preserves neutral and all
 unavailable return meanings, and invokes the primitive only for directional
-plus available return evidence.
+plus available return evidence. The supplied-leaf directional-win readiness
+classification is also complete: it distinguishes only the exact endpoint-
+not-reached chain from every other unavailable chain and publishes no canonical
+lifecycle state.
 
 ## Pure target-hit slice boundary
 
@@ -948,11 +951,79 @@ plus available return evidence.
   locally executable bodies pass, and the final cross-stack body remains
   syntax-checked here for execution by the workflow's service jobs.
 
+## Supplied-leaf directional-win readiness boundary
+
+- The request consumes exactly the readiness policy and one complete supplied
+  ADR-021 resolution. It supplies no competing terms, route, price, return,
+  endpoint, reason, Boolean, evaluation time, status, or schedule and invokes
+  no producer or calculator.
+- `Settled` is limited to ADR-021 `Available`, or neutral `NotApplicable` whose
+  preserved asset-return leaf is Available. It means only that the supplied
+  asset-return dependency is available; it does not mean every outcome metric
+  exists or that the neutral source has a directional-win Boolean.
+- `AwaitingEndpoint` requires the exact nested unavailable chain
+  `AssetReturn.PRICE_PAIR_UNAVAILABLE` ->
+  `PricePair.ENDPOINT_PRICE_UNAVAILABLE` ->
+  `Endpoint.ENDPOINT_NOT_REACHED_AS_OF`. No other missing, mismatch,
+  ambiguity, adjustment, continuity, catalog, binding, observation, or numeric
+  condition is treated as temporal.
+- Every other unavailable chain becomes `EvidenceUnavailable` while preserving
+  the complete source. `BASIS_AND_ENDPOINT_PRICE_UNAVAILABLE` remains evidence-
+  unavailable even with nested endpoint-not-reached because waiting for the
+  close cannot repair the unavailable basis price.
+- The three names are source-local readiness evidence only. They are not
+  `OutcomeEvaluationStatus`, `CallOutcome`, `dataComplete`, retry/freshness,
+  cancellation, latest-correction selection, scheduling, or provider-health
+  claims.
+
+## Supplied-leaf directional-win readiness contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-DWR01 | Exact source surface | Package `com.wallstreetreceipts.api.domain.outcome.directionalwinreadiness` contains exactly `DirectionalWinReadinessPolicyVersion`, `DirectionalWinReadinessRequest`, `DirectionalWinReadinessResolution`, and `DirectionalWinReadinessResolver` plus exactly one source-local golden test. No controller, service, repository, provider, DTO, scheduler, or helper is added. |
+| P3-DWR02 | Exact policy identity | Policy enum contains only `SUPPLIED_LEAF_DIRECTIONAL_WIN_READINESS_V1`. ADR-022 locks the exact single-line 2353-byte ASCII/UTF-8 definition and SHA-256 `1eca77c5b4d43de7657281c161a8c50356cd90e1a18c6e9fd7f5b2c0142b7ec7`; every context echoes it and returned bytes are defensive. |
+| P3-DWR03 | Exact all-present request | Request components are exactly readiness policy and `DirectionalWinOrchestrationResolution sourceResolution`; both are non-null. The source uses ADR-021 V1 and digest `51429c7601d4807162855f08c680d1e6bb7895f87fc108e141e5ad3a3ab25bcb`. No raw or competing leaf input exists. |
+| P3-DWR04 | Exact source extraction | The resolver extracts only the complete `AssetReturnResult` already preserved by ADR-021 `Available`, `NotApplicable`, or `AssetReturnUnavailable`. It does not reconstruct terms, routing, price pairs, endpoints, returns, or Booleans and invokes no resolver, selector, orchestrator, or calculator producer. |
+| P3-DWR05 | Exact result variants | Resolution permits exactly `Settled(context,sourceResolution)`, `AwaitingEndpoint(context,sourceResolution)`, and `EvidenceUnavailable(context,sourceResolution)`. Context contains only readiness version/hash; each branch preserves the exact whole ADR-021 source with no outer reason or duplicate leaf. |
+| P3-DWR06 | Settled boundary | `Settled` accepts only ADR-021 directional `Available`, or neutral `NotApplicable` with an available asset-return leaf. It does not add a Boolean to neutral, imply complete metrics, or accept any unavailable return chain. |
+| P3-DWR07 | Exact awaiting chain | `AwaitingEndpoint` requires, simultaneously, asset-return reason `PRICE_PAIR_UNAVAILABLE`, price-pair reason `ENDPOINT_PRICE_UNAVAILABLE`, a typed unavailable price pair carrying that same reason, endpoint reason `ENDPOINT_NOT_REACHED_AS_OF`, and a typed unavailable endpoint carrying that same reason. |
+| P3-DWR08 | Compound-evidence firewall | `BASIS_AND_ENDPOINT_PRICE_UNAVAILABLE` is always `EvidenceUnavailable`, including when it preserves `ENDPOINT_NOT_REACHED_AS_OF`. Every other one of the 55 unavailable chains is also evidence-unavailable except the single endpoint-only chain. |
+| P3-DWR09 | Precedence and reason ownership | Classification order is available return, exact endpoint-only chain, then all remaining unavailable evidence. Exact nested reason inspection occurs only inside `DirectionalWinReadinessResolver`; no reason is flattened, renamed, generalized, or exposed on the outer result. |
+| P3-DWR10 | Constructor and attestation boundary | Public result constructors reject a source classified for another variant by delegating to the resolver's single classification rule. They attest local source policy/shape and classification only, not original request membership, producer invocation, PIT filtering, candidate cardinality, or market truth. |
+| P3-DWR11 | Whole-source preservation | Every result retains the exact supplied ADR-021 object, including terms, route, asset-return result, price-pair/endpoint evidence, nested reasons, and directional Boolean where one exists. No copy, fallback, recalculation, or evidence clearing is permitted. |
+| P3-DWR12 | Determinism | Equal source records classify equally regardless of clock, locale, timezone, input decimal scale where valid, environment, thread, random state, invocation order, or prior calls. The policy accepts no clock, timeout, retry count, or current-time input. |
+| P3-DWR13 | Lifecycle firewall | The slice does not construct or mutate `CallOutcome`; emit `PENDING`, `INCOMPLETE`, `CALCULATED`, or `EXCLUDED`; set `dataComplete`; decide retry, cancellation, latest correction, scheduling, methodology activation, fingerprinting, persistence, aggregation, ranking, or publication. |
+| P3-DWR14 | Product/data firewall | No schema, canonical fixture, manifest, OpenAPI, Flyway, database, API/provider behavior, resource, or web source changes. No key, account, paid plan, provider license, named secret, or network access is needed for this source-local classification. |
+| P3-DWR15 | Repository CI contract | Both protected-production baselines contain exactly 181 files at SHA-256 `4b295246194dfe1a60d6e37380ad398393e8951be070e6e82b7852b151909e8c`. CI locks the dedicated policy and reverse-reference guard, unchanged data/product surfaces, and exact 118/118 Surefire cardinality with an explicit nonzero mismatch exit. |
+
+## Required directional-win readiness golden and negative tests
+
+- Execute exactly 118 vectors: six contract/null/shape/replay/determinism
+  checks, all 55 typed unavailable chains in both directional and neutral
+  source shapes for 110 classification vectors, and two settled source shapes.
+- Lock the exact canonical bytes/hash, four-production-file/one-test surface,
+  two-field request, context components, three sealed variants, exact source
+  policy requirement, reverse references, and absence of producer/calculator or
+  canonical lifecycle wiring.
+- Prove that only the endpoint-only chain is awaiting in both source shapes and
+  that the compound basis-and-endpoint case remains evidence-unavailable.
+  Mutate each nested reason/type and every direct result variant; contradictory
+  construction must fail closed.
+- Prove exact whole-source preservation, equal-but-distinct replay, null
+  rejection, defensive policy bytes, and deterministic locale/default-timezone
+  replay with restoration in `finally`.
+- The expected complete API suite after adding the 118 source-local invocations
+  is exactly 937 tests. Repository CI must contain exactly 29 embedded Python
+  bodies: all 29 compile, the 28 locally executable bodies pass, and the final
+  cross-stack body remains syntax-checked here for workflow service execution.
+  The dedicated policy/reverse-wiring guard and exact 118/118 Surefire
+  cardinality check use explicit nonzero mismatch exits.
+
 ## Deferred work and implementation order
 
-1. Add an explicit reviewed lifecycle/readiness policy before promoting any
-   nested unavailable reason to Pending, retry, cancellation, or scheduling;
-   this source-local orchestration deliberately makes no such inference.
+1. Add a separate canonical lifecycle policy before mapping source-local
+   readiness to Pending/Incomplete, retry/freshness, cancellation, or
+   scheduling. ADR-022 deliberately makes none of those inferences.
 2. Add provider-side raw intraday/tick aggregation only after versioning
    no-trade, halt, auction, bar-straddle, correction-sequence, and raw-coverage
    proof semantics. P5 must first establish entitled historical intraday/tick,

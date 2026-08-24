@@ -34,9 +34,11 @@ contract composes complete supplied forecast terms, calculator-side routing,
 and signed asset-return evidence. It validates exact direction, basis, asset,
 and point-in-time correlation before branch selection, preserves neutral and
 all unavailable return evidence, and invokes the pure directional-win
-calculator only for a directional route plus an available return. None is
-wired to fixtures, persistence, an API, a provider, or the web. The broader P3
-scoring phase remains open.
+calculator only for a directional route plus an available return. The
+seventeenth contract classifies that complete supplied result as source-local
+`Settled`, `AwaitingEndpoint`, or `EvidenceUnavailable` readiness while
+preserving the whole source result. None is wired to fixtures, persistence, an
+API, a provider, or the web. The broader P3 scoring phase remains open.
 Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
 maps, market publication state, recorded S&P call history, and the honest
@@ -354,6 +356,22 @@ SHA-256
 `51429c7601d4807162855f08c680d1e6bb7895f87fc108e141e5ad3a3ab25bcb`
 are locked by ADR-021. Its three results are `Available`, `NotApplicable`, and
 `AssetReturnUnavailable`; none is a canonical lifecycle or publication state.
+
+The completed seventeenth P3 slice accepts exactly its readiness policy and
+one complete supplied ADR-021 result. `Settled` is limited to directional
+`Available`, or neutral `NotApplicable` carrying an available asset-return
+leaf. `AwaitingEndpoint` is limited to the exact nested chain
+`PRICE_PAIR_UNAVAILABLE` -> `ENDPOINT_PRICE_UNAVAILABLE` ->
+`ENDPOINT_NOT_REACHED_AS_OF`. Every other unavailable chain is
+`EvidenceUnavailable`; in particular,
+`BASIS_AND_ENDPOINT_PRICE_UNAVAILABLE` never becomes awaiting merely because
+its nested endpoint is not reached. Every branch preserves the exact whole
+ADR-021 result without flattening a reason or rerunning a producer or
+calculator. The exact 2353-byte policy definition and SHA-256
+`1eca77c5b4d43de7657281c161a8c50356cd90e1a18c6e9fd7f5b2c0142b7ec7`
+are locked by ADR-022. These readiness names do not mean
+`OutcomeEvaluationStatus`, `dataComplete`, retryability, cancellation,
+scheduling, methodology activation, persistence, or publication.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
