@@ -465,10 +465,11 @@ same basis-to-endpoint UTC interval, exact currency with no FX, explicit
 reference calendar/source/venue identity, and index divisor-continuity proof.
 They use separate calculator/result types, must apply ADR-017's exact one-
 subtraction/one scale-12 `HALF_EVEN` division, and never reuse the asset share-
-basis adjustment types. Current DEMO outcome values remain null. ADR-027 now
-implements benchmark assignment and ADR-028 locks the provider-neutral sector
-taxonomy and mapping decision. Basis-frozen sector assignment comes next,
-followed by reference-level pairs, return calculators and readiness. Raw-window
+basis adjustment types. Current DEMO outcome values remain null. ADR-027
+implements benchmark assignment, ADR-028 locks the provider-neutral sector
+taxonomy and mapping decision, and ADR-029 implements basis-frozen sector
+assignment. ADR-030 now adds the two independent reference-level pairs.
+Separate return calculators and source-local readiness come next. Raw-window
 coverage precedes MFE/MAE, alpha and sector alpha come last, and lifecycle
 composition remains separate.
 
@@ -552,6 +553,98 @@ Excluding ADR-029's seven-plus-one surface reproduces ADR-028 production at
 and test/web at 198 files /
 `0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e`,
 while the user-owned `apps/web/next-env.d.ts` remains untouched.
+
+ADR-030 resolves benchmark and sector reference-level pairs independently from explicit point-in-time provider-published price-index evidence over the exact basis-event-to-asset-endpoint UTC interval.
+The disconnected slice adds seven independently named production types and
+one source-local golden for each leg. The benchmark policy is
+`POINT_IN_TIME_EXACT_BENCHMARK_PRICE_INDEX_LEVEL_PAIR_V1`, with an exact
+9342-byte definition and SHA-256
+`2394b535c1061d32c647504a303b6f1e4ec2fe88e6017d9ff335d12087a5f73d`.
+The sector policy is
+`POINT_IN_TIME_EXACT_SECTOR_PRICE_INDEX_LEVEL_PAIR_V1`, with an exact
+9806-byte definition and SHA-256
+`4224648ba01104fd3e96319158c7d6b42da472e9aa6f2ab22ef9fccf43da7e4a`.
+The packages share no generic pair, policy, evidence, result, selector, cast,
+or fallback.
+
+Each request preserves the complete corresponding ADR-027 or ADR-029
+assignment resolution and complete ADR-014 `EndpointPriceResolution`.
+Basis and evaluation cutoff always match exactly. The selector derives anchor
+validity from catalog PIT visibility, exact catalog-to-horizon
+calendar/revision identity, and binding PIT visibility—not from the supplied
+endpoint unavailable label. Only after that anchor is usable must asset match;
+a resolved or not-applicable assignment then also matches the endpoint
+binding's primary venue and currency. The exact source-local anchor reasons
+`CATALOG_NOT_KNOWN_AS_OF`, `CATALOG_EVIDENCE_MISMATCH`, and
+`BINDING_NOT_KNOWN_AS_OF` produce
+`EndpointAnchorUnavailable(context,reason)`. With coherent anchor facts, all
+sixteen ADR-014 unavailable labels are ignored and independently available
+reference evidence may proceed. Assignment N/A and assignment unavailability
+retain their complete upstream receipts and take precedence.
+
+Both legs select one PIT-visible provider-published price-index binding, one
+exact source-recorded level at the basis event, one exact level at the asset
+endpoint UTC, and one divisor-continuity attestation linked to both
+observations over that same interval. Calendar ID/revision and calendar source
+ID/revision remain explicit on the binding, both levels, and continuity row.
+Benchmark levels and continuity repeat the exact assigned canonical benchmark
+asset ID/type. Sector binding, levels, and continuity repeat one explicit
+reference asset ID whose type is exactly `INDEX`. Visible mismatches fail
+closed before cardinality, future evidence is invisible, and equal duplicates
+remain ambiguous. Levels are positive exact `NUMERIC(38,12)`; reference and
+asset currencies match with no FX. Prior close, nearest timestamp,
+interpolation, shifted sessions, total-return indices, ETFs, current baskets,
+market-cap proxies, provider-return fields, deduplication, provider preference,
+and fallback cannot resolve.
+
+The five result variants per leg are `Resolved`, `NotApplicable`,
+`AssignmentUnavailable`, `EndpointAnchorUnavailable`, and
+`EvidenceUnavailable`; the anchor variant carries its independent exact reason.
+Benchmark has 53 ordered local unavailable reasons; sector has 56 because its
+binding also proves exact taxonomy, canonical-node, and independently named
+reference-asset correlation. A resolved WSR node remains economic-activity
+assignment evidence only: the sector reference leg separately links its exact
+mapping evidence and canonical node to an explicit provider-published sector
+price index. Membership provider, index publisher, and level redistributor are
+not assumed to be the same.
+
+ADR-030 adds no actual provider identity, binding, index level, calendar,
+divisor data, schema, fixture, manifest, OpenAPI, Flyway, database, adapter,
+API, or web behavior. It performs no return calculation or readiness/lifecycle
+mapping and does not reuse ADR-016 asset-share price-pair or corporate-action
+types. No API key, account, plan, license, secret, or network access is needed
+for this disconnected contract. Before non-DEMO evidence, P5 must approve the
+exact index products/feeds and historical exact-time index-level,
+calendar identity/revision/source, divisor-continuity/methodology, sector
+binding, storage/cache, display, derived-data, and redistribution rights.
+Credentials come only after that approval through untracked
+local/CI/deployment secret stores, never chat or Git.
+
+ADR-030 verification passes the exact fourteen-plus-two surface, policy
+bytes/hashes, B53/S56 local reasons, independently typed three-reason anchor
+enums, reverse isolation, and four-document marker parity. Focused benchmark
+golden 200/200 and sector golden 220/220—420 total—and full API Maven
+1668/1668 `BUILD SUCCESS` pass with zero failures, errors, or skips, including
+Docker/PostgreSQL/Flyway. Normalized golden-source SHA-256 values are benchmark
+`3518b66914656c8225858f8f15fdb60e25576a15b64f148270cda9881e3d8099`
+and sector
+`af9ec3aa0318595027d13eb4748d41bdb587776ef3d2e5c8b3bf477fa7ba439b`.
+
+The dedicated ADR-030 guard independently passes. All 35/35 workflow Python
+heredoc bodies syntax-compile; 34/34 locally executable bodies pass, with the
+last cross-stack body intentionally syntax-only. SnakeYAML 2.5 parses exactly
+four jobs and Compose config passes. Current production is 216 files /
+`45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d`;
+current API-test/web is 201 /
+`fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f`.
+Exact ADR-030 fourteen-plus-two exclusion reproduces ADR-029 production 202 /
+`b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899`
+and test/web 199 /
+`59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293`.
+README-marker, benchmark-policy-byte, and benchmark expected-cardinality 201
+mutations all exit 1 and are restored; the cardinality gate observes actual
+200. `git diff --check` is clean, and the user-owned
+`apps/web/next-env.d.ts` remains preserved and unstaged: **PASS**.
 
 ## Repository layout
 
