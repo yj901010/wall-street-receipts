@@ -25,7 +25,11 @@ lifecycle state. The supplied-leaf target-error readiness classification is
 also complete at its source-local boundary: available target error settles,
 only the exact endpoint-not-reached chain awaits, and the other 38 constructible
 unavailable shapes remain evidence-unavailable. It likewise publishes no
-canonical lifecycle state.
+canonical lifecycle state. The supplied-leaf target-hit readiness
+classification is also complete at its source-local boundary: the one
+Available and three permanent NotApplicable shapes settle, the sole Pending
+shape awaits its endpoint, and all 36 evidence-unavailable shapes preserve
+their complete typed source. It publishes no canonical lifecycle state.
 
 ## Pure target-hit slice boundary
 
@@ -1096,21 +1100,101 @@ canonical lifecycle state.
   `4a1479312db7053a476ae4b982df3f13aad570332baef4489e03d039cd49114a`,
   and the dedicated and affected reverse guards pass.
 
+## Supplied-leaf target-hit readiness boundary
+
+- The request consumes exactly the readiness policy and one complete supplied
+  ADR-020 `TargetHitOrchestrationResolution`. It supplies no competing
+  eligibility, favorable extreme, reason, Boolean, evaluation time, status, or
+  schedule and invokes no resolver, selector, orchestrator, or calculator.
+- `Settled` contains exactly ADR-020 `Available` and all three permanent
+  `NotApplicable` reasons. Permanent non-applicability is a finished metric
+  meaning, not `false`, a loss, missing evidence, or proof that another metric
+  exists.
+- `AwaitingEndpoint` contains exactly ADR-020 `Pending`. Its nested eligibility
+  result can carry only `HORIZON_NOT_REACHED_AS_OF` and already proves that the
+  endpoint close remains future; the readiness resolver does not reinterpret
+  or duplicate that reason.
+- `EligibilityUnavailable` and `FavorableExtremeUnavailable` always become
+  `EvidenceUnavailable`. Missing-as-of or another nested evidence reason is not
+  promoted into a retry, freshness, temporal, or permanence claim.
+- The three names are source-local readiness evidence only. They are not
+  `OutcomeEvaluationStatus`, `CallOutcome`, `dataComplete`, retry/freshness,
+  cancellation, latest-correction selection, scheduling, provider health,
+  methodology activation, persistence, aggregation, ranking, or publication.
+  A later canonical lifecycle policy must consider all 10 required metrics and
+  intentional non-applicability.
+
+## Supplied-leaf target-hit readiness contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-THR01 | Exact source surface | Package `com.wallstreetreceipts.api.domain.outcome.targethitreadiness` contains exactly `TargetHitReadinessPolicyVersion`, `TargetHitReadinessRequest`, `TargetHitReadinessResolution`, and `TargetHitReadinessResolver` plus exactly one source-local golden test. No controller, service, repository, provider, DTO, scheduler, or helper is added. |
+| P3-THR02 | Exact policy identity | Policy enum contains only `SUPPLIED_LEAF_TARGET_HIT_READINESS_V1`. ADR-024 locks the exact single-line 2042-byte ASCII/UTF-8 definition and SHA-256 `8f81dee5227370d82dd91cd2fb8448797c7028eaa485dc64cf4bdc3cbf2f31a3`; every context echoes it and returned bytes are defensive. |
+| P3-THR03 | Exact all-present request | Request components are exactly readiness policy and `TargetHitOrchestrationResolution sourceResult`; both are non-null. The source uses ADR-020 `POINT_IN_TIME_TARGET_HIT_ORCHESTRATION_V1` and digest `b91bf68958e42ad003b80973c74f9acc2dad8e4629f6a1905798df98aa8b5348`. No raw or competing leaf input exists. |
+| P3-THR04 | Exact source consumption | The resolver consumes only the complete supplied orchestration result. It does not reconstruct eligibility, target, favorable extreme, Boolean, reason, or evaluation time and invokes no eligibility resolver, favorable-extreme selector, target-hit orchestrator, calculator, or producer. |
+| P3-THR05 | Exact result variants | Resolution permits exactly `Settled(context,sourceResult)`, `AwaitingEndpoint(context,sourceResult)`, and `EvidenceUnavailable(context,sourceResult)`. Context contains only readiness version/hash; every branch preserves the exact whole ADR-020 source with no outer reason or copied nested leaf. |
+| P3-THR06 | Settled boundary | `Settled` accepts exactly one `Available` shape and all three permanent `NotApplicable` reasons. Non-applicability is not converted to a Boolean and does not imply that another metric or the overall outcome is complete. |
+| P3-THR07 | Exact awaiting boundary | `AwaitingEndpoint` accepts only the typed ADR-020 `Pending` variant. Its preserved nested eligibility record carries the sole `HORIZON_NOT_REACHED_AS_OF` reason and proves an unreached resolved endpoint; no unavailable branch may await. |
+| P3-THR08 | Evidence-unavailable boundary | All 14 `EligibilityUnavailable` and all 22 `FavorableExtremeUnavailable` shapes are `EvidenceUnavailable`. No nested missing-as-of, mismatch, ambiguity, adjustment, continuity, catalog, binding, observation, or numeric meaning is inferred to be retryable, temporal, or permanent. |
+| P3-THR09 | Exact matrix and precedence | The complete constructible source matrix is exactly 41 shapes: four settled (one Available plus three NotApplicable), one awaiting Pending, and 36 evidence-unavailable (14 eligibility plus 22 favorable extreme). Classification order is Available, NotApplicable, Pending, EligibilityUnavailable, FavorableExtremeUnavailable. |
+| P3-THR10 | Constructor and attestation boundary | Public result constructors reject a source classified for another variant by delegating to the resolver's single classification rule. They attest local source policy/shape and classification only, not original request membership, PIT filtering, candidate cardinality, selector/calculator invocation, or market truth. |
+| P3-THR11 | Whole-source preservation | Every result retains the exact supplied ADR-020 object, including its context, complete nested eligibility or favorable-extreme resolution, reasons, and Boolean where available. No copy, fallback, recalculation, reason flattening, or evidence clearing is permitted. |
+| P3-THR12 | Determinism | Equal source records classify equally regardless of clock, locale, timezone, environment, thread, random state, invocation order, or prior calls. The policy accepts no clock, timeout, retry count, or current-time input. |
+| P3-THR13 | Lifecycle firewall | The slice does not construct or mutate `CallOutcome`; emit `PENDING`, `INCOMPLETE`, `CALCULATED`, or `EXCLUDED`; set `dataComplete`; decide retry, freshness, cancellation, latest correction, scheduling, methodology activation, fingerprinting, persistence, aggregation, ranking, or publication. |
+| P3-THR14 | Product/data firewall | No schema, canonical fixture, manifest, OpenAPI, Flyway, database, API/provider behavior, resource, or web source changes. No API key, account, paid plan, provider license, named secret, or network access is needed for this source-local classification. |
+| P3-THR15 | Repository CI contract | Both protected-production baselines contain exactly 189 files at SHA-256 `bc251da006f897de69744ee8aec2400da5d18c38c2945aac03ec46063cc18721`. CI locks the four-production-file/one-test surface, exact policy bytes/hash, exact 47/47 Surefire cardinality with an explicit nonzero mismatch exit, reverse references, unchanged product/data surfaces, and the lifecycle firewall; all affected guards pass. |
+
+## Required target-hit readiness golden and negative tests
+
+- Execute exactly 47 vectors: six fixed policy/contract, null/shape, wrong
+  direct-construction, equal-but-distinct replay, and locale/time-zone
+  determinism checks plus all 41 constructible source shapes.
+- Prove exactly four settled shapes (one Available plus all three NotApplicable
+  reasons), one awaiting Pending shape, and 36 evidence-unavailable shapes (all
+  14 eligibility-unavailable plus all 22 favorable-extreme-unavailable).
+- Lock the exact canonical bytes/hash, four-production-file/one-test surface,
+  two-field request, context components, three sealed variants, exact ADR-020
+  source policy requirement, reverse references, and absence of producer,
+  selector, calculator, or canonical lifecycle wiring.
+- Prove exact whole-source identity preservation, equal-but-distinct replay,
+  null rejection, wrong direct-variant rejection, defensive policy bytes, and
+  deterministic locale/default-timezone replay with restoration in `finally`.
+- Focused source-local verification passes exactly 47/47 with zero failures,
+  errors, or skips. Complete Maven verification passes exactly 1030/1030 with
+  zero failures, errors, or skips, including PostgreSQL/Flyway, H2/Spring/API,
+  and Spring Boot packaging. Repository CI contains exactly 31 embedded Python
+  bodies: all 31 compile, all 30 locally executable bodies pass, and the final
+  cross-stack body remains syntax-checked for workflow service execution. Both
+  protected-production baselines are fixed at 189 files / SHA-256
+  `bc251da006f897de69744ee8aec2400da5d18c38c2945aac03ec46063cc18721`;
+  the dedicated ADR-024, affected reverse-reference, baseline, and exact 47/47
+  cardinality guards pass.
+
 ## Deferred work and implementation order
 
-1. Complete the remaining source-local metric readiness contracts, then add a
-   separate canonical lifecycle policy across all 10 required metrics before
-   mapping readiness to Pending/Incomplete, retry/freshness, cancellation, or
-   scheduling. ADR-022 and ADR-023 deliberately make none of those inferences.
-2. Add provider-side raw intraday/tick aggregation only after versioning
+1. Decide explicitly whether ADR-022 is the combined asset-return/directional-
+   win readiness receipt or whether a separate asset-return receipt is needed.
+   ADR-024 does not make that cross-metric ownership decision.
+2. Before benchmark or sector return contracts are designed, obtain explicit
+   product approval for benchmark identity, sector taxonomy and point-in-time
+   membership, price-versus-total-return basis, currency, venue, and corporate-
+   action treatment. Do not infer these financial meanings from existing demo
+   data.
+3. Add benchmark/sector point-in-time evidence, return calculations, and
+   source-local readiness only after that approval.
+4. Add provider-side raw intraday/tick aggregation only after versioning
    no-trade, halt, auction, bar-straddle, correction-sequence, and raw-coverage
    proof semantics. P5 must first establish entitled historical intraday/tick,
    calendar, corporate-action, asset/venue data and storage, display,
    derived-data, and redistribution rights.
-3. Add MFE/MAE after raw full-window completeness and bullish/bearish sign rules;
+5. Add MFE/MAE after raw full-window completeness and bullish/bearish sign rules;
    add alpha/sector alpha last, after benchmark/sector identity and corporate-
    action-adjusted return policy exist.
-4. Persist or expose a non-null metric only with a canonical versioned input
+6. Add a separate canonical lifecycle policy across all 10 required metrics,
+   including intentional non-applicability, before mapping source readiness to
+   Pending/Incomplete, retry/freshness, cancellation, latest correction, or
+   scheduling. ADR-022, ADR-023, and ADR-024 make none of those inferences.
+7. Persist or expose a non-null metric only with a canonical versioned input
    fixture, reproducible methodology definition/hash, input fingerprint, golden
    test, append-only lineage, and schema/domain/database completeness matrix.
 
