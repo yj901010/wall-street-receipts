@@ -15,7 +15,12 @@ loss, and the disconnected mechanical adapter that translates the two common
 directional sides into the existing target-hit and directional-win side enums
 without invoking either calculator, followed by closed full-polarity routing
 that preserves either directional calculator-side evidence or explicit
-non-directional evidence. The broader P3 scoring phase remains open.
+non-directional evidence. The ninth and tenth P3 contracts are complete as
+disconnected source-local leaves: point-in-time selection of one
+official primary-venue endpoint close, followed by exact target error using the
+actual endpoint price as denominator with scale-12 half-even rounding. Neither
+is wired to fixtures, persistence, an API, a provider, or the web. The broader
+P3 scoring phase remains open.
 Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
 maps, market publication state, recorded S&P call history, and the honest
@@ -211,9 +216,41 @@ no calculator, owns no new version/hash, and has no runtime or product
 connection. No API key, account, provider, market calendar, price feed, data
 license, or network access is required.
 
+The completed ninth P3 slice selects one endpoint close only from explicit
+point-in-time evidence. V1 requires a resolved ADR-010 session endpoint, catalog
+and asset/primary-venue/source binding known by evaluation-as-of, and exactly
+one known observation matching the official regular-session close. Currency is
+exact with no FX or fallback; the price is positive `NUMERIC(38,12)`, adjusted
+for splits/reverse splits to the endpoint-share basis, and dividend-unadjusted.
+Future candidates are invisible before identity checks, zero known candidates
+are explicitly missing, and multiple valid known candidates are ambiguous.
+The exact 2259-byte policy definition and SHA-256
+`37e37aba9302d77366cef4129f77a82b7ccb2f1937bfffc0315ea8d0bc6b1f76`
+are locked by ADR-014. This is not a claim that any bundled value is a real
+observed close.
+
+The completed tenth P3 slice consumes that complete endpoint resolution plus
+nullable point-in-time target evidence. Its only formula is
+`abs(target-actual)/actual`, with the actual endpoint price as denominator and
+exactly one scale-12 `HALF_EVEN` division. Missing target and endpoint evidence
+compose explicitly while preserving the exact nested endpoint reason; identity
+mismatches and rounded output overflow are never converted to zero. The exact
+1942-byte policy definition and SHA-256
+`31ca30555549f670e3c22d98ead16f7a02bfad198f36532effaf4a4b6931d074`
+are locked by ADR-015. No target error is added to the canonical outcome
+fixtures or published by a product route.
+
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
 adapters before they reach the canonical domain.
+
+These two disconnected leaves require no API key, provider account, paid plan,
+domain, vendor license, or network access. Real-data integration remains the P5
+boundary: before any non-DEMO value enters them, a provider must be selected and
+credentials plus contractual rights for primary-venue closes, calendars,
+corporate actions, reference data, target evidence, storage, display, and
+derived outputs must be established. No vendor or environment-variable name is
+invented by this slice.
 
 ## Repository layout
 

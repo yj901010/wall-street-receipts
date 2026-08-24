@@ -7,7 +7,9 @@ named-horizon and explicit forecast-basis policy slice is also complete. The
 call-direction polarity policy slice is also complete. None publishes a
 calculated outcome or completes the broader P3 scoring phase, which remains
 open. The mechanical calculator-side adapter slice is also complete. The
-disconnected calculator-side routing-evidence slice is also complete.
+disconnected calculator-side routing-evidence slice is also complete. The
+point-in-time official endpoint-price selector and target-error calculation
+leaves are also complete; no runtime outcome or product surface is published.
 
 ## Pure target-hit slice boundary
 
@@ -466,22 +468,135 @@ disconnected calculator-side routing-evidence slice is also complete.
   switching, sole reverse wiring, no calculator invocation, no policy identity,
   no canonical JSON changes, and no product publication.
 
+## Point-in-time endpoint-price selection slice boundary
+
+- The selector consumes one ADR-010 strict-close `Resolved` window plus
+  explicit catalog, asset/primary-venue/source binding, evaluation-as-of, and
+  observation-candidate evidence. It never obtains any of those inputs.
+- V1 means the official primary-venue regular-session endpoint close in the
+  binding currency, with no FX or fallback, split/reverse-split adjusted to the
+  endpoint-share basis and dividend-unadjusted.
+- Catalog, binding, and every candidate carry separate point-in-time and
+  provenance evidence. Both `availableAt` and `capturedAt` must be known by
+  `evaluationAsOf`; future candidates are filtered before any identity test.
+- Only exactly one fully valid known candidate resolves. Zero known candidates,
+  ordered mismatch gates, continuity failure, and multiple valid known
+  candidates remain explicit unavailable evidence rather than a guessed price.
+- The selector is disconnected from canonical fixtures, persistence, API,
+  providers, and web publication. Its goldens are evidence vectors, not market
+  facts.
+
+## Point-in-time endpoint-price contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-EP01 | Exact file/package surface | Production package `com.wallstreetreceipts.api.domain.outcome.observation` contains exactly `CatalogPointInTimeEvidence.java`, `CorporateActionContinuity.java`, `EndpointPriceAdjustmentBasis.java`, `EndpointPriceBinding.java`, `EndpointPriceField.java`, `EndpointPriceObservation.java`, `EndpointPricePolicyVersion.java`, `EndpointPriceRequest.java`, `EndpointPriceResolution.java`, and `EndpointPriceSelector.java`. Tests add exactly matching `EndpointPriceSelectorGoldenTest.java`; no provider/controller/repository/helper file is added. |
+| P3-EP02 | Exact policy identity | `EndpointPricePolicyVersion` contains exactly `OFFICIAL_PRIMARY_VENUE_CLOSE_SPLIT_ADJUSTED_V1`. Its canonical definition is the exact ADR-014 single-line 2259-byte ASCII/UTF-8 sequence and its fixed lowercase SHA-256 is `37e37aba9302d77366cef4129f77a82b7ccb2f1937bfffc0315ea8d0bc6b1f76`. Returned bytes are defensive and every result context echoes the digest. |
+| P3-EP03 | Strict-horizon input | Request accepts only `SessionCloseHorizonResolution.Resolved` using `STRICTLY_AFTER_BASIS_EVENT_SESSION_CLOSE_V1` and exact hash `550087efe7ddf2ba31974c89c2740ab79df986eefef48919c32c56a3232f8dc1`. An incomplete/directly inferred horizon, different version/hash, null component, or sub-microsecond evaluation instant fails closed. |
+| P3-EP04 | Exact PIT evidence | Catalog and binding require canonical trimmed identities, separate provenance, microsecond times, and `capturedAt >= availableAt`. Both timestamps must be `<= evaluationAsOf`; catalog ID/revision must exactly match the resolved horizon context. The endpoint close must be `<= evaluationAsOf`. Gate precedence is exactly catalog not known, catalog mismatch, binding not known, endpoint not reached, then no known observation. |
+| P3-EP05 | Future invisibility | Candidate filtering evaluates `availableAt <= evaluationAsOf && capturedAt <= evaluationAsOf` before every identity/mismatch/cardinality check. Empty and all-future lists return equal complete `OBSERVATION_MISSING_AS_OF` results. Adding future exact, wrong-identity, or duplicate rows to one known valid row leaves the full resolved result equal, including context and selected observation. |
+| P3-EP06 | Exact known-candidate precedence | Known candidates are checked in exact order for asset, primary venue, currency, price-source ID/revision, catalog ID/revision, session ID, exact endpoint-close `observedAt`, price field, adjustment basis, and continuity. Multi-mismatch vectors return the first reason independent of candidate-list order; no string parsing, normalization, tolerance, implicit source preference, or later mismatch may override it. |
+| P3-EP07 | Exact price semantics | The only accepted field is `OFFICIAL_REGULAR_SESSION_CLOSE`; venue is exact primary venue, currency is exact with no FX, and source ID/revision is exact. Price is positive and exactly `NUMERIC(38,12)`-representable. Adjustment is exactly split/reverse-split to endpoint-share basis and dividend-unadjusted; only `SPLIT_REVERSE_SPLIT_CONTINUOUS` is available. |
+| P3-EP08 | Cardinality and identity | Exactly one fully valid known candidate resolves and preserves observation ID, provider event ID, source ID/revision, provenance, catalog/session identity, field, basis, continuity, times, original decimal value, and scale. Two valid known rows—including the same object repeated—return `OBSERVATION_AMBIGUOUS`; no dedupe or fallback exists. |
+| P3-EP09 | Closed result and constructor ownership | `EndpointPriceResolution` permits exactly `Resolved(context,observation)` and `Unavailable(context,reason)` with the 16 ADR-014 reasons in exact order. Context contains exact policy identity, complete horizon resolution, catalog evidence, binding, and evaluation-as-of. Public constructors validate locally decidable consistency only; only `EndpointPriceSelector` attests request membership, PIT filtering, gate precedence, and cardinality. |
+| P3-EP10 | Determinism and purity | Equal requests return equal results regardless of clock, locale, default timezone, input order where precedence is invariant, prior calls, environment, thread, or random state. Production uses deterministic Java/domain types only; no `Clock`, local calendar inference, float/double, rounding, JSON, framework, repository, network, provider, scheduler, reflection, environment, or mutable global state is allowed. |
+| P3-EP11 | Exact reverse graph | Outside ADR-010's owning horizon package, only the exact endpoint request/resolution types consume their required strict-close types. The selector is the sole production consumer that attests endpoint request candidates. Target-error may consume only the exact endpoint policy/resolution/adjustment-basis types it requires; no other production package consumes raw observation, selector, or request types. |
+| P3-EP12 | No product publication | Existing 14 schemas, 13 canonical fixture files, manifest membership/order, five OpenAPI paths, five Flyway migrations, API/controller/repository/database behavior, canonical methodology/outcome rows, and web source remain unchanged. No API key, account, paid plan, domain, provider license, or network access is required. P5 owns real primary-venue close, calendar, corporate-action, reference-data, display/storage/derived-data rights, and credentials. |
+
+## Required endpoint-price golden and negative tests
+
+- Exact canonical string bytes, length 2259, independently recomputed SHA-256,
+  fixed returned digest, and defensive byte copies are asserted. Reflection or
+  equivalent exact-shape checks lock all ten production types, enum order,
+  request/context/result components, sealed variants, and 16 reason values.
+- Gate vectors independently cover catalog/binding `availableAt` and
+  `capturedAt` immediately before, at, and one microsecond after
+  `evaluationAsOf`; catalog identity mismatch; endpoint close before/at/after
+  evaluation; empty candidates; and candidates future by either timestamp.
+- Full-result equality—not reason-only equality—proves empty equals all-future
+  wrong candidates, and one known exact candidate equals the same request plus
+  future exact, future wrong, and future duplicate candidates.
+- Every known-candidate mismatch reason is mutation-sensitive. Multi-mismatch
+  rows and reversed list order lock precedence. One valid known row resolves;
+  two distinct valid known rows and the same known row repeated both produce
+  exact ambiguity.
+- Exact source/catalog/session/event/provenance preservation, scale-equivalent
+  positive price, exact `NUMERIC(38,12)` maximum, and all invalid decimal/time/
+  identity constructors are covered. Each disallowed price field, adjustment
+  basis, and corporate-action continuity value fails with the exact reason.
+- Locale/default-timezone replay restores globals in `finally`; repository CI
+  locks exact files/imports, narrow ADR-010/ADR-015 reverse edges, no provider
+  or runtime wiring, and unchanged canonical product surfaces.
+
+## Point-in-time target-error slice boundary
+
+- The calculator consumes one complete ADR-014 endpoint-price resolution and
+  nullable target evidence. It never selects a target or endpoint observation.
+- A target is known only if both of its PIT timestamps are not after the
+  endpoint context's `evaluationAsOf`; null and future target evidence are
+  intentionally indistinguishable and invisible to the output.
+- Formula is exactly `abs(target-actual)/actual`, using actual endpoint price as
+  denominator and exactly one scale-12 `HALF_EVEN` division. Output is a decimal
+  ratio, not a display percent.
+- Missing target and endpoint states compose without flattening the exact
+  nested endpoint reason. Complete evidence must match basis, asset, primary
+  venue, currency, and adjustment basis before calculation.
+- This disconnected leaf does not invoke target-hit/directional-win, activate a
+  canonical scoring methodology, persist an outcome, or publish a metric.
+
+## Point-in-time target-error contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-TE01 | Exact file/package surface | Production package `com.wallstreetreceipts.api.domain.outcome.targeterror` contains exactly `TargetErrorCalculator.java`, `TargetErrorInput.java`, `TargetErrorPolicyVersion.java`, `TargetErrorResult.java`, and `TargetPriceEvidence.java`. Tests add exactly matching `TargetErrorCalculatorGoldenTest.java`; no orchestrator/provider/controller/repository/helper file is added. |
+| P3-TE02 | Exact policy identity | `TargetErrorPolicyVersion` contains exactly `ACTUAL_DENOMINATOR_SCALE_12_HALF_EVEN_V1`. Its canonical definition is the exact ADR-015 single-line 1942-byte ASCII/UTF-8 sequence and fixed lowercase SHA-256 `31ca30555549f670e3c22d98ead16f7a02bfad198f36532effaf4a4b6931d074`. Returned bytes are defensive and every calculation context echoes the digest. |
+| P3-TE03 | Exact endpoint input | Input accepts exactly one ADR-014 endpoint resolution using `OFFICIAL_PRIMARY_VENUE_CLOSE_SPLIT_ADJUSTED_V1` and hash `37e37aba9302d77366cef4129f77a82b7ccb2f1937bfffc0315ea8d0bc6b1f76`, plus nullable target evidence. No raw price, favorable extreme, return, side, call aggregate, provider, clock, or fallback field exists. |
+| P3-TE04 | Target evidence and PIT | Target evidence contains exact evidence ID, `OutcomeBasis`, asset, primary venue, currency, approved adjustment basis, target, available/captured times, and provenance. It requires `basis.eventTime <= availableAt <= capturedAt`, microsecond times, canonical identities, and positive exact `NUMERIC(38,12)`. Known-as-of requires both timestamps `<= endpoint.evaluationAsOf`; null and future target produce equal full results. |
+| P3-TE05 | Missing-state truth table | Missing target plus unavailable endpoint yields `TARGET_AND_ENDPOINT_PRICE_UNAVAILABLE` with exact nested endpoint reason; missing target with resolved endpoint yields `TARGET_MISSING_AS_OF` and null nested reason; known target with unavailable endpoint yields `ENDPOINT_PRICE_UNAVAILABLE` with exact nested reason. Future target is missing before identity checks, and no endpoint reason is dropped or replaced. |
+| P3-TE06 | Identity precedence | With known target and resolved endpoint, exact precedence is basis, asset, primary venue, currency, then adjustment basis. Currency must match exactly with no FX. Multi-mismatch vectors return the first exact reason; no normalization, alias, fallback, or alternate evidence is inferred. |
+| P3-TE07 | Exact formula | Complete matching input computes exactly `target.subtract(actual).abs().divide(actual, 12, HALF_EVEN)`: actual endpoint price is the sole denominator, absolute target difference is the numerator, exactly one division/rounding occurs, and output is a decimal ratio. Asymmetric actual-denominator vectors, exact equality, and two opposite half-even tie parities lock the rule. |
+| P3-TE08 | Decimal/output boundary | Inputs are positive and exact `NUMERIC(38,12)`. Available output is nonnegative, exact scale 12, and precision at most 38. A value whose one permitted rounding produces precision 39 returns `OUTPUT_NOT_REPRESENTABLE`; it is never clipped, rescaled again, returned at another scale, or converted through float/double. |
+| P3-TE09 | Closed result and constructor ownership | `TargetErrorResult` permits exactly `Available(context,targetError)` and `Unavailable(context,reason,endpointReason)` with the nine ADR-015 reasons in exact enum order. Context contains exact target-error policy identity and the complete endpoint resolution only. Public constructors validate local shape/hash/endpoint-reason consistency; only `TargetErrorCalculator` attests target PIT visibility, precedence, identity, formula, and representability. |
+| P3-TE10 | Determinism and purity | Equal input returns equal output regardless of clock, locale, default timezone, original decimal scale where valid, prior calls, environment, thread, or random state. Production imports only deterministic Java/domain types; no target-hit/directional-win invocation, return/window calculation, JSON, Spring, persistence, repository, network, provider, scheduler, reflection, environment, or mutable global state exists. |
+| P3-TE11 | Exact reverse graph | Only the five target-error production types consume this new policy/result/evidence surface. They may reference only ADR-010 `OutcomeBasis` and the exact ADR-014 endpoint policy/resolution/adjustment-basis types required by their components and consistency checks. No existing product runtime class invokes the calculator or consumes its result. |
+| P3-TE12 | No product publication | No schema, canonical fixture, manifest member, JSON golden, OpenAPI path, Flyway migration, database row, API/controller/repository/provider behavior, methodology activation, input fingerprint, outcome mutation, or web source is added. No API key/account/vendor/license/network access is needed for the leaf; P5 owns real target and endpoint data acquisition and rights. |
+
+## Required target-error golden and negative tests
+
+- Exact canonical string bytes, length 1942, independently recomputed SHA-256,
+  fixed returned digest, and defensive byte copies are asserted. Reflection or
+  equivalent exact-shape checks lock all five production types, request/result
+  records, enum order, sealed variants, and nine reason values.
+- The exact three-row missing-state truth table is crossed with all 16 endpoint
+  reasons where applicable, preserving each nested reason. Full-result equality
+  proves null target equals a target future by available time and one future by
+  captured time; future mismatches must never leak into output/context.
+- Basis, asset, venue, currency, and adjustment-basis mismatches are asserted
+  independently and in multi-mismatch/precedence vectors. Original/correction
+  basis identity and event time are exact; no matching by call ID alone exists.
+- Formula vectors cover zero error, target above actual, target below actual,
+  asymmetric actual denominators, scale-equivalent inputs, exact maximums,
+  exactly one division, output scale 12, and two half-even ties whose retained
+  digit is respectively even and odd.
+- Rounded output overflow—not merely invalid input—returns exact
+  `OUTPUT_NOT_REPRESENTABLE`. Null/malformed identity/time/policy/hash, target
+  before basis event, nonpositive/scale-13/precision-39 target, invalid direct
+  result shape, and wrong nested endpoint reason fail closed.
+- Locale/default-timezone replay restores globals in `finally`; repository CI
+  locks exact files/imports, formula/rounding markers, reverse isolation, no
+  runtime invocation, and unchanged canonical product surfaces.
+
 ## Deferred work and implementation order
 
-1. Add endpoint-price/asset-return support only after catalog provenance, asset/venue
-   association, observation identity, corporate-action, and currency rules are
-   versioned.
-2. Add target error after the exact
-   `actual` observation, positivity, output scale, and rounding policy are
-   versioned. Target error precedes window metrics because it needs one resolved
-   close rather than a complete high/low path.
-3. Invoke calculators only through a later orchestrator consuming the closed
+1. Add asset return only after a separately versioned price-pair, split/action
+   continuity, basis, currency, and unavailable-state contract is approved.
+2. Invoke calculators only through a later orchestrator consuming the closed
    routing evidence, after target eligibility, window inclusivity, point-in-time
    input identity, and unavailable-state composition are locked.
-4. Add MFE/MAE after full-window completeness and bullish/bearish sign rules;
+3. Add MFE/MAE after full-window completeness and bullish/bearish sign rules;
    add alpha/sector alpha last, after benchmark/sector identity and corporate-
    action-adjusted return policy exist.
-5. Persist or expose a non-null metric only with a canonical versioned input
+4. Persist or expose a non-null metric only with a canonical versioned input
    fixture, reproducible methodology definition/hash, input fingerprint, golden
    test, append-only lineage, and schema/domain/database completeness matrix.
 
