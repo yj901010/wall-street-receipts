@@ -1236,31 +1236,100 @@ ADR-022 remains the sole shared receipt for asset-return and directional-win rea
   ownership guard preserves the exact 118/118 ADR-022 golden contract and the
   protected 189-file baseline/hash.
 
+## Comparative reference-return foundation boundary
+
+ADR-026 locks benchmark and sector returns to explicit point-in-time reference assignments.
+
+- ADR-026 records the received product approval as a decision-only foundation.
+  It adds no executable assignment, reference-evidence, calculation, or
+  readiness policy and no canonical definition or digest.
+- Benchmark and sector assignments remain independently typed. Each freezes an
+  explicit source-revised assignment at the exact original/correction basis
+  event; a correction is evaluated independently and current/latest membership
+  is never inferred.
+- V1 benchmark applicability requires visible coherent evidence of an equity,
+  a United States primary venue, and USD. Such an asset maps to `asset-spx`
+  only through exactly one explicit visible assignment. Known out-of-scope
+  assets are typed not-applicable; expected missing, conflicting, or ambiguous
+  evidence is typed unavailable.
+- A future WSR sector taxonomy must be provider-neutral, versioned, closed, and
+  explicitly mapped from preserved provider classifications. Synthetic P2 map
+  labels are not evidence and no GICS, ICB, ETF, basket, or treemap semantics
+  are inferred.
+- Benchmark and sector price-return evidence must cover the exact common
+  basis-event-to-asset-endpoint UTC interval, match currency without FX,
+  preserve reference-specific venue/calendar/source revisions, and attest
+  provider-published index divisor continuity with reference-specific types.
+
+## Comparative reference-return foundation contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-CRF01 | Decision-only surface | ADR-026, README, this gate, the implementation log, and repository validation are the only intended changes. No Java production/test file, executable policy, canonical definition/hash, schema, fixture, manifest, OpenAPI, Flyway, database, provider, API, resource, or web source is added. |
+| P3-CRF02 | Independent assignment ownership | Benchmark and sector assignment evidence, selection, results, and later readiness remain distinct contracts. No generic nullable reference, implicit shared receipt, cross-cast, or cross-kind fallback is allowed. |
+| P3-CRF03 | Exact basis freeze | Assignment membership is evaluated at the exact `OutcomeBasis.eventTime` using a start-inclusive/end-exclusive effective interval and remains frozen through the horizon. Original and correction bases are independent; latest/current membership inference is absent. |
+| P3-CRF04 | PIT visibility | Assignment, classification, taxonomy mapping, and later reference evidence are visible only when both `availableAt` and `capturedAt` are not after the exact `evaluationAsOf`. Future evidence is identical to absent evidence and cannot affect output or reasons. |
+| P3-CRF05 | Required evidence identity | Later evidence preserves provider-event/evidence identity, source ID/revision, provenance, asset/class, primary venue and explicitly sourced venue country, currency, effective interval, and PIT timestamps. Open-ended membership must be represented explicitly. |
+| P3-CRF06 | Benchmark V1 scope | Only an explicitly evidenced `AssetType.EQUITY` with primary-venue country exactly ISO 3166-1 alpha-2 `US` and currency exactly ISO 4217 `USD` enters V1 benchmark scope. Ticker, name, current master state, fixture universe, map inclusion, and exchange-like text establish nothing. |
+| P3-CRF07 | Exact benchmark assignment | An in-scope asset is assigned to canonical `asset-spx` with `AssetType.INDEX` only by exactly one valid visible mapping that attests a USD provider-published price-index reference. The existing DEMO identity alone is not assignment or level evidence. |
+| P3-CRF08 | Typed N/A versus unavailable | Visible coherent non-equity, index, non-US, or non-USD classification is intentional `NotApplicable`. Missing mapping for an in-scope asset, missing/conflicting classification, visible out-of-scope mapping conflict, invalid mapping, or duplicate mapping is `EvidenceUnavailable`; none becomes zero, false, loss, or automatic SPX assignment. |
+| P3-CRF09 | No inference or fallback | `SPX`, `S&P 500`, `MarketSnapshot.spx`, P2 `sp500`, treemap/map data, ticker, latest row, nearest interval, provider preference, deduplication, and fallback cannot create or repair an assignment. |
+| P3-CRF10 | Provider-neutral taxonomy | Before sector code exists, a later decision locks WSR taxonomy ID/version, canonical bytes/hash, closed node IDs, and exact provider-to-canonical mapping evidence. Provider labels are preserved but do not imply GICS, ICB, or another licensed taxonomy. |
+| P3-CRF11 | Exact sector reference | Sector return uses the explicitly assigned provider-published sector price index. ETF, current basket, constituent inference, market-cap proxy, treemap aggregate, and provider-return fields are excluded. |
+| P3-CRF12 | Exact common UTC interval | Reference evidence binds the exact source-recorded level at `basis.eventTime` and the exact level at the asset endpoint UTC. Prior close, nearest timestamp, interpolation, or shifted-session substitution is absent. |
+| P3-CRF13 | Return and currency basis | V1 is price return, not total return. Asset and reference currency match exactly with no FX. Reference-specific calculation venue, calendar, source, and revisions are preserved without shifting the common UTC interval. |
+| P3-CRF14 | Divisor continuity and type separation | Provider-published index evidence attests divisor continuity with reference-specific types. ADR-014/ADR-016 split/reverse-split share-basis enums and evidence are not reused, cast, or relabelled for an index. |
+| P3-CRF15 | Separate deterministic calculators | Future benchmark and sector calculators have separate semantic input/result types and must use ADR-017's exact `(endpoint-basis)/basis` arithmetic: one subtraction, one scale-12 `HALF_EVEN` division, no intermediate or second rounding, decimal-ratio units, and fail-closed representability. They do not cast to `AssetReturnResult` or trust a provider-calculated return. |
+| P3-CRF16 | Null DEMO and lifecycle firewall | Current DEMO benchmark/sector/alpha fields remain null. This foundation sets no outcome status, `dataComplete`, retry, permanence, cancellation, latest-correction, freshness, scheduling, methodology activation, fingerprint, persistence, aggregation, ranking, API/UI, or publication behavior. |
+| P3-CRF17 | Staged delivery and external boundary | Benchmark assignment precedes sector taxonomy/assignment, reference-level pairs, independent calculators, and source-local readiness. No key, account, paid plan, license, secret, or network is needed now; P5 must establish provider entitlements and storage/display/derived/redistribution rights before non-DEMO evidence or scoped secrets exist. |
+
+## Required comparative-foundation documentation and negative checks
+
+- Documentation marker parity, decision-only surface, forbidden-inference
+  wording, staged-order consistency, and protected production/test baseline:
+  **PASS** — the exact ADR-026 marker occurs once in each of the four required
+  documents, no premature runtime surface exists, and the protected baseline
+  remains exactly 189 files with SHA-256
+  `bc251da006f897de69744ee8aec2400da5d18c38c2945aac03ec46063cc18721`.
+  The API-test plus application-owned web source/config baseline is exactly
+  197 files with SHA-256
+  `12fb3dbacd830f86ca0790284e2a2833d0314bcf56291337d7698d40720ca45d`;
+  a temporary sector-index-test plus web-taxonomy mutation pair produces the
+  required nonzero guard exit.
+- Complete API regression, repository CI bodies, workflow YAML parsing, Compose
+  validation, and patch hygiene: **PASS** — Maven ran 1030 tests with zero
+  failures, errors, or skips and completed the build; all 31 embedded Python
+  bodies compile under optimization, all 30 locally executable bodies pass,
+  SnakeYAML parses the exact four jobs, Compose configuration is valid, and
+  `git diff --check` is clean.
+
 ## Deferred work and implementation order
 
-1. ADR-025 completes the asset-return/directional-win readiness ownership
-   decision: consume ADR-022 once as one ownership input covering two metric
-   meanings; do not add a separate asset-return readiness receipt.
-2. Before benchmark or sector return contracts are designed, obtain explicit
-   product approval for benchmark identity, sector taxonomy and point-in-time
-   membership, price-versus-total-return basis, currency, venue, and corporate-
-   action treatment. Do not infer these financial meanings from existing demo
-   data.
-3. Add benchmark/sector point-in-time evidence, return calculations, and
-   source-local readiness only after that approval.
-4. Add provider-side raw intraday/tick aggregation only after versioning
+1. ADR-025 remains the sole asset-return/directional-win shared-readiness
+   ownership decision; do not add a separate asset-return readiness receipt.
+2. ADR-026 records the received comparative-return approval and exact
+   assignment, PIT, applicability, price-index, currency, continuity, and
+   no-inference foundation without adding executable policy.
+3. Add the independently typed benchmark assignment evidence, exact PIT
+   selector, policy definition/hash, and golden matrix first.
+4. Define/version the provider-neutral WSR sector taxonomy and explicit
+   provider mappings, then add basis-frozen sector assignment evidence.
+5. Add independent benchmark/sector reference-level pair evidence, calculators,
+   and source-local readiness in that order. Keep DEMO outcome values null
+   until dedicated canonical evidence and reproducibility contracts exist.
+6. Add provider-side raw intraday/tick aggregation only after versioning
    no-trade, halt, auction, bar-straddle, correction-sequence, and raw-coverage
    proof semantics. P5 must first establish entitled historical intraday/tick,
    calendar, corporate-action, asset/venue data and storage, display,
    derived-data, and redistribution rights.
-5. Add MFE/MAE after raw full-window completeness and bullish/bearish sign rules;
-   add alpha/sector alpha last, after benchmark/sector identity and corporate-
-   action-adjusted return policy exist.
-6. Add a separate canonical lifecycle policy across all 10 required metrics,
+7. Add MFE/MAE after raw full-window completeness and bullish/bearish sign rules;
+   add alpha/sector alpha last, after benchmark/sector reference identity and
+   index-continuity price-return policy exist.
+8. Add a separate canonical lifecycle policy across all 10 required metrics,
    including intentional non-applicability, before mapping source readiness to
    Pending/Incomplete, retry/freshness, cancellation, latest correction, or
    scheduling. ADR-022, ADR-023, and ADR-024 make none of those inferences.
-7. Persist or expose a non-null metric only with a canonical versioned input
+9. Persist or expose a non-null metric only with a canonical versioned input
    fixture, reproducible methodology definition/hash, input fingerprint, golden
    test, append-only lineage, and schema/domain/database completeness matrix.
 

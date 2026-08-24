@@ -447,12 +447,28 @@ target-error ADR-023, and target-hit ADR-024 readiness contracts exist; the
 remaining inputs are deferred. None of the three source-local readiness names
 maps directly to a canonical lifecycle state.
 
-Benchmark and sector return work must next pause for explicit product approval
-of benchmark identity, sector taxonomy and point-in-time membership, price-
-versus-total-return basis, currency, venue, and corporate-action treatment.
-After those return/readiness contracts, raw-window coverage semantics precede
-MFE/MAE; alpha and sector alpha come last; only then may a separate lifecycle
-policy compose all 10 required metrics.
+ADR-026 locks benchmark and sector returns to explicit point-in-time reference assignments.
+The required product approval has been received and recorded as a decision-only
+comparative reference-return foundation. Benchmark and sector assignments stay
+independently typed and freeze explicit source-revised membership at the exact
+original/correction basis event. V1 may map an explicitly evidenced US/USD
+equity to `asset-spx` only through a visible assignment; it never infers that
+mapping from a ticker, current master row, `MarketSnapshot.spx`, or a DEMO map.
+Known out-of-scope assets are intentionally not applicable, while missing or
+conflicting expected evidence remains unavailable.
+
+Sector work first requires a versioned provider-neutral WSR taxonomy and
+explicit provider mappings; synthetic P2 grouping labels are not evidence and
+the product does not claim GICS or ICB semantics. Later benchmark and sector
+price-return leaves must use exact source-recorded reference levels over the
+same basis-to-endpoint UTC interval, exact currency with no FX, explicit
+reference calendar/source/venue identity, and index divisor-continuity proof.
+They use separate calculator/result types, must apply ADR-017's exact one-
+subtraction/one scale-12 `HALF_EVEN` division, and never reuse the asset share-
+basis adjustment types. Current DEMO outcome values remain null. Benchmark
+assignment comes next, then sector taxonomy/assignment, reference-level pairs,
+return calculators and readiness; raw-window coverage precedes MFE/MAE, alpha
+and sector alpha come last, and lifecycle composition remains separate.
 
 ## Repository layout
 
