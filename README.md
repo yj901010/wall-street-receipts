@@ -15,11 +15,14 @@ loss, and the disconnected mechanical adapter that translates the two common
 directional sides into the existing target-hit and directional-win side enums
 without invoking either calculator, followed by closed full-polarity routing
 that preserves either directional calculator-side evidence or explicit
-non-directional evidence. The ninth and tenth P3 contracts are complete as
+non-directional evidence. The ninth through twelfth P3 contracts are complete as
 disconnected source-local leaves: point-in-time selection of one
 official primary-venue endpoint close, followed by exact target error using the
-actual endpoint price as denominator with scale-12 half-even rounding. Neither
-is wired to fixtures, persistence, an API, a provider, or the web. The broader
+actual endpoint price as denominator with scale-12 half-even rounding; then a
+point-in-time pair of the exact source-recorded basis-event price and that
+official endpoint close, followed by signed asset return using the basis price
+as denominator. None is wired to fixtures, persistence, an API, a provider, or
+the web. The broader
 P3 scoring phase remains open.
 Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
@@ -240,17 +243,42 @@ mismatches and rounded output overflow are never converted to zero. The exact
 are locked by ADR-015. No target error is added to the canonical outcome
 fixtures or published by a product route.
 
+The completed eleventh P3 slice pairs that complete endpoint resolution with
+exactly one source-recorded price at the original or correction basis event.
+Both basis and independent corporate-action adjustment evidence must be known
+by the endpoint `evaluationAsOf`; future exact, wrong, or duplicate candidates
+are invisible. Asset, primary venue, currency, price source/revision, selected
+observation/provider-event links, coverage endpoints, and the
+split/reverse-split endpoint-share/dividend-unadjusted basis must match exactly.
+There is no prior-close substitution, nearest-price choice, interpolation,
+deduplication, FX, or fallback. The exact 4655-byte policy definition and
+SHA-256
+`895e4bc97ebb3a92b80f2c58e2d28abb94440eeca963046ee755fa98825f4887`
+are locked by ADR-016.
+
+The completed twelfth P3 slice calculates a signed decimal price-return ratio
+from one complete pair as exactly `(endpoint-basis)/basis`, with one subtraction
+and one scale-12 `HALF_EVEN` division. Pair unavailability preserves its exact
+nested reason; rounded output overflow is explicitly unavailable. Exact -1 is
+valid, output below -1 is invalid, and no percent conversion or additional
+rounding occurs. The exact 1011-byte policy definition and SHA-256
+`e5e61c4adcd6567bfc76f73114499578f09de2254dc39a2553f3c0e2eaf03486`
+are locked by ADR-017. No asset return is written into the canonical outcome
+fixtures or exposed by a product route.
+
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
 adapters before they reach the canonical domain.
 
-These two disconnected leaves require no API key, provider account, paid plan,
+These four disconnected leaves require no API key, provider account, paid plan,
 domain, vendor license, or network access. Real-data integration remains the P5
 boundary: before any non-DEMO value enters them, a provider must be selected and
-credentials plus contractual rights for primary-venue closes, calendars,
-corporate actions, reference data, target evidence, storage, display, and
-derived outputs must be established. No vendor or environment-variable name is
-invented by this slice.
+credentials plus contractual rights for historical event-time/intraday prices,
+primary-venue closes, calendars, corporate actions, asset/venue reference data,
+target evidence, storage, display, derived outputs, and redistribution must be
+established. Only after that selection may a reviewed adapter introduce a named,
+scoped secret; this repository does not invent a vendor or environment-variable
+name in P3.
 
 ## Repository layout
 

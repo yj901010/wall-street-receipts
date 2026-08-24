@@ -3841,9 +3841,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 147
+              len(protected_paths) == 158
               and protected_digest.hexdigest()
-              == "f8bd1d9e5f1bbeeb24361f2680292d79d5a47a5c545cec9ce9447d987345193b",
+              == "baefa28530773995c420bf10547edd5316f95411d717b80a72435f416b13fc13",
               "Call-outcome audit consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           api_main_source = "\n".join(
@@ -4476,9 +4476,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 147
+              len(protected_paths) == 158
               and protected_digest.hexdigest()
-              == "f8bd1d9e5f1bbeeb24361f2680292d79d5a47a5c545cec9ce9447d987345193b",
+              == "baefa28530773995c420bf10547edd5316f95411d717b80a72435f416b13fc13",
               "Call-list consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           workflow_source = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -5538,6 +5538,18 @@ jobs:
               api_main_dir / "com/wallstreetreceipts/api/domain/outcome/targeterror/"
               "TargetPriceEvidence.java"
           ).resolve()
+          price_pair_evidence_paths = {
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/pricepair/"
+                  "BasisPriceObservation.java"
+              ).resolve(),
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/pricepair/"
+                  "PricePairAdjustmentEvidence.java"
+              ).resolve(),
+          }
           all_horizon_type_markers = {
               path.stem for path in horizon_dir.glob("*.java")
           }
@@ -5610,6 +5622,17 @@ jobs:
                       and qualified_horizon_refs == ["OutcomeBasis"]
                       and not any(marker in other_code for marker in type_markers),
                       "Target evidence may consume only OutcomeBasis",
+                  )
+                  continue
+              if other_path.resolve() in price_pair_evidence_paths:
+                  require(
+                      horizon_imports == {
+                          "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis"
+                      }
+                      and used_horizon_types == {"OutcomeBasis"}
+                      and qualified_horizon_refs == ["OutcomeBasis"]
+                      and not any(marker in other_code for marker in type_markers),
+                      "ADR-016 price-pair evidence may consume only OutcomeBasis",
                   )
                   continue
               require(
@@ -6509,6 +6532,18 @@ jobs:
               api_main_dir / "com/wallstreetreceipts/api/domain/outcome/targeterror/"
               "TargetPriceEvidence.java"
           ).resolve()
+          price_pair_evidence_paths = {
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/pricepair/"
+                  "BasisPriceObservation.java"
+              ).resolve(),
+              (
+                  api_main_dir
+                  / "com/wallstreetreceipts/api/domain/outcome/pricepair/"
+                  "PricePairAdjustmentEvidence.java"
+              ).resolve(),
+          }
           all_horizon_type_markers = {
               path.stem for path in horizon_dir.glob("*.java")
           }
@@ -6578,6 +6613,17 @@ jobs:
                       and used_horizon_types == {"OutcomeBasis"}
                       and qualified_horizon_refs == ["OutcomeBasis"],
                       "ADR-015 target evidence may consume only OutcomeBasis",
+                  )
+                  continue
+              if other_path.resolve() in price_pair_evidence_paths:
+                  require(
+                      horizon_imports == {
+                          "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis"
+                      }
+                      and other_code.count("OutcomeBasis") == 2
+                      and used_horizon_types == {"OutcomeBasis"}
+                      and qualified_horizon_refs == ["OutcomeBasis"],
+                      "ADR-016 price-pair evidence may consume only OutcomeBasis",
                   )
                   continue
               require(
@@ -9020,10 +9066,63 @@ jobs:
           new_markers = tuple(
               name.removesuffix(".java") for name in observation_files | target_files
           )
+          approved_later_observation_references = {
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/pricepair/BasisPriceObservation.java")).resolve(): {
+                  "CorporateActionContinuity", "EndpointPriceAdjustmentBasis",
+              },
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/pricepair/PricePairAdjustmentEvidence.java")).resolve(): {
+                  "CorporateActionContinuity", "EndpointPriceAdjustmentBasis",
+              },
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/pricepair/AssetReturnPricePairPolicyVersion.java")).resolve(): set(),
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/pricepair/AssetReturnPricePairRequest.java")).resolve(): {
+                  "EndpointPricePolicyVersion", "EndpointPriceResolution",
+              },
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/pricepair/AssetReturnPricePairResolution.java")).resolve(): {
+                  "CorporateActionContinuity", "EndpointPriceAdjustmentBasis",
+                  "EndpointPricePolicyVersion", "EndpointPriceResolution",
+              },
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/pricepair/AssetReturnPricePairSelector.java")).resolve(): {
+                  "CorporateActionContinuity", "EndpointPriceAdjustmentBasis",
+                  "EndpointPriceResolution",
+              },
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/pricepair/BasisPriceField.java")).resolve(): set(),
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/assetreturn/AssetReturnPolicyVersion.java")).resolve(): set(),
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/assetreturn/AssetReturnInput.java")).resolve(): set(),
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/assetreturn/AssetReturnResult.java")).resolve(): set(),
+              (Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                    "outcome/assetreturn/AssetReturnCalculator.java")).resolve(): {
+                  "EndpointPriceResolution",
+              },
+          }
           for other_path in api_main_dir.rglob("*.java"):
               if other_path.resolve() in new_paths:
                   continue
               other_source = other_path.read_text(encoding="utf-8")
+              if other_path.resolve() in approved_later_observation_references:
+                  other_logic = without_comments_or_strings(other_source)
+                  actual_observation_references = {
+                      marker for marker in observation_type_markers
+                      if re.search(rf"\b{re.escape(marker)}\b", other_logic)
+                  }
+                  require(
+                      actual_observation_references
+                      == approved_later_observation_references[other_path.resolve()]
+                      and not any(re.search(rf"\b{re.escape(marker)}\b", other_logic)
+                                  for marker in target_type_markers)
+                      and "domain.outcome.targeterror" not in other_source,
+                      f"ADR-016/017 endpoint-consumer edge changed: {other_path}",
+                  )
+                  continue
               require(
                   "domain.outcome.observation" not in other_source
                   and "domain.outcome.targeterror" not in other_source
@@ -9233,6 +9332,1029 @@ jobs:
               "evidence invisibility, target missing-state composition, actual-denominator "
               "scale-12 HALF_EVEN calculation, closed unavailability, and no provider or "
               "product publication"
+          )
+          PYTHON
+
+      - name: Guard point-in-time basis price pair and signed asset return
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def without_comments(source):
+              source = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
+              return re.sub(r"//.*", "", source)
+
+          def without_comments_or_strings(source):
+              return re.sub(r'"(?:\\.|[^"\\])*"', '""', without_comments(source))
+
+          def compact(source):
+              return re.sub(r"\s+", "", source)
+
+          def validate_java_lexical_safety(source, label):
+              require(
+                  re.search(r"\\u+[0-9a-fA-F]{4}", source) is None,
+                  f"{label} must not contain Java Unicode escapes",
+              )
+              require('"""' not in source, f"{label} must not contain a text block")
+              state = "code"
+              index = 0
+              while index < len(source):
+                  current = source[index]
+                  following = source[index + 1] if index + 1 < len(source) else ""
+                  if state == "code":
+                      if current == "/" and following == "/":
+                          state = "line_comment"
+                          index += 2
+                          continue
+                      if current == "/" and following == "*":
+                          state = "block_comment"
+                          index += 2
+                          continue
+                      if current == '"':
+                          state = "string"
+                      elif current == "'":
+                          state = "character"
+                  elif state == "line_comment":
+                      if source.startswith(("/*", "*/"), index):
+                          raise ValueError(
+                              f"{label} line comment contains a block delimiter"
+                          )
+                      if current in "\r\n":
+                          state = "code"
+                  elif state == "block_comment":
+                      if current == "*" and following == "/":
+                          state = "code"
+                          index += 2
+                          continue
+                  elif state == "string":
+                      if current == "\\":
+                          index += 2
+                          continue
+                      if source.startswith(("//", "/*", "*/"), index):
+                          raise ValueError(
+                              f"{label} string contains a comment delimiter"
+                          )
+                      if current == '"':
+                          state = "code"
+                      elif current in "\r\n":
+                          raise ValueError(f"{label} contains an unterminated string")
+                  elif state == "character":
+                      if current == "\\":
+                          index += 2
+                          continue
+                      if current == "'":
+                          state = "code"
+                      elif current in "\r\n":
+                          raise ValueError(
+                              f"{label} contains an unterminated character literal"
+                          )
+                  index += 1
+              require(
+                  state in {"code", "line_comment"},
+                  f"{label} contains an unterminated lexical construct",
+              )
+
+          def java_string_constant(source, name):
+              match = re.search(
+                  rf"private\s+static\s+final\s+String\s+{name}\s*=\s*(?P<body>.*?);",
+                  source,
+                  flags=re.DOTALL,
+              )
+              require(match is not None, f"Missing Java string constant {name}")
+              tokens = re.findall(r'"(?:\\.|[^"\\])*"', match.group("body"))
+              require(tokens, f"Java string constant {name} has no literal bytes")
+              return "".join(json.loads(token) for token in tokens)
+
+          def enum_values(source, enum_name):
+              match = re.search(
+                  rf"enum\s+{enum_name}\s*\{{(?P<body>.*?)\}}",
+                  without_comments(source),
+                  flags=re.DOTALL,
+              )
+              require(match is not None, f"Missing enum {enum_name}")
+              return re.findall(
+                  r"\b[A-Z][A-Z0-9_]+\b",
+                  match.group("body").split(";", 1)[0],
+              )
+
+          pair_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/pricepair"
+          )
+          asset_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/assetreturn"
+          )
+          pair_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/pricepair"
+          )
+          asset_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/assetreturn"
+          )
+          pair_files = {
+              "BasisPriceField.java", "BasisPriceObservation.java",
+              "PricePairAdjustmentEvidence.java",
+              "AssetReturnPricePairPolicyVersion.java",
+              "AssetReturnPricePairRequest.java",
+              "AssetReturnPricePairResolution.java",
+              "AssetReturnPricePairSelector.java",
+          }
+          asset_files = {
+              "AssetReturnPolicyVersion.java", "AssetReturnInput.java",
+              "AssetReturnResult.java", "AssetReturnCalculator.java",
+          }
+          require(
+              {path.name for path in pair_dir.glob("*.java")} == pair_files,
+              "Price-pair production package must contain exactly seven files",
+          )
+          require(
+              {path.name for path in asset_dir.glob("*.java")} == asset_files,
+              "Asset-return production package must contain exactly four files",
+          )
+          require(
+              {path.name for path in pair_test_dir.glob("*.java")}
+              == {"AssetReturnPricePairSelectorGoldenTest.java"},
+              "Price-pair test package must contain exactly one golden",
+          )
+          require(
+              {path.name for path in asset_test_dir.glob("*.java")}
+              == {"AssetReturnCalculatorGoldenTest.java"},
+              "Asset-return test package must contain exactly one golden",
+          )
+
+          pair_sources = {
+              name: (pair_dir / name).read_text(encoding="utf-8")
+              for name in pair_files
+          }
+          asset_sources = {
+              name: (asset_dir / name).read_text(encoding="utf-8")
+              for name in asset_files
+          }
+          all_sources = pair_sources | asset_sources
+          for name, source in all_sources.items():
+              validate_java_lexical_safety(source, name)
+          expected_structural_hashes = {
+              "AssetReturnPricePairPolicyVersion.java":
+                  "9a4368c44e8754ce2abd1229258fdc234ccaf3cc63a8b3cca682d0957826882f",
+              "AssetReturnPricePairRequest.java":
+                  "ebbe8fff7d50343526b4be4b1b2930c9182d6b1f768009947a8dd225ae303b70",
+              "AssetReturnPricePairResolution.java":
+                  "781bb643425ffe718b18f809d172144ce023cc32a74af01756304d0c463eb857",
+              "AssetReturnPricePairSelector.java":
+                  "c8504aa12b92254666a94755a844ef21a59fb098765feadc6aec680aa10be37f",
+              "BasisPriceField.java":
+                  "900727efbbf6d9ea0075030cccd26e96c95449f2d96322d54baa50542cb6c8e3",
+              "BasisPriceObservation.java":
+                  "70aec4f8862d446a955929571b41ababa5a108895e8de176ee8d3af67a9c5fe6",
+              "PricePairAdjustmentEvidence.java":
+                  "6a12208fb6c4434e6ab5247557504523a1f22ae78a6cc4cabb5b97102d0e2220",
+              "AssetReturnPolicyVersion.java":
+                  "de47170c78824a92bca50d1000aa8ca49e4f507eea391261f659857ddc1f6472",
+              "AssetReturnInput.java":
+                  "0f2fdfdcbd8417e5383e13856ace179f6154ed7230912bc07d72af252172b20d",
+              "AssetReturnResult.java":
+                  "80a07a7a606464ca7993e53a8aa1f90a7463d8678f1b3a0f06e8f825c95bfb5a",
+              "AssetReturnCalculator.java":
+                  "49d6fc9bd42fcf576ca4beeae2c654aa7c9f1613d13176ff56007a0005e4b5e1",
+          }
+          forbidden_surface_escape = re.compile(
+              r"\.class\b|\bgetClass\s*\(|\bgetDeclared\w*\s*\(|"
+              r"\bget(?:Method|Methods|Field|Fields|Constructor|Constructors)\s*\(|"
+              r"\bjava\.lang\.reflect\b|\breflection\b|\bassert\b|"
+              r"\bsynchronized\b|\.\s*(?:wait|notify|notifyAll)\s*\("
+          )
+          explicit_field = re.compile(
+              r"\b(?:public|protected|private)\s+"
+              r"(?:(?:static|final|volatile|transient)\s+)*[^;{}()]+;"
+          )
+          for name, source in all_sources.items():
+              structural_source = compact(without_comments_or_strings(source))
+              require(
+                  hashlib.sha256(structural_source.encode("utf-8")).hexdigest()
+                  == expected_structural_hashes[name],
+                  f"Executable declaration/field/method surface changed: {name}",
+              )
+              logic = without_comments_or_strings(source)
+              field_declarations = explicit_field.findall(logic)
+              require(
+                  forbidden_surface_escape.search(logic) is None
+                  and all(
+                      re.match(r"private\s+static\s+final\s+", declaration)
+                      is not None
+                      for declaration in field_declarations
+                  )
+                  and re.search(
+                      r"(?m)^\s*static\s+(?!final\b)[^(){};]+(?:=|;)", logic
+                  ) is None
+                  and " volatile " not in f" {compact(logic)} "
+                  and " transient " not in f" {compact(logic)} ",
+                  f"Mutable/static state or reflection/monitor escape added: {name}",
+              )
+
+          pair_policy = pair_sources["AssetReturnPricePairPolicyVersion.java"]
+          pair_definition = java_string_constant(pair_policy, "CANONICAL_DEFINITION")
+          pair_hash = "895e4bc97ebb3a92b80f2c58e2d28abb94440eeca963046ee755fa98825f4887"
+          endpoint_hash = (
+              "37e37aba9302d77366cef4129f77a82b7ccb2f1937bfffc0315ea8d0bc6b1f76"
+          )
+          require(
+              len(pair_definition.encode("utf-8")) == 4655
+              and hashlib.sha256(pair_definition.encode("utf-8")).hexdigest()
+              == pair_hash
+              and java_string_constant(pair_policy, "DEFINITION_HASH") == pair_hash
+              and pair_definition.count(endpoint_hash) == 1
+              and java_string_constant(
+                  pair_sources["AssetReturnPricePairRequest.java"],
+                  "REQUIRED_ENDPOINT_POLICY_HASH",
+              ) == endpoint_hash
+              and pair_sources[
+                  "AssetReturnPricePairResolution.java"
+              ].count(endpoint_hash) == 1
+              and sum(source.count(endpoint_hash) for source in pair_sources.values())
+                  == 3
+              and '"basisObservationFields"' in pair_definition
+              and '"adjustmentEvidenceFields"' in pair_definition
+              and '"selectedEvidenceRule":'
+                  '"PRESERVE_COMPLETE_BASIS_OBSERVATION_AND_ADJUSTMENT_EVIDENCE_RECORDS"'
+                  in pair_definition,
+              "Price-pair canonical bytes, complete field identity, length, or hash changed",
+          )
+          asset_policy = asset_sources["AssetReturnPolicyVersion.java"]
+          asset_definition = java_string_constant(asset_policy, "CANONICAL_DEFINITION")
+          asset_hash = "e5e61c4adcd6567bfc76f73114499578f09de2254dc39a2553f3c0e2eaf03486"
+          require(
+              len(asset_definition.encode("utf-8")) == 1011
+              and hashlib.sha256(asset_definition.encode("utf-8")).hexdigest()
+              == asset_hash
+              and java_string_constant(asset_policy, "DEFINITION_HASH") == asset_hash
+              and asset_definition.count(pair_hash) == 1
+              and java_string_constant(
+                  asset_sources["AssetReturnInput.java"],
+                  "REQUIRED_PRICE_PAIR_POLICY_HASH",
+              ) == pair_hash
+              and asset_sources["AssetReturnResult.java"].count(pair_hash) == 1
+              and sum(source.count(pair_hash) for source in asset_sources.values())
+                  == 3,
+              "Asset-return canonical bytes, required pair hash, length, or hash changed",
+          )
+          require(
+              enum_values(pair_policy, "AssetReturnPricePairPolicyVersion")
+              == ["SOURCE_RECORDED_BASIS_EVENT_TO_OFFICIAL_ENDPOINT_PRICE_PAIR_V1"],
+              "Price-pair policy enum changed",
+          )
+          require(
+              enum_values(asset_policy, "AssetReturnPolicyVersion")
+              == ["SIGNED_BASIS_DENOMINATOR_SCALE_12_HALF_EVEN_V1"],
+              "Asset-return policy enum changed",
+          )
+          require(
+              enum_values(pair_sources["BasisPriceField.java"], "BasisPriceField")
+              == ["SOURCE_RECORDED_BASIS_EVENT_PRICE", "INDICATIVE_OR_OTHER"],
+              "Basis-price field vocabulary changed",
+          )
+          pair_reasons = enum_values(
+              pair_sources["AssetReturnPricePairResolution.java"],
+              "UnavailableReason",
+          )
+          require(
+              pair_reasons == [
+                  "BASIS_AND_ENDPOINT_PRICE_UNAVAILABLE",
+                  "BASIS_PRICE_MISSING_AS_OF", "ENDPOINT_PRICE_UNAVAILABLE",
+                  "BASIS_MISMATCH", "ASSET_MISMATCH", "PRIMARY_VENUE_MISMATCH",
+                  "CURRENCY_MISMATCH", "PRICE_SOURCE_MISMATCH",
+                  "OBSERVED_AT_MISMATCH", "PRICE_FIELD_MISMATCH",
+                  "BASIS_PRICE_ADJUSTMENT_BASIS_MISMATCH",
+                  "BASIS_PRICE_CONTINUITY_UNAVAILABLE", "BASIS_PRICE_AMBIGUOUS",
+                  "ADJUSTMENT_EVIDENCE_MISSING_AS_OF",
+                  "ADJUSTMENT_OUTCOME_BASIS_MISMATCH", "ADJUSTMENT_ASSET_MISMATCH",
+                  "ADJUSTMENT_PRIMARY_VENUE_MISMATCH",
+                  "ADJUSTMENT_CURRENCY_MISMATCH",
+                  "BASIS_OBSERVATION_LINK_MISMATCH",
+                  "ENDPOINT_OBSERVATION_LINK_MISMATCH",
+                  "ADJUSTMENT_COVERAGE_MISMATCH",
+                  "ADJUSTMENT_PRICE_BASIS_MISMATCH",
+                  "ADJUSTMENT_CONTINUITY_UNAVAILABLE",
+                  "ADJUSTMENT_EVIDENCE_AMBIGUOUS",
+              ],
+              f"Price-pair unavailable reasons changed: {pair_reasons}",
+          )
+          asset_reasons = enum_values(
+              asset_sources["AssetReturnResult.java"], "UnavailableReason"
+          )
+          require(
+              asset_reasons == ["PRICE_PAIR_UNAVAILABLE", "OUTPUT_NOT_REPRESENTABLE"],
+              f"Asset-return unavailable reasons changed: {asset_reasons}",
+          )
+
+          compact_pair = {
+              name: compact(without_comments_or_strings(source))
+              for name, source in pair_sources.items()
+          }
+          compact_asset = {
+              name: compact(without_comments_or_strings(source))
+              for name, source in asset_sources.items()
+          }
+          for name, marker in {
+              "BasisPriceObservation.java":
+                  "publicrecordBasisPriceObservation(StringobservationId,"
+                  "StringproviderEventId,OutcomeBasisbasis,StringassetId,"
+                  "StringvenueId,Currencycurrency,StringpriceSourceId,"
+                  "StringpriceSourceRevision,StringprovenanceId,"
+                  "BasisPriceFieldpriceField,EndpointPriceAdjustmentBasisadjustmentBasis,"
+                  "CorporateActionContinuitycorporateActionContinuity,InstantobservedAt,"
+                  "InstantavailableAt,InstantcapturedAt,BigDecimalprice)",
+              "PricePairAdjustmentEvidence.java":
+                  "publicrecordPricePairAdjustmentEvidence(StringadjustmentEvidenceId,"
+                  "StringproviderEventId,OutcomeBasisbasis,StringassetId,"
+                  "StringprimaryVenueId,Currencycurrency,StringadjustmentSourceId,"
+                  "StringadjustmentSourceRevision,StringprovenanceId,"
+                  "StringbasisObservationId,StringbasisProviderEventId,"
+                  "StringendpointObservationId,StringendpointProviderEventId,"
+                  "InstantcoverageStartsAt,InstantcoverageEndsAt,"
+                  "EndpointPriceAdjustmentBasisadjustmentBasis,"
+                  "CorporateActionContinuitycorporateActionContinuity,"
+                  "InstantavailableAt,InstantcapturedAt)",
+              "AssetReturnPricePairRequest.java":
+                  "publicrecordAssetReturnPricePairRequest("
+                  "AssetReturnPricePairPolicyVersionpolicyVersion,"
+                  "EndpointPriceResolutionendpointPriceResolution,"
+                  "List<BasisPriceObservation>basisCandidates,"
+                  "List<PricePairAdjustmentEvidence>adjustmentCandidates)",
+          }.items():
+              require(marker in compact_pair[name], f"Price-pair record changed: {name}")
+          pair_result = compact_pair["AssetReturnPricePairResolution.java"]
+          require(
+              "permitsAssetReturnPricePairResolution.Resolved,"
+              "AssetReturnPricePairResolution.Unavailable" in pair_result
+              and "recordResolutionContext(AssetReturnPricePairPolicyVersionpolicyVersion,"
+              "StringpolicyDefinitionHash,EndpointPriceResolutionendpointPriceResolution)"
+              in pair_result
+              and "recordResolved(ResolutionContextcontext,"
+              "BasisPriceObservationbasisObservation,"
+              "PricePairAdjustmentEvidenceadjustmentEvidence)"
+              "implementsAssetReturnPricePairResolution" in pair_result
+              and "recordUnavailable(ResolutionContextcontext,UnavailableReasonreason,"
+              "EndpointPriceResolution.UnavailableReasonendpointReason)"
+              "implementsAssetReturnPricePairResolution" in pair_result,
+              "Price-pair result/context surface changed",
+          )
+          require(
+              "publicfinalclassAssetReturnPricePairSelector" in compact_pair[
+                  "AssetReturnPricePairSelector.java"
+              ]
+              and "privateAssetReturnPricePairSelector(){}" in compact_pair[
+                  "AssetReturnPricePairSelector.java"
+              ]
+              and "publicstaticAssetReturnPricePairResolutionselect("
+              "AssetReturnPricePairRequestrequest)" in compact_pair[
+                  "AssetReturnPricePairSelector.java"
+              ],
+              "Price-pair selector surface changed",
+          )
+          require(
+              "publicrecordAssetReturnInput(AssetReturnPolicyVersionpolicyVersion,"
+              "AssetReturnPricePairResolutionpricePairResolution)"
+              in compact_asset["AssetReturnInput.java"],
+              "Asset-return input surface changed",
+          )
+          asset_result = compact_asset["AssetReturnResult.java"]
+          require(
+              "permitsAssetReturnResult.Available,AssetReturnResult.Unavailable"
+              in asset_result
+              and "recordCalculationContext(AssetReturnPolicyVersionpolicyVersion,"
+              "StringpolicyDefinitionHash,"
+              "AssetReturnPricePairResolutionpricePairResolution)" in asset_result
+              and "recordAvailable(CalculationContextcontext,BigDecimalassetReturn)"
+              "implementsAssetReturnResult" in asset_result
+              and "recordUnavailable(CalculationContextcontext,UnavailableReasonreason,"
+              "AssetReturnPricePairResolution.UnavailableReasonpricePairReason)"
+              "implementsAssetReturnResult" in asset_result,
+              "Asset-return result/context surface changed",
+          )
+          require(
+              "publicfinalclassAssetReturnCalculator" in compact_asset[
+                  "AssetReturnCalculator.java"
+              ]
+              and "privateAssetReturnCalculator(){}" in compact_asset[
+                  "AssetReturnCalculator.java"
+              ]
+              and "publicstaticAssetReturnResultcalculate(AssetReturnInputinput)"
+              in compact_asset["AssetReturnCalculator.java"],
+              "Asset-return calculator surface changed",
+          )
+
+          expected_imports = {
+              "BasisPriceField.java": set(),
+              "BasisPriceObservation.java": {
+                  "java.math.BigDecimal", "java.math.RoundingMode", "java.time.Instant",
+                  "java.util.Currency", "java.util.Objects",
+                  "com.wallstreetreceipts.api.domain.PersistentInstant",
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "CorporateActionContinuity",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "EndpointPriceAdjustmentBasis",
+              },
+              "PricePairAdjustmentEvidence.java": {
+                  "java.time.Instant", "java.util.Currency", "java.util.Objects",
+                  "com.wallstreetreceipts.api.domain.PersistentInstant",
+                  "com.wallstreetreceipts.api.domain.outcome.horizon.OutcomeBasis",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "CorporateActionContinuity",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "EndpointPriceAdjustmentBasis",
+              },
+              "AssetReturnPricePairPolicyVersion.java": {
+                  "java.nio.charset.StandardCharsets",
+              },
+              "AssetReturnPricePairRequest.java": {
+                  "java.util.List", "java.util.Objects",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "EndpointPricePolicyVersion",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "EndpointPriceResolution",
+              },
+              "AssetReturnPricePairResolution.java": {
+                  "java.time.Instant", "java.util.Objects",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "CorporateActionContinuity",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "EndpointPriceAdjustmentBasis",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "EndpointPricePolicyVersion",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "EndpointPriceResolution",
+              },
+              "AssetReturnPricePairSelector.java": {
+                  "java.time.Instant", "java.util.List", "java.util.Objects",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "CorporateActionContinuity",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "EndpointPriceAdjustmentBasis",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "EndpointPriceResolution",
+                  "com.wallstreetreceipts.api.domain.outcome.pricepair."
+                  "AssetReturnPricePairResolution.ResolutionContext",
+                  "com.wallstreetreceipts.api.domain.outcome.pricepair."
+                  "AssetReturnPricePairResolution.UnavailableReason",
+              },
+              "AssetReturnPolicyVersion.java": {
+                  "java.nio.charset.StandardCharsets",
+              },
+              "AssetReturnInput.java": {
+                  "java.util.Objects",
+                  "com.wallstreetreceipts.api.domain.outcome.pricepair."
+                  "AssetReturnPricePairPolicyVersion",
+                  "com.wallstreetreceipts.api.domain.outcome.pricepair."
+                  "AssetReturnPricePairResolution",
+              },
+              "AssetReturnResult.java": {
+                  "java.math.BigDecimal", "java.util.Objects",
+                  "com.wallstreetreceipts.api.domain.outcome.pricepair."
+                  "AssetReturnPricePairPolicyVersion",
+                  "com.wallstreetreceipts.api.domain.outcome.pricepair."
+                  "AssetReturnPricePairResolution",
+              },
+              "AssetReturnCalculator.java": {
+                  "java.math.BigDecimal", "java.math.RoundingMode", "java.util.Objects",
+                  "com.wallstreetreceipts.api.domain.outcome.assetreturn."
+                  "AssetReturnResult.Available",
+                  "com.wallstreetreceipts.api.domain.outcome.assetreturn."
+                  "AssetReturnResult.CalculationContext",
+                  "com.wallstreetreceipts.api.domain.outcome.assetreturn."
+                  "AssetReturnResult.Unavailable",
+                  "com.wallstreetreceipts.api.domain.outcome.assetreturn."
+                  "AssetReturnResult.UnavailableReason",
+                  "com.wallstreetreceipts.api.domain.outcome.observation."
+                  "EndpointPriceResolution",
+                  "com.wallstreetreceipts.api.domain.outcome.pricepair."
+                  "AssetReturnPricePairResolution",
+              },
+          }
+          forbidden_runtime = re.compile(
+              r"\b(?:Clock|Locale|TimeZone|ZoneId|LocalDate|LocalDateTime|"
+              r"OffsetDateTime|ZonedDateTime|UUID|Random|SecureRandom|System|Runtime|"
+              r"Thread|Process|ProcessBuilder|StackWalker|ProcessHandle|ClassLoader)\b|"
+              r"\bClass\s*\.\s*forName\s*\(|\.\s*now\s*\(|Math\s*\.\s*random\s*\(|"
+              r"\b(?:getenv|getProperty|setProperty)\s*\(|@(?:Component|Service|Repository|Controller)\b"
+          )
+          for name, source in all_sources.items():
+              code = without_comments(source)
+              logic = without_comments_or_strings(source)
+              imports = set(re.findall(r"^import\s+([^;]+);", code, flags=re.MULTILINE))
+              require(imports == expected_imports[name], f"Imports changed: {name} {imports}")
+              body = re.sub(
+                  r"^(?:package|import)\s+[^;]+;\s*", "", logic, flags=re.MULTILINE
+              )
+              qualified_refs = set(re.findall(
+                  r"\b(?:com|org|net|io|java|javax|jakarta|jdk|sun)"
+                  r"(?:\.[A-Za-z_$][\w$]*){2,}", body
+              ))
+              require(
+                  not qualified_refs
+                  and forbidden_runtime.search(logic) is None
+                  and "double" not in logic
+                  and "float" not in logic
+                  and "ObjectMapper" not in logic
+                  and "HttpClient" not in logic
+                  and "DataSource" not in logic,
+                  f"Source crosses deterministic/domain boundary: {name} {qualified_refs}",
+              )
+
+          basis_source = compact_pair["BasisPriceObservation.java"]
+          adjustment_source = compact_pair["PricePairAdjustmentEvidence.java"]
+          for component in (
+              "observationId", "providerEventId", "assetId", "venueId",
+              "priceSourceId", "priceSourceRevision", "provenanceId",
+          ):
+              require(
+                  f"requireCanonicalText({component}," in basis_source,
+                  f"Basis observation must validate canonical {component}",
+              )
+          for component in (
+              "adjustmentEvidenceId", "providerEventId", "assetId", "primaryVenueId",
+              "adjustmentSourceId", "adjustmentSourceRevision", "provenanceId",
+              "basisObservationId", "basisProviderEventId", "endpointObservationId",
+              "endpointProviderEventId",
+          ):
+              require(
+                  f"requireCanonicalText({component}," in adjustment_source,
+                  f"Adjustment evidence must validate canonical {component}",
+              )
+          require(
+              basis_source.count("PersistentInstant.requireMicrosecondPrecision(") == 3
+              and adjustment_source.count(
+                  "PersistentInstant.requireMicrosecondPrecision("
+              ) == 4
+              and basis_source.count(
+                  "setScale(STORAGE_SCALE,RoundingMode.UNNECESSARY)"
+              ) == 1
+              and "privatestaticfinalintSTORAGE_SCALE=12;" in basis_source
+              and "privatestaticfinalintSTORAGE_PRECISION=38;" in basis_source
+              and "if(availableAt.isBefore(observedAt))" in basis_source
+              and "if(capturedAt.isBefore(availableAt))" in basis_source
+              and "if(coverageEndsAt.isBefore(coverageStartsAt))" in adjustment_source
+              and "if(availableAt.isBefore(coverageEndsAt))" in adjustment_source
+              and "if(capturedAt.isBefore(availableAt))" in adjustment_source,
+              "Evidence decimal, precision, microsecond, or temporal validation changed",
+          )
+
+          selector_logic = compact_pair["AssetReturnPricePairSelector.java"]
+          selector_reason_order = [
+              "BASIS_AND_ENDPOINT_PRICE_UNAVAILABLE",
+              "BASIS_PRICE_MISSING_AS_OF", "ENDPOINT_PRICE_UNAVAILABLE",
+              "BASIS_MISMATCH", "ASSET_MISMATCH", "PRIMARY_VENUE_MISMATCH",
+              "CURRENCY_MISMATCH", "PRICE_SOURCE_MISMATCH",
+              "OBSERVED_AT_MISMATCH", "PRICE_FIELD_MISMATCH",
+              "BASIS_PRICE_ADJUSTMENT_BASIS_MISMATCH",
+              "BASIS_PRICE_CONTINUITY_UNAVAILABLE", "BASIS_PRICE_AMBIGUOUS",
+              "ADJUSTMENT_EVIDENCE_MISSING_AS_OF",
+              "ADJUSTMENT_OUTCOME_BASIS_MISMATCH", "ADJUSTMENT_ASSET_MISMATCH",
+              "ADJUSTMENT_PRIMARY_VENUE_MISMATCH",
+              "ADJUSTMENT_CURRENCY_MISMATCH", "BASIS_OBSERVATION_LINK_MISMATCH",
+              "ENDPOINT_OBSERVATION_LINK_MISMATCH",
+              "ADJUSTMENT_COVERAGE_MISMATCH",
+              "ADJUSTMENT_PRICE_BASIS_MISMATCH",
+              "ADJUSTMENT_CONTINUITY_UNAVAILABLE",
+              "ADJUSTMENT_EVIDENCE_AMBIGUOUS",
+          ]
+          selector_positions = [
+              selector_logic.index(f"UnavailableReason.{reason}")
+              for reason in selector_reason_order
+          ]
+          require(
+              selector_positions == sorted(selector_positions)
+              and selector_logic.count(".filter(candidate->known(") == 2
+              and selector_logic.count(".stream().anyMatch(") == 18
+              and selector_logic.count(".size()>1") == 2
+              and selector_logic.count(".getFirst()") == 2
+              and "return!availableAt.isAfter(evaluationAsOf)"
+                  "&&!capturedAt.isAfter(evaluationAsOf);" in selector_logic
+              and "candidate.observedAt().equals(basis.eventTime())" in selector_logic
+              and "candidate.priceField()!=BasisPriceField."
+                  "SOURCE_RECORDED_BASIS_EVENT_PRICE" in selector_logic
+              and "candidate.basisObservationId().equals("
+                  "basisObservation.observationId())" in selector_logic
+              and "candidate.basisProviderEventId().equals("
+                  "basisObservation.providerEventId())" in selector_logic
+              and "candidate.endpointObservationId().equals("
+                  "endpointObservation.observationId())" in selector_logic
+              and "candidate.endpointProviderEventId().equals("
+                  "endpointObservation.providerEventId())" in selector_logic
+              and "candidate.coverageStartsAt().equals("
+                  "basisObservation.observedAt())" in selector_logic
+              and "candidate.coverageEndsAt().equals("
+                  "endpointObservation.observedAt())" in selector_logic
+              and ".distinct(" not in selector_logic
+              and ".sorted(" not in selector_logic
+              and ".sort(" not in selector_logic,
+              "Price-pair PIT filtering, precedence, links, coverage, or cardinality changed",
+          )
+
+          calculator_logic = compact_asset["AssetReturnCalculator.java"]
+          require(
+              calculator_logic.count(".subtract(") == 1
+              and calculator_logic.count(".divide(") == 1
+              and "BigDecimalnumerator=endpoint.subtract(basis);" in calculator_logic
+              and "numerator.divide(basis,OUTPUT_SCALE,RoundingMode.HALF_EVEN)"
+                  in calculator_logic
+              and "privatestaticfinalintOUTPUT_SCALE=12;" in calculator_logic
+              and "privatestaticfinalintOUTPUT_PRECISION=38;" in calculator_logic
+              and "assetReturn.precision()>OUTPUT_PRECISION" in calculator_logic
+              and "UnavailableReason.PRICE_PAIR_UNAVAILABLE" in calculator_logic
+              and "UnavailableReason.OUTPUT_NOT_REPRESENTABLE" in calculator_logic
+              and ".abs(" not in calculator_logic
+              and ".multiply(" not in calculator_logic
+              and ".setScale(" not in calculator_logic
+              and "movePointRight(" not in calculator_logic
+              and "doubleValue(" not in calculator_logic
+              and "floatValue(" not in calculator_logic,
+              "Signed basis-denominator formula, one rounding, or overflow changed",
+          )
+          require(
+              "assetReturn.compareTo(BigDecimal.ONE.negate())<0" in asset_result
+              and "assetReturn.scale()!=12" in asset_result
+              and "assetReturn.precision()>38" in asset_result,
+              "Asset-return exact -1/scale/precision constructor boundary changed",
+          )
+
+          api_main_dir = Path("apps/api/src/main/java")
+          new_paths = {
+              (pair_dir / name).resolve() for name in pair_files
+          } | {
+              (asset_dir / name).resolve() for name in asset_files
+          }
+          new_markers = tuple(
+              name.removesuffix(".java") for name in pair_files | asset_files
+          )
+          for other_path in api_main_dir.rglob("*.java"):
+              if other_path.resolve() in new_paths:
+                  continue
+              other_source = other_path.read_text(encoding="utf-8")
+              require(
+                  re.search(r"\\u+[0-9a-fA-F]{4}", other_source) is None
+                  and "domain.outcome.pricepair" not in other_source
+                  and "domain.outcome.assetreturn" not in other_source
+                  and not any(marker in other_source for marker in new_markers),
+                  f"Price-pair/asset-return leaf must not be wired into production: {other_path}",
+              )
+
+          pair_golden = (
+              pair_test_dir / "AssetReturnPricePairSelectorGoldenTest.java"
+          ).read_text(encoding="utf-8")
+          asset_golden = (
+              asset_test_dir / "AssetReturnCalculatorGoldenTest.java"
+          ).read_text(encoding="utf-8")
+          validate_java_lexical_safety(pair_golden, "Price-pair golden")
+          validate_java_lexical_safety(asset_golden, "Asset-return golden")
+          pair_golden_code = without_comments(pair_golden)
+          asset_golden_code = without_comments(asset_golden)
+          pair_golden_executable = without_comments_or_strings(pair_golden)
+          asset_golden_executable = without_comments_or_strings(asset_golden)
+          pair_golden_logic = compact(pair_golden_executable)
+          asset_golden_logic = compact(asset_golden_executable)
+          require(
+              hashlib.sha256(pair_golden_logic.encode("utf-8")).hexdigest()
+              == "8705bdbd738ced43ff8228a54b35ade37d73b82857a6bd9c162837bd8727ca80"
+              and hashlib.sha256(asset_golden_logic.encode("utf-8")).hexdigest()
+              == "a09d408993068c784032b0f887e97d61c9fe6123b9781e14b803a6e728241794",
+              "Golden executable structure changed outside the locked V1 test surface",
+          )
+          compact_pair_golden = compact(pair_golden_code)
+          compact_asset_golden = compact(asset_golden_code)
+          pair_methods = set(re.findall(
+              r"\b(?:void|Stream<[^>]+>|Stream<Arguments>)\s+"
+              r"([A-Za-z_$][\w$]*)\s*\(", pair_golden_code
+          ))
+          asset_methods = set(re.findall(
+              r"\b(?:void|Stream<[^>]+>|Stream<Arguments>)\s+"
+              r"([A-Za-z_$][\w$]*)\s*\(", asset_golden_code
+          ))
+          required_pair_methods = {
+              "canonicalPolicyDefinitionHasStableExactUtf8BytesAndIndependentSha256",
+              "resolvesOneExactKnownPairAtInclusivePitBoundariesAndPreservesEvidence",
+              "basisCandidatesArePitFilteredBeforeAllIdentityAndCardinalityChecks",
+              "adjustmentCandidatesArePitFilteredBeforeAllIdentityAndCardinalityChecks",
+              "composesEveryNestedEndpointReasonForBasisMissingAndEndpointOnlyStates",
+              "matchesCompleteOriginalAndCorrectionBasisIdentityWithoutEventTimeShortcut",
+              "basisMismatchVectors", "reportsEveryBasisMismatchWithoutFallback",
+              "basisPrecedenceVectors",
+              "appliesEveryBasisMismatchGateBeforeTheNextGateRegardlessOfInputOrder",
+              "basisMismatchGatesPrecedeAmbiguityAndKnownDuplicatesAreNeverDeduplicated",
+              "adjustmentMismatchVectors",
+              "reportsEveryAdjustmentMismatchAndExactObservationLinks",
+              "adjustmentPrecedenceVectors",
+              "appliesEveryAdjustmentMismatchGateBeforeTheNextGateRegardlessOfInputOrder",
+              "adjustmentMismatchGatesPrecedeAmbiguityAndKnownDuplicatesAreNeverDeduplicated",
+              "directResultsEnforceLocalEvidenceAndNestedReasonConsistencyOnly",
+              "requestDefensivelyCopiesBothCandidateListsAndRejectsNulls",
+              "resultConstructorsRejectEveryNullPublicComponent",
+              "basisObservationRejectsEveryNullBlankAndUntrimmedCanonicalText",
+              "adjustmentEvidenceRejectsEveryNullBlankAndUntrimmedCanonicalText",
+              "basisObservationRejectsEveryNullableTimeOrderAndDecimalMutation",
+              "adjustmentEvidenceRejectsEveryNullableTimeAndOrderMutation",
+              "acceptsExactMaximumNumericBasisWithoutChangingItsRepresentation",
+              "closesPublicRecordsEnumsAndReplayAgainstJvmDefaultsAndInputOrder",
+          }
+          pair_parameterized_methods = {
+              "composesEveryNestedEndpointReasonForBasisMissingAndEndpointOnlyStates":
+                  "endpointReasons",
+              "reportsEveryBasisMismatchWithoutFallback": "basisMismatchVectors",
+              "appliesEveryBasisMismatchGateBeforeTheNextGateRegardlessOfInputOrder":
+                  "basisPrecedenceVectors",
+              "reportsEveryAdjustmentMismatchAndExactObservationLinks":
+                  "adjustmentMismatchVectors",
+              "appliesEveryAdjustmentMismatchGateBeforeTheNextGateRegardlessOfInputOrder":
+                  "adjustmentPrecedenceVectors",
+              "basisObservationRejectsEveryNullBlankAndUntrimmedCanonicalText":
+                  "basisTextMutations",
+              "adjustmentEvidenceRejectsEveryNullBlankAndUntrimmedCanonicalText":
+                  "adjustmentTextMutations",
+              "basisObservationRejectsEveryNullableTimeOrderAndDecimalMutation":
+                  "basisConstructorMutations",
+              "adjustmentEvidenceRejectsEveryNullableTimeAndOrderMutation":
+                  "adjustmentConstructorMutations",
+          }
+          pair_test_methods = {
+              "canonicalPolicyDefinitionHasStableExactUtf8BytesAndIndependentSha256",
+              "resolvesOneExactKnownPairAtInclusivePitBoundariesAndPreservesEvidence",
+              "basisCandidatesArePitFilteredBeforeAllIdentityAndCardinalityChecks",
+              "adjustmentCandidatesArePitFilteredBeforeAllIdentityAndCardinalityChecks",
+              "matchesCompleteOriginalAndCorrectionBasisIdentityWithoutEventTimeShortcut",
+              "basisMismatchGatesPrecedeAmbiguityAndKnownDuplicatesAreNeverDeduplicated",
+              "adjustmentMismatchGatesPrecedeAmbiguityAndKnownDuplicatesAreNeverDeduplicated",
+              "directResultsEnforceLocalEvidenceAndNestedReasonConsistencyOnly",
+              "requestDefensivelyCopiesBothCandidateListsAndRejectsNulls",
+              "resultConstructorsRejectEveryNullPublicComponent",
+              "acceptsExactMaximumNumericBasisWithoutChangingItsRepresentation",
+              "closesPublicRecordsEnumsAndReplayAgainstJvmDefaultsAndInputOrder",
+          }
+          require(
+              required_pair_methods <= pair_methods
+              and len(re.findall(
+                  r"@(?:[\w$]+\.)*Test\b", pair_golden_executable
+              )) == 12
+              and len(re.findall(
+                  r"@(?:[\w$]+\.)*ParameterizedTest\b", pair_golden_executable
+              )) == 9
+              and len(re.findall(
+                  r"@(?:[\w$]+\.)*MethodSource\b", pair_golden_executable
+              )) == 9
+              and all(
+                  re.search(
+                      r"@(?:[\w$]+\.)*ParameterizedTest\s*\([^)]*\)\s*"
+                      rf"@(?:[\w$]+\.)*MethodSource\s*\(\s*\"{re.escape(source)}\"\s*\)\s*"
+                      rf"void\s+{re.escape(method)}\s*\(",
+                      pair_golden_code,
+                      flags=re.DOTALL,
+                  ) is not None
+                  for method, source in pair_parameterized_methods.items()
+              )
+              and all(
+                  f"@Testvoid{method}(" in pair_golden_logic
+                  for method in pair_test_methods
+              )
+              and pair_golden_logic.count("isEqualTo(baseline)") == 4
+              and pair_golden_logic.count("isEqualTo(empty)") == 6
+              and pair_golden_logic.count(
+                  "List.of(fixture.basis(),fixture.basis())"
+              ) == 1
+              and pair_golden_logic.count(
+                  "List.of(fixture.adjustment(),fixture.adjustment())"
+              ) == 1
+              and "AS_OF.plusNanos(1_000)" in pair_golden_code
+              and "assertRecordComponents(BasisPriceObservation.class" in pair_golden_code
+              and "assertRecordComponents(PricePairAdjustmentEvidence.class"
+                  in pair_golden_code
+              and all(f"UnavailableReason.{reason}" in pair_golden_code
+                      for reason in pair_reasons)
+              and "Locale.setDefault" in pair_golden_code
+              and "TimeZone.setDefault" in pair_golden_code
+              and "finally" in pair_golden_logic,
+              "Price-pair golden must lock PIT equality, full evidence, precedence, ambiguity, and replay",
+          )
+          required_asset_methods = {
+              "canonicalPolicyDefinitionHasStableExactUtf8BytesAndIndependentSha256",
+              "primaryFormulaVectors",
+              "calculatesSignedPositiveNegativeAndZeroReturnsWithBasisDenominator",
+              "scaleEquivalentPricesProduceEqualExactScaleTwelveResults",
+              "halfEvenTieVectors",
+              "roundsPositiveAndNegativeExactTiesHalfEvenWithOneDivision",
+              "allowsRoundedNegativeOneForPositiveInputsWhoseExactReturnExceedsNegativeOne",
+              "acceptsExactPrecision38OutputAndReturnsUnavailableForRoundedPrecision39",
+              "preservesEveryExactPricePairUnavailableReason",
+              "directResultConstructorsEnforceLocalPolicyPairAndReasonConsistency",
+              "rejectsEveryNullInputContextAndResultComponent",
+              "closesPublicSurfaceReasonOrderAndReplayAgainstJvmDefaults",
+          }
+          asset_parameterized_methods = {
+              "calculatesSignedPositiveNegativeAndZeroReturnsWithBasisDenominator":
+                  "primaryFormulaVectors",
+              "roundsPositiveAndNegativeExactTiesHalfEvenWithOneDivision":
+                  "halfEvenTieVectors",
+              "preservesEveryExactPricePairUnavailableReason": "pairReasons",
+          }
+          asset_test_methods = {
+              "canonicalPolicyDefinitionHasStableExactUtf8BytesAndIndependentSha256",
+              "scaleEquivalentPricesProduceEqualExactScaleTwelveResults",
+              "allowsRoundedNegativeOneForPositiveInputsWhoseExactReturnExceedsNegativeOne",
+              "acceptsExactPrecision38OutputAndReturnsUnavailableForRoundedPrecision39",
+              "directResultConstructorsEnforceLocalPolicyPairAndReasonConsistency",
+              "rejectsEveryNullInputContextAndResultComponent",
+              "closesPublicSurfaceReasonOrderAndReplayAgainstJvmDefaults",
+          }
+          require(
+              required_asset_methods <= asset_methods
+              and len(re.findall(
+                  r"@(?:[\w$]+\.)*Test\b", asset_golden_executable
+              )) == 7
+              and len(re.findall(
+                  r"@(?:[\w$]+\.)*ParameterizedTest\b", asset_golden_executable
+              )) == 3
+              and len(re.findall(
+                  r"@(?:[\w$]+\.)*MethodSource\b", asset_golden_executable
+              )) == 3
+              and all(
+                  re.search(
+                      r"@(?:[\w$]+\.)*ParameterizedTest\s*\([^)]*\)\s*"
+                      rf"@(?:[\w$]+\.)*MethodSource\s*\(\s*\"{re.escape(source)}\"\s*\)\s*"
+                      rf"void\s+{re.escape(method)}\s*\(",
+                      asset_golden_code,
+                      flags=re.DOTALL,
+                  ) is not None
+                  for method, source in asset_parameterized_methods.items()
+              )
+              and all(
+                  f"@Testvoid{method}(" in asset_golden_logic
+                  for method in asset_test_methods
+              )
+              and 'Arguments.of("positive","100","120","0.200000000000")'
+                  in compact_asset_golden
+              and 'Arguments.of("negative","120","100","-0.166666666667")'
+                  in compact_asset_golden
+              and 'Arguments.of("asymmetric-forward","2","3","0.500000000000")'
+                  in compact_asset_golden
+              and 'Arguments.of("asymmetric-reverse","3","2","-0.333333333333")'
+                  in compact_asset_golden
+              and 'Arguments.of("positive-odd-to-even","2.000000000003",'
+                  '"0.000000000002")' in compact_asset_golden
+              and 'Arguments.of("negative-odd-to-even","1.999999999997",'
+                  '"-0.000000000002")' in compact_asset_golden
+              and 'newBigDecimal("-1.000000000000")' in compact_asset_golden
+              and '"99999999999999999999999998.999999999999"'
+                  in compact_asset_golden
+              and "maximumOutput.assetReturn().precision()).isEqualTo(38)"
+                  in asset_golden_logic
+              and "Stream.of(AssetReturnPricePairResolution.UnavailableReason.values())"
+                  in asset_golden_logic
+              and all(f"UnavailableReason.{reason}" in asset_golden_code
+                      for reason in asset_reasons)
+              and "Locale.setDefault" in asset_golden_code
+              and "TimeZone.setDefault" in asset_golden_code
+              and "finally" in asset_golden_logic,
+              "Asset-return golden must lock sign, denominator, ties, -1, overflow, reasons, and replay",
+          )
+          for label, golden_logic, golden_executable in (
+              ("Price-pair", pair_golden_logic, pair_golden_executable),
+              ("Asset-return", asset_golden_logic, asset_golden_executable),
+          ):
+              expected_control_counts = {
+                  "Price-pair": {
+                      "if": 0, "for": 4, "while": 0, "do": 0,
+                      "switch": 2, "try": 1, "catch": 0, "finally": 1,
+                      "break": 0, "continue": 0,
+                  },
+                  "Asset-return": {
+                      "if": 1, "for": 1, "while": 0, "do": 0,
+                      "switch": 0, "try": 1, "catch": 0, "finally": 1,
+                      "break": 0, "continue": 0,
+                  },
+              }[label]
+              require(
+                  re.search(
+                      r"@(?:[\w$]+\.)*(?:Disabled|Enabled\w*|Tag)\b",
+                      golden_executable,
+                  )
+                  is None
+                  and "allowZeroInvocations" not in golden_logic
+                  and not any(
+                      token in golden_logic
+                      for token in (
+                          "Assumptions", "assumeTrue", "assumeFalse",
+                          "assumingThat", "TestAbortedException",
+                      )
+                  )
+                  and re.search(r"\breturn\s*;", golden_logic) is None
+                  and all(
+                      len(re.findall(rf"\b{keyword}\b", golden_executable)) == count
+                      for keyword, count in expected_control_counts.items()
+                  ),
+                  f"{label} golden must not disable, condition, assume, early-return, or swallow tests",
+              )
+          require(
+              "ObjectMapper" not in pair_golden
+              and "ClassPathResource" not in pair_golden
+              and "ObjectMapper" not in asset_golden
+              and "ClassPathResource" not in asset_golden,
+              "Price-pair/asset-return goldens must remain source-local",
+          )
+
+          expected_schemas = {
+              "analyst-call-revision.schema.json", "analyst-call.schema.json",
+              "call-context.schema.json", "call-outcome.schema.json",
+              "event-context.schema.json", "macro-observation.schema.json",
+              "macro-snapshot.schema.json", "market-board.schema.json",
+              "market-map.schema.json", "market-snapshot.schema.json",
+              "market-treemap.schema.json", "scoring-methodology.schema.json",
+              "source-document.schema.json", "source-reference.schema.json",
+          }
+          expected_fixtures = {
+              "analyst-call-revisions.json", "analyst-calls.json",
+              "call-contexts.json", "call-outcomes.json", "manifest.json",
+              "market-board.json", "market-map-nasdaq100.json", "market-map.json",
+              "market-snapshots.json", "market-treemap-nasdaq100.json",
+              "market-treemap-sp500.json", "master-data.json", "timeline-nvda.json",
+          }
+          require(
+              {path.name for path in Path("schemas").glob("*.json")}
+              == expected_schemas
+              and {path.name for path in Path("fixtures/v1").glob("*.json")}
+              == expected_fixtures,
+              "Price-pair/asset-return slice must preserve schemas and fixtures",
+          )
+          manifest = json.loads(
+              Path("fixtures/v1/manifest.json").read_text(encoding="utf-8")
+          )
+          require(
+              [entry["path"] for entry in manifest["files"]] == [
+                  "master-data.json", "analyst-calls.json",
+                  "analyst-call-revisions.json", "call-outcomes.json",
+                  "call-contexts.json", "market-snapshots.json", "market-map.json",
+                  "market-map-nasdaq100.json", "market-treemap-sp500.json",
+                  "market-treemap-nasdaq100.json", "timeline-nvda.json",
+                  "market-board.json",
+              ],
+              "Price-pair/asset-return slice must preserve fixture manifest order",
+          )
+          outcomes = json.loads(
+              Path("fixtures/v1/call-outcomes.json").read_text(encoding="utf-8")
+          )
+          metrics = (
+              "assetReturn", "benchmarkReturn", "sectorReturn", "alpha",
+              "sectorAlpha", "mfe", "mae", "targetHit", "directionalWin",
+              "targetError",
+          )
+          require(
+              len(outcomes["methodologies"]) == 2
+              and all(item["status"] == "MODEL_ONLY"
+                      for item in outcomes["methodologies"])
+              and len(outcomes["outcomes"]) == 4
+              and all(item[field] is None
+                      for item in outcomes["outcomes"] for field in metrics),
+              "Price-pair/asset-return leaves must not publish or activate outcomes",
+          )
+          openapi_source = Path("contracts/openapi.yaml").read_text(encoding="utf-8")
+          require(
+              set(re.findall(r"^  (/[^\n]+):\s*$", openapi_source, re.MULTILINE))
+              == {
+                  "/v1/calls", "/v1/calls/{id}", "/v1/calls/{id}/revisions",
+                  "/v1/calls/{id}/outcomes", "/v1/calls/{id}/context",
+              }
+              and {path.name for path in Path(
+                  "apps/api/src/main/resources/db/migration"
+              ).glob("*.sql")} == {
+                  "V1__baseline.sql", "V2__analyst_calls.sql",
+                  "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
+                  "V5__call_contexts.sql",
+              },
+              "Price-pair/asset-return slice must preserve OpenAPI and Flyway",
+          )
+          for resource_path in Path("apps/api/src/test/resources").rglob("*.json"):
+              resource_source = resource_path.read_text(encoding="utf-8")
+              require(
+                  not any(marker in resource_source for marker in new_markers),
+                  f"Price-pair/asset-return leaves must not add JSON goldens: {resource_path}",
+              )
+          for web_path in Path("apps/web/src").rglob("*"):
+              if web_path.is_file() and web_path.suffix in {".ts", ".tsx", ".js", ".jsx"}:
+                  web_source = web_path.read_text(encoding="utf-8")
+                  require(
+                      "domain.outcome.pricepair" not in web_source
+                      and "domain.outcome.assetreturn" not in web_source
+                      and not any(marker in web_source for marker in new_markers),
+                      f"Price-pair/asset-return leaves must not expand web: {web_path}",
+                  )
+
+          print(
+              "Validated exact point-in-time basis-event/endpoint price-pair policy, "
+              "signed basis-denominator scale-12 HALF_EVEN asset return, closed "
+              "unavailability, and no provider or product publication"
           )
           PYTHON
 
