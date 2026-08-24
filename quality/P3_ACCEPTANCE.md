@@ -1573,3 +1573,109 @@ ADR-029 freezes WSR sector assignment to explicit point-in-time membership and m
   schema, API, database, provider adapter, reference index, return, or web
   behavior may appear in this slice. Provider selection and rights approval
   remain prerequisites for real data.
+
+## Point-in-time independent benchmark/sector reference-level pairs V1 boundary
+
+ADR-030 resolves benchmark and sector reference-level pairs independently from explicit point-in-time provider-published price-index evidence over the exact basis-event-to-asset-endpoint UTC interval.
+
+- The slice contains two independently typed seven-file production packages
+  and two independently typed selector goldens. It has no shared generic pair,
+  cross-kind policy/evidence/result, cast, or fallback.
+- Each leg consumes its complete ADR-027 or ADR-029 assignment resolution and
+  complete ADR-014 endpoint-price resolution. No free-standing basis, horizon,
+  endpoint instant, asset, venue, currency, or evaluation cutoff is accepted.
+- Assignment basis and cutoff always match the endpoint context. Anchor
+  validity is derived from catalog PIT, catalog-to-horizon identity, and
+  binding PIT facts—not an endpoint unavailable label. Asset, then resolved or
+  not-applicable classification venue/currency, match the endpoint binding only
+  after the anchor is usable; unavailable assignment venue/currency are not
+  inferred.
+- The exact five result variants are `Resolved`, `NotApplicable`,
+  `AssignmentUnavailable`, `EndpointAnchorUnavailable`, and
+  `EvidenceUnavailable`. Assignment branches precede the exact three
+  independently derived catalog/binding anchor failures. The anchor variant
+  carries its own exact three-value reason enum; all sixteen upstream endpoint
+  unavailable labels are ignored when the preserved anchor facts are coherent.
+- The binding interval contains both exact UTC endpoints. Each resolved leg
+  preserves one explicit provider-published price-index binding, one exact
+  source-recorded level at each endpoint, and one exact divisor-continuity
+  attestation linked to both observations. Calendar identity and its source
+  identity remain explicit on every row.
+- Benchmark binding links the selected assignment evidence. Sector binding
+  links selected mapping evidence, exact WSR taxonomy identity, and exact
+  canonical node. Benchmark levels/continuity retain the exact canonical
+  benchmark asset; sector binding/levels/continuity retain an explicit
+  reference asset whose type is `INDEX`. A WSR node alone is not a provider
+  index, reference asset, level, calendar, currency, or divisor claim.
+- Reference/index identity is exact and unnormalized. Currency matches the
+  asset endpoint binding with no FX; calculation venue, calendar/revision,
+  calendar source/revision, level source/revision, and continuity
+  source/revision stay explicit without shifting the common UTC interval.
+- Every visible mismatch fails closed before cardinality, future evidence is
+  invisible, and equal duplicates remain ambiguous. No prior close, nearest
+  timestamp, interpolation, shifted session, total-return index, ETF, current
+  basket, market-cap proxy, provider-return field, provider preference,
+  deduplication, or fallback may repair evidence.
+
+## Independent reference-level-pair contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-RLP01 | Exact source surface | Package `benchmarkreferencepair` contains exactly `BenchmarkReferenceLevelPairPolicyVersion`, `BenchmarkReferenceIndexEvidence`, `BenchmarkReferenceLevelObservation`, `BenchmarkIndexDivisorContinuityEvidence`, `BenchmarkReferenceLevelPairRequest`, `BenchmarkReferenceLevelPairResolution`, and `BenchmarkReferenceLevelPairSelector`; `sectorreferencepair` contains the exact seven Sector analogues. Test surface contains only the two corresponding `SelectorGoldenTest` files. |
+| P3-RLP02 | Independent ownership | Benchmark and sector have separate policy definitions/hashes, evidence, requests, resolutions, selectors, reasons, and goldens. No generic reference-pair type, nullable kind, shared result, cross-cast, or cross-leg fallback exists. |
+| P3-RLP03 | Exact policy identities | Benchmark policy is only `POINT_IN_TIME_EXACT_BENCHMARK_PRICE_INDEX_LEVEL_PAIR_V1`, exact 9342 bytes, SHA-256 `2394b535c1061d32c647504a303b6f1e4ec2fe88e6017d9ff335d12087a5f73d`. Sector is only `POINT_IN_TIME_EXACT_SECTOR_PRICE_INDEX_LEVEL_PAIR_V1`, exact 9806 bytes, SHA-256 `4224648ba01104fd3e96319158c7d6b42da472e9aa6f2ab22ef9fccf43da7e4a`. Bytes are defensive and contexts echo their exact digest. |
+| P3-RLP04 | Exact upstream policies | Benchmark requires ADR-027 hash `7318514c2f50eda16b2d7ef35bc68d00d6a8b18a0f09f77130525fca2f32da69`; sector requires ADR-029 hash `52d9f705a3a8a965a6fca79d36bd94ed8836642f1a2c4e5f29a878d0a267311c`. Both require ADR-014 hash `37e37aba9302d77366cef4129f77a82b7ccb2f1937bfffc0315ea8d0bc6b1f76` and nested strict-horizon hash `550087efe7ddf2ba31974c89c2740ab79df986eefef48919c32c56a3232f8dc1`. |
+| P3-RLP05 | Full upstream receipts | Each request preserves the complete assignment resolution, complete endpoint-price resolution, and four immutable non-null candidate lists; each resolution context preserves the two complete upstream resolutions. There is no direct `OutcomeBasis` or horizon input/import. |
+| P3-RLP06 | Exact upstream topology | Basis and evaluation-as-of always cohere. Asset co-identity is enforced only after context facts prove a usable endpoint anchor; resolved/N/A classification venue and currency then cohere with endpoint binding. Assignment unavailable has no provable classification venue/currency, so neither is invented. |
+| P3-RLP07 | Five exact branches | Results are exactly `Resolved(context,referenceIndexEvidence,basisLevelObservation,endpointLevelObservation,divisorContinuityEvidence)`, `NotApplicable(context)`, `AssignmentUnavailable(context)`, `EndpointAnchorUnavailable(context,reason)`, and `EvidenceUnavailable(context,reason)`. Anchor and local evidence reasons use independent enums; complete upstream receipts remain in context. |
+| P3-RLP08 | Exact branch precedence | Assignment N/A, assignment unavailable, endpoint-anchor unavailable, local unavailable reasons in declared order, then resolve. N/A or missing evidence never becomes zero, false, loss, or another branch. |
+| P3-RLP09 | Exact endpoint anchor | The selector never trusts `EndpointPriceResolution.Unavailable.reason`. It derives an independent `EndpointAnchorUnavailableReason` in exact precedence from catalog PIT visibility, catalog calendar/revision equality with the horizon, then binding PIT visibility: `CATALOG_NOT_KNOWN_AS_OF`, `CATALOG_EVIDENCE_MISMATCH`, or `BINDING_NOT_KNOWN_AS_OF`. `EndpointAnchorUnavailable(context,reason)` requires a resolved assignment and exact fact-derived reason; resolved/local-unavailable constructors reject factual anchor failures. |
+| P3-RLP10 | Endpoint-observation independence | All sixteen possible ADR-014 unavailable labels are ignored when the retained context has a mature, coherent catalog/horizon/binding anchor. `ENDPOINT_NOT_REACHED_AS_OF` is local if and only if the exact asset endpoint UTC is after evaluation-as-of; once reached, independently complete reference evidence may resolve. |
+| P3-RLP11 | Exact UTC interval | The interval is exactly nested horizon basis event time through nested horizon endpoint-session close. Binding effective interval is start-inclusive/end-exclusive and contains both instants with an explicit open or finite end. Prior close, nearest, interpolation, or shifted-session substitution is absent. |
+| P3-RLP12 | PIT filter and multiplicity | Visibility is exactly `availableAt <= evaluationAsOf && capturedAt <= evaluationAsOf`. Future evidence affects no output, reason, or cardinality. Any visible mismatch fails before cardinality; duplicates remain ambiguous and order-independent. |
+| P3-RLP13 | Exact benchmark binding | Binding links selected assignment evidence ID/provider-event ID, benchmark asset identity/type, and one separately supplied reference provider/index/definition revision. Both level rows and continuity evidence repeat and exactly match that canonical benchmark asset ID/type. Canonical `asset-spx` assignment alone is not provider index-level evidence. |
+| P3-RLP14 | Exact sector binding | Binding links selected mapping evidence ID/provider-event ID, taxonomy `wsr-economic-activity` version `1.0.0` and hash `820ce3ea264d67312fe4f2efe346631a81d74248e9a7f041793d65d8ef0d62ae`, exact mapped canonical node, and an explicit reference asset ID/type `INDEX`. Both level rows and continuity repeat that reference asset. Provider membership-to-WSR mapping and WSR-node-to-provider-index binding remain distinct. |
+| P3-RLP15 | Exact provider identity | `referenceProviderId`, `referenceIndexId`, and definition revision use case-sensitive unnormalized Unicode code-point equality and non-null/non-empty validation. Provider label is preserved evidence only, not an identity or match key. |
+| P3-RLP16 | Exact price-index semantics | Only `PROVIDER_PUBLISHED_PRICE_INDEX` and `PROVIDER_PUBLISHED_INDEX_LEVEL` resolve. Total-return/non-provider indices, ETFs, ETF price/NAV, current baskets, market-cap/derived proxies, provider returns, and unknown values fail closed. |
+| P3-RLP17 | Exact level observations | Basis and endpoint observations link the selected binding ID/provider event and match the leg-specific canonical/reference asset, provider/index/revision/kind, currency, calculation venue, calendar/revision, calendar source/revision, and level source/revision. `observedAt` equals the exact basis or endpoint instant. Level is positive exact `NUMERIC(38,12)` with no rounding. |
+| P3-RLP18 | Same currency, explicit reference context | Reference currency equals endpoint binding currency with no FX. Reference calculation venue/calendar/source may differ from the asset's but remains explicit and cannot alter the UTC interval. |
+| P3-RLP19 | Exact divisor continuity | One evidence record links selected binding plus both observation/provider-event identities, repeats the leg-specific canonical/reference asset, matches reference, calendar source, and continuity source, covers the exact interval, and attests `PROVIDER_PUBLISHED_INDEX_DIVISOR_CONTINUITY_ATTESTED`. Missing, mismatched, discontinuous, unattested, unknown, or duplicate evidence is unavailable. |
+| P3-RLP20 | Exact reason vocabularies | Benchmark has exactly 53 local unavailable reasons and sector exactly 56, in ADR-030 and canonical-definition order. Each leg's independent anchor enum has exactly three ordered fact-derived reasons. Selector gates follow those orders; enum ordinal/name parsing is absent. |
+| P3-RLP21 | Asset-pair type firewall | Neither package imports, reuses, relabels, or casts `AssetReturnPricePairResolution`, `CorporateActionContinuity`, or `EndpointPriceAdjustmentBasis`. No benchmark/sector result is an `AssetReturnResult`. |
+| P3-RLP22 | Product and lifecycle firewall | No actual provider/index/binding/level/calendar/divisor data, canonical fixture, schema, manifest, OpenAPI, Flyway, DB, provider adapter, API, resource, or web behavior is added. DEMO comparative metrics remain null. No return calculator, readiness, lifecycle, methodology, persistence, aggregation, ranking, or publication is invoked. |
+| P3-RLP23 | External boundary | No API key, account, plan, license, secret, or network is needed now. Before non-DEMO evidence, P5 must approve exact index products/feeds, exact-time historical index-level coverage, calendar identity/revision/source rights, divisor/methodology and sector-binding rights, plus storage/cache, display, derived-data, and redistribution rights. Credentials follow rights approval and never enter chat or Git. |
+| P3-RLP24 | Repository CI contract | CI locks four-document marker parity, exact fourteen-plus-two surface, both policy definitions/hashes and field/reason order, benchmark 200 and sector 220 golden invocations, reverse isolation, null DEMO publication, current production 216 / `45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d`, current test/web 201 / `fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f`, and ADR-029 replay after exact exclusion at production 202 / `b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899` and test/web 199 / `59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293`. |
+
+## Required independent reference-level-pair verification checks
+
+- Exact two-policy canonical JSON extraction, 9342/9806-byte lengths, SHA-256
+  values, field/variant order, 53/56 local reasons plus each three-reason anchor
+  enum, fourteen-plus-two source surface, reverse isolation, and four-document
+  marker parity: **PASS**.
+- Focused benchmark selector golden 200/200 and sector selector golden
+  220/220—420 total—and complete API Maven regression 1668/1668
+  `BUILD SUCCESS` with zero failures, errors, or skips, including
+  Docker/PostgreSQL/Flyway integration: **PASS**. Normalized golden-source
+  SHA-256 values are benchmark
+  `3518b66914656c8225858f8f15fdb60e25576a15b64f148270cda9881e3d8099`
+  and sector
+  `af9ec3aa0318595027d13eb4748d41bdb587776ef3d2e5c8b3bf477fa7ba439b`.
+- The dedicated ADR-030 guard independently passes; 35/35 workflow Python
+  heredoc bodies syntax-compile, 34/34 locally executable bodies pass, and the
+  final cross-stack body remains intentionally syntax-only. SnakeYAML 2.5
+  parses exactly four jobs and Compose config validates: **PASS**.
+- Current production 216 / `45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d`
+  and test/web 201 / `fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f`
+  pass. Excluding the exact fourteen-plus-two surface reproduces ADR-029
+  production 202 / `b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899`
+  and test/web 199 / `59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293`:
+  **PASS**.
+- README-marker and benchmark-policy-byte mutations make the dedicated guard
+  exit 1; a benchmark expected-cardinality mutation to 201 observes actual 200
+  and makes its gate exit 1. All are restored. `git diff --check` is clean and
+  the user-owned `apps/web/next-env.d.ts` remains preserved and unstaged:
+  **PASS**.
+- No actual provider identity, provider-published binding, non-DEMO index
+  level/calendar/divisor data, schema, API, database, adapter, return
+  calculator, readiness, or web behavior may appear in this slice. Provider
+  selection and written rights approval remain prerequisites for real data.
