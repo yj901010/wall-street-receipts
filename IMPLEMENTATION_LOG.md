@@ -4073,3 +4073,152 @@ and `af9ec3aa0318595027d13eb4748d41bdb587776ef3d2e5c8b3bf477fa7ba439b`:
   lifecycle integration. Canonical evidence/methodology fingerprints and
   lineage, raw coverage and MFE/MAE paths, and sector alpha remain later work;
   alpha is last and cannot be inferred from either pair contract.
+
+## 2026-08-24 — ADR-031 signed benchmark reference return
+
+Status: the production contract and canonical policy definition are frozen for
+the twenty-fourth disconnected P3 slice. Focused/full regression, the dedicated
+guard/runtime gate, current/legacy baselines, workflow/YAML/Compose, and
+independent review are **PASS**. Mutation checks, final guard, marker parity,
+and Git diff hygiene are also **PASS**. No provider data, runtime wiring,
+lifecycle, persistence, API, database, or web publication is added.
+
+ADR-031 calculates a signed benchmark price-index return from one complete ADR-030 benchmark reference-level-pair receipt using the exact basis-level denominator.
+
+### Scope
+
+- Add an independently typed benchmark price-index return policy, complete
+  input, sealed result, and deterministic calculator, plus one source-local
+  golden matrix. Do not add the sector calculator in this slice.
+- Accept only one complete ADR-030
+  `BenchmarkReferenceLevelPairResolution`. A resolved branch preserves its
+  exact assignment, endpoint, reference binding, basis/endpoint levels,
+  divisor-continuity, PIT, and provenance receipt; unavailable branches
+  preserve their complete typed contexts and reasons. No branch is replaced by
+  extracted values.
+- Calculate only a resolved pair. Preserve intentional N/A, assignment
+  unavailable, endpoint-anchor unavailable, and reference-evidence unavailable
+  as distinct typed branches without copying or flattening nested reasons.
+- Add no selector, readiness, lifecycle, methodology activation, fingerprint,
+  persistence, fixture, schema, manifest, OpenAPI, Flyway, database, provider,
+  API, resource, or web behavior.
+
+### Locked policy decisions
+
+- Policy
+  `SIGNED_BENCHMARK_BASIS_LEVEL_DENOMINATOR_SCALE_12_HALF_EVEN_V1` has one
+  exact 2832-byte single-line ASCII/UTF-8 definition and SHA-256
+  `96d0aab8e8e784b80a12b16c99f6ba8c5f44eff7a342fd14c075b944a0a7de79`.
+  Returned definition bytes are defensive and every calculation context echoes
+  that exact digest.
+- Input requires ADR-030 policy
+  `POINT_IN_TIME_EXACT_BENCHMARK_PRICE_INDEX_LEVEL_PAIR_V1` with exact hash
+  `2394b535c1061d32c647504a303b6f1e4ec2fe88e6017d9ff335d12087a5f73d`.
+  Pair-context extraction exhaustively handles all five source variants without
+  a default or a reconstructed receipt.
+- Results are exactly `Available(context,benchmarkReturn)`,
+  `NotApplicable(context)`, `AssignmentUnavailable(context)`,
+  `EndpointAnchorUnavailable(context)`, `EvidenceUnavailable(context)`, and
+  `OutputUnavailable(context,reason)`. The sole local output reason is
+  `OUTPUT_NOT_REPRESENTABLE`.
+- Every context preserves the same complete source receipt. Upstream source
+  branches precede arithmetic, and nested assignment/anchor/evidence reasons
+  remain inside that receipt with no mapping, duplication, or flattening.
+- Formula is exactly `(endpoint-basis)/basis`, reading only the selected
+  provider-published basis and endpoint index levels. The implementation performs
+  one exact `endpoint.subtract(basis)` and then one scale-12
+  `RoundingMode.HALF_EVEN` division by the positive basis level.
+- Output units are a signed decimal ratio. Available output has exact scale 12,
+  precision at most 38, and is at least -1. Rounded exact
+  `-1.000000000000` remains valid. Arithmetic failure or rounded precision
+  overflow becomes `OutputUnavailable(OUTPUT_NOT_REPRESENTABLE)`.
+- Operand rescale, `MathContext`, intermediate/second rounding, percent
+  conversion, float/double conversion, tolerance, provider-return fields,
+  alternate denominator, clipping, asset-return reuse, sector-return reuse,
+  reflection/class tokens, shared generic helpers, and fallback are absent.
+- Constructors enforce local policy, receipt variant, and output shape only.
+  Only `BenchmarkReturnCalculator.calculate` attests the formula and required
+  rounding operation.
+
+### Module and file boundary
+
+`com.wallstreetreceipts.api.domain.outcome.benchmarkreturn` contains exactly:
+
+- `BenchmarkReturnPolicyVersion.java`
+- `BenchmarkReturnInput.java`
+- `BenchmarkReturnResult.java`
+- `BenchmarkReturnCalculator.java`
+
+The matching test surface contains only
+`BenchmarkReturnCalculatorGoldenTest.java`. Production imports only JDK types
+and the ADR-030 benchmark reference-level-pair contract. It has no direct or
+reverse dependency through asset-return, asset price-pair, sector, assignment,
+endpoint-observation, horizon, lifecycle, persistence, API, or web types.
+
+### Routes, lifecycle, publication, and external data
+
+- None. This leaf does not invoke the ADR-030 selector or assert original
+  candidate membership; it consumes one supplied typed resolution. It does not
+  decide readiness, retry, freshness, completeness, cancellation, methodology,
+  fingerprint, persistence, aggregation, ranking, or product publication.
+- Existing schemas, canonical fixtures, manifest membership, OpenAPI, Flyway,
+  database rows, controller/repository/provider behavior, API responses, and web
+  source remain unchanged. Existing DEMO benchmark, sector, alpha, and sector
+  alpha values remain null.
+- No API key, account, paid plan, provider license, environment secret, or
+  network access is required. Before real use, P5 must approve the exact
+  benchmark price-index product/feed, historical exact-time coverage,
+  calendar/divisor evidence, and storage/cache, display, derived-data, and
+  redistribution rights. Only then may a reviewed adapter receive a scoped
+  credential through untracked local/CI/deployment secret stores, never chat or
+  Git.
+
+### Verification
+
+- Exact policy JSON extraction, 2832-byte length/hash, result topology,
+  four-plus-one source surface, dependency and reverse isolation, null DEMO
+  publication, and four-document marker parity: **PASS**. Independent reviews
+  report no remaining P0/P1/P2 finding after two golden-coverage gaps were
+  corrected.
+- Focused `BenchmarkReturnCalculatorGoldenTest`: **PASS**, exactly 95/95 with
+  zero failures, errors, or skips. Normalized golden-source SHA-256 is
+  `80c8e7dcdf6b4ee3daf980dc3c3d2aa54e4446620af2fc0985173fddf5ab3c90`.
+- Full API Maven verification: **PASS**, exactly 1763/1763 with zero failures,
+  errors, or skips and `BUILD SUCCESS`, including Testcontainers PostgreSQL
+  17.10 and Flyway.
+- The dedicated ADR-031 guard and runtime gate pass. All 36/36 workflow Python
+  heredoc bodies syntax-compile and all 29/29 locally runnable bodies pass. Six
+  `jsonschema`-dependent bodies are syntax-only because the bundled local
+  runtime lacks `jsonschema`; the final cross-stack integration-log body is
+  syntax-only by design. SnakeYAML 2.5 parses exactly four jobs and Compose
+  config validates: **PASS**.
+- Current protected production is exactly 220 files / SHA-256
+  `cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9`;
+  current API-test/web is exactly 202 files /
+  `12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273`.
+  Excluding the exact ADR-031 four-plus-one surface reproduces ADR-030
+  production 216 /
+  `45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d`
+  and test/web 201 /
+  `fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f`;
+  downstream replay also retains ADR-029 production 202 /
+  `b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899`
+  and test/web 199 /
+  `59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293`:
+  **PASS**. The user-owned `apps/web/next-env.d.ts` remains preserved.
+- Deliberate README-marker and canonical `percentConversion`-byte mutations
+  each make the dedicated guard exit 1. Changing expected runtime count from 95
+  to 94 while actual remains 95 makes its gate exit 1. All mutations are
+  restored; the final dedicated guard passes, `git diff --check` is clean, and
+  marker parity remains exactly one occurrence per contract document:
+  **PASS**.
+
+### Next reviewed work
+
+- Add the independently typed sector reference-return calculator with its own
+  policy, receipt, result, golden matrix, and firewall; it cannot reuse this
+  benchmark result.
+- Add source-local readiness only after both calculators are independently
+  reviewed. Canonical evidence/methodology fingerprints and lineage, lifecycle
+  composition, persistence/API/UI publication, raw-window coverage, MFE/MAE,
+  alpha, and sector alpha remain later slices. Alpha remains last.
