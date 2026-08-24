@@ -434,14 +434,25 @@ scoped secret through approved local/CI secret stores; secrets must never be
 supplied in chat or committed to Git. This repository does not invent a vendor
 or environment-variable name in P3.
 
-After ADR-024, the next reviewed work must first decide whether ADR-022 is the
-combined asset-return/directional-win readiness receipt or whether a separate
-asset-return receipt is required. Benchmark and sector return work must then
-pause for explicit product approval of benchmark identity, sector taxonomy and
-point-in-time membership, price-versus-total-return basis, currency, venue, and
-corporate-action treatment. After those return/readiness contracts, raw-window
-coverage semantics precede MFE/MAE; alpha and sector alpha come last; only then
-may a separate lifecycle policy compose all 10 required metrics.
+ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
+ADR-025 makes this an ownership decision without adding a policy, digest,
+package, resolver, or test: the exact ADR-022 receipt is consumed once while a
+later aggregate accounts for both metric meanings. Directional `Available`
+preserves the exact return and Boolean; neutral `NotApplicable` preserves the
+exact available return and intentional directional non-applicability; an
+unavailable return keeps the shared receipt awaiting or evidence-unavailable
+without inventing either metric. A complete future aggregate has 10 metric
+meanings and nine readiness ownership inputs. Today only shared ADR-022,
+target-error ADR-023, and target-hit ADR-024 readiness contracts exist; the
+remaining inputs are deferred. None of the three source-local readiness names
+maps directly to a canonical lifecycle state.
+
+Benchmark and sector return work must next pause for explicit product approval
+of benchmark identity, sector taxonomy and point-in-time membership, price-
+versus-total-return basis, currency, venue, and corporate-action treatment.
+After those return/readiness contracts, raw-window coverage semantics precede
+MFE/MAE; alpha and sector alpha come last; only then may a separate lifecycle
+policy compose all 10 required metrics.
 
 ## Repository layout
 

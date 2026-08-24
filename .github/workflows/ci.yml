@@ -14574,10 +14574,116 @@ jobs:
                       f"Directional-win readiness must not expand web: {web_path}",
                   )
 
+          ownership_adr_path = Path(
+              "decisions/ADR-025-shared-asset-return-directional-win-"
+              "readiness-ownership.md"
+          )
+          ownership_marker = (
+              "ADR-022 remains the sole shared receipt for asset-return and "
+              "directional-win readiness."
+          )
+          ownership_doc_paths = (
+              ownership_adr_path,
+              Path("README.md"),
+              Path("quality/P3_ACCEPTANCE.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+          )
+          ownership_docs = {}
+          for doc_path in ownership_doc_paths:
+              require(doc_path.is_file(), f"Missing ADR-025 ownership doc: {doc_path}")
+              doc_source = doc_path.read_text(encoding="utf-8")
+              ownership_docs[doc_path] = doc_source
+              require(
+                  doc_source.count(ownership_marker) == 1
+                  and "ADR-025" in doc_source,
+                  f"ADR-025 ownership marker must occur exactly once: {doc_path}",
+              )
+              normalized_doc = re.sub(r"\s+", " ", doc_source)
+              require(
+                  "whether ADR-022 is the combined" not in normalized_doc
+                  and "whether a separate asset-return receipt"
+                  not in normalized_doc
+                  and "separate asset-return receipt is required"
+                  not in normalized_doc
+                  and "separate asset-return receipt is needed"
+                  not in normalized_doc,
+                  f"Removed asset-return readiness question returned: {doc_path}",
+              )
+
+          ownership_adr = ownership_docs[ownership_adr_path]
+          for marker in (
+              "- Status: Accepted",
+              "`DirectionalWinReadinessResolution` supplied by ADR-022 owns both",
+              "No standalone `assetreturnreadiness` package, policy, request,",
+              "2353-byte ASCII/UTF-8",
+              policy_hash,
+              "ten metric meanings",
+              "nine readiness ownership inputs",
+              "No ADR-022 variant maps directly to `OutcomeEvaluationStatus`.",
+              "`dataComplete=true`",
+              "`CallOutcome`",
+              "ADR-025 adds no Java production file, test, policy enum",
+          ):
+              require(marker in ownership_adr,
+                      f"Missing ADR-025 ownership boundary: {marker}")
+
+          competing_type = re.compile(r"\bAssetReturnReadiness\w*\b")
+          competing_policy = re.compile(
+              r"\b[A-Z0-9_]*ASSET_RETURN_READINESS[A-Z0-9_]*\b"
+          )
+          source_text_suffixes = {
+              ".java", ".json", ".md", ".properties", ".sql", ".txt",
+              ".xml", ".yaml", ".yml",
+          }
+          for source_root in (
+              Path("apps/api/src/main"),
+              Path("apps/api/src/test"),
+          ):
+              for source_path in source_root.rglob("*"):
+                  if not source_path.is_file():
+                      continue
+                  normalized_path = re.sub(
+                      r"[^a-z0-9]", "", source_path.as_posix().lower()
+                  )
+                  require(
+                      "assetreturnreadiness" not in normalized_path,
+                      f"Standalone asset-return readiness path is forbidden: "
+                      f"{source_path}",
+                  )
+                  if source_path.suffix.lower() in source_text_suffixes:
+                      source = source_path.read_text(encoding="utf-8")
+                      if source_path.suffix.lower() == ".java":
+                          source = without_comments(source)
+                      require(
+                          competing_type.search(source) is None
+                          and competing_policy.search(source) is None,
+                          f"Standalone asset-return readiness type or policy is "
+                          f"forbidden: {source_path}",
+                      )
+
+          for decision_path in Path("decisions").glob("ADR-*.md"):
+              if decision_path == ownership_adr_path:
+                  continue
+              normalized_name = re.sub(
+                  r"[^a-z0-9]", "", decision_path.name.lower()
+              )
+              decision_source = decision_path.read_text(encoding="utf-8")
+              require(
+                  not (
+                      "assetreturn" in normalized_name
+                      and "readiness" in normalized_name
+                  )
+                  and competing_type.search(decision_source) is None
+                  and competing_policy.search(decision_source) is None,
+                  f"ADR-025 forbids a competing asset-return readiness ADR or "
+                  f"policy: {decision_path}",
+              )
+
           print(
-              "Validated exact supplied-leaf directional-win readiness, the one "
-              "endpoint-only temporal chain, compound-unavailability firewall, "
-              "whole-source preservation, and no canonical lifecycle publication"
+              "Validated ADR-022 as the sole shared asset-return/directional-win "
+              "readiness receipt, its exact endpoint-only temporal chain and "
+              "whole-source preservation, no competing receipt, and no canonical "
+              "lifecycle publication"
           )
           PYTHON
 
