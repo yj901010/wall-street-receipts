@@ -3147,3 +3147,137 @@ persistence, provider, API, or product publication.
   persistence, MFE/MAE, benchmark/sector return evidence, alpha/sector alpha,
   aggregation, ranking, API/UI publication, and production provider
   integration remain later reviewed P3/P5 work.
+
+## P3 — Supplied-leaf target-hit readiness classification
+
+Status: production implementation, focused source-local verification, complete
+API verification, and repository CI verification are complete for the
+nineteenth disconnected P3 contract. The broader P3 scoring phase remains open
+with no canonical outcome lifecycle, retry, scheduling, persistence, provider,
+API, or product publication.
+
+### Scope
+
+- Consume exactly two non-null fields: the readiness policy and one complete
+  supplied ADR-020 `TargetHitOrchestrationResolution` using its exact required
+  policy version and digest.
+- Classify the single `Available` shape and all three permanent
+  `NotApplicable` reasons as `Settled`. Non-applicability remains an intentional
+  finished metric meaning; it is not converted to `false`, a loss, or missing
+  evidence and does not imply that another metric exists.
+- Classify only the typed ADR-020 `Pending` branch as `AwaitingEndpoint`. Its
+  preserved target-eligibility leaf can carry only
+  `HORIZON_NOT_REACHED_AS_OF` and already enforces the unreached endpoint;
+  readiness does not duplicate or reinterpret that reason.
+- Classify all 14 `EligibilityUnavailable` and all 22
+  `FavorableExtremeUnavailable` shapes as `EvidenceUnavailable`, without
+  inferring retryability, temporality, permanence, or provider health from a
+  nested reason.
+- Preserve the exact complete ADR-020 source object on every branch. Add no
+  flattened reason, copied leaf, reconstructed evidence, producer replay,
+  eligibility resolver, favorable-extreme selector, target-hit orchestrator,
+  or calculator invocation.
+- Add no canonical `CallOutcome` status, `dataComplete`, retry, freshness,
+  cancellation, latest-correction, scheduling, methodology, fingerprint,
+  persistence, aggregation, ranking, provider, API, or web behavior.
+
+### Locked contract decisions
+
+- ADR-024 owns `SUPPLIED_LEAF_TARGET_HIT_READINESS_V1`, its exact 2042 UTF-8
+  bytes, SHA-256
+  `8f81dee5227370d82dd91cd2fb8448797c7028eaa485dc64cf4bdc3cbf2f31a3`,
+  exact two-field all-non-null request, three result variants, required ADR-020
+  version/hash, branch precedence, whole-source preservation, shared
+  classification validation, and no-lifecycle boundaries.
+- Results are exactly `Settled(context,sourceResult)`,
+  `AwaitingEndpoint(context,sourceResult)`, and
+  `EvidenceUnavailable(context,sourceResult)`. Context contains only the
+  readiness policy identity; no branch stores an outer reason or duplicate
+  nested leaf.
+- The complete constructible matrix contains exactly 41 shapes: four settled
+  (one Available plus three NotApplicable), one awaiting Pending, and 36
+  evidence-unavailable (14 eligibility plus 22 favorable extreme).
+- Classification switches only on ADR-020's sealed top-level variants in this
+  exact order: Available, NotApplicable, Pending, EligibilityUnavailable, and
+  FavorableExtremeUnavailable. Public result constructors delegate their
+  locally decidable check to the same resolver rule so contradictory direct
+  variants fail closed.
+- Equal supplied records replay equally, but this policy does not attest the
+  original orchestration request, PIT candidate membership/filtering, selector
+  or calculator execution, market truth, provider freshness, retryability, or
+  permanence.
+
+### Module and file boundary
+
+- `com.wallstreetreceipts.api.domain.outcome.targethitreadiness` adds exactly
+  four production files: `TargetHitReadinessPolicyVersion.java`,
+  `TargetHitReadinessRequest.java`,
+  `TargetHitReadinessResolution.java`, and
+  `TargetHitReadinessResolver.java`.
+- The sole source-local test is
+  `TargetHitReadinessResolverGoldenTest.java` in the matching package and must
+  execute exactly 47 invocations: six fixed policy/contract/null/shape/direct-
+  construction/replay/determinism checks plus all 41 classification shapes.
+- ADR-024, `quality/P3_ACCEPTANCE.md`, README, this log, repository CI reverse
+  allowlists, the dedicated guard, and the API Surefire cardinality step own the
+  exact boundary.
+
+### Routes
+
+- None. No controller, application service, provider, repository, scheduler,
+  API response, canonical fixture adapter, or web route consumes or publishes
+  the readiness result.
+
+### Verification
+
+- Focused source-local golden: PASS, exactly 47/47
+  `TargetHitReadinessResolverGoldenTest` invocations with zero failures, errors,
+  or skips.
+- Complete API Maven verification: PASS, exactly 1030/1030 tests with zero
+  failures, errors, or skips. PostgreSQL Testcontainers/Flyway, H2/Spring/API
+  tests, and Spring Boot packaging completed successfully.
+- Repository CI contract validation: PASS. The finalized workflow contains 31
+  embedded Python bodies; all 31 compile under optimized Python and all 30
+  locally executable bodies pass. The dedicated ADR-024 guard, affected
+  target-hit orchestration reverse guard, exact 47/47 Surefire XML cardinality
+  check, and both protected-production baseline guards at exactly 189 files /
+  SHA-256
+  `bc251da006f897de69744ee8aec2400da5d18c38c2945aac03ec46063cc18721`
+  all pass.
+- No web, browser, provider, network, or cross-stack result is claimed for this
+  disconnected implementation.
+
+### External-data boundary
+
+- This source-local classification requires no API key, account, paid plan,
+  domain, provider license, environment secret, or network access.
+- Before non-DEMO evidence enters a runtime pipeline, P5 must select entitled
+  analyst-call, historical intraday or tick, official-close, exchange-calendar,
+  corporate-action, and asset/venue reference providers and establish storage,
+  display, derived-data, and redistribution rights. Only then may a reviewed
+  adapter introduce named, scoped secrets through approved local/CI secret
+  stores; secrets must never be supplied in chat or committed to Git.
+
+### Deferred boundary and post-ADR-024 order
+
+- ADR-024 readiness must not be mapped directly to
+  `OutcomeEvaluationStatus`. A future reviewed canonical lifecycle policy must
+  consider all 10 required metrics, intentional non-applicability, cancellation,
+  and latest-correction eligibility before defining Pending/Incomplete mapping,
+  retry/freshness, or scheduling.
+- First decide explicitly whether ADR-022 is the combined asset-return and
+  directional-win readiness receipt or whether a separate asset-return receipt
+  is required. ADR-024 makes no cross-metric ownership inference.
+- Before benchmark or sector return contracts are implemented, request and
+  receive explicit product approval for benchmark identity, sector taxonomy and
+  point-in-time membership, price-versus-total-return basis, currency, venue,
+  and corporate-action treatment. Existing fixtures must not be used to invent
+  those financial meanings.
+- After that approval, add benchmark/sector point-in-time evidence, return
+  calculations, and readiness. Raw intraday/tick coverage semantics must precede
+  MFE/MAE; alpha and sector alpha remain last, after benchmark/sector identity
+  and corporate-action-adjusted return policy are fixed.
+- Leaf-producer receipts, request-membership proofs, canonical methodology
+  activation, input fingerprinting, append-only outcome persistence,
+  aggregation, ranking, API/UI publication, and production provider integration
+  remain later reviewed P3/P5 work.

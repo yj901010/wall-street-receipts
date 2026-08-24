@@ -41,8 +41,12 @@ preserving the whole source result. The eighteenth contract applies the same
 source-local distinction to one complete supplied target-error result:
 available target error is `Settled`, only the exact endpoint-not-reached chain
 is `AwaitingEndpoint`, and all other unavailable shapes are
-`EvidenceUnavailable`. None is wired to fixtures, persistence, an API, a
-provider, or the web. The broader P3 scoring phase remains open.
+`EvidenceUnavailable`. The nineteenth contract classifies one complete
+supplied target-hit orchestration result: its one Available and three permanent
+NotApplicable shapes are `Settled`, its sole Pending shape is
+`AwaitingEndpoint`, and all eligibility or favorable-extreme unavailable
+shapes are `EvidenceUnavailable`. None is wired to fixtures, persistence, an
+API, a provider, or the web. The broader P3 scoring phase remains open.
 Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
 maps, market publication state, recorded S&P call history, and the honest
@@ -394,6 +398,26 @@ are locked by ADR-023. This source-local readiness does not establish the
 canonical lifecycle: that later decision must consider completeness across all
 10 required metrics.
 
+The completed nineteenth P3 slice accepts exactly its readiness policy and one
+complete supplied ADR-020 `TargetHitOrchestrationResolution`. `Settled`
+contains the one `Available` shape and all three permanent `NotApplicable`
+reasons; it does not turn non-applicability into `false` or claim that another
+metric exists. `AwaitingEndpoint` contains only the typed `Pending` branch,
+whose preserved eligibility leaf already proves
+`HORIZON_NOT_REACHED_AS_OF`. The 14 eligibility-unavailable and 22 favorable-
+extreme-unavailable shapes are `EvidenceUnavailable` without retry or
+permanence inference. The exact constructible matrix is 41 shapes: four
+settled, one awaiting, and 36 evidence-unavailable. Every branch preserves the
+exact whole ADR-020 result without flattening a nested reason or replaying an
+eligibility resolver, selector, orchestrator, or calculator. The exact
+2042-byte policy definition and SHA-256
+`8f81dee5227370d82dd91cd2fb8448797c7028eaa485dc64cf4bdc3cbf2f31a3`
+are locked by ADR-024. Its source-local names do not establish
+`OutcomeEvaluationStatus`, `dataComplete`, retry/freshness, cancellation,
+scheduling, methodology activation, persistence, or publication. The golden
+contract is exactly 47 invocations: six fixed contract/negative/replay checks
+plus all 41 classification shapes.
+
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider
 adapters before they reach the canonical domain.
@@ -409,6 +433,15 @@ established. Only after that selection may a reviewed adapter introduce a named,
 scoped secret through approved local/CI secret stores; secrets must never be
 supplied in chat or committed to Git. This repository does not invent a vendor
 or environment-variable name in P3.
+
+After ADR-024, the next reviewed work must first decide whether ADR-022 is the
+combined asset-return/directional-win readiness receipt or whether a separate
+asset-return receipt is required. Benchmark and sector return work must then
+pause for explicit product approval of benchmark identity, sector taxonomy and
+point-in-time membership, price-versus-total-return basis, currency, venue, and
+corporate-action treatment. After those return/readiness contracts, raw-window
+coverage semantics precede MFE/MAE; alpha and sector alpha come last; only then
+may a separate lifecycle policy compose all 10 required metrics.
 
 ## Repository layout
 
