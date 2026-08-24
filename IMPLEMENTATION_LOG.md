@@ -4222,3 +4222,143 @@ endpoint-observation, horizon, lifecycle, persistence, API, or web types.
   reviewed. Canonical evidence/methodology fingerprints and lineage, lifecycle
   composition, persistence/API/UI publication, raw-window coverage, MFE/MAE,
   alpha, and sector alpha remain later slices. Alpha remains last.
+
+## 2026-08-24 — ADR-032 signed sector reference return
+
+Status: the production contract and canonical policy definition are frozen for
+the twenty-fifth disconnected P3 slice. Focused/full regression, the dedicated
+guard/runtime gate, current/legacy baselines, workflow/YAML/Compose validation,
+mutation checks, independent review, and final repository hygiene are
+**PASS**. No provider data, runtime wiring, lifecycle, persistence, API,
+database, or web publication is added.
+
+ADR-032 calculates a signed sector price-index return from one complete ADR-030 sector reference-level-pair receipt using the exact basis-level denominator.
+
+### Scope
+
+- Add an independently typed sector price-index return policy, complete input,
+  sealed result, and deterministic calculator, plus one source-local golden
+  matrix. Do not add readiness or lifecycle composition in this slice.
+- Accept only one complete ADR-030 `SectorReferenceLevelPairResolution`. A
+  resolved branch preserves its exact assignment, endpoint, reference binding,
+  basis/endpoint levels, divisor-continuity, PIT, and provenance receipt;
+  unavailable branches preserve complete typed contexts and nested reasons.
+- Calculate only a resolved pair. Keep intentional N/A, assignment unavailable,
+  endpoint-anchor unavailable, and reference-evidence unavailable as distinct
+  typed branches without copied or flattened reasons.
+- Add no selector, methodology activation, fingerprint, lineage, persistence,
+  fixture, schema, manifest, OpenAPI, Flyway, database, provider, API, resource,
+  or web behavior.
+
+### Locked policy decisions
+
+- Policy `SIGNED_SECTOR_BASIS_LEVEL_DENOMINATOR_SCALE_12_HALF_EVEN_V1` has one
+  exact 2817-byte single-line ASCII/UTF-8 definition and SHA-256
+  `5aecd42c32ba69f0d21ab6e1ee1e3128cd31584724a6f46e176acd470204d0f7`.
+  Every calculation context echoes that digest.
+- Input requires ADR-030 policy
+  `POINT_IN_TIME_EXACT_SECTOR_PRICE_INDEX_LEVEL_PAIR_V1` with exact hash
+  `4224648ba01104fd3e96319158c7d6b42da472e9aa6f2ab22ef9fccf43da7e4a`.
+  Pair-context extraction exhaustively handles all five variants without a
+  default or reconstructed receipt.
+- Results are exactly `Available(context,sectorReturn)`,
+  `NotApplicable(context)`, `AssignmentUnavailable(context)`,
+  `EndpointAnchorUnavailable(context)`, `EvidenceUnavailable(context)`, and
+  `OutputUnavailable(context,reason)`. The sole local output reason is
+  `OUTPUT_NOT_REPRESENTABLE`.
+- Formula is exactly `(endpoint-basis)/basis`, reading only the resolved pair's
+  selected provider-published basis and endpoint levels. Implementation
+  performs one exact `endpoint.subtract(basis)` followed by one scale-12
+  `RoundingMode.HALF_EVEN` division by the positive basis.
+- Available output is a signed decimal ratio with exact scale 12, precision at
+  most 38, and value at least -1. Rounded exact `-1.000000000000` remains
+  valid. Arithmetic failure or rounded precision overflow becomes
+  `OutputUnavailable(OUTPUT_NOT_REPRESENTABLE)`.
+- Operand rescale, `MathContext`, intermediate/second rounding, percent
+  conversion, float/double conversion, provider-return fields, alternate
+  denominator, clipping, asset-return reuse, benchmark-return reuse,
+  reflection/class tokens, shared generic helpers, and fallback are absent.
+- Constructors enforce only local policy, receipt variant, and output shape.
+  Only `SectorReturnCalculator.calculate` attests the formula and operation
+  order.
+
+### Module and file boundary
+
+`com.wallstreetreceipts.api.domain.outcome.sectorreturn` contains exactly:
+
+- `SectorReturnPolicyVersion.java`
+- `SectorReturnInput.java`
+- `SectorReturnResult.java`
+- `SectorReturnCalculator.java`
+
+The matching test surface contains only
+`SectorReturnCalculatorGoldenTest.java`. Production imports only JDK and
+ADR-030 sector reference-level-pair types. It has no direct or reverse
+dependency through asset-return, benchmark-return, assignment, taxonomy,
+endpoint-observation, horizon, lifecycle, persistence, API, or web types.
+
+### Routes, lifecycle, publication, and external data
+
+- None. This leaf consumes one supplied typed resolution; it does not invoke
+  the ADR-030 selector, assert original candidate membership, establish
+  readiness, decide retry/completeness, activate methodology, create a
+  fingerprint or lineage receipt, persist, aggregate, rank, or publish.
+- Existing schemas, canonical fixtures, manifests, OpenAPI, Flyway, database,
+  controller/repository/provider behavior, API responses, and web sources are
+  unchanged. Existing DEMO benchmark, sector, alpha, and sector-alpha values
+  remain null.
+- No API key, account, paid plan, provider license, environment secret, or
+  network access is required, and this slice has no credential. Before
+  non-DEMO use, P5 must approve the exact sector-index product/feed; rights to
+  create and use the exact WSR canonical-node-to-selected provider-published
+  sector price-index binding; exact-time historical levels and revisions;
+  reference-calendar identity, revision, and source; divisor and methodology
+  continuity; and storage, cache, display, derived-return, and redistribution
+  rights. Publisher and redistributor require independent review when they
+  differ. Assignment or classification rights alone do not grant index rights.
+  Only after provider/product and written-rights approval may a reviewed
+  adapter receive a scoped credential through untracked local, CI, and
+  deployment secret stores, never chat or Git.
+
+### Verification
+
+- Exact policy extraction is 2817 bytes / SHA-256
+  `5aecd42c32ba69f0d21ab6e1ee1e3128cd31584724a6f46e176acd470204d0f7`.
+- Focused `SectorReturnCalculatorGoldenTest`: **PASS**, exactly 112/112 with
+  zero failures, errors, or skips. Normalized golden-source SHA-256 is
+  `6047b29c8c338893bf2fdeaa9a5fef83ec20cb4f5e11acb77d82b48d8752b129`.
+- Current protected production is exactly 224 files / SHA-256
+  `bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055`;
+  exact ADR-032 production exclusion reproduces ADR-031 at 220 /
+  `cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9`.
+- Current API-test/web is exactly 203 files /
+  `5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce`;
+  exact golden exclusion reproduces ADR-031 at 202 /
+  `12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273`.
+- Full API Maven verification: **PASS**, exactly 1875/1875 with zero failures,
+  errors, or skips and `BUILD SUCCESS`, including Testcontainers PostgreSQL
+  17.10 and Flyway.
+- The dedicated ADR-032 guard and exact 112/112 runtime gate pass. All 37/37
+  workflow Python heredoc bodies syntax-compile and all 30/30 locally runnable
+  bodies pass. Six `jsonschema`/`referencing` bodies remain syntax-only because
+  those modules are absent from the bundled runtime; the final cross-stack
+  integration-log body is syntax-only by design. SnakeYAML 2.5 parses exactly
+  four jobs and Compose config validates: **PASS**.
+- Deliberately mutating the README marker, canonical `percentConversion` byte,
+  or expected runtime count from 112 to 111 makes the dedicated guard or gate
+  exit nonzero; every mutation is exactly restored and the final guard passes.
+  Web lint, 569/569 Vitest tests, and production build pass. Independent
+  reviews report no remaining P0/P1/P2 finding, marker parity is exactly one
+  per contract document, and `git diff --check` is clean. Next.js regenerated
+  `apps/web/next-env.d.ts` during verification, and its user-owned pre-build
+  content was immediately restored to SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`:
+  **PASS**.
+
+### Next reviewed work
+
+- Add source-local comparative readiness as its own gated slice now that the
+  benchmark and sector calculators are independently typed and reviewed.
+- Keep lifecycle composition, methodology activation/fingerprint, lineage,
+  persistence, API/UI publication, canonical evidence, raw-window coverage,
+  MFE/MAE, alpha, and sector alpha separate. Alpha and sector alpha remain last.
