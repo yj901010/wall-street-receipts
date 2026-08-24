@@ -465,10 +465,33 @@ same basis-to-endpoint UTC interval, exact currency with no FX, explicit
 reference calendar/source/venue identity, and index divisor-continuity proof.
 They use separate calculator/result types, must apply ADR-017's exact one-
 subtraction/one scale-12 `HALF_EVEN` division, and never reuse the asset share-
-basis adjustment types. Current DEMO outcome values remain null. Benchmark
-assignment comes next, then sector taxonomy/assignment, reference-level pairs,
-return calculators and readiness; raw-window coverage precedes MFE/MAE, alpha
-and sector alpha come last, and lifecycle composition remains separate.
+basis adjustment types. Current DEMO outcome values remain null. ADR-027 now
+implements benchmark assignment; the provider-neutral sector taxonomy decision
+comes next, followed by sector assignment, reference-level pairs, return
+calculators and readiness. Raw-window coverage precedes MFE/MAE, alpha and
+sector alpha come last, and lifecycle composition remains separate.
+
+ADR-027 selects benchmark assignment only from explicit point-in-time evidence frozen at the outcome basis event.
+The disconnected V1 selector accepts only complete source-identified
+classification and assignment candidate lists for one exact `OutcomeBasis`,
+asset, and `evaluationAsOf`. It removes future evidence before every identity,
+reason, and cardinality decision, applies start-inclusive/end-exclusive
+membership with an explicit open-ended variant, and never filters visible bad
+evidence toward a convenient valid row. Originals and corrections are
+independent bases.
+
+Known non-equity or non-US/USD classifications are typed `NotApplicable` only
+when no visible assignment conflicts with that scope. An in-scope US/USD equity
+resolves only through exactly one coherent mapping to `asset-spx`,
+`AssetType.INDEX`, USD, and `PROVIDER_PUBLISHED_PRICE_INDEX`; missing,
+conflicting, invalid, or duplicate evidence is typed `Unavailable`. The exact
+4261-byte policy definition has SHA-256
+`7318514c2f50eda16b2d7ef35bc68d00d6a8b18a0f09f77130525fca2f32da69`.
+No ticker, current master state, `MarketSnapshot.spx`, UI universe, map, or
+treemap can create an assignment, and no schema, fixture, API, database,
+provider, or web runtime consumes this leaf. It requires no API key, account,
+license, secret, or network access; non-DEMO use remains blocked on P5 provider
+selection and storage/display/derived-data/redistribution rights.
 
 ## Repository layout
 

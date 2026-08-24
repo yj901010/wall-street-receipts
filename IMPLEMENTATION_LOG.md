@@ -3507,3 +3507,119 @@ executable policy, canonical definition/hash, production code, or golden test.
   `12fb3dbacd830f86ca0790284e2a2833d0314bcf56291337d7698d40720ca45d`.
   A temporary sector-index-golden plus web-taxonomy mutation pair was rejected
   with the required nonzero exit, then removed before final verification.
+
+## P3 — Point-in-time explicit benchmark assignment V1
+
+Status: production implementation, focused source-local verification, full API
+verification, and repository CI/YAML/Compose/mutation verification are complete
+for the twentieth disconnected P3 contract. The broader P3 scoring phase
+remains open with no reference level, comparative return, canonical lifecycle,
+persistence, provider, API, or product publication.
+
+ADR-027 selects benchmark assignment only from explicit point-in-time evidence frozen at the outcome basis event.
+
+### Scope
+
+- Consume exactly the V1 policy, one complete original/correction
+  `OutcomeBasis`, canonical asset ID, microsecond `evaluationAsOf`, and immutable
+  complete classification and assignment candidate lists.
+- Preserve provider-event/evidence identity, source/revision/provenance,
+  asset/type, primary venue and sourced ISO country, ISO currency, explicit
+  effective interval, PIT timestamps, and benchmark mapping semantics.
+- Remove evidence with either PIT timestamp after `evaluationAsOf` before all
+  identity, applicability, reason, and cardinality gates. Future invalid or
+  duplicate records are indistinguishable from absence and are never echoed.
+- Select classification at the exact basis event with start-inclusive/end-
+  exclusive membership and an explicit sealed open-ended value. Original and
+  correction bases remain independent; membership never floats to current or
+  horizon-end state.
+- Resolve only one coherent US/USD equity mapping to `asset-spx`, INDEX, USD,
+  and provider-published price-index semantics. Preserve typed intentional
+  non-applicability and fail closed on missing, conflicting, invalid, or
+  ambiguous expected evidence.
+- Add no provider read, current-master/ticker/UI inference, reference level,
+  return calculation, canonical outcome status, persistence, schema, fixture,
+  database, API, or web behavior.
+
+### Locked contract decisions
+
+- ADR-027 owns policy
+  `POINT_IN_TIME_EXPLICIT_US_EQUITY_ASSET_SPX_ASSIGNMENT_V1`, its exact 4261
+  single-line ASCII/UTF-8 bytes, and SHA-256
+  `7318514c2f50eda16b2d7ef35bc68d00d6a8b18a0f09f77130525fca2f32da69`.
+  Every result context echoes the digest and definition byte reads are
+  defensive.
+- Result variants are exactly `Resolved`, `NotApplicable`, and `Unavailable`.
+  The four N/A reasons and 19 unavailable reasons follow ADR-027's exact order;
+  missing assignment is N/A only for a coherent out-of-scope classification
+  with no visible mapping.
+- Every visible mismatch poisons the candidate set at its fixed gate. Equal
+  duplicates remain ambiguous, known mismatch precedes ambiguity, candidate
+  order is irrelevant, and no filter-to-valid, deduplication, current/latest
+  row, provider preference, nearest interval, or fallback exists.
+- Public resolved/N/A constructors validate locally decidable context/evidence
+  consistency. Only `BenchmarkAssignmentSelector` attests request membership,
+  PIT filtering, all-candidate precedence, and cardinality.
+
+### Module and file boundary
+
+- `com.wallstreetreceipts.api.domain.outcome.benchmarkassignment` contains
+  exactly six production files:
+  `BenchmarkAssignmentPolicyVersion.java`,
+  `BenchmarkAssetClassificationEvidence.java`,
+  `BenchmarkAssignmentEvidence.java`, `BenchmarkAssignmentRequest.java`,
+  `BenchmarkAssignmentResolution.java`, and
+  `BenchmarkAssignmentSelector.java`.
+- The matching source-local test surface contains only
+  `BenchmarkAssignmentSelectorGoldenTest.java`, with exactly 84 invocations
+  across 31 test methods.
+- ADR-027, README, P3 acceptance, this log, the dedicated CI guard, the strict-
+  close `OutcomeBasis` reverse allowlist, protected baseline guards, and the API
+  Surefire cardinality step own the exact boundary.
+
+### Routes and publication
+
+- None. No controller, application service, provider, repository, scheduler,
+  API response, canonical fixture adapter, resource, or web route consumes or
+  publishes the resolution.
+- Existing model-only and DEMO `benchmarkReturn`, `sectorReturn`, `alpha`, and
+  `sectorAlpha` remain null. Assignment evidence is neither a price level nor a
+  return or methodology claim.
+
+### Verification
+
+- Focused source-local golden: **PASS**, exactly 84/84 tests with zero failures,
+  errors, or skips.
+- Complete API Maven verification: **PASS**, exactly 1114/1114 tests with zero
+  failures, errors, or skips; Spring Boot repackage completed.
+- Repository CI guard and all embedded Python checks: **PASS**. All 32 bodies
+  compile under optimized Python, all 31 locally executable bodies pass, and
+  the final cross-stack body remains syntax-checked for workflow service
+  execution. The exact ADR-027 marker mutation exits nonzero and is restored.
+- Workflow YAML, Compose, and patch hygiene: **PASS**. SnakeYAML parses the
+  exact four jobs, Compose configuration is valid, and `git diff --check` is
+  clean.
+- App-owned web regression: **PASS**. ESLint passes, Vitest runs 569/569 tests
+  across 42 files, and the Next production build emits the expected 12 static
+  pages and routes without adding benchmark-assignment web behavior.
+- The finalized source surface currently produces a 195-file protected
+  production baseline at SHA-256
+  `562e6402b06c4b549d518b5935d7c6525d795708d135bb4c8dd4af8c674d0640`
+  and a 198-file API-test plus application-owned web baseline at SHA-256
+  `0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e`.
+  Excluding exactly the ADR-027 six production files and one golden reproduces
+  the ADR-026-era 189/197 counts and both historical digests.
+
+### External-data and next-decision boundary
+
+- This disconnected policy requires no API key, account, paid plan, domain,
+  provider license, environment secret, or network access.
+- Before non-DEMO evidence enters it, P5 must select entitled classification,
+  venue-country, currency, and benchmark-mapping providers and establish
+  storage, display, derived-data, and redistribution rights. Named scoped
+  secrets may then be introduced only through approved local/CI/deployment
+  stores, never chat or Git.
+- The next step is a product decision for the provider-neutral WSR sector
+  taxonomy: taxonomy ID/version, canonical bytes/hash, closed node IDs, and
+  exact provider-to-canonical mapping semantics. Sector assignment code remains
+  blocked until that approval is received.
