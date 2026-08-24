@@ -11268,10 +11268,248 @@ jobs:
                       f"Price-pair/asset-return leaves must not expand web: {web_path}",
                   )
 
+          comparative_adr_path = Path(
+              "decisions/ADR-026-point-in-time-comparative-reference-return-"
+              "foundation.md"
+          )
+          comparative_marker = (
+              "ADR-026 locks benchmark and sector returns to explicit point-in-time "
+              "reference assignments."
+          )
+          comparative_doc_paths = (
+              comparative_adr_path,
+              Path("README.md"),
+              Path("quality/P3_ACCEPTANCE.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+          )
+          comparative_docs = {}
+          for doc_path in comparative_doc_paths:
+              require(doc_path.is_file(), f"Missing ADR-026 foundation doc: {doc_path}")
+              doc_source = doc_path.read_text(encoding="utf-8")
+              comparative_docs[doc_path] = doc_source
+              require(
+                  doc_source.count(comparative_marker) == 1
+                  and "ADR-026" in doc_source,
+                  f"ADR-026 foundation marker must occur exactly once: {doc_path}",
+              )
+
+          comparative_adr = comparative_docs[comparative_adr_path]
+          require(
+              comparative_adr.startswith(
+                  "# ADR-026 — Point-in-Time Comparative Reference-Return Foundation\n"
+              )
+              and "- Status: Accepted" in comparative_adr
+              and "- Date: 2026-08-24" in comparative_adr,
+              "ADR-026 title, accepted status, or date changed",
+          )
+          comparative_words = re.sub(
+              r"[^a-z0-9]+", " ", comparative_adr.lower()
+          )
+          required_comparative_terms = (
+              ("decision only",),
+              (
+                  "asset spx", "explicit", "assignment", "assettype equity",
+                  "iso 3166 1 alpha 2 us", "iso 4217 usd", "assettype index",
+              ),
+              ("satisfies only adr 025", "does not relax"),
+              ("ticker", "infer"),
+              ("non applicability", "evidence unavailability"),
+              ("point in time", "basis event", "frozen"),
+              (
+                  "wall street receipts", "sector taxonomy", "provider",
+                  "mapping", "membership",
+              ),
+              ("treemap", "gics", "icb"),
+              ("provider published", "price index", "etf", "basket"),
+              ("price return", "total return"),
+              ("same currency", "no fx"),
+              ("shared utc interval", "calendar", "venue", "source"),
+              ("source recorded", "reference level", "basis event", "endpoint"),
+              ("prior", "nearest", "interpolation"),
+              ("divisor continuity",),
+              (
+                  "assetreturnresult", "assetreturnpricepairresolution",
+                  "corporateactioncontinuity", "endpointpriceadjustmentbasis",
+              ),
+              (
+                  "separate semantic types", "own inputs and results", "must use",
+                  "exactly one subtraction", "exactly one scale 12 half even division",
+                  "no intermediate or second rounding",
+              ),
+              ("demo", "outcome", "null"),
+              ("api key", "network"),
+          )
+          for required_terms in required_comparative_terms:
+              require(
+                  all(term in comparative_words for term in required_terms),
+                  "Missing ADR-026 decision-only foundation terms: "
+                  f"{required_terms}",
+              )
+          require(
+              re.search(r"\b[a-f0-9]{64}\b", comparative_adr) is None
+              and "## Canonical policy definition" not in comparative_adr
+              and '"policyVersion"' not in comparative_adr
+              and "DEFINITION_HASH" not in comparative_adr,
+              "Decision-only ADR-026 must not create canonical policy bytes or a digest",
+          )
+
+          normalized_docs = {
+              path: re.sub(r"\s+", " ", source).lower()
+              for path, source in comparative_docs.items()
+          }
+          stale_blockers = {
+              Path("README.md"): (
+                  "benchmark and sector return work must next pause for explicit "
+                  "product approval",
+              ),
+              Path("quality/P3_ACCEPTANCE.md"): (
+                  "before benchmark or sector return contracts are designed, obtain "
+                  "explicit product approval",
+              ),
+              Path("IMPLEMENTATION_LOG.md"): (
+                  "before benchmark or sector return contracts are implemented, request "
+                  "and receive explicit product approval",
+                  "benchmark and sector return work still requires explicit product "
+                  "approval",
+              ),
+          }
+          for doc_path, stale_phrases in stale_blockers.items():
+              require(
+                  not any(
+                      phrase in normalized_docs[doc_path]
+                      for phrase in stale_phrases
+                  ),
+                  f"Stale pre-ADR-026 approval blocker remains: {doc_path}",
+              )
+
+          premature_path_pattern = re.compile(
+              r"(?:benchmark|sector|comparativereference)"
+              r"[^/]*(?:assignment|pricepair|return)"
+          )
+          premature_type_pattern = re.compile(
+              r"\b(?:Benchmark|Sector)(?:Reference)?"
+              r"(?:Assignment|PricePair|Return)\w*\b|"
+              r"\bComparativeReference(?:Assignment|PricePair|Return)\w*\b"
+          )
+          for java_root in (
+              Path("apps/api/src/main/java"),
+              Path("apps/api/src/test/java"),
+          ):
+              for java_path in java_root.rglob("*.java"):
+                  normalized_path = re.sub(
+                      r"[^a-z0-9]", "", java_path.as_posix().lower()
+                  )
+                  java_source = java_path.read_text(encoding="utf-8")
+                  java_logic = without_comments_or_strings(java_source)
+                  require(
+                      premature_path_pattern.search(normalized_path) is None,
+                      "ADR-026 must not add a premature comparative runtime path: "
+                      f"{java_path}",
+                  )
+                  require(
+                      premature_type_pattern.search(java_logic) is None,
+                      "ADR-026 must not add a premature benchmark/sector runtime type: "
+                      f"{java_path}",
+                  )
+
+          comparative_web_paths = [
+              path
+              for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+              for path in root.rglob("*")
+              if path.is_file()
+          ] + [
+              path for path in Path("apps/web").glob("*")
+              if path.is_file()
+          ]
+          for web_path in comparative_web_paths:
+              normalized_path = re.sub(
+                  r"[^a-z0-9]", "", web_path.as_posix().lower()
+              )
+              require(
+                  premature_path_pattern.search(normalized_path) is None,
+                  "ADR-026 must not add a premature comparative web path: "
+                  f"{web_path}",
+              )
+              if web_path.suffix.lower() in {
+                  ".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx",
+              }:
+                  web_source = web_path.read_text(encoding="utf-8")
+                  require(
+                      premature_type_pattern.search(web_source) is None,
+                      "ADR-026 must not add a premature benchmark/sector web type: "
+                      f"{web_path}",
+                  )
+
+          protected_paths = sorted(
+              {
+                  Path("contracts/openapi.yaml"),
+                  *Path("schemas").glob("*.json"),
+                  *Path("fixtures/v1").glob("*.json"),
+                  *(
+                      path for path in Path("apps/api/src/main").rglob("*")
+                      if path.is_file()
+                  ),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          protected_digest = hashlib.sha256()
+          for protected_path in protected_paths:
+              protected_digest.update(protected_path.as_posix().encode("utf-8"))
+              protected_digest.update(b"\0")
+              protected_digest.update(
+                  protected_path.read_bytes().replace(b"\r\n", b"\n")
+              )
+              protected_digest.update(b"\0")
+          require(
+              len(protected_paths) == 189
+              and protected_digest.hexdigest()
+              == "bc251da006f897de69744ee8aec2400da5d18c38c2945aac03ec46063cc18721",
+              "ADR-026 decision-only foundation must preserve the protected "
+              "OpenAPI/schema/fixture/API production baseline",
+          )
+
+          decision_only_paths = sorted(
+              {
+                  *(
+                      path for path in Path("apps/api/src/test").rglob("*")
+                      if path.is_file()
+                  ),
+                  *(
+                      path
+                      for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                      for path in root.rglob("*")
+                      if path.is_file()
+                  ),
+                  *(
+                      path for path in Path("apps/web").glob("*")
+                      if path.is_file() and path.name != "next-env.d.ts"
+                  ),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          decision_only_digest = hashlib.sha256()
+          for decision_only_path in decision_only_paths:
+              decision_only_digest.update(
+                  decision_only_path.as_posix().encode("utf-8")
+              )
+              decision_only_digest.update(b"\0")
+              decision_only_digest.update(
+                  decision_only_path.read_bytes().replace(b"\r\n", b"\n")
+              )
+              decision_only_digest.update(b"\0")
+          require(
+              len(decision_only_paths) == 197
+              and decision_only_digest.hexdigest()
+              == "12fb3dbacd830f86ca0790284e2a2833d0314bcf56291337d7698d40720ca45d",
+              "ADR-026 decision-only foundation must preserve the exact API test "
+              "and web source/config baseline",
+          )
+
           print(
               "Validated exact point-in-time basis-event/endpoint price-pair policy, "
               "signed basis-denominator scale-12 HALF_EVEN asset return, closed "
-              "unavailability, and no provider or product publication"
+              "unavailability, decision-only comparative reference-return foundations, "
+              "and no provider or product publication"
           )
           PYTHON
 
