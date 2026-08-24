@@ -3028,3 +3028,122 @@ scheduling, persistence, provider, API, or product publication.
   persistence, MFE/MAE, benchmark/sector return evidence, alpha/sector alpha,
   aggregation, ranking, API/UI publication, and production provider
   integration remain later reviewed P3/P5 work.
+
+## P3 — Supplied-leaf target-error readiness classification
+
+Status: production implementation, focused source-local verification, complete
+API verification, and repository CI verification are complete for the
+eighteenth disconnected P3 contract. The broader P3 scoring phase remains open
+with no canonical outcome lifecycle, retry, scheduling,
+persistence, provider, API, or product publication.
+
+### Scope
+
+- Consume exactly two non-null fields: the readiness policy and one complete
+  supplied ADR-015 `TargetErrorResult` using the exact required version and
+  digest.
+- Classify `TargetErrorResult.Available` as `Settled` without inferring that
+  any other required metric exists.
+- Classify only the exact nested chain `ENDPOINT_PRICE_UNAVAILABLE` ->
+  `ENDPOINT_NOT_REACHED_AS_OF`, including the typed unavailable endpoint
+  carrying the same reason, as `AwaitingEndpoint`.
+- Classify every other constructible unavailable shape as
+  `EvidenceUnavailable`. This includes
+  `TARGET_AND_ENDPOINT_PRICE_UNAVAILABLE` with endpoint-not-reached because
+  waiting for the close cannot repair the missing target.
+- Preserve the exact complete source object on every branch. Add no flattened
+  reason, reconstructed endpoint evidence, producer replay, or calculator
+  invocation.
+- Add no canonical `CallOutcome` status, `dataComplete`, retry, freshness,
+  cancellation, latest-correction, scheduling, methodology, fingerprint,
+  persistence, aggregation, ranking, provider, API, or web behavior.
+
+### Locked contract decisions
+
+- ADR-023 owns `SUPPLIED_LEAF_TARGET_ERROR_READINESS_V1`, its exact 1979 UTF-8
+  bytes, SHA-256
+  `0b8bfb22dccd4a494f568c44d06163f73af36462cf929bc83cf238019811c44a`,
+  exact two-field all-non-null request, three result variants, required ADR-015
+  version/hash, branch precedence, exact endpoint-only chain, whole-source
+  preservation, single classification owner, and no-lifecycle boundaries.
+- Results are exactly `Settled(context,sourceResult)`,
+  `AwaitingEndpoint(context,sourceResult)`, and
+  `EvidenceUnavailable(context,sourceResult)`. Context contains only the
+  readiness policy identity; no branch stores a flattened reason or copied
+  endpoint leaf.
+- The complete constructible matrix contains exactly 40 shapes: one settled,
+  one awaiting, and 38 evidence-unavailable. The 39 unavailable shapes comprise
+  16 endpoint-only reasons, 16 compound target-and-endpoint reasons, and seven
+  reasons requiring a resolved endpoint.
+- Exact reason inspection is owned only by `TargetErrorReadinessResolver`.
+  Public result constructors delegate their locally decidable classification
+  check to the same resolver rule so directly constructed contradictory
+  variants fail closed without duplicated reason logic.
+- Equal supplied records replay equally, but this policy does not attest the
+  original target-error input, PIT candidate membership/filtering, selector or
+  calculator execution, market truth, provider freshness, retryability, or
+  permanence.
+
+### Module and file boundary
+
+- `com.wallstreetreceipts.api.domain.outcome.targeterrorreadiness` adds exactly
+  four production files: `TargetErrorReadinessPolicyVersion.java`,
+  `TargetErrorReadinessRequest.java`,
+  `TargetErrorReadinessResolution.java`, and
+  `TargetErrorReadinessResolver.java`.
+- The sole source-local test is exactly
+  `TargetErrorReadinessResolverGoldenTest.java` in the matching package and is
+  required to execute exactly 46 invocations: six contract/null/shape/direct-
+  construction/replay/determinism checks, all 39 unavailable shapes, and one
+  settled shape.
+- ADR-023, `quality/P3_ACCEPTANCE.md`, README, this log, repository CI reverse
+  allowlists, the dedicated guard, and the API Surefire cardinality step own the
+  exact boundary.
+
+### Routes
+
+- None. No controller, application service, provider, repository, scheduler,
+  API response, canonical fixture adapter, or web route consumes or publishes
+  the readiness result.
+
+### Verification
+
+- Focused source-local golden: PASS, exactly 46/46
+  `TargetErrorReadinessResolverGoldenTest` invocations with zero failures,
+  errors, or skips.
+- Complete API Maven verification: PASS, exactly 983/983 tests with zero
+  failures, errors, or skips. PostgreSQL Testcontainers/Flyway, H2/Spring/API
+  tests, and Spring Boot packaging completed successfully.
+- Repository CI contract validation: PASS. The finalized workflow contains 30
+  embedded Python bodies; all 30 compile under optimized Python and all 29
+  locally executable bodies pass. The dedicated ADR-023 guard, affected
+  endpoint/target reverse guards, exact 46/46 Surefire XML cardinality check,
+  and both protected-production baselines at exactly 185 files / SHA-256
+  `4a1479312db7053a476ae4b982df3f13aad570332baef4489e03d039cd49114a`;
+  all pass.
+- No web, browser, provider, network, or cross-stack result is claimed for this
+  disconnected implementation.
+
+### External-data boundary
+
+- This source-local classification requires no API key, account, paid plan,
+  domain, provider license, environment secret, or network access.
+- Before non-DEMO evidence enters a runtime pipeline, P5 must select analyst-
+  call, official-close, exchange-calendar, corporate-action, and asset/venue
+  reference providers and establish storage, display, derived-data, and
+  redistribution rights. Only then may a reviewed adapter introduce named,
+  scoped secrets through approved local/CI secret stores; secrets must never be
+  supplied in chat or committed to Git.
+
+### Deferred boundary
+
+- ADR-023 readiness must not be mapped directly to
+  `OutcomeEvaluationStatus`. A future reviewed canonical lifecycle policy must
+  consider completeness across all 10 required metrics before defining
+  Pending/Incomplete mapping, retry/freshness, cancellation and latest-
+  correction eligibility, or scheduling.
+- Leaf-producer receipts, request-membership proofs, raw intraday aggregation,
+  canonical methodology activation, input fingerprinting, append-only outcome
+  persistence, MFE/MAE, benchmark/sector return evidence, alpha/sector alpha,
+  aggregation, ranking, API/UI publication, and production provider
+  integration remain later reviewed P3/P5 work.

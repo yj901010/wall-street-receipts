@@ -37,8 +37,12 @@ all unavailable return evidence, and invokes the pure directional-win
 calculator only for a directional route plus an available return. The
 seventeenth contract classifies that complete supplied result as source-local
 `Settled`, `AwaitingEndpoint`, or `EvidenceUnavailable` readiness while
-preserving the whole source result. None is wired to fixtures, persistence, an
-API, a provider, or the web. The broader P3 scoring phase remains open.
+preserving the whole source result. The eighteenth contract applies the same
+source-local distinction to one complete supplied target-error result:
+available target error is `Settled`, only the exact endpoint-not-reached chain
+is `AwaitingEndpoint`, and all other unavailable shapes are
+`EvidenceUnavailable`. None is wired to fixtures, persistence, an API, a
+provider, or the web. The broader P3 scoring phase remains open.
 Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
 maps, market publication state, recorded S&P call history, and the honest
@@ -372,6 +376,23 @@ calculator. The exact 2353-byte policy definition and SHA-256
 are locked by ADR-022. These readiness names do not mean
 `OutcomeEvaluationStatus`, `dataComplete`, retryability, cancellation,
 scheduling, methodology activation, persistence, or publication.
+
+The completed eighteenth P3 slice accepts exactly its readiness policy and one
+complete supplied ADR-015 `TargetErrorResult`. `Settled` requires an available
+target error. `AwaitingEndpoint` requires the exact nested chain
+`ENDPOINT_PRICE_UNAVAILABLE` -> `ENDPOINT_NOT_REACHED_AS_OF`, including the
+typed endpoint-unavailable result carrying that reason. All other constructible
+shapes are `EvidenceUnavailable`; in particular,
+`TARGET_AND_ENDPOINT_PRICE_UNAVAILABLE` never becomes awaiting because the
+missing target cannot be repaired by waiting for the close. The complete matrix
+is exactly 40 shapes: one settled, one awaiting, and 38 evidence-unavailable.
+Every branch preserves the exact whole ADR-015 result without flattening a
+reason or rerunning a selector or calculator. The exact 1979-byte policy
+definition and SHA-256
+`0b8bfb22dccd4a494f568c44d06163f73af36462cf929bc83cf238019811c44a`
+are locked by ADR-023. This source-local readiness does not establish the
+canonical lifecycle: that later decision must consider completeness across all
+10 required metrics.
 
 The fixtures are deterministic and require no vendor credentials or network
 access. Production provider payloads must be translated through provider

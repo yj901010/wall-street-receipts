@@ -21,7 +21,11 @@ unavailable return meanings, and invokes the primitive only for directional
 plus available return evidence. The supplied-leaf directional-win readiness
 classification is also complete: it distinguishes only the exact endpoint-
 not-reached chain from every other unavailable chain and publishes no canonical
-lifecycle state.
+lifecycle state. The supplied-leaf target-error readiness classification is
+also complete at its source-local boundary: available target error settles,
+only the exact endpoint-not-reached chain awaits, and the other 38 constructible
+unavailable shapes remain evidence-unavailable. It likewise publishes no
+canonical lifecycle state.
 
 ## Pure target-hit slice boundary
 
@@ -1019,11 +1023,85 @@ lifecycle state.
   The dedicated policy/reverse-wiring guard and exact 118/118 Surefire
   cardinality check use explicit nonzero mismatch exits.
 
+## Supplied-leaf target-error readiness boundary
+
+- The request consumes exactly the readiness policy and one complete supplied
+  ADR-015 `TargetErrorResult`. It supplies no competing target, endpoint,
+  reason, error value, evaluation time, status, or schedule and invokes no
+  selector or calculator.
+- `Settled` is limited to `TargetErrorResult.Available`. It means only that the
+  supplied target-error dependency is available; it does not mean the other
+  nine required metrics exist or that a complete outcome can be published.
+- `AwaitingEndpoint` requires the exact complete nested chain
+  `TargetErrorResult.ENDPOINT_PRICE_UNAVAILABLE` ->
+  `EndpointPriceResolution.ENDPOINT_NOT_REACHED_AS_OF`, with the preserved
+  typed endpoint-unavailable result carrying the same reason.
+- Every other constructible unavailable shape becomes `EvidenceUnavailable`.
+  `TARGET_AND_ENDPOINT_PRICE_UNAVAILABLE` remains evidence-unavailable even
+  when its endpoint is not reached because waiting for the close cannot repair
+  the already absent target.
+- The three names are source-local readiness evidence only. They are not
+  `OutcomeEvaluationStatus`, `CallOutcome`, `dataComplete`, retry/freshness,
+  cancellation, latest-correction selection, scheduling, or provider-health
+  claims. A later canonical lifecycle policy must consider completeness across
+  all 10 required metrics.
+
+## Supplied-leaf target-error readiness contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-TER01 | Exact source surface | Package `com.wallstreetreceipts.api.domain.outcome.targeterrorreadiness` contains exactly `TargetErrorReadinessPolicyVersion`, `TargetErrorReadinessRequest`, `TargetErrorReadinessResolution`, and `TargetErrorReadinessResolver` plus exactly one source-local golden test. No controller, service, repository, provider, DTO, scheduler, or helper is added. |
+| P3-TER02 | Exact policy identity | Policy enum contains only `SUPPLIED_LEAF_TARGET_ERROR_READINESS_V1`. ADR-023 locks the exact single-line 1979-byte ASCII/UTF-8 definition and SHA-256 `0b8bfb22dccd4a494f568c44d06163f73af36462cf929bc83cf238019811c44a`; every context echoes it and returned bytes are defensive. |
+| P3-TER03 | Exact all-present request | Request components are exactly readiness policy and `TargetErrorResult sourceResult`; both are non-null. The source uses ADR-015 `ACTUAL_DENOMINATOR_SCALE_12_HALF_EVEN_V1` and digest `31ca30555549f670e3c22d98ead16f7a02bfad198f36532effaf4a4b6931d074`. No raw or competing leaf input exists. |
+| P3-TER04 | Exact source extraction | The resolver consumes only the complete supplied target-error result and its already-preserved endpoint resolution. It does not reconstruct a target, endpoint observation, target-error value, or evaluation time and invokes no selector, calculator, orchestrator, or producer. |
+| P3-TER05 | Exact result variants | Resolution permits exactly `Settled(context,sourceResult)`, `AwaitingEndpoint(context,sourceResult)`, and `EvidenceUnavailable(context,sourceResult)`. Context contains only readiness version/hash; every branch preserves the exact whole ADR-015 source with no outer reason or duplicate endpoint leaf. |
+| P3-TER06 | Settled boundary | `Settled` accepts only `TargetErrorResult.Available`. It does not imply that another metric exists, that the overall outcome is complete, or that any unavailable target error can settle. |
+| P3-TER07 | Exact awaiting chain | `AwaitingEndpoint` simultaneously requires target-error reason `ENDPOINT_PRICE_UNAVAILABLE`, echoed endpoint reason `ENDPOINT_NOT_REACHED_AS_OF`, a typed unavailable endpoint in the source context, and that endpoint carrying the same reason. |
+| P3-TER08 | Compound-evidence firewall | `TARGET_AND_ENDPOINT_PRICE_UNAVAILABLE` is always `EvidenceUnavailable`, including when its endpoint reason is `ENDPOINT_NOT_REACHED_AS_OF`. Of the 39 constructible unavailable shapes, exactly one awaits and the other 38 are evidence-unavailable. |
+| P3-TER09 | Precedence and reason ownership | Classification order is available target error, exact endpoint-only chain, then every other unavailable result. Exact reason inspection occurs only inside `TargetErrorReadinessResolver`; no reason is flattened, renamed, generalized, or exposed on the outer result. |
+| P3-TER10 | Constructor and attestation boundary | Public result constructors reject a source classified for another variant by delegating to the resolver's single classification rule. They attest local source policy/shape and classification only, not original input membership, PIT filtering, candidate cardinality, selector/calculator invocation, or market truth. |
+| P3-TER11 | Whole-source preservation | Every result retains the exact supplied ADR-015 object, including its context, endpoint evidence, reasons, and decimal target error where available. No copy, fallback, recalculation, or evidence clearing is permitted. |
+| P3-TER12 | Determinism | Equal source records classify equally regardless of clock, locale, timezone, valid decimal scale, environment, thread, random state, invocation order, or prior calls. The policy accepts no clock, timeout, retry count, or current-time input. |
+| P3-TER13 | Lifecycle firewall | The slice does not construct or mutate `CallOutcome`; emit `PENDING`, `INCOMPLETE`, `CALCULATED`, or `EXCLUDED`; set `dataComplete`; decide retry, freshness, cancellation, latest correction, scheduling, methodology activation, fingerprinting, persistence, aggregation, ranking, or publication. |
+| P3-TER14 | Product/data firewall | No schema, canonical fixture, manifest, OpenAPI, Flyway, database, API/provider behavior, resource, or web source changes. No key, account, paid plan, provider license, named secret, or network access is needed for this source-local classification. |
+| P3-TER15 | Repository CI contract | Both protected-production baselines contain exactly 185 files at SHA-256 `4a1479312db7053a476ae4b982df3f13aad570332baef4489e03d039cd49114a`. CI locks the dedicated policy and reverse-reference guard, unchanged data/product surfaces, and exact 46/46 Surefire cardinality with an explicit nonzero mismatch exit; all affected repository guards pass. |
+
+## Required target-error readiness golden and negative tests
+
+- Execute exactly 46 vectors: six contract, null, shape, direct-construction,
+  replay, and determinism checks; all 39 constructible unavailable shapes; and
+  one settled shape.
+- Lock the exact canonical bytes/hash, four-production-file/one-test surface,
+  two-field request, context components, three sealed variants, exact source
+  policy requirement, reverse references, and absence of selector/calculator
+  or canonical lifecycle wiring.
+- Prove the exact 40-shape classification matrix: one settled, one awaiting,
+  and 38 evidence-unavailable. The 39 unavailable shapes comprise 16 endpoint-
+  only reasons, 16 compound target-and-endpoint reasons, and seven reasons that
+  require a resolved endpoint.
+- Prove that only endpoint-only plus endpoint-not-reached awaits and that the
+  compound missing-target case remains evidence-unavailable. Contradictory
+  direct variant construction must fail closed.
+- Prove exact whole-source preservation, equal-but-distinct replay, null
+  rejection, defensive policy bytes, and deterministic locale/default-timezone
+  replay with restoration in `finally`.
+- Focused source-local verification is exactly 46/46 with zero failures,
+  errors, or skips. The expected complete API suite after these 46 invocations
+  is exactly 983 tests; complete Maven verification passes 983/983 with zero
+  failures, errors, or skips, including PostgreSQL/Flyway, H2/Spring/API, and
+  Spring Boot packaging. Repository CI contains exactly 30 embedded Python
+  bodies: all 30 compile, the 29 locally executable bodies pass, and the final
+  cross-stack body remains syntax-checked here for workflow service execution.
+  Both protected-production baselines are fixed at 185 files / SHA-256
+  `4a1479312db7053a476ae4b982df3f13aad570332baef4489e03d039cd49114a`,
+  and the dedicated and affected reverse guards pass.
+
 ## Deferred work and implementation order
 
-1. Add a separate canonical lifecycle policy before mapping source-local
-   readiness to Pending/Incomplete, retry/freshness, cancellation, or
-   scheduling. ADR-022 deliberately makes none of those inferences.
+1. Complete the remaining source-local metric readiness contracts, then add a
+   separate canonical lifecycle policy across all 10 required metrics before
+   mapping readiness to Pending/Incomplete, retry/freshness, cancellation, or
+   scheduling. ADR-022 and ADR-023 deliberately make none of those inferences.
 2. Add provider-side raw intraday/tick aggregation only after versioning
    no-trade, halt, auction, bar-straddle, correction-sequence, and raw-coverage
    proof semantics. P5 must first establish entitled historical intraday/tick,
