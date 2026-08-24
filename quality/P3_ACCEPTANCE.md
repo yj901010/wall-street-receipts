@@ -10,9 +10,9 @@ open. The mechanical calculator-side adapter slice is also complete. The
 disconnected calculator-side routing-evidence slice is also complete. The
 point-in-time official endpoint-price selector, target-error calculation,
 basis-event/endpoint price-pair selector, and signed asset-return calculation
-leaves are also complete. Point-in-time target-hit input eligibility is now
-complete through readiness for later full-window evidence only; no calculator,
-runtime outcome, or product surface is published.
+leaves are also complete. Point-in-time target-hit input eligibility and the
+PIT attested causal-window favorable-extreme selector are now complete; no
+calculator orchestration, runtime outcome, or product surface is published.
 
 ## Pure target-hit slice boundary
 
@@ -753,16 +753,79 @@ runtime outcome, or product surface is published.
   repository CI locks source imports/reverse edges, no calculator/orchestrator
   invocation, and unchanged product/data surfaces.
 
+## Point-in-time causal-window favorable-extreme boundary
+
+- The selector consumes only one complete ADR-018
+  `ReadyForWindowEvidence`, nullable PIT window-price binding evidence, and
+  caller-supplied full-window high/low candidates. Evaluation as-of, target,
+  route, strict horizon, and catalog are inherited rather than resupplied.
+- The causal economic set is exactly primary-venue regular-session
+  observations belonging to the ordered horizon sessions with
+  `observation.time > basis.eventTime` and
+  `observation.time <= endpointSession.closesAt`. The lower bound is exclusive
+  and upper bound inclusive. A daily/session high containing pre-call prices is
+  not equivalent, and the endpoint close is never a high/low fallback.
+- One candidate attests both high and low over that exact union. Bullish selects
+  the stored high; bearish selects the stored low. Original valid decimal scale
+  is preserved with no rounding, rescaling, raw maximum/minimum aggregation, or
+  target comparison.
+- `EXACT_CAUSAL_WINDOW_SESSION_UNION` is an upstream source/provider
+  completeness attestation. V1 checks its identity and metadata but does not
+  independently prove raw tick/bar coverage or define no-trade, halt, auction,
+  bar-straddle, or correction-sequence semantics.
+
+## Point-in-time favorable-extreme contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-FE01 | Exact file/package surface | Production package `com.wallstreetreceipts.api.domain.outcome.favorableextreme` contains exactly `FavorableExtremePolicyVersion.java`, `WindowPriceBinding.java`, `FullWindowHighLowObservation.java`, `FavorableExtremeRequest.java`, `FavorableExtremeResolution.java`, and `FavorableExtremeSelector.java`. Tests add exactly `FavorableExtremeSelectorGoldenTest.java`; no raw aggregator, orchestrator, provider, controller, repository, or helper is added. |
+| P3-FE02 | Exact policy identity | `FavorableExtremePolicyVersion` contains exactly `POINT_IN_TIME_ATTESTED_CAUSAL_WINDOW_HIGH_LOW_V1`. Its canonical definition is the exact ADR-019 single-line 4633-byte ASCII/UTF-8 sequence and fixed lowercase SHA-256 `e3a0e93030c8f09ae5398bf6df0f2e28eec14b0a31f5bea240fc78f2412c2463`. Returned bytes are defensive and every context echoes the digest. |
+| P3-FE03 | Exact request source | Request fields are exactly policy version, one ADR-018 `ReadyForWindowEvidence` using hash `a6b4c9f4e4d29b5f1a9b0c300e2d7b9505318c708dfb0ad0e88f71324cf65465`, nullable binding, and immutable candidates. Evaluation as-of, resolved horizon, side, target, and catalog come only from readiness. Pending, not-applicable, unavailable, incomplete, or competing raw inputs cannot enter. |
+| P3-FE04 | Binding PIT and identity | Binding preserves exact identity/revision, asset, primary venue, currency, price-source ID/revision, availability/capture, and provenance. It is visible only when both PIT timestamps are `<= evaluationAsOf`. After the target-adjustment-basis gate passes, null and future binding are full-result-equal `BINDING_NOT_KNOWN_AS_OF` evidence and future data is never echoed. Visible asset, venue, and currency mismatches are distinct ordered reasons. |
+| P3-FE05 | Exact causal window | Each candidate must bind the exact outcome basis and named horizon, ordered strict-horizon session IDs, catalog ID/revision, `lowerBound == basis.eventTime` with `EXCLUSIVE`, and `upperBound == endpointSession.closesAt` with `INCLUSIVE`. This encodes only regular-session observations in those sessions where `t > basis.eventTime && t <= endpoint close`; off-hours, gaps, pre-call first-session values, prior/next windows, and inferred calendars are excluded. |
+| P3-FE06 | Complete observation identity | Candidate preserves observation/provider-event identity, asset, venue, currency, price-source ID/revision, provenance, catalog and ordered window identity, field/completeness, adjustment/continuity, PIT timestamps, and the original high/low pair. Both prices are positive exact `NUMERIC(38,12)` values, low is `<=` high, bounds are ordered, and availability cannot precede the upper bound. |
+| P3-FE07 | Candidate PIT invisibility | A candidate is known only when both availability and capture are `<= evaluationAsOf`. Future exact, wrong, incomplete, or duplicate candidates are invisible before all mismatch, output, and cardinality decisions. Empty/all-future candidates are exactly `OBSERVATION_MISSING_AS_OF`. |
+| P3-FE08 | All-candidate poison rule | Every PIT-visible request candidate must pass every identity gate. One valid candidate does not hide another known invalid candidate. Mismatch checks use fixed reason precedence independent of candidate order; no candidate filtering, source preference, latest-revision choice, deduplication, or fallback exists. |
+| P3-FE09 | Field, completeness, and continuity | Field must be exactly `PRIMARY_VENUE_REGULAR_SESSION_CAUSAL_WINDOW_HIGH_LOW_PAIR`; coverage must be `EXACT_CAUSAL_WINDOW_SESSION_UNION`; target and observation basis must be split/reverse-split adjusted to endpoint-share basis and dividend-unadjusted; continuity must be `SPLIT_REVERSE_SPLIT_CONTINUOUS`. Indicative/other fields, partial/unknown coverage, FX, merger, spin-off, delisting, special-distribution, unknown continuity, or endpoint-close substitution fail closed. |
+| P3-FE10 | Exact cardinality and ambiguity | Exactly one PIT-visible candidate may pass all gates. More than one is `OBSERVATION_AMBIGUOUS`, including the same object twice, distinct equal records, or equal high/low values from different candidates. No record is deduplicated. A single observation with `windowHigh == windowLow` is valid. |
+| P3-FE11 | Exact side selection | ADR-013 directional routing is inherited through readiness. Bullish returns `FavorableExtreme(HIGH, observation.windowHigh)` and bearish returns `FavorableExtreme(LOW, observation.windowLow)`. The exact selected `BigDecimal` object/value and valid scale are preserved; there is no rounding, rescaling, tolerance, close fallback, high/low inversion, or calculator invocation. |
+| P3-FE12 | Exact result and reason order | Result variants are exactly `Resolved(context,evidence,favorableExtreme)` and `Unavailable(context,evidence,reason)`. Context preserves policy identity and complete readiness; evidence preserves only PIT-visible binding/candidates through the deciding gate. Nested public constructors validate local consistency only for their supplied evidence; only `FavorableExtremeSelector.select(request)` attests complete-request membership, PIT filtering, poisoning, and cardinality. Reasons are exactly, in order: `TARGET_ADJUSTMENT_BASIS_UNSUPPORTED`, `BINDING_NOT_KNOWN_AS_OF`, `BINDING_ASSET_MISMATCH`, `BINDING_PRIMARY_VENUE_MISMATCH`, `BINDING_CURRENCY_MISMATCH`, `OBSERVATION_MISSING_AS_OF`, `BASIS_MISMATCH`, `HORIZON_MISMATCH`, `ASSET_MISMATCH`, `PRIMARY_VENUE_MISMATCH`, `CURRENCY_MISMATCH`, `SOURCE_MISMATCH`, `CATALOG_MISMATCH`, `SESSION_WINDOW_MISMATCH`, `LOWER_BOUND_MISMATCH`, `UPPER_BOUND_MISMATCH`, `BOUNDARY_CONVENTION_MISMATCH`, `PRICE_FIELD_MISMATCH`, `WINDOW_COMPLETENESS_UNAVAILABLE`, `ADJUSTMENT_BASIS_MISMATCH`, `CORPORATE_ACTION_CONTINUITY_UNAVAILABLE`, `OBSERVATION_AMBIGUOUS`. Ambiguity runs only after all 21 earlier gates. |
+| P3-FE13 | Attestation boundary | Resolved means one upstream-attested exact-window pair selected by side. It does not mean this repository aggregated per-session bars or independently proved raw coverage, no-trade, halt, bar-straddle, auction, correction-sequence, or extreme occurrence-time facts. Those claims remain unavailable until a later raw-data policy exists. |
+| P3-FE14 | Purity and unchanged publication | The selector invokes no target-hit, directional-win, asset-return, or target-error calculator; activates no methodology; fingerprints, persists, aggregates, ranks, or publishes nothing; and changes no schema, fixture, manifest, OpenAPI, Flyway, database, provider/API behavior, or web source. No key/account/license/network access is needed for this source-local slice. |
+
+## Required favorable-extreme golden and negative tests
+
+- Lock exact canonical bytes, length 4633, independently recomputed SHA-256,
+  defensive byte copies, six-type source surface, record components, nested
+  enums, sealed variants, 22-reason order, and private selector constructor.
+- Resolve original and correction bases, every named horizon, bullish/strong
+  bullish high selection, bearish/strong bearish low selection, exact-open,
+  intraday, pre-open, exact-prior-close, and strict-gap bases. Prove the lower
+  bound remains the basis event rather than the first-session open.
+- Prove null/future binding equality and null/all-future candidate equality at
+  one-microsecond boundaries for both PIT timestamps. Future wrong and future
+  duplicate evidence must not alter result, context, evidence, reason, or
+  cardinality.
+- Mutate every binding and candidate gate and cross multiple faults in reverse
+  input order. Known invalid plus valid must return the first exact mismatch;
+  same-object and distinct-equal candidates must remain ambiguous.
+- Cover positive numeric scale/precision limits, low below/equal high,
+  malformed boundaries/timestamps/identities/session IDs, defensive copies,
+  original decimal-scale preservation, contradictory direct results, and
+  deterministic replay under changed locale/timezone with restoration.
+
 ## Deferred work and implementation order
 
-1. Add a versioned full-window high/low selector that consumes only
-   `ReadyForWindowEvidence` and locks window inclusivity, complete point-in-time
-   observation identity, adjustment continuity, missing/ambiguity precedence,
-   and exact favorable-extreme selection.
-2. Invoke calculators only through a later orchestrator after that selector
-   exists; preserve not-applicable, pending, unavailable, and nested leaf
-   reasons without recalculation or fallback.
-3. Add MFE/MAE after full-window completeness and bullish/bearish sign rules;
+1. Add a reviewed orchestrator that consumes eligibility and favorable-extreme
+   resolutions, invokes the existing pure target-hit calculator only for the
+   exact resolved branch, and preserves pending, not-applicable, unavailable,
+   and nested reasons without recalculation or fallback.
+2. Add provider-side raw intraday/tick aggregation only after versioning
+   no-trade, halt, auction, bar-straddle, correction-sequence, and raw-coverage
+   proof semantics. P5 must first establish entitled historical intraday/tick,
+   calendar, corporate-action, asset/venue data and storage, display,
+   derived-data, and redistribution rights.
+3. Add MFE/MAE after raw full-window completeness and bullish/bearish sign rules;
    add alpha/sector alpha last, after benchmark/sector identity and corporate-
    action-adjusted return policy exist.
 4. Persist or expose a non-null metric only with a canonical versioned input

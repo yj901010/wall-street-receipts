@@ -2500,12 +2500,145 @@ API, or product publication
 
 ### Deferred boundary
 
-- An exact PIT full-window high/low selector comes next. It must lock session
-  inclusivity, complete observation identity, source/revision, adjustment and
-  continuity, missing/ambiguity precedence, and favorable-extreme selection.
-- Only after that selector exists may a reviewed orchestrator invoke target hit
-  and the already completed leaves while preserving not-applicable, pending,
-  unavailable, and nested reasons without recalculation or fallback.
+- The exact PIT full-window high/low selector described here is completed by
+  the following P3 slice with causal bounds, source/revision, adjustment,
+  continuity, missing/ambiguity precedence, and side selection locked.
+- A reviewed orchestrator comes next. It may invoke target hit and the already
+  completed leaves only while preserving not-applicable, pending, unavailable,
+  and nested reasons without recalculation or fallback.
 - MFE/MAE, alpha/sector alpha, cancellation eligibility, canonical methodology
   activation, input fingerprints, append-only persistence, aggregation,
   ranking, and UI publication remain later reviewed P3/P5 work.
+
+## P3 — Point-in-time attested causal-window favorable extreme
+
+Status: complete for one disconnected source-attested selection policy; the
+broader P3 scoring phase remains open, with no calculator orchestration,
+persistence, provider, API, or product publication
+
+### Scope
+
+- Consume one complete ADR-018 `ReadyForWindowEvidence`, nullable window-price
+  binding evidence, and caller-supplied full-window high/low observations.
+  Inherit evaluation as-of, resolved horizon, directional side, target, and
+  catalog rather than accepting competing values.
+- Define the economic interval as exact primary-venue regular-session
+  observations in the ordered horizon sessions where
+  `observation.time > basis.eventTime` and
+  `observation.time <= endpointSession.closesAt`. This prevents an intraday
+  first session's pre-call high or low from becoming post-call evidence while
+  retaining the endpoint-close boundary.
+- Select the stored high for bullish or stored low for bearish from exactly one
+  PIT-visible, fully matching, upstream-attested pair. Add no endpoint-close
+  fallback, raw bar/tick aggregation, target comparison, calculator invocation,
+  methodology activation, schema, fixture, persistence, provider, API, or web
+  behavior.
+
+### Locked contract decisions
+
+- ADR-019 owns
+  `POINT_IN_TIME_ATTESTED_CAUSAL_WINDOW_HIGH_LOW_V1`, its exact 4633 UTF-8
+  bytes, SHA-256
+  `e3a0e93030c8f09ae5398bf6df0f2e28eec14b0a31f5bea240fc78f2412c2463`,
+  exact input/result fields, causal boundaries, PIT invisibility, binding and
+  candidate identities, reason precedence, side selection, attestation scope,
+  and no-fallback boundary.
+- `WindowPriceBinding` preserves exact binding identity/revision, asset,
+  primary venue, currency, price-source ID/revision, PIT timestamps, and
+  provenance. Null and future binding evidence are indistinguishable and
+  absent from output; binding identity failures clear all candidate evidence.
+- `FullWindowHighLowObservation` preserves exact observation/provider-event,
+  basis/horizon, asset/venue/currency/source, provenance, catalog, ordered
+  sessions, bounds and boundary types, field/completeness, adjustment,
+  continuity, PIT timestamps, and original high/low evidence. Values are
+  positive exact `NUMERIC(38,12)` inputs with low `<=` high; availability cannot
+  precede the upper bound.
+- `EXACT_CAUSAL_WINDOW_SESSION_UNION` is an upstream provider/source
+  attestation, not a claim that this selector independently checked raw ticks or
+  bars. No-trade, halt, bar-straddle, correction-sequence, auction, and raw-
+  coverage proof semantics remain deferred.
+- Future candidates are filtered before every identity, reason, cardinality,
+  and output decision. Every known candidate is in scope; any known invalid
+  candidate poisons selection at the first fixed gate. Multiple fully valid
+  candidates remain ambiguous even when equal or repeated, with no
+  deduplication or provider preference.
+- Public result constructors validate local consistency only for the evidence
+  supplied to them. Only `FavorableExtremeSelector.select(request)` attests
+  complete-request membership, PIT filtering, poisoning, and cardinality;
+  downstream request-wide claims must use a selector-produced resolution.
+- The exact 22 unavailable reasons are, in order:
+  `TARGET_ADJUSTMENT_BASIS_UNSUPPORTED`, `BINDING_NOT_KNOWN_AS_OF`,
+  `BINDING_ASSET_MISMATCH`, `BINDING_PRIMARY_VENUE_MISMATCH`,
+  `BINDING_CURRENCY_MISMATCH`, `OBSERVATION_MISSING_AS_OF`, `BASIS_MISMATCH`,
+  `HORIZON_MISMATCH`, `ASSET_MISMATCH`, `PRIMARY_VENUE_MISMATCH`,
+  `CURRENCY_MISMATCH`, `SOURCE_MISMATCH`, `CATALOG_MISMATCH`,
+  `SESSION_WINDOW_MISMATCH`, `LOWER_BOUND_MISMATCH`, `UPPER_BOUND_MISMATCH`,
+  `BOUNDARY_CONVENTION_MISMATCH`, `PRICE_FIELD_MISMATCH`,
+  `WINDOW_COMPLETENESS_UNAVAILABLE`, `ADJUSTMENT_BASIS_MISMATCH`,
+  `CORPORATE_ACTION_CONTINUITY_UNAVAILABLE`, and `OBSERVATION_AMBIGUOUS`.
+- A resolved bullish route returns the exact original `windowHigh` as field
+  `HIGH`; a bearish route returns the exact original `windowLow` as field
+  `LOW`. The selector does not round, rescale, aggregate, compare to target, or
+  invoke the pure target-hit calculator.
+
+### Module and file boundary
+
+- `com.wallstreetreceipts.api.domain.outcome.favorableextreme` adds exactly six
+  production files: `FavorableExtremePolicyVersion.java`,
+  `WindowPriceBinding.java`, `FullWindowHighLowObservation.java`,
+  `FavorableExtremeRequest.java`, `FavorableExtremeResolution.java`, and
+  `FavorableExtremeSelector.java`.
+- The source-local test is exactly `FavorableExtremeSelectorGoldenTest.java` in
+  the matching package.
+- ADR-019, `quality/P3_ACCEPTANCE.md`, README, this log, and the repository CI
+  extension own canonical identity, exact shape, PIT/precedence/equality,
+  reverse-graph, and unchanged-publication boundaries.
+
+### Routes
+
+- None. No controller, application service, calculator orchestrator, provider,
+  repository, scheduler, API response, canonical fixture adapter, or web route
+  consumes the favorable-extreme result.
+
+### Verification
+
+- Focused source-local golden: PASS, 42/42
+  `FavorableExtremeSelectorGoldenTest` tests with zero failures, errors, or
+  skips.
+- Full API Maven verification: PASS, 680/680 tests with zero failures, errors,
+  or skips. PostgreSQL Testcontainers/Flyway migration coverage passed and the
+  Spring Boot jar was repackaged successfully.
+- Repository CI contract validation: PASS. All 26 embedded Python bodies
+  compiled, all 25 locally runnable bodies passed, and the final Tomcat
+  cross-stack body was syntax-checked but intentionally not executed without
+  its CI-produced runtime logs. The dedicated ADR-019 guard, both protected
+  production baselines at 169 files / SHA-256
+  `9db95ad810fb908be4ba82ea27841cd69d7f5f2cf188fed8e2476f7fa4782352`,
+  the API job's exact 42/42 Surefire XML cardinality check, SnakeYAML 2.5
+  four-job parsing, Compose configuration, and `git diff --check` all passed.
+- No web, browser, provider, or cross-stack result is claimed for this
+  disconnected implementation.
+
+### External-data boundary
+
+- This source-local policy requires no API key, account, paid plan, domain,
+  vendor license, environment secret, or network access.
+- Before a non-DEMO attestation enters this contract, P5 must select a provider
+  and establish entitled historical intraday/tick data, exchange calendars,
+  corporate actions, asset/venue reference data, and explicit storage, display,
+  derived-data, and redistribution rights. Only then may a reviewed adapter
+  define a named, scoped secret; this slice invents neither vendor nor secret
+  name.
+
+### Deferred boundary
+
+- A reviewed calculator orchestrator comes next. It must consume eligibility
+  and favorable-extreme resolutions, invoke target hit only for the exact
+  resolved branch, and preserve every pending, not-applicable, unavailable, and
+  nested reason without recalculation or fallback.
+- Raw intraday/tick aggregation remains later provider work. It must version
+  no-trade, halt, auction, bar-straddle, correction-sequence, and raw-coverage
+  proof semantics before it can produce the completeness attestation.
+- MFE/MAE, alpha/sector alpha, cancellation eligibility, canonical methodology
+  activation, input fingerprints, append-only persistence, aggregation,
+  ranking, scheduling, and UI publication remain later reviewed P3/P5 work.
