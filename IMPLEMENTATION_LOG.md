@@ -2169,3 +2169,115 @@ provider, persistence, API, or product publication
   display/storage/derived-data rights remain P5 work. This routing leaf requires
   no API key, account, paid plan, domain, market calendar, price feed, license,
   or network access.
+
+## P3 — Point-in-time endpoint price and target error
+
+Status: complete for two disconnected source-local policy leaves; the
+broader P3 scoring phase remains open, with no runtime outcome, persistence,
+provider, API, or product publication
+
+### Scope
+
+- Select exactly one official primary-venue regular-session endpoint close from
+  a strict ADR-010 resolved window and explicit point-in-time catalog, binding,
+  and observation evidence.
+- Require exact asset, venue, currency, source, catalog, session, observation
+  time, price-field, adjustment-basis, and corporate-action-continuity identity.
+  Future candidates are invisible before mismatch/cardinality evaluation.
+- Preserve explicit endpoint unavailability and ambiguity. Use only positive
+  exact `NUMERIC(38,12)` price evidence, split/reverse-split adjusted to the
+  endpoint-share basis and dividend-unadjusted, with no FX or fallback.
+- Calculate target error from one complete endpoint resolution and nullable
+  point-in-time target evidence as exactly `abs(target-actual)/actual`, with
+  actual endpoint price as denominator and one scale-12 `HALF_EVEN` division.
+- Compose missing target/endpoint states while preserving the exact nested
+  endpoint reason; reject identity mismatches and return explicit rounded-output
+  overflow rather than zero, clipping, or another scale.
+- Add no asset-return policy, window metric, target-hit/directional-win
+  invocation, methodology activation, fingerprint, schema, fixture, manifest
+  member, OpenAPI path, Flyway migration, database row, provider adapter,
+  controller, repository, scheduler, API behavior, or web source.
+
+### Locked contract decisions
+
+- ADR-014 owns
+  `OFFICIAL_PRIMARY_VENUE_CLOSE_SPLIT_ADJUSTED_V1`, its exact 2259 UTF-8 bytes,
+  SHA-256
+  `37e37aba9302d77366cef4129f77a82b7ccb2f1937bfffc0315ea8d0bc6b1f76`,
+  point-in-time gates, future invisibility, exact mismatch precedence,
+  cardinality, price/adjustment semantics, and 16 unavailable reasons.
+- ADR-015 owns `ACTUAL_DENOMINATOR_SCALE_12_HALF_EVEN_V1`, its exact 1942
+  UTF-8 bytes, SHA-256
+  `31ca30555549f670e3c22d98ead16f7a02bfad198f36532effaf4a4b6931d074`,
+  target PIT visibility, missing-state truth table, identity precedence,
+  actual-denominator formula, one-division half-even rounding, scale-12 output,
+  and nine unavailable reasons.
+- A V1 endpoint request requires the exact strict-close V1 policy and hash.
+  A V1 target-error input requires the exact endpoint V1 policy and hash. No
+  later policy version may be silently accepted as equivalent.
+- Public result constructors own only locally decidable consistency. Only
+  `EndpointPriceSelector` attests request-candidate membership, PIT filtering,
+  precedence, and cardinality; only `TargetErrorCalculator` attests target PIT,
+  missing-state composition, identity precedence, formula, and output boundary.
+
+### Module and file boundary
+
+- `com.wallstreetreceipts.api.domain.outcome.observation` adds exactly ten
+  production files: `CatalogPointInTimeEvidence.java`,
+  `CorporateActionContinuity.java`, `EndpointPriceAdjustmentBasis.java`,
+  `EndpointPriceBinding.java`, `EndpointPriceField.java`,
+  `EndpointPriceObservation.java`, `EndpointPricePolicyVersion.java`,
+  `EndpointPriceRequest.java`, `EndpointPriceResolution.java`, and
+  `EndpointPriceSelector.java`.
+- `com.wallstreetreceipts.api.domain.outcome.targeterror` adds exactly five
+  production files: `TargetErrorCalculator.java`, `TargetErrorInput.java`,
+  `TargetErrorPolicyVersion.java`, `TargetErrorResult.java`, and
+  `TargetPriceEvidence.java`.
+- Source-local tests are exactly `EndpointPriceSelectorGoldenTest.java` and
+  `TargetErrorCalculatorGoldenTest.java` in their matching packages.
+- ADR-014, ADR-015, `quality/P3_ACCEPTANCE.md`, README, this log, and a
+  mutation-sensitive repository CI extension own canonical bytes/hashes,
+  exact-shape, precedence/equality, decimal, reverse-graph, and unchanged-
+  publication boundaries.
+
+### Routes
+
+- None. No controller, application service, provider, repository, scheduler,
+  API response, canonical fixture adapter, or web route invokes either leaf.
+
+### Verification
+
+- Focused source-local goldens: PASS, 63/63 tests (`EndpointPriceSelectorGoldenTest`
+  23/23 and `TargetErrorCalculatorGoldenTest` 40/40), with zero failures,
+  errors, or skips. API test compilation and `git diff --check` also passed.
+- Clean full API Maven verification: PASS, 25 Surefire suites and 408/408 tests
+  with zero failures, errors, or skips. PostgreSQL Testcontainers migration
+  coverage passed 4/4, and the application JAR packaging/repackage completed
+  successfully.
+- Repository-local workflow runtime blocks 1–22 passed 22/22, including the
+  dedicated endpoint/target guard and every affected reverse guard. Block 23
+  is the existing cross-stack Spring/Next access-log verifier and was
+  intentionally not run because neither service was launched for this
+  disconnected slice.
+- All embedded workflow Python blocks passed syntax compilation 23/23.
+  SnakeYAML 2.5 parsed the four-job workflow, Compose configuration validation
+  passed, and `git diff --check` passed.
+- No web, browser, provider, or cross-stack result is claimed for this
+  disconnected implementation.
+
+### External-data boundary
+
+- This source-local implementation requires no API key, account, paid plan,
+  domain, vendor license, environment secret, or network access.
+- P5 owns provider selection and the exact credential/environment boundary.
+  Before non-DEMO values enter these contracts, primary-venue close, exchange
+  calendar, corporate-action, asset/venue/reference, target-evidence, storage,
+  display, and derived-data rights must be established. This slice does not
+  invent a vendor or secret name.
+
+### Deferred boundary
+
+- Asset return, full-window high/low evidence, MFE/MAE, alpha/sector alpha,
+  cancellation eligibility, calculator orchestration, canonical methodology
+  activation, input fingerprints, append-only persistence, aggregation,
+  ranking, and UI publication remain later reviewed P3/P5 work.
