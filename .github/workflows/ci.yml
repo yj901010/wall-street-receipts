@@ -3841,9 +3841,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 224
+              len(protected_paths) == 232
               and protected_digest.hexdigest()
-              == "bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055",
+              == "2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941",
               "Call-outcome audit consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           api_main_source = "\n".join(
@@ -4476,9 +4476,9 @@ jobs:
               )
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 224
+              len(protected_paths) == 232
               and protected_digest.hexdigest()
-              == "bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055",
+              == "2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941",
               "Call-list consumer must preserve the current approved OpenAPI/schema/fixture/API production baseline",
           )
           workflow_source = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -11592,6 +11592,22 @@ jobs:
               "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
               "sectorreturn"
           )
+          benchmark_readiness_main_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          benchmark_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          sector_readiness_main_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          sector_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
           approved_benchmark_main_files = {
               "BenchmarkAssignmentPolicyVersion.java",
               "BenchmarkAssetClassificationEvidence.java",
@@ -11725,6 +11741,51 @@ jobs:
               == approved_sector_return_test_files,
               "ADR-026 sector-return consumer must remain the exact ADR-032 slice",
           )
+          approved_benchmark_readiness_main_files = {
+              "BenchmarkReturnReadinessPolicyVersion.java",
+              "BenchmarkReturnReadinessRequest.java",
+              "BenchmarkReturnReadinessResolution.java",
+              "BenchmarkReturnReadinessResolver.java",
+          }
+          approved_benchmark_readiness_test_files = {
+              "BenchmarkReturnReadinessResolverGoldenTest.java",
+          }
+          approved_benchmark_readiness_main_paths = {
+              (benchmark_readiness_main_dir / name).resolve()
+              for name in approved_benchmark_readiness_main_files
+          }
+          approved_benchmark_readiness_test_paths = {
+              (benchmark_readiness_test_dir / name).resolve()
+              for name in approved_benchmark_readiness_test_files
+          }
+          approved_sector_readiness_main_files = {
+              "SectorReturnReadinessPolicyVersion.java",
+              "SectorReturnReadinessRequest.java",
+              "SectorReturnReadinessResolution.java",
+              "SectorReturnReadinessResolver.java",
+          }
+          approved_sector_readiness_test_files = {
+              "SectorReturnReadinessResolverGoldenTest.java",
+          }
+          approved_sector_readiness_main_paths = {
+              (sector_readiness_main_dir / name).resolve()
+              for name in approved_sector_readiness_main_files
+          }
+          approved_sector_readiness_test_paths = {
+              (sector_readiness_test_dir / name).resolve()
+              for name in approved_sector_readiness_test_files
+          }
+          require(
+              {path.name for path in benchmark_readiness_main_dir.glob("*.java")}
+                  == approved_benchmark_readiness_main_files
+              and {path.name for path in benchmark_readiness_test_dir.glob("*.java")}
+                  == approved_benchmark_readiness_test_files
+              and {path.name for path in sector_readiness_main_dir.glob("*.java")}
+                  == approved_sector_readiness_main_files
+              and {path.name for path in sector_readiness_test_dir.glob("*.java")}
+                  == approved_sector_readiness_test_files,
+              "ADR-026 readiness consumers must remain the exact independent ADR-033 slices",
+          )
           approved_comparative_paths = (
               approved_benchmark_paths | approved_sector_paths
               | approved_benchmark_reference_main_paths
@@ -11735,6 +11796,10 @@ jobs:
               | approved_benchmark_return_test_paths
               | approved_sector_return_main_paths
               | approved_sector_return_test_paths
+              | approved_benchmark_readiness_main_paths
+              | approved_benchmark_readiness_test_paths
+              | approved_sector_readiness_main_paths
+              | approved_sector_readiness_test_paths
           )
           for java_root in (
               Path("apps/api/src/main/java"),
@@ -11808,6 +11873,8 @@ jobs:
                   | approved_sector_reference_main_paths
                   | approved_benchmark_return_main_paths
                   | approved_sector_return_main_paths
+                  | approved_benchmark_readiness_main_paths
+                  | approved_sector_readiness_main_paths
               )
           ]
           protected_digest = hashlib.sha256()
@@ -11854,6 +11921,8 @@ jobs:
                   | approved_sector_reference_test_paths
                   | approved_benchmark_return_test_paths
                   | approved_sector_return_test_paths
+                  | approved_benchmark_readiness_test_paths
+                  | approved_sector_readiness_test_paths
               )
           ]
           decision_only_digest = hashlib.sha256()
@@ -12036,6 +12105,50 @@ jobs:
           }
           sector_return_golden_resolved = (
               sector_return_test_dir / "SectorReturnCalculatorGoldenTest.java"
+          ).resolve()
+          benchmark_readiness_production_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          benchmark_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          benchmark_readiness_production_files = {
+              "BenchmarkReturnReadinessPolicyVersion.java",
+              "BenchmarkReturnReadinessRequest.java",
+              "BenchmarkReturnReadinessResolution.java",
+              "BenchmarkReturnReadinessResolver.java",
+          }
+          benchmark_readiness_production_paths = {
+              (benchmark_readiness_production_dir / name).resolve()
+              for name in benchmark_readiness_production_files
+          }
+          benchmark_readiness_golden_resolved = (
+              benchmark_readiness_test_dir
+              / "BenchmarkReturnReadinessResolverGoldenTest.java"
+          ).resolve()
+          sector_readiness_production_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          sector_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          sector_readiness_production_files = {
+              "SectorReturnReadinessPolicyVersion.java",
+              "SectorReturnReadinessRequest.java",
+              "SectorReturnReadinessResolution.java",
+              "SectorReturnReadinessResolver.java",
+          }
+          sector_readiness_production_paths = {
+              (sector_readiness_production_dir / name).resolve()
+              for name in sector_readiness_production_files
+          }
+          sector_readiness_golden_resolved = (
+              sector_readiness_test_dir
+              / "SectorReturnReadinessResolverGoldenTest.java"
           ).resolve()
           production_files = {
               "BenchmarkAssignmentPolicyVersion.java",
@@ -12505,9 +12618,9 @@ jobs:
               protected_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 224
+              len(protected_paths) == 232
               and protected_digest.hexdigest()
-              == "bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055",
+              == "2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941",
               "Benchmark-assignment protected production baseline changed",
           )
           legacy_protected_paths = [
@@ -12518,6 +12631,8 @@ jobs:
               and path.resolve() not in sector_reference_production_paths
               and path.resolve() not in benchmark_return_production_paths
               and path.resolve() not in sector_return_production_paths
+              and path.resolve() not in benchmark_readiness_production_paths
+              and path.resolve() not in sector_readiness_production_paths
           ]
           legacy_protected_digest = hashlib.sha256()
           for path in legacy_protected_paths:
@@ -12560,9 +12675,9 @@ jobs:
               test_web_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               test_web_digest.update(b"\0")
           require(
-              len(test_web_paths) == 203
+              len(test_web_paths) == 205
               and test_web_digest.hexdigest()
-              == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+              == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
               "Benchmark-assignment API-test/web baseline changed",
           )
           golden_resolved = golden_path.resolve()
@@ -12574,6 +12689,8 @@ jobs:
               and path.resolve() != sector_reference_golden_resolved
               and path.resolve() != benchmark_return_golden_resolved
               and path.resolve() != sector_return_golden_resolved
+              and path.resolve() != benchmark_readiness_golden_resolved
+              and path.resolve() != sector_readiness_golden_resolved
           ]
           legacy_test_web_digest = hashlib.sha256()
           for path in legacy_test_web_paths:
@@ -13142,9 +13259,73 @@ jobs:
               == sector_return_test_files,
               "ADR-028 future comparative consumer must remain exact ADR-032",
           )
+          benchmark_readiness_main_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          benchmark_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          sector_readiness_main_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          sector_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          benchmark_readiness_main_files = {
+              "BenchmarkReturnReadinessPolicyVersion.java",
+              "BenchmarkReturnReadinessRequest.java",
+              "BenchmarkReturnReadinessResolution.java",
+              "BenchmarkReturnReadinessResolver.java",
+          }
+          sector_readiness_main_files = {
+              "SectorReturnReadinessPolicyVersion.java",
+              "SectorReturnReadinessRequest.java",
+              "SectorReturnReadinessResolution.java",
+              "SectorReturnReadinessResolver.java",
+          }
+          benchmark_readiness_test_files = {
+              "BenchmarkReturnReadinessResolverGoldenTest.java",
+          }
+          sector_readiness_test_files = {
+              "SectorReturnReadinessResolverGoldenTest.java",
+          }
+          benchmark_readiness_main_paths = {
+              (benchmark_readiness_main_dir / name).resolve()
+              for name in benchmark_readiness_main_files
+          }
+          sector_readiness_main_paths = {
+              (sector_readiness_main_dir / name).resolve()
+              for name in sector_readiness_main_files
+          }
+          benchmark_readiness_test_paths = {
+              (benchmark_readiness_test_dir / name).resolve()
+              for name in benchmark_readiness_test_files
+          }
+          sector_readiness_test_paths = {
+              (sector_readiness_test_dir / name).resolve()
+              for name in sector_readiness_test_files
+          }
+          require(
+              {path.name for path in benchmark_readiness_main_dir.glob("*.java")}
+                  == benchmark_readiness_main_files
+              and {path.name for path in benchmark_readiness_test_dir.glob("*.java")}
+                  == benchmark_readiness_test_files
+              and {path.name for path in sector_readiness_main_dir.glob("*.java")}
+                  == sector_readiness_main_files
+              and {path.name for path in sector_readiness_test_dir.glob("*.java")}
+                  == sector_readiness_test_files,
+              "ADR-028 future readiness consumers must remain exact independent ADR-033",
+          )
           approved_sector_paths |= (
               sector_reference_main_paths | sector_reference_test_paths
               | sector_return_main_paths | sector_return_test_paths
+              | benchmark_readiness_main_paths
+              | benchmark_readiness_test_paths
+              | sector_readiness_main_paths | sector_readiness_test_paths
           )
           product_paths = [Path("contracts/openapi.yaml")]
           product_paths += list(Path("schemas").glob("*.json"))
@@ -13197,6 +13378,8 @@ jobs:
               and path.resolve() not in sector_reference_main_paths
               and path.resolve() not in benchmark_return_main_paths
               and path.resolve() not in sector_return_main_paths
+              and path.resolve() not in benchmark_readiness_main_paths
+              and path.resolve() not in sector_readiness_main_paths
           ]
           protected_digest = hashlib.sha256()
           for path in legacy_protected_paths:
@@ -13236,6 +13419,8 @@ jobs:
               and path.resolve() not in sector_reference_test_paths
               and path.resolve() not in benchmark_return_test_paths
               and path.resolve() not in sector_return_test_paths
+              and path.resolve() not in benchmark_readiness_test_paths
+              and path.resolve() not in sector_readiness_test_paths
           ]
           test_web_digest = hashlib.sha256()
           for path in legacy_test_web_paths:
@@ -13874,9 +14059,9 @@ jobs:
               protected_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               protected_digest.update(b"\0")
           require(
-              len(protected_paths) == 224
+              len(protected_paths) == 232
               and protected_digest.hexdigest()
-              == "bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055",
+              == "2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941",
               "Sector-assignment protected production baseline changed",
           )
           test_web_paths = sorted(
@@ -13904,9 +14089,9 @@ jobs:
               test_web_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
               test_web_digest.update(b"\0")
           require(
-              len(test_web_paths) == 203
+              len(test_web_paths) == 205
               and test_web_digest.hexdigest()
-              == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+              == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
               "Sector-assignment API-test/web baseline changed",
           )
 
@@ -14741,6 +14926,66 @@ jobs:
           sector_return_golden_path = (
               sector_return_test_dir / "SectorReturnCalculatorGoldenTest.java"
           ).resolve()
+          benchmark_readiness_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          benchmark_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          sector_readiness_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          sector_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          benchmark_readiness_files = {
+              "BenchmarkReturnReadinessPolicyVersion.java",
+              "BenchmarkReturnReadinessRequest.java",
+              "BenchmarkReturnReadinessResolution.java",
+              "BenchmarkReturnReadinessResolver.java",
+          }
+          sector_readiness_files = {
+              "SectorReturnReadinessPolicyVersion.java",
+              "SectorReturnReadinessRequest.java",
+              "SectorReturnReadinessResolution.java",
+              "SectorReturnReadinessResolver.java",
+          }
+          benchmark_readiness_test_files = {
+              "BenchmarkReturnReadinessResolverGoldenTest.java",
+          }
+          sector_readiness_test_files = {
+              "SectorReturnReadinessResolverGoldenTest.java",
+          }
+          require(
+              {path.name for path in benchmark_readiness_dir.glob("*.java")}
+                  == benchmark_readiness_files
+              and {path.name for path in benchmark_readiness_test_dir.glob("*.java")}
+                  == benchmark_readiness_test_files
+              and {path.name for path in sector_readiness_dir.glob("*.java")}
+                  == sector_readiness_files
+              and {path.name for path in sector_readiness_test_dir.glob("*.java")}
+                  == sector_readiness_test_files,
+              "ADR-030 downstream readiness consumers must remain exact ADR-033",
+          )
+          benchmark_readiness_paths = {
+              (benchmark_readiness_dir / name).resolve()
+              for name in benchmark_readiness_files
+          }
+          sector_readiness_paths = {
+              (sector_readiness_dir / name).resolve()
+              for name in sector_readiness_files
+          }
+          readiness_paths = benchmark_readiness_paths | sector_readiness_paths
+          readiness_golden_paths = {
+              (benchmark_readiness_test_dir
+               / "BenchmarkReturnReadinessResolverGoldenTest.java").resolve(),
+              (sector_readiness_test_dir
+               / "SectorReturnReadinessResolverGoldenTest.java").resolve(),
+          }
 
           api_main_dir = Path("apps/api/src/main/java")
           new_production_paths = {
@@ -14780,6 +15025,30 @@ jobs:
                   "SectorReferenceLevelPairResolution",
               },
           }
+          allowed_benchmark_readiness_edges = {
+              (benchmark_readiness_dir
+               / "BenchmarkReturnReadinessPolicyVersion.java").resolve(): set(),
+              (benchmark_readiness_dir
+               / "BenchmarkReturnReadinessRequest.java").resolve(): set(),
+              (benchmark_readiness_dir
+               / "BenchmarkReturnReadinessResolution.java").resolve(): set(),
+              (benchmark_readiness_dir
+               / "BenchmarkReturnReadinessResolver.java").resolve(): {
+                  "BenchmarkReferenceLevelPairResolution",
+              },
+          }
+          allowed_sector_readiness_edges = {
+              (sector_readiness_dir
+               / "SectorReturnReadinessPolicyVersion.java").resolve(): set(),
+              (sector_readiness_dir
+               / "SectorReturnReadinessRequest.java").resolve(): set(),
+              (sector_readiness_dir
+               / "SectorReturnReadinessResolution.java").resolve(): set(),
+              (sector_readiness_dir
+               / "SectorReturnReadinessResolver.java").resolve(): {
+                  "SectorReferenceLevelPairResolution",
+              },
+          }
           for path in api_main_dir.rglob("*.java"):
               if path.resolve() in new_production_paths:
                   continue
@@ -14809,6 +15078,30 @@ jobs:
                       f"ADR-032 sector-return consumer edge changed: {path}",
                   )
                   continue
+              if path.resolve() in benchmark_readiness_paths:
+                  actual_edges = {
+                      marker_name for marker_name in type_markers
+                      if re.search(rf"\b{re.escape(marker_name)}\b", logic)
+                  }
+                  require(
+                      "domain.outcome.sectorreferencepair" not in source
+                      and actual_edges
+                          == allowed_benchmark_readiness_edges[path.resolve()],
+                      f"ADR-033 benchmark readiness pair edge changed: {path}",
+                  )
+                  continue
+              if path.resolve() in sector_readiness_paths:
+                  actual_edges = {
+                      marker_name for marker_name in type_markers
+                      if re.search(rf"\b{re.escape(marker_name)}\b", logic)
+                  }
+                  require(
+                      "domain.outcome.benchmarkreferencepair" not in source
+                      and actual_edges
+                          == allowed_sector_readiness_edges[path.resolve()],
+                      f"ADR-033 sector readiness pair edge changed: {path}",
+                  )
+                  continue
               require(
                   "domain.outcome.benchmarkreferencepair" not in source
                   and "domain.outcome.sectorreferencepair" not in source
@@ -14828,17 +15121,30 @@ jobs:
               key=lambda path: path.as_posix(),
           )
           require(
-              len(protected_paths) == 224
+              len(protected_paths) == 232
               and digest(protected_paths)
-              == "bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055",
+              == "2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941",
               "ADR-030 current protected production baseline changed",
           )
-          adr031_protected_paths = [
+          adr032_protected_paths = [
               path for path in protected_paths
-              if path.resolve() not in sector_return_paths
+              if path.resolve() not in readiness_paths
           ]
           require(
               {path.resolve() for path in protected_paths}
+              - {path.resolve() for path in adr032_protected_paths}
+                  == readiness_paths
+              and len(adr032_protected_paths) == 224
+              and digest(adr032_protected_paths)
+                  == "bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055",
+              "ADR-032 protected baseline changed outside exact ADR-033 readiness production",
+          )
+          adr031_protected_paths = [
+              path for path in adr032_protected_paths
+              if path.resolve() not in sector_return_paths
+          ]
+          require(
+              {path.resolve() for path in adr032_protected_paths}
               - {path.resolve() for path in adr031_protected_paths}
                   == sector_return_paths
               and len(adr031_protected_paths) == 220
@@ -14885,17 +15191,30 @@ jobs:
               key=lambda path: path.as_posix(),
           )
           require(
-              len(test_web_paths) == 203
+              len(test_web_paths) == 205
               and digest(test_web_paths)
-              == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+              == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
               "ADR-030 current API-test/web baseline changed",
           )
-          adr031_test_web_paths = [
+          adr032_test_web_paths = [
               path for path in test_web_paths
-              if path.resolve() != sector_return_golden_path
+              if path.resolve() not in readiness_golden_paths
           ]
           require(
               {path.resolve() for path in test_web_paths}
+              - {path.resolve() for path in adr032_test_web_paths}
+                  == readiness_golden_paths
+              and len(adr032_test_web_paths) == 203
+              and digest(adr032_test_web_paths)
+                  == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+              "ADR-032 test/web baseline changed outside exact ADR-033 readiness goldens",
+          )
+          adr031_test_web_paths = [
+              path for path in adr032_test_web_paths
+              if path.resolve() != sector_return_golden_path
+          ]
+          require(
+              {path.resolve() for path in adr032_test_web_paths}
               - {path.resolve() for path in adr031_test_web_paths}
                   == {sector_return_golden_path}
               and len(adr031_test_web_paths) == 202
@@ -15437,14 +15756,101 @@ jobs:
           sector_return_golden_path = (
               sector_return_test_dir / "SectorReturnCalculatorGoldenTest.java"
           ).resolve()
+          benchmark_readiness_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          benchmark_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          sector_readiness_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          sector_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          benchmark_readiness_files = {
+              "BenchmarkReturnReadinessPolicyVersion.java",
+              "BenchmarkReturnReadinessRequest.java",
+              "BenchmarkReturnReadinessResolution.java",
+              "BenchmarkReturnReadinessResolver.java",
+          }
+          sector_readiness_files = {
+              "SectorReturnReadinessPolicyVersion.java",
+              "SectorReturnReadinessRequest.java",
+              "SectorReturnReadinessResolution.java",
+              "SectorReturnReadinessResolver.java",
+          }
+          benchmark_readiness_test_files = {
+              "BenchmarkReturnReadinessResolverGoldenTest.java",
+          }
+          sector_readiness_test_files = {
+              "SectorReturnReadinessResolverGoldenTest.java",
+          }
+          require(
+              {path.name for path in benchmark_readiness_dir.glob("*.java")}
+                  == benchmark_readiness_files
+              and {path.name for path in benchmark_readiness_test_dir.glob("*.java")}
+                  == benchmark_readiness_test_files
+              and {path.name for path in sector_readiness_dir.glob("*.java")}
+                  == sector_readiness_files
+              and {path.name for path in sector_readiness_test_dir.glob("*.java")}
+                  == sector_readiness_test_files,
+              "ADR-031 downstream readiness consumers must remain exact ADR-033",
+          )
+          benchmark_readiness_paths = {
+              (benchmark_readiness_dir / name).resolve()
+              for name in benchmark_readiness_files
+          }
+          sector_readiness_paths = {
+              (sector_readiness_dir / name).resolve()
+              for name in sector_readiness_files
+          }
+          readiness_paths = benchmark_readiness_paths | sector_readiness_paths
+          readiness_golden_paths = {
+              (benchmark_readiness_test_dir
+               / "BenchmarkReturnReadinessResolverGoldenTest.java").resolve(),
+              (sector_readiness_test_dir
+               / "SectorReturnReadinessResolverGoldenTest.java").resolve(),
+          }
           type_markers = tuple(
               name.removesuffix(".java") for name in production_files
           )
+          allowed_readiness_edges = {
+              (benchmark_readiness_dir
+               / "BenchmarkReturnReadinessPolicyVersion.java").resolve(): set(),
+              (benchmark_readiness_dir
+               / "BenchmarkReturnReadinessRequest.java").resolve(): {
+                  "BenchmarkReturnPolicyVersion", "BenchmarkReturnResult",
+              },
+              (benchmark_readiness_dir
+               / "BenchmarkReturnReadinessResolution.java").resolve(): {
+                  "BenchmarkReturnResult",
+              },
+              (benchmark_readiness_dir
+               / "BenchmarkReturnReadinessResolver.java").resolve(): {
+                  "BenchmarkReturnResult",
+              },
+          }
           for path in Path("apps/api/src/main/java").rglob("*.java"):
               if path.resolve() in new_production_paths:
                   continue
               source = path.read_text(encoding="utf-8")
               logic = java_logic(source)
+              if path.resolve() in benchmark_readiness_paths:
+                  actual_edges = {
+                      name for name in type_markers
+                      if re.search(rf"\b{re.escape(name)}\b", logic)
+                  }
+                  require(
+                      actual_edges == allowed_readiness_edges[path.resolve()]
+                      and "domain.outcome.sectorreturn" not in source,
+                      f"ADR-033 benchmark readiness return edge changed: {path}",
+                  )
+                  continue
               require(
                   "domain.outcome.benchmarkreturn" not in source
                   and not any(re.search(rf"\b{re.escape(name)}\b", logic)
@@ -15463,17 +15869,30 @@ jobs:
               key=lambda path: path.as_posix(),
           )
           require(
-              len(protected_paths) == 224
+              len(protected_paths) == 232
               and digest(protected_paths)
-                  == "bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055",
+                  == "2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941",
               "ADR-031 current protected production baseline changed",
           )
-          adr031_protected_paths = [
+          adr032_protected_paths = [
               path for path in protected_paths
-              if path.resolve() not in sector_return_paths
+              if path.resolve() not in readiness_paths
           ]
           require(
               {path.resolve() for path in protected_paths}
+              - {path.resolve() for path in adr032_protected_paths}
+                  == readiness_paths
+              and len(adr032_protected_paths) == 224
+              and digest(adr032_protected_paths)
+                  == "bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055",
+              "ADR-032 protected baseline changed outside exact ADR-033 readiness production",
+          )
+          adr031_protected_paths = [
+              path for path in adr032_protected_paths
+              if path.resolve() not in sector_return_paths
+          ]
+          require(
+              {path.resolve() for path in adr032_protected_paths}
               - {path.resolve() for path in adr031_protected_paths}
                   == sector_return_paths
               and len(adr031_protected_paths) == 220
@@ -15528,17 +15947,30 @@ jobs:
               key=lambda path: path.as_posix(),
           )
           require(
-              len(test_web_paths) == 203
+              len(test_web_paths) == 205
               and digest(test_web_paths)
-                  == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+                  == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
               "ADR-031 current API-test/web baseline changed",
           )
-          adr031_test_web_paths = [
+          adr032_test_web_paths = [
               path for path in test_web_paths
-              if path.resolve() != sector_return_golden_path
+              if path.resolve() not in readiness_golden_paths
           ]
           require(
               {path.resolve() for path in test_web_paths}
+              - {path.resolve() for path in adr032_test_web_paths}
+                  == readiness_golden_paths
+              and len(adr032_test_web_paths) == 203
+              and digest(adr032_test_web_paths)
+                  == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+              "ADR-032 test/web baseline changed outside exact ADR-033 readiness goldens",
+          )
+          adr031_test_web_paths = [
+              path for path in adr032_test_web_paths
+              if path.resolve() != sector_return_golden_path
+          ]
+          require(
+              {path.resolve() for path in adr032_test_web_paths}
               - {path.resolve() for path in adr031_test_web_paths}
                   == {sector_return_golden_path}
               and len(adr031_test_web_paths) == 202
@@ -16047,17 +16479,87 @@ jobs:
               "ADR-032 source-local 112-vector golden contract changed",
           )
 
+          benchmark_readiness_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          benchmark_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          sector_readiness_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          sector_readiness_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          benchmark_readiness_files = {
+              "BenchmarkReturnReadinessPolicyVersion.java",
+              "BenchmarkReturnReadinessRequest.java",
+              "BenchmarkReturnReadinessResolution.java",
+              "BenchmarkReturnReadinessResolver.java",
+          }
+          sector_readiness_files = {
+              "SectorReturnReadinessPolicyVersion.java",
+              "SectorReturnReadinessRequest.java",
+              "SectorReturnReadinessResolution.java",
+              "SectorReturnReadinessResolver.java",
+          }
+          benchmark_readiness_paths = {
+              (benchmark_readiness_dir / name).resolve()
+              for name in benchmark_readiness_files
+          }
+          sector_readiness_paths = {
+              (sector_readiness_dir / name).resolve()
+              for name in sector_readiness_files
+          }
+          readiness_paths = benchmark_readiness_paths | sector_readiness_paths
+          readiness_golden_paths = {
+              (benchmark_readiness_test_dir
+               / "BenchmarkReturnReadinessResolverGoldenTest.java").resolve(),
+              (sector_readiness_test_dir
+               / "SectorReturnReadinessResolverGoldenTest.java").resolve(),
+          }
           new_production_paths = {
               (production_dir / name).resolve() for name in production_files
           }
           type_markers = tuple(
               name.removesuffix(".java") for name in production_files
           )
+          allowed_readiness_edges = {
+              (sector_readiness_dir
+               / "SectorReturnReadinessPolicyVersion.java").resolve(): set(),
+              (sector_readiness_dir
+               / "SectorReturnReadinessRequest.java").resolve(): {
+                  "SectorReturnPolicyVersion", "SectorReturnResult",
+              },
+              (sector_readiness_dir
+               / "SectorReturnReadinessResolution.java").resolve(): {
+                  "SectorReturnResult",
+              },
+              (sector_readiness_dir
+               / "SectorReturnReadinessResolver.java").resolve(): {
+                  "SectorReturnResult",
+              },
+          }
           for path in Path("apps/api/src/main/java").rglob("*.java"):
               if path.resolve() in new_production_paths:
                   continue
               source = path.read_text(encoding="utf-8")
               logic = java_logic(source)
+              if path.resolve() in sector_readiness_paths:
+                  actual_edges = {
+                      name for name in type_markers
+                      if re.search(rf"\b{re.escape(name)}\b", logic)
+                  }
+                  require(
+                      actual_edges == allowed_readiness_edges[path.resolve()]
+                      and "domain.outcome.benchmarkreturn" not in source,
+                      f"ADR-033 sector readiness return edge changed: {path}",
+                  )
+                  continue
               require(
                   "domain.outcome.sectorreturn" not in source
                   and not any(re.search(rf"\b{re.escape(name)}\b", logic)
@@ -16076,17 +16578,30 @@ jobs:
               key=lambda path: path.as_posix(),
           )
           require(
-              len(protected_paths) == 224
+              len(protected_paths) == 232
               and digest(protected_paths)
-                  == "bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055",
+                  == "2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941",
               "ADR-032 current protected production baseline changed",
           )
-          adr031_protected_paths = [
+          adr032_protected_paths = [
               path for path in protected_paths
-              if path.resolve() not in new_production_paths
+              if path.resolve() not in readiness_paths
           ]
           require(
               {path.resolve() for path in protected_paths}
+              - {path.resolve() for path in adr032_protected_paths}
+                  == readiness_paths
+              and len(adr032_protected_paths) == 224
+              and digest(adr032_protected_paths)
+                  == "bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055",
+              "ADR-032 protected baseline changed outside exact ADR-033 readiness production",
+          )
+          adr031_protected_paths = [
+              path for path in adr032_protected_paths
+              if path.resolve() not in new_production_paths
+          ]
+          require(
+              {path.resolve() for path in adr032_protected_paths}
               - {path.resolve() for path in adr031_protected_paths}
                   == new_production_paths
               and len(adr031_protected_paths) == 220
@@ -16152,17 +16667,30 @@ jobs:
               key=lambda path: path.as_posix(),
           )
           require(
-              len(test_web_paths) == 203
+              len(test_web_paths) == 205
               and digest(test_web_paths)
-                  == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+                  == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
               "ADR-032 current API-test/web baseline changed",
           )
-          adr031_test_web_paths = [
+          adr032_test_web_paths = [
               path for path in test_web_paths
-              if path.resolve() != golden_path.resolve()
+              if path.resolve() not in readiness_golden_paths
           ]
           require(
               {path.resolve() for path in test_web_paths}
+              - {path.resolve() for path in adr032_test_web_paths}
+                  == readiness_golden_paths
+              and len(adr032_test_web_paths) == 203
+              and digest(adr032_test_web_paths)
+                  == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+              "ADR-032 test/web baseline changed outside exact ADR-033 readiness goldens",
+          )
+          adr031_test_web_paths = [
+              path for path in adr032_test_web_paths
+              if path.resolve() != golden_path.resolve()
+          ]
+          require(
+              {path.resolve() for path in adr032_test_web_paths}
               - {path.resolve() for path in adr031_test_web_paths}
                   == {golden_path.resolve()}
               and len(adr031_test_web_paths) == 202
@@ -16259,6 +16787,820 @@ jobs:
               "complete-receipt propagation, 56/3 nested reason replay, 112-vector "
               "golden, reverse isolation, current baselines, ADR-031/030/029 replay, "
               "and no product publication"
+          )
+          PYTHON
+
+      - name: Guard independent benchmark and sector return readiness
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def reject_duplicate_keys(pairs):
+              result = {}
+              for key, value in pairs:
+                  require(key not in result, f"Duplicate canonical JSON key: {key}")
+                  result[key] = value
+              return result
+
+          def normalized_hash(path):
+              return hashlib.sha256(
+                  path.read_bytes().replace(b"\r\n", b"\n")
+              ).hexdigest()
+
+          def digest(paths):
+              result = hashlib.sha256()
+              for path in sorted(paths, key=lambda value: value.as_posix()):
+                  result.update(path.as_posix().encode("utf-8"))
+                  result.update(b"\0")
+                  result.update(path.read_bytes().replace(b"\r\n", b"\n"))
+                  result.update(b"\0")
+              return result.hexdigest()
+
+          def enum_values(source, enum_name):
+              match = re.search(
+                  rf"(?:public\s+)?enum\s+{re.escape(enum_name)}\s*\{{"
+                  r"(?P<body>.*?)\}",
+                  source,
+                  flags=re.DOTALL,
+              )
+              require(match is not None, f"Missing enum {enum_name}")
+              return re.findall(
+                  r"\b[A-Z][A-Z0-9_]+\b",
+                  match.group("body").split(";", 1)[0],
+              )
+
+          def record_fields(source, record_name):
+              match = re.search(
+                  rf"(?:public\s+)?record\s+{re.escape(record_name)}\s*\("
+                  r"(?P<body>.*?)\)\s*(?:implements\s+[^\{]+)?\{",
+                  source,
+                  flags=re.DOTALL,
+              )
+              require(match is not None, f"Missing record {record_name}")
+              return re.findall(
+                  r"\b([a-z][A-Za-z0-9_]*)\s*(?:,|$)",
+                  match.group("body"),
+                  flags=re.MULTILINE,
+              )
+
+          def java_definition(source):
+              match = re.search(
+                  r"private static final String CANONICAL_DEFINITION\s*=\s*"
+                  r"(?P<body>.*?)\s*;\s*private static final String DEFINITION_HASH",
+                  source,
+                  flags=re.DOTALL,
+              )
+              require(match is not None, "Missing Java canonical definition")
+              literals = re.findall(r'"(?:\\.|[^"\\])*"', match.group("body"))
+              return "".join(json.loads(literal) for literal in literals)
+
+          def java_logic(source):
+              return re.sub(
+                  r'//.*?$|/\*.*?\*/|"(?:\\.|[^"\\])*"',
+                  "",
+                  source,
+                  flags=re.MULTILINE | re.DOTALL,
+              )
+
+          marker = (
+              "ADR-033 classifies benchmark and sector return readiness "
+              "independently from their complete supplied ADR-031 and ADR-032 "
+              "result receipts without mapping either leaf to canonical "
+              "lifecycle status."
+          )
+          adr_path = Path(
+              "decisions/ADR-033-independent-benchmark-sector-return-readiness.md"
+          )
+          marker_paths = (
+              adr_path,
+              Path("README.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+              Path("quality/P3_ACCEPTANCE.md"),
+          )
+          for path in marker_paths:
+              require(path.is_file(), f"Missing ADR-033 contract document: {path}")
+              require(
+                  path.read_text(encoding="utf-8").count(marker) == 1,
+                  f"ADR-033 marker must occur exactly once: {path}",
+              )
+          adr_source = adr_path.read_text(encoding="utf-8")
+          require(
+              adr_source.startswith(
+                  "# ADR-033 — Independent Benchmark and Sector Return Readiness\n\n"
+                  "- Status: Accepted\n- Date: 2026-08-25\n"
+              ),
+              "ADR-033 title, accepted status, or date changed",
+          )
+          fence = chr(96) * 3
+          blocks = re.findall(
+              re.escape(fence) + r"json\n(\{[^\n]*\})\n" + re.escape(fence),
+              adr_source,
+          )
+          require(
+              len(blocks) == 2,
+              "ADR-033 must contain exactly two single-line canonical JSON blocks",
+          )
+          adr_policies = {
+              json.loads(block, object_pairs_hook=reject_duplicate_keys)[
+                  "policyVersion"
+              ]: block
+              for block in blocks
+          }
+
+          benchmark_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          benchmark_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturnreadiness"
+          )
+          sector_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          sector_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturnreadiness"
+          )
+          contracts = (
+              {
+                  "leg": "Benchmark",
+                  "lower": "benchmark",
+                  "directory": benchmark_dir,
+                  "test_directory": benchmark_test_dir,
+                  "policy_name": "BenchmarkReturnReadinessPolicyVersion",
+                  "request_name": "BenchmarkReturnReadinessRequest",
+                  "resolution_name": "BenchmarkReturnReadinessResolution",
+                  "resolver_name": "BenchmarkReturnReadinessResolver",
+                  "golden_name":
+                      "BenchmarkReturnReadinessResolverGoldenTest.java",
+                  "policy_value":
+                      "SUPPLIED_LEAF_BENCHMARK_RETURN_READINESS_V1",
+                  "policy_length": 2622,
+                  "policy_hash":
+                      "2dedaf014a149ed81e75941ee3677e3c8b77243b9987d9496709266aad721daf",
+                  "required_policy_key":
+                      "requiredBenchmarkReturnPolicyVersion",
+                  "required_hash_key":
+                      "requiredBenchmarkReturnPolicyDefinitionHash",
+                  "required_policy":
+                      "SIGNED_BENCHMARK_BASIS_LEVEL_DENOMINATOR_SCALE_12_HALF_EVEN_V1",
+                  "required_hash":
+                      "96d0aab8e8e784b80a12b16c99f6ba8c5f44eff7a342fd14c075b944a0a7de79",
+                  "source_input":
+                      "COMPLETE_SUPPLIED_BENCHMARK_RETURN_RESULT",
+                  "ownership": "BENCHMARK_RETURN_ONLY",
+                  "settled_rule":
+                      "BENCHMARK_RETURN_AVAILABLE_OR_INTENTIONALLY_NOT_APPLICABLE",
+                  "source_preservation":
+                      "PRESERVE_EXACT_WHOLE_BENCHMARK_RETURN_RESULT",
+                  "reason_inspection":
+                      "ONLY_IN_BENCHMARK_RETURN_READINESS_RESOLVER",
+                  "return_package": "benchmarkreturn",
+                  "pair_package": "benchmarkreferencepair",
+                  "pair_type": "BenchmarkReferenceLevelPairResolution",
+                  "source_hashes": {
+                      "BenchmarkReturnReadinessPolicyVersion.java":
+                          "33d78427d5c7baff2ac029cf645d8965a5fc3973bc058ab7044369597110735e",
+                      "BenchmarkReturnReadinessRequest.java":
+                          "e5ffc5a3e650cb47910144cf7429a4261e499503f2f5fcf86f516e07467aa856",
+                      "BenchmarkReturnReadinessResolution.java":
+                          "8fee4c697aa37965d4fdac76f0932dd4a4bded7e3e5e85eb19376ba5bdcffc67",
+                      "BenchmarkReturnReadinessResolver.java":
+                          "f29220fe8a31bdd0fafe9b7cbdb677569cee2a0bb369c2408b990af27c84435a",
+                  },
+                  "golden_hash":
+                      "f61e82ba7766effe4954f4c96db745a49bb49a03d06de583c39c32d76e3c1b3d",
+                  "vector_size": "81",
+                  "settled_size": "5",
+                  "awaiting_size": "1",
+                  "unavailable_size": "75",
+                  "future_anchor_markers": (
+                      "caseCATALOG_NOT_KNOWN_AS_OF->EndpointState.FUTURE_CATALOG",
+                      "caseBINDING_NOT_KNOWN_AS_OF->EndpointState.FUTURE_BINDING",
+                      "endpoint(state,true)",
+                  ),
+              },
+              {
+                  "leg": "Sector",
+                  "lower": "sector",
+                  "directory": sector_dir,
+                  "test_directory": sector_test_dir,
+                  "policy_name": "SectorReturnReadinessPolicyVersion",
+                  "request_name": "SectorReturnReadinessRequest",
+                  "resolution_name": "SectorReturnReadinessResolution",
+                  "resolver_name": "SectorReturnReadinessResolver",
+                  "golden_name":
+                      "SectorReturnReadinessResolverGoldenTest.java",
+                  "policy_value":
+                      "SUPPLIED_LEAF_SECTOR_RETURN_READINESS_V1",
+                  "policy_length": 2592,
+                  "policy_hash":
+                      "5737f44ebc6e65270300889dd5c2e92da0c4f3a2f04e4c6c43e4483e522187d4",
+                  "required_policy_key":
+                      "requiredSectorReturnPolicyVersion",
+                  "required_hash_key":
+                      "requiredSectorReturnPolicyDefinitionHash",
+                  "required_policy":
+                      "SIGNED_SECTOR_BASIS_LEVEL_DENOMINATOR_SCALE_12_HALF_EVEN_V1",
+                  "required_hash":
+                      "5aecd42c32ba69f0d21ab6e1ee1e3128cd31584724a6f46e176acd470204d0f7",
+                  "source_input":
+                      "COMPLETE_SUPPLIED_SECTOR_RETURN_RESULT",
+                  "ownership": "SECTOR_RETURN_ONLY",
+                  "settled_rule":
+                      "SECTOR_RETURN_AVAILABLE_OR_INTENTIONALLY_NOT_APPLICABLE",
+                  "source_preservation":
+                      "PRESERVE_EXACT_WHOLE_SECTOR_RETURN_RESULT",
+                  "reason_inspection":
+                      "ONLY_IN_SECTOR_RETURN_READINESS_RESOLVER",
+                  "return_package": "sectorreturn",
+                  "pair_package": "sectorreferencepair",
+                  "pair_type": "SectorReferenceLevelPairResolution",
+                  "source_hashes": {
+                      "SectorReturnReadinessPolicyVersion.java":
+                          "fbacd8305ec8782b13151e5f70ad9a5854e6cc39002cf4ef172ed7f8ffba6f26",
+                      "SectorReturnReadinessRequest.java":
+                          "2194801a39baf0815641369e5fd490afbf5c5458f20eb74f63b324781c9a633f",
+                      "SectorReturnReadinessResolution.java":
+                          "e1aa0dce34de1c2cbbaaa90a53315e70696423a080305346b68ba9be9354e5b3",
+                      "SectorReturnReadinessResolver.java":
+                          "d314dea999984f790a029644300778f72a3ca7129acbe384032495044a046353",
+                  },
+                  "golden_hash":
+                      "1b2aa1eea5d5c8efcddd048c54d8b53be87b14cdfd96a6df43e11a7f55bc9f8c",
+                  "vector_size": "98",
+                  "settled_size": "2",
+                  "awaiting_size": "1",
+                  "unavailable_size": "95",
+                  "future_anchor_markers": (
+                      "resolvedAssignment(AWAITING_AS_OF)",
+                      "endpointUnavailable(endpointReason(reason),AWAITING_AS_OF,"
+                      "anchorFault(reason))",
+                      "caseCATALOG_NOT_KNOWN_AS_OF->AnchorFault.CATALOG_FUTURE",
+                      "caseBINDING_NOT_KNOWN_AS_OF->AnchorFault.BINDING_FUTURE",
+                  ),
+              },
+          )
+
+          result_variants = {
+              "Settled": ["context", "sourceResult"],
+              "AwaitingEndpoint": ["context", "sourceResult"],
+              "EvidenceUnavailable": ["context", "sourceResult"],
+          }
+          branch_precedence = [
+              "Available", "NotApplicable", "EXACT_AWAITING_ENDPOINT_CHAIN",
+              "AssignmentUnavailable", "EndpointAnchorUnavailable",
+              "OTHER_EVIDENCE_UNAVAILABLE", "OutputUnavailable",
+          ]
+          branch_mapping = {
+              "Available": "SETTLED",
+              "NotApplicable": "SETTLED",
+              "ExactAwaitingEndpointChain": "AWAITING_ENDPOINT",
+              "AssignmentUnavailable": "EVIDENCE_UNAVAILABLE",
+              "EndpointAnchorUnavailable": "EVIDENCE_UNAVAILABLE",
+              "OtherEvidenceUnavailable": "EVIDENCE_UNAVAILABLE",
+              "OutputUnavailable": "EVIDENCE_UNAVAILABLE",
+          }
+          all_production_paths = set()
+          all_golden_paths = set()
+          all_type_markers = set()
+          all_production_logic = []
+
+          for contract in contracts:
+              directory = contract["directory"]
+              test_directory = contract["test_directory"]
+              production_files = set(contract["source_hashes"])
+              test_files = {contract["golden_name"]}
+              require(
+                  {path.name for path in directory.glob("*.java")}
+                      == production_files,
+                  f"ADR-033 {contract['lower']} production surface must be exact 4",
+              )
+              require(
+                  {path.name for path in test_directory.glob("*.java")}
+                      == test_files,
+                  f"ADR-033 {contract['lower']} test surface must be exact 1",
+              )
+              sources = {
+                  name: (directory / name).read_text(encoding="utf-8")
+                  for name in production_files
+              }
+              require(
+                  all(
+                      normalized_hash(directory / name) == expected
+                      for name, expected in contract["source_hashes"].items()
+                  ),
+                  f"ADR-033 exact {contract['lower']} production source changed",
+              )
+
+              policy_source = sources[contract["policy_name"] + ".java"]
+              definition = java_definition(policy_source)
+              require(
+                  definition == adr_policies[contract["policy_value"]]
+                  and len(definition.encode("ascii"))
+                      == contract["policy_length"]
+                  and hashlib.sha256(definition.encode("ascii")).hexdigest()
+                      == contract["policy_hash"]
+                  and re.search(
+                      rf'private static final String DEFINITION_HASH\s*=\s*'
+                      rf'"{contract["policy_hash"]}"',
+                      policy_source,
+                  )
+                  and enum_values(
+                      policy_source, contract["policy_name"]
+                  ) == [contract["policy_value"]],
+                  f"ADR-033 {contract['lower']} canonical bytes/hash changed",
+              )
+              policy = json.loads(
+                  definition, object_pairs_hook=reject_duplicate_keys
+              )
+              require(
+                  policy["policyVersion"] == contract["policy_value"]
+                  and policy[contract["required_policy_key"]]
+                      == contract["required_policy"]
+                  and policy[contract["required_hash_key"]]
+                      == contract["required_hash"]
+                  and policy["requestFields"]
+                      == ["policyVersion", "sourceResult"]
+                  and policy["requestPresence"] == "ALL_FIELDS_NON_NULL"
+                  and policy["resolutionContextFields"]
+                      == ["policyVersion", "policyDefinitionHash"]
+                  and policy["resultVariants"] == result_variants
+                  and policy["sourceInput"] == contract["source_input"]
+                  and policy["readinessOwnership"] == contract["ownership"]
+                  and policy["otherComparativeReturnInput"] == "ABSENT"
+                  and policy["crossReturnCorrelation"]
+                      == "ABSENT_DEFERRED_TO_FUTURE_AGGREGATE"
+                  and policy["sharedGenericReadiness"] == "ABSENT"
+                  and policy["branchPrecedence"] == branch_precedence
+                  and policy["branchMapping"] == branch_mapping
+                  and policy["settledRule"] == contract["settled_rule"]
+                  and policy["sourcePreservation"]
+                      == contract["source_preservation"]
+                  and policy["reasonInspection"]
+                      == contract["reason_inspection"],
+                  f"ADR-033 {contract['lower']} ownership/branch policy changed",
+              )
+              awaiting_key = contract["lower"] + "ReturnVariant"
+              require(
+                  policy["awaitingEndpointChain"] == {
+                      awaiting_key: "EvidenceUnavailable",
+                      "referenceLevelPairVariant": "EvidenceUnavailable",
+                      "referenceLevelPairReason":
+                          "ENDPOINT_NOT_REACHED_AS_OF",
+                  }
+                  and policy["notApplicableEndpointRule"]
+                      == "SETTLED_WITHOUT_ENDPOINT_WAIT_OR_REASON_INSPECTION"
+                  and policy["assignmentOrAnchorUnavailableRule"]
+                      == "EVIDENCE_UNAVAILABLE_EVEN_WHEN_ENDPOINT_NOT_REACHED"
+                  and policy["sourceAttestationBoundary"]
+                      == "LOCAL_SOURCE_POLICY_AND_TYPED_SHAPE_ONLY_NO_ORIGINAL_INPUT_MEMBERSHIP_PIT_FILTERING_SELECTOR_OR_CALCULATOR_INVOCATION_CLAIM"
+                  and policy["classificationValidation"]
+                      == "RESULT_CONSTRUCTORS_AND_RESOLVER_SHARE_EXACT_CLASSIFICATION_VALIDATION"
+                  and policy["resolverInvocationAttestation"]
+                      == "ONLY_RESOLVE_ATTESTS_REQUEST_TO_RESULT_INVOCATION",
+                  f"ADR-033 {contract['lower']} exact temporal chain changed",
+              )
+              for key in (
+                  "reasonFlattening", "canonicalOutcomeStatus",
+                  "dataCompleteClaim", "retry", "freshness", "cancellation",
+                  "scheduling", "producerReplay", "selectorInvocation",
+                  "calculatorInvocation", "methodologyActivation",
+                  "inputFingerprint", "persistence", "aggregation", "ranking",
+                  "publication",
+              ):
+                  require(
+                      policy[key] == "ABSENT",
+                      f"ADR-033 {contract['lower']} forbidden {key} changed",
+                  )
+
+              request_source = sources[contract["request_name"] + ".java"]
+              resolution_source = sources[
+                  contract["resolution_name"] + ".java"
+              ]
+              resolver_source = sources[contract["resolver_name"] + ".java"]
+              require(
+                  record_fields(request_source, contract["request_name"])
+                      == ["policyVersion", "sourceResult"]
+                  and record_fields(resolution_source, "ResolutionContext")
+                      == ["policyVersion", "policyDefinitionHash"]
+                  and all(
+                      record_fields(resolution_source, name) == fields
+                      for name, fields in result_variants.items()
+                  ),
+                  f"ADR-033 {contract['lower']} public record fields changed",
+              )
+              permitted = re.search(
+                  rf"sealed interface {contract['resolution_name']}\s+permits"
+                  r"(?P<body>.*?)\{",
+                  resolution_source,
+                  flags=re.DOTALL,
+              )
+              require(
+                  permitted is not None
+                  and re.findall(
+                      rf"{contract['resolution_name']}\.([A-Z][A-Za-z]+)",
+                      permitted.group("body"),
+                  ) == list(result_variants),
+                  f"ADR-033 {contract['lower']} sealed variant order changed",
+              )
+              resolver_logic = java_logic(resolver_source)
+              request_resolution_logic = java_logic(
+                  request_source + "\n" + resolution_source
+              )
+              source_variants = (
+                  "Available", "NotApplicable", "EvidenceUnavailable",
+                  "AssignmentUnavailable", "EndpointAnchorUnavailable",
+                  "OutputUnavailable",
+              )
+              require(
+                  all(
+                      re.search(
+                          rf"case\s+{contract['leg']}ReturnResult\.{variant}\b",
+                          resolver_logic,
+                      )
+                      for variant in source_variants
+                  )
+                  and resolver_logic.count(".reason()") == 1
+                  and "ENDPOINT_NOT_REACHED_AS_OF" in resolver_logic
+                  and contract["pair_type"] in resolver_logic
+                  and ".reason()" not in request_resolution_logic
+                  and "UnavailableReason" not in request_resolution_logic
+                  and "new " + contract["request_name"] in resolution_source
+                  and "requireClassification" in resolution_source,
+                  f"ADR-033 {contract['lower']} exact classification changed",
+              )
+
+              expected_edges = {
+                  contract["policy_name"] + ".java": {
+                      contract["lower"] + "returnreadiness",
+                  },
+                  contract["request_name"] + ".java": {
+                      contract["lower"] + "returnreadiness",
+                      contract["return_package"],
+                  },
+                  contract["resolution_name"] + ".java": {
+                      contract["lower"] + "returnreadiness",
+                      contract["return_package"],
+                  },
+                  contract["resolver_name"] + ".java": {
+                      contract["lower"] + "returnreadiness",
+                      contract["return_package"],
+                      contract["pair_package"],
+                  },
+              }
+              for name, source in sources.items():
+                  actual_edges = {
+                      match.group(1)
+                      for match in re.finditer(
+                          r"com\.wallstreetreceipts\.api\.domain\.outcome\.([a-z]+)",
+                          java_logic(source),
+                      )
+                  }
+                  require(
+                      actual_edges == expected_edges[name],
+                      f"ADR-033 exact import edge changed: {name}",
+                  )
+
+              golden_path = test_directory / contract["golden_name"]
+              golden = golden_path.read_text(encoding="utf-8")
+              golden_logic = re.sub(r"\s+", "", java_logic(golden))
+              anchor_loop_start = golden_logic.find(
+                  "for(" + contract["pair_type"]
+                  + ".EndpointAnchorUnavailableReasonreason"
+              )
+              anchor_loop_end = golden_logic.find(
+                  "for(" + contract["pair_type"] + ".UnavailableReasonreason",
+                  anchor_loop_start,
+              )
+              anchor_loop = golden_logic[
+                  anchor_loop_start:anchor_loop_end
+              ] if anchor_loop_start >= 0 and anchor_loop_end > anchor_loop_start else ""
+              require(
+                  normalized_hash(golden_path) == contract["golden_hash"]
+                  and len(re.findall(r"(?m)^\s+@Test\s*$", golden)) == 6
+                  and len(re.findall(
+                      r"(?m)^\s+@ParameterizedTest(?:\(|\s*$)", golden
+                  )) == 1
+                  and len(re.findall(
+                      r"(?m)^\s+@MethodSource\(", golden
+                  )) == 1
+                  and f"hasSize({contract['vector_size']})" in golden
+                  and f"hasSize({contract['settled_size']})" in golden
+                  and f"hasSize({contract['awaiting_size']})" in golden
+                  and f"hasSize({contract['unavailable_size']})" in golden
+                  and "directResultConstructorsShareExactFailClosedClassification"
+                      in golden
+                  and "equalButDistinctWholeSourceRecordsReplayEqually" in golden
+                  and "classificationIsIndependentOfLocaleTimezoneAndPriorCalls"
+                      in golden
+                  and "Locale.setDefault" in golden
+                  and "TimeZone.setDefault" in golden
+                  and "finally" in golden
+                  and "ObjectMapper" not in golden
+                  and "ClassPathResource" not in golden,
+                  f"ADR-033 {contract['lower']} exhaustive golden changed",
+              )
+              require(
+                  anchor_loop
+                  and "endpointAnchorUnavailableSource(reason)" in anchor_loop
+                  and contract["resolution_name"]
+                      + ".EvidenceUnavailable.class" in anchor_loop
+                  and contract["resolution_name"]
+                      + ".AwaitingEndpoint.class" not in anchor_loop
+                  and all(
+                      marker_name in golden_logic
+                      for marker_name in contract["future_anchor_markers"]
+                  ),
+                  f"ADR-033 {contract['lower']} future-endpoint anchor must remain "
+                  "EvidenceUnavailable",
+              )
+
+              production_paths = {
+                  (directory / name).resolve() for name in production_files
+              }
+              all_production_paths |= production_paths
+              all_golden_paths.add(golden_path.resolve())
+              all_type_markers |= {
+                  name.removesuffix(".java") for name in production_files
+              }
+              all_production_logic.extend(
+                  java_logic(source) for source in sources.values()
+              )
+
+          combined_logic = "\n".join(all_production_logic)
+          require(
+              "BenchmarkReturn" not in "\n".join(
+                  java_logic(path.read_text(encoding="utf-8"))
+                  for path in sector_dir.glob("*.java")
+              )
+              and "SectorReturn" not in "\n".join(
+                  java_logic(path.read_text(encoding="utf-8"))
+                  for path in benchmark_dir.glob("*.java")
+              )
+              and not any(
+                  token in combined_logic
+                  for token in (
+                      "ComparativeReturnReadiness", "SharedReturnReadiness",
+                      "OutcomeEvaluationStatus", "CallOutcome", "dataComplete",
+                      "BenchmarkReturnCalculator", "SectorReturnCalculator",
+                      "BenchmarkReferenceLevelPairSelector",
+                      "SectorReferenceLevelPairSelector", "Class<", ".class",
+                      "java.lang.reflect", "@Service", "@Repository",
+                      "@Controller",
+                  )
+              )
+              and not Path(
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                  "outcome/comparativereturnreadiness"
+              ).exists()
+              and not Path(
+                  "apps/api/src/test/java/com/wallstreetreceipts/api/domain/"
+                  "outcome/comparativereturnreadiness"
+              ).exists(),
+              "ADR-033 independent ownership or lifecycle firewall changed",
+          )
+
+          for path in Path("apps/api/src/main/java").rglob("*.java"):
+              if path.resolve() in all_production_paths:
+                  continue
+              source = path.read_text(encoding="utf-8")
+              logic = java_logic(source)
+              require(
+                  "domain.outcome.benchmarkreturnreadiness" not in source
+                  and "domain.outcome.sectorreturnreadiness" not in source
+                  and not any(
+                      re.search(rf"\b{re.escape(name)}\b", logic)
+                      for name in all_type_markers
+                  ),
+                  f"ADR-033 readiness leaves must not be reverse-wired: {path}",
+              )
+
+          protected_paths = sorted(
+              {
+                  Path("contracts/openapi.yaml"),
+                  *Path("schemas").glob("*.json"),
+                  *Path("fixtures/v1").glob("*.json"),
+                  *(path for path in Path("apps/api/src/main").rglob("*")
+                    if path.is_file()),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          require(
+              len(protected_paths) == 232
+              and digest(protected_paths)
+                  == "2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941",
+              "ADR-033 current protected production baseline changed",
+          )
+          adr032_protected_paths = [
+              path for path in protected_paths
+              if path.resolve() not in all_production_paths
+          ]
+          require(
+              {path.resolve() for path in protected_paths}
+              - {path.resolve() for path in adr032_protected_paths}
+                  == all_production_paths
+              and len(adr032_protected_paths) == 224
+              and digest(adr032_protected_paths)
+                  == "bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055",
+              "ADR-032 baseline changed outside exact ADR-033 8-file production",
+          )
+          sector_return_paths = {
+              path.resolve()
+              for path in Path(
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                  "outcome/sectorreturn"
+              ).glob("*.java")
+          }
+          adr031_protected_paths = [
+              path for path in adr032_protected_paths
+              if path.resolve() not in sector_return_paths
+          ]
+          require(
+              len(sector_return_paths) == 4
+              and len(adr031_protected_paths) == 220
+              and digest(adr031_protected_paths)
+                  == "cb8532a4020c76a9ed2fd4a61fbb5844717dc23c7f27d90510e603c0bee1f5e9",
+              "ADR-031 baseline changed outside ADR-032/033 production",
+          )
+          benchmark_return_paths = {
+              path.resolve()
+              for path in Path(
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                  "outcome/benchmarkreturn"
+              ).glob("*.java")
+          }
+          adr030_protected_paths = [
+              path for path in adr031_protected_paths
+              if path.resolve() not in benchmark_return_paths
+          ]
+          require(
+              len(benchmark_return_paths) == 4
+              and len(adr030_protected_paths) == 216
+              and digest(adr030_protected_paths)
+                  == "45d06843fd95235221c6716a578915f40a410de8464b0b0ca3a09fff7c29436d",
+              "ADR-030 baseline changed outside ADR-031/032/033 production",
+          )
+          reference_pair_paths = {
+              path.resolve()
+              for package_name in (
+                  "benchmarkreferencepair", "sectorreferencepair",
+              )
+              for path in Path(
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/domain/"
+                  f"outcome/{package_name}"
+              ).glob("*.java")
+          }
+          adr029_protected_paths = [
+              path for path in adr030_protected_paths
+              if path.resolve() not in reference_pair_paths
+          ]
+          require(
+              len(reference_pair_paths) == 14
+              and len(adr029_protected_paths) == 202
+              and digest(adr029_protected_paths)
+                  == "b1ae60b9c550353960687cb9973e2909e965a5e3eb98bb23b39b0a7f01a2a899",
+              "ADR-029 baseline changed outside ADR-030/031/032/033 production",
+          )
+
+          test_web_paths = sorted(
+              {
+                  *(path for path in Path("apps/api/src/test").rglob("*")
+                    if path.is_file()),
+                  *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                    for path in root.rglob("*") if path.is_file()),
+                  *(path for path in Path("apps/web").glob("*")
+                    if path.is_file() and path.name != "next-env.d.ts"),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          require(
+              len(test_web_paths) == 205
+              and digest(test_web_paths)
+                  == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
+              "ADR-033 current API-test/web baseline changed",
+          )
+          adr032_test_web_paths = [
+              path for path in test_web_paths
+              if path.resolve() not in all_golden_paths
+          ]
+          require(
+              {path.resolve() for path in test_web_paths}
+              - {path.resolve() for path in adr032_test_web_paths}
+                  == all_golden_paths
+              and len(adr032_test_web_paths) == 203
+              and digest(adr032_test_web_paths)
+                  == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+              "ADR-032 baseline changed outside exact ADR-033 two goldens",
+          )
+          sector_return_golden = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "sectorreturn/SectorReturnCalculatorGoldenTest.java"
+          ).resolve()
+          adr031_test_web_paths = [
+              path for path in adr032_test_web_paths
+              if path.resolve() != sector_return_golden
+          ]
+          require(
+              len(adr031_test_web_paths) == 202
+              and digest(adr031_test_web_paths)
+                  == "12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273",
+              "ADR-031 test/web baseline changed outside ADR-032/033 goldens",
+          )
+          benchmark_return_golden = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "benchmarkreturn/BenchmarkReturnCalculatorGoldenTest.java"
+          ).resolve()
+          adr030_test_web_paths = [
+              path for path in adr031_test_web_paths
+              if path.resolve() != benchmark_return_golden
+          ]
+          require(
+              len(adr030_test_web_paths) == 201
+              and digest(adr030_test_web_paths)
+                  == "fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f",
+              "ADR-030 test/web baseline changed outside ADR-031/032/033 goldens",
+          )
+          reference_pair_goldens = {
+              Path(
+                  "apps/api/src/test/java/com/wallstreetreceipts/api/domain/"
+                  f"outcome/{package_name}/{class_name}.java"
+              ).resolve()
+              for package_name, class_name in (
+                  ("benchmarkreferencepair",
+                   "BenchmarkReferenceLevelPairSelectorGoldenTest"),
+                  ("sectorreferencepair",
+                   "SectorReferenceLevelPairSelectorGoldenTest"),
+              )
+          }
+          adr029_test_web_paths = [
+              path for path in adr030_test_web_paths
+              if path.resolve() not in reference_pair_goldens
+          ]
+          require(
+              len(adr029_test_web_paths) == 199
+              and digest(adr029_test_web_paths)
+                  == "59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293",
+              "ADR-029 test/web baseline changed outside ADR-030/031/032/033 goldens",
+          )
+
+          product_paths = [Path("contracts/openapi.yaml")]
+          product_paths += list(Path("schemas").glob("*.json"))
+          product_paths += list(Path("fixtures/v1").glob("*.json"))
+          product_paths += [
+              path for root in (
+                  Path("apps/api/src/main/resources"),
+                  Path("apps/web/src"),
+                  Path("apps/web/e2e"),
+              )
+              for path in root.rglob("*") if path.is_file()
+          ]
+          runtime_markers = (
+              "SUPPLIED_LEAF_BENCHMARK_RETURN_READINESS_V1",
+              "SUPPLIED_LEAF_SECTOR_RETURN_READINESS_V1",
+              "domain.outcome.benchmarkreturnreadiness",
+              "domain.outcome.sectorreturnreadiness",
+              "BenchmarkReturnReadinessResolution",
+              "SectorReturnReadinessResolution",
+          )
+          for path in product_paths:
+              try:
+                  source = path.read_text(encoding="utf-8")
+              except UnicodeDecodeError:
+                  continue
+              require(
+                  not any(marker_name in source for marker_name in runtime_markers),
+                  f"ADR-033 readiness must not be published: {path}",
+              )
+          outcomes = json.loads(
+              Path("fixtures/v1/call-outcomes.json").read_text(encoding="utf-8")
+          )
+          require(
+              all(
+                  outcome[field] is None
+                  for outcome in outcomes["outcomes"]
+                  for field in (
+                      "benchmarkReturn", "sectorReturn", "alpha", "sectorAlpha",
+                  )
+              ),
+              "ADR-033 must not publish comparative returns or alpha",
+          )
+
+          print(
+              "Validated ADR-033 exact independent 8+2 readiness surface, two "
+              "canonical policies, 81/98 exhaustive source shapes, exact temporal "
+              "chains, source preservation, import/reverse/lifecycle firewalls, "
+              "current baselines, ADR-032/031/030/029 replay, and no publication"
           )
           PYTHON
 
@@ -21475,6 +22817,26 @@ jobs:
           actual = {key: suite.attrib.get(key, "0") for key in expected};
           sys.exit(f"SectorReturnCalculatorGoldenTest runtime cardinality changed: {actual}") if actual != expected else None;
           print("Verified SectorReturnCalculatorGoldenTest runtime cardinality: 112/112")'
+
+      - name: Guard benchmark return readiness golden runtime cardinality
+        working-directory: apps/api
+        run: >-
+          python -c 'import sys; import xml.etree.ElementTree as ET;
+          suite = ET.parse("target/surefire-reports/TEST-com.wallstreetreceipts.api.domain.outcome.benchmarkreturnreadiness.BenchmarkReturnReadinessResolverGoldenTest.xml").getroot();
+          expected = {"tests": "87", "failures": "0", "errors": "0", "skipped": "0"};
+          actual = {key: suite.attrib.get(key, "0") for key in expected};
+          sys.exit(f"BenchmarkReturnReadinessResolverGoldenTest runtime cardinality changed: {actual}") if actual != expected else None;
+          print("Verified BenchmarkReturnReadinessResolverGoldenTest runtime cardinality: 87/87")'
+
+      - name: Guard sector return readiness golden runtime cardinality
+        working-directory: apps/api
+        run: >-
+          python -c 'import sys; import xml.etree.ElementTree as ET;
+          suite = ET.parse("target/surefire-reports/TEST-com.wallstreetreceipts.api.domain.outcome.sectorreturnreadiness.SectorReturnReadinessResolverGoldenTest.xml").getroot();
+          expected = {"tests": "104", "failures": "0", "errors": "0", "skipped": "0"};
+          actual = {key: suite.attrib.get(key, "0") for key in expected};
+          sys.exit(f"SectorReturnReadinessResolverGoldenTest runtime cardinality changed: {actual}") if actual != expected else None;
+          print("Verified SectorReturnReadinessResolverGoldenTest runtime cardinality: 104/104")'
 
       - name: Guard favorable-extreme golden runtime cardinality
         working-directory: apps/api

@@ -470,9 +470,10 @@ implements benchmark assignment, ADR-028 locks the provider-neutral sector
 taxonomy and mapping decision, and ADR-029 implements basis-frozen sector
 assignment. ADR-030 now adds the two independent reference-level pairs,
 ADR-031 adds the independently typed benchmark return calculator, and ADR-032
-adds the independently typed sector return calculator. Source-local readiness
-comes next as its own reviewed slice. Raw-window coverage precedes MFE/MAE,
-alpha and sector alpha come last, and lifecycle composition remains separate.
+adds the independently typed sector return calculator. ADR-033 adds two
+independent source-local readiness contracts without correlating the leaves.
+Raw-window coverage precedes MFE/MAE, alpha and sector alpha come last, and
+lifecycle composition remains separate.
 
 ADR-027 selects benchmark assignment only from explicit point-in-time evidence frozen at the outcome basis event.
 The disconnected V1 selector accepts only complete source-identified
@@ -711,8 +712,9 @@ exit 1; changing expected runtime count from 95 to 94 while actual remains 95
 makes its gate exit 1. All mutations are restored, the final dedicated guard
 passes, `git diff --check` is clean, and marker parity remains one per document:
 **PASS**. ADR-032 now supplies the independent sector reference-return
-calculator. Comparative readiness is next; lifecycle integration, canonical
-publication, MFE/MAE, alpha, and sector alpha remain later work.
+calculator, and ADR-033 now supplies both independent comparative-readiness
+contracts. Raw-window coverage/evidence is next; lifecycle integration,
+canonical publication, MFE/MAE, alpha, and sector alpha remain later work.
 
 ADR-032 calculates a signed sector price-index return from one complete ADR-030 sector reference-level-pair receipt using the exact basis-level denominator.
 The disconnected leaf adds exactly `SectorReturnPolicyVersion`,
@@ -778,9 +780,65 @@ lint, 569/569 Vitest tests, production build, marker parity, and diff hygiene
 pass; independent review has no remaining P0/P1/P2 finding. The user-owned
 `apps/web/next-env.d.ts` remains preserved.
 
-Source-local comparative readiness is the next independent slice. Lifecycle,
-methodology/fingerprint, lineage, persistence, API/UI publication, raw-window
-coverage, MFE/MAE, alpha, and sector alpha remain later work.
+ADR-033 classifies benchmark and sector return readiness independently from their complete supplied ADR-031 and ADR-032 result receipts without mapping either leaf to canonical lifecycle status.
+The disconnected slice adds separate `benchmarkreturnreadiness` and
+`sectorreturnreadiness` packages. Each contains exactly one policy, request,
+sealed resolution, and resolver plus one source-local exhaustive golden. A
+request accepts only its matching complete return result and exact source
+policy/hash. `Available` and intentional `NotApplicable` are `Settled`; only a
+return `EvidenceUnavailable` that preserves a pair
+`EvidenceUnavailable(ENDPOINT_NOT_REACHED_AS_OF)` is `AwaitingEndpoint`.
+Assignment, anchor, every other evidence reason, and output unavailability are
+`EvidenceUnavailable`. Every result preserves the exact whole supplied source
+object and carries no flattened reason.
+
+The benchmark readiness definition is exactly 2622 UTF-8 bytes with SHA-256
+`2dedaf014a149ed81e75941ee3677e3c8b77243b9987d9496709266aad721daf`;
+the sector definition is exactly 2592 bytes with SHA-256
+`5737f44ebc6e65270300889dd5c2e92da0c4f3a2f04e4c6c43e4483e522187d4`.
+ADR-025's future nine-input ownership stays intact: there is no combined
+comparative receipt, cross-return correlation, shared generic helper, cast,
+or lifecycle mapping. Existing DEMO comparative values remain null, and no
+schema, fixture, manifest, OpenAPI, Flyway, database, controller, repository,
+provider, API, or web runtime is added.
+
+No API key, account, paid plan, license, secret, or network access is required
+for ADR-033. Real evidence remains blocked until P5 approves the exact
+benchmark and sector-index products/feeds, exact-time history/revisions,
+calendar and divisor/methodology continuity, sector binding, and
+storage/cache/display/derived-return/redistribution rights. Publisher and
+redistributor rights are reviewed separately when they differ; only then may
+scoped credentials enter untracked local, CI, and deployment secret stores,
+never chat or Git.
+
+Focused verification passes benchmark 87/87 and sector 104/104—191 total—with
+zero failures, errors, or skips. Normalized golden-source SHA-256 values are
+benchmark
+`f61e82ba7766effe4954f4c96db745a49bb49a03d06de583c39c32d76e3c1b3d`
+and sector
+`1b2aa1eea5d5c8efcddd048c54d8b53be87b14cdfd96a6df43e11a7f55bc9f8c`.
+Protected production is 232 files /
+`2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941`
+and API-test/web is 205 files /
+`fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75`.
+Excluding exactly ADR-033's eight production files and two goldens reproduces
+ADR-032 at 224 /
+`bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055`
+and 203 /
+`5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce`.
+Full API verification passes 2066/2066 with zero failures, errors, or skips,
+including Testcontainers PostgreSQL 17.10 and Flyway. The dedicated guard plus
+87/87 and 104/104 runtime gates pass; 38/38 workflow Python bodies compile and
+31/31 locally runnable bodies pass. SnakeYAML retains four jobs and Compose
+validates. Web lint, 569/569 Vitest tests, and production build pass. README
+marker, canonical policy-byte, and expected runtime 87-to-86 mutations each
+fail and are restored. Independent review found no P0/P1/P2 issue after its
+future-endpoint anchor coverage gap was corrected. The user-owned
+`apps/web/next-env.d.ts` is restored to its exact pre-build hash.
+
+Point-in-time raw-window coverage/evidence for MFE/MAE is the next independent
+foundation. Lifecycle, methodology/fingerprint, lineage, persistence, API/UI
+publication, alpha, and sector alpha remain later work; alpha stays last.
 
 ## Repository layout
 
