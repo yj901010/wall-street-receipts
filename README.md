@@ -712,9 +712,10 @@ exit 1; changing expected runtime count from 95 to 94 while actual remains 95
 makes its gate exit 1. All mutations are restored, the final dedicated guard
 passes, `git diff --check` is clean, and marker parity remains one per document:
 **PASS**. ADR-032 now supplies the independent sector reference-return
-calculator, and ADR-033 now supplies both independent comparative-readiness
-contracts. Raw-window coverage/evidence is next; lifecycle integration,
-canonical publication, MFE/MAE, alpha, and sector alpha remain later work.
+calculator, ADR-033 supplies both independent comparative-readiness contracts,
+and ADR-034 now freezes the decision-only raw-window truth boundary. Executable
+raw aggregation remains gated; lifecycle integration, canonical publication,
+MFE/MAE, alpha, and sector alpha remain later work.
 
 ADR-032 calculates a signed sector price-index return from one complete ADR-030 sector reference-level-pair receipt using the exact basis-level denominator.
 The disconnected leaf adds exactly `SectorReturnPolicyVersion`,
@@ -836,9 +837,67 @@ fail and are restored. Independent review found no P0/P1/P2 issue after its
 future-endpoint anchor coverage gap was corrected. The user-owned
 `apps/web/next-env.d.ts` is restored to its exact pre-build hash.
 
-Point-in-time raw-window coverage/evidence for MFE/MAE is the next independent
-foundation. Lifecycle, methodology/fingerprint, lineage, persistence, API/UI
-publication, alpha, and sector alpha remain later work; alpha stays last.
+ADR-034 freezes provider-neutral point-in-time raw-window coverage semantics before any executable raw aggregation or MFE/MAE calculation.
+The decision-only foundation fixes V1 to eligible primary-venue regular-session
+trade ticks over the exact causal interval
+`(basis.eventTime, endpointSession.closesAt]`. It excludes pre-call ticks,
+off-hours, alternate venues, quotes, indications, and OHLC/intraday/session
+bars, and forbids basis-price, endpoint-close, prior-close, nearest-price,
+interpolation, bar-derived, and ADR-019 aggregate fallbacks.
+
+A later executable request must anchor to one complete ADR-016
+`AssetReturnPricePairResolution.Resolved`, not target-specific ADR-018 or
+ADR-019 output. Raw events and their manifest must preserve exact source and
+provider-event revisions, sequence/watermark and correction/bust coverage,
+trade conditions, ordered sessions, calendar/catalog identity, adjustment and
+continuity, provenance, and both `availableAt` and `capturedAt`. Every item is
+visible only when both PIT timestamps are at or before the inherited
+`evaluationAsOf`; later corrections create later replay evidence and never
+rewrite an earlier receipt.
+Raw events additionally require
+`eventTime <= availableAt <= capturedAt <= evaluationAsOf`, while manifests
+require `upperBound <= availableAt <= capturedAt <= evaluationAsOf`; evidence
+cannot become available before its event or attested window exists.
+
+No-trade silence is complete only under an approved source completeness proof.
+Halts contribute no price, auction trades require an explicit versioned
+condition mapping, unknown conditions and internal sequence gaps fail closed,
+and a proven window with zero eligible trades remains
+`CompleteWithoutEligibleTrade` rather than invented zero MFE/MAE. One future
+coverage receipt must co-identify the population used for both high and low;
+it is shared source evidence only, while MFE and MAE calculators and readiness
+ownership remain separately reviewed.
+
+ADR-034 adds no Java, test, schema, fixture, manifest member, OpenAPI, Flyway,
+database, provider, API, or web runtime surface. Existing DEMO MFE/MAE stay
+null, and ADR-019's supplied `EXACT_CAUSAL_WINDOW_SESSION_UNION` attestation is
+not promoted into raw proof. No API key, account, plan, license, secret, or
+network is needed. Before executable non-DEMO work, the exact historical
+trade-tick feed and written history, sequence/correction, auction/halt,
+calendar/corporate-action, storage, derived-use, display, and redistribution
+rights must be approved. Only then may a scoped credential enter untracked
+local, CI, or deployment secret storage—never chat or Git.
+
+The dedicated decision-only guard passes with protected production unchanged
+at 232 files / SHA-256
+`2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941`
+and API-test/web unchanged at 205 files / SHA-256
+`fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75`.
+All 39/39 workflow Python bodies compile, 32/32 locally runnable bodies pass,
+SnakeYAML retains four jobs, and Compose validates. Full API verification is
+2066/2066 with zero failures, errors, or skips including PostgreSQL 17.10
+Testcontainers/Flyway; web lint, 569/569 Vitest tests, and the 12-page
+production build pass. Exact marker and forbidden-runtime mutations each make
+the guard fail; `NotApplicable`, causal-time, and provider-config mutations do
+the same. All are restored. `git diff --check` passes, and the user-owned
+`apps/web/next-env.d.ts` is restored to its exact pre-build hash. Independent
+closure review reports no remaining P0-P3 finding.
+
+The next executable raw-window resolver remains blocked on that exact product's
+documented sequence, correction, trade-condition, auction, halt, and rights
+evidence. Separate MFE/MAE arithmetic and readiness follow it; lifecycle,
+methodology/fingerprint, lineage, persistence, API/UI publication, alpha, and
+sector alpha remain later work, with alpha last.
 
 ## Repository layout
 

@@ -17604,6 +17604,298 @@ jobs:
           )
           PYTHON
 
+      - name: Guard point-in-time raw-window coverage foundation
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def digest(paths):
+              result = hashlib.sha256()
+              for path in sorted(paths, key=lambda value: value.as_posix()):
+                  result.update(path.as_posix().encode("utf-8"))
+                  result.update(b"\0")
+                  result.update(path.read_bytes().replace(b"\r\n", b"\n"))
+                  result.update(b"\0")
+              return result.hexdigest()
+
+          marker = (
+              "ADR-034 freezes provider-neutral point-in-time raw-window coverage "
+              "semantics before any executable raw aggregation or MFE/MAE "
+              "calculation."
+          )
+          adr_path = Path(
+              "decisions/ADR-034-point-in-time-raw-window-coverage-foundation.md"
+          )
+          marker_paths = (
+              adr_path,
+              Path("README.md"),
+              Path("quality/P3_ACCEPTANCE.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+          )
+          documents = {}
+          for path in marker_paths:
+              require(path.is_file(), f"Missing ADR-034 contract document: {path}")
+              source = path.read_text(encoding="utf-8")
+              documents[path] = source
+              require(
+                  source.count(marker) == 1,
+                  f"ADR-034 marker must occur exactly once: {path}",
+              )
+
+          adr = documents[adr_path]
+          require(
+              adr.startswith(
+                  "# ADR-034 — Point-in-Time Raw-Window Coverage Foundation\n\n"
+                  "- Status: Accepted\n- Date: 2026-08-25\n"
+              ),
+              "ADR-034 title, accepted status, or date changed",
+          )
+          exact_terms = (
+              "TRADE_TICK_ONLY_V1",
+              "(basis.eventTime, endpointSession.closesAt]",
+              "AssetReturnPricePairResolution.Resolved",
+              "Covered",
+              "CompleteWithoutEligibleTrade",
+              "EvidenceUnavailable",
+              "availableAt",
+              "capturedAt",
+              "evaluationAsOf",
+              "eventTime <= availableAt <= capturedAt <= evaluationAsOf",
+              "upperBound <= availableAt <= capturedAt <= evaluationAsOf",
+              "EXACT_CAUSAL_WINDOW_SESSION_UNION",
+              "ADR-019",
+              "MFE",
+              "MAE",
+          )
+          require(
+              all(term in adr for term in exact_terms),
+              "ADR-034 exact reserved vocabulary or source boundary changed",
+          )
+          words = re.sub(r"[^a-z0-9]+", " ", adr.lower())
+          required_groups = (
+              ("decision only", "provider neutral", "point in time"),
+              ("primary venue", "regular session", "ordered session"),
+              ("lower bound", "exclusive", "upper bound", "inclusive"),
+              ("trade tick", "provider event", "event time", "trade condition"),
+              ("source revision", "provenance", "calendar", "catalog"),
+              ("correction", "bust", "predecessor", "watermark"),
+              ("future", "invisible", "identity", "cardinality"),
+              ("no trade", "halt", "auction", "bar", "straddle"),
+              ("bars", "quotes", "fallback"),
+              ("co identify", "high", "low", "shared", "evidence"),
+              ("separate", "calculator", "readiness"),
+              ("lifecycle", "methodology", "publication"),
+              ("historical", "trade tick", "product", "feed", "written rights"),
+              ("storage", "derived", "display", "redistribution"),
+              ("api key", "account", "license", "network", "secret"),
+              ("local", "ci", "deployment", "chat", "git"),
+          )
+          for group in required_groups:
+              require(
+                  all(term in words for term in group),
+                  f"ADR-034 required semantic boundary is missing: {group}",
+              )
+          require(
+              re.search(r"\b(?:reject|exclude|excluded|absent|no|never|not)\w*\b.{0,120}\bbars?\b",
+                        words) is not None
+              or re.search(r"\bbars?\b.{0,120}\b(?:reject|exclude|excluded|absent|outside|never|not)\w*\b",
+                           words) is not None,
+              "ADR-034 must explicitly reject bar input or inference",
+          )
+          require(
+              re.search(r"\b(?:reject|exclude|excluded|absent|no|never|not)\w*\b.{0,120}\bquotes?\b",
+                        words) is not None
+              or re.search(r"\bquotes?\b.{0,120}\b(?:reject|exclude|excluded|absent|outside|never|not)\w*\b",
+                           words) is not None,
+              "ADR-034 must explicitly reject quotes",
+          )
+          require(
+              "no `awaitingendpoint`" in adr.lower()
+              or "`awaitingendpoint` is absent" in adr.lower()
+              or "does not reserve `awaitingendpoint`" in adr.lower(),
+              "ADR-034 mature endpoint anchor must not reserve AwaitingEndpoint",
+          )
+          require(
+              "no `notapplicable`" in adr.lower()
+              or "`notapplicable` is absent" in adr.lower()
+              or "does not reserve `notapplicable`" in adr.lower(),
+              "ADR-034 evidence state must not reserve NotApplicable",
+          )
+          require(
+              "completewithouteligibletrade" in adr.lower()
+              and (
+                  "zero mfe/mae" in adr.lower()
+                  or ("zero mfe" in adr.lower() and "zero mae" in adr.lower())
+              ),
+              "ADR-034 complete-without-trade must never become zero MFE/MAE",
+          )
+          require(
+              "datacomplete" in words or "data complete" in words,
+              "ADR-034 must explicitly keep dataComplete outside the foundation",
+          )
+
+          fence = chr(96) * 3
+          require(
+              fence + "json" not in adr.lower()
+              and '"policyVersion"' not in adr
+              and "CANONICAL_DEFINITION" not in adr
+              and "DEFINITION_HASH" not in adr
+              and "## Canonical policy definition" not in adr
+              and re.search(r"\b[a-f0-9]{64}\b", adr.lower()) is None,
+              "Decision-only ADR-034 must not define canonical policy bytes or hash",
+          )
+
+          raw_main_dir = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/"
+              "rawwindowcoverage"
+          )
+          raw_test_dir = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/domain/outcome/"
+              "rawwindowcoverage"
+          )
+          require(
+              not raw_main_dir.exists() and not raw_test_dir.exists(),
+              "Decision-only ADR-034 must not add a rawwindowcoverage Java/test package",
+          )
+          raw_type = re.compile(
+              r"\bRawWindow(?:Coverage|PriceEvent|Manifest|Request|Resolution|"
+              r"Resolver|Aggregator|Calculator|Readiness)\w*\b"
+          )
+          raw_policy = re.compile(
+              r"\b[A-Z0-9_]*RAW_WINDOW_(?:COVERAGE|AGGREGATION|READINESS)"
+              r"[A-Z0-9_]*\b|\bTRADE_TICK_ONLY_V1\b"
+          )
+          for root in (
+              Path("apps/api/src/main/java"),
+              Path("apps/api/src/test/java"),
+          ):
+              for path in root.rglob("*.java"):
+                  normalized_path = re.sub(
+                      r"[^a-z0-9]", "", path.as_posix().lower()
+                  )
+                  source = path.read_text(encoding="utf-8")
+                  require(
+                      "rawwindowcoverage" not in normalized_path
+                      and raw_type.search(source) is None
+                      and raw_policy.search(source) is None,
+                      f"Decision-only ADR-034 must not add executable raw-window code: {path}",
+                  )
+
+          protected_paths = sorted(
+              {
+                  Path("contracts/openapi.yaml"),
+                  *Path("schemas").glob("*.json"),
+                  *(path for path in Path("fixtures/v1").rglob("*")
+                    if path.is_file()),
+                  *(path for path in Path("apps/api/src/main").rglob("*")
+                    if path.is_file()),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          require(
+              len(protected_paths) == 232
+              and digest(protected_paths)
+                  == "2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941",
+              "ADR-034 decision-only protected production baseline changed",
+          )
+          test_web_paths = sorted(
+              {
+                  *(path for path in Path("apps/api/src/test").rglob("*")
+                    if path.is_file()),
+                  *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                    for path in root.rglob("*") if path.is_file()),
+                  *(path for path in Path("apps/web").glob("*")
+                    if path.is_file() and path.name != "next-env.d.ts"),
+              },
+              key=lambda path: path.as_posix(),
+          )
+          require(
+              len(test_web_paths) == 205
+              and digest(test_web_paths)
+                  == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
+              "ADR-034 decision-only API-test/web baseline changed",
+          )
+          dependency_runtime_paths = {
+              Path("apps/api/pom.xml"),
+              Path("apps/api/mvnw"),
+              Path("apps/api/mvnw.cmd"),
+              Path("apps/api/.mvn/wrapper/maven-wrapper.properties"),
+              Path("package.json"),
+              Path("pnpm-lock.yaml"),
+              Path("pnpm-workspace.yaml"),
+              Path("compose.yaml"),
+              Path(".env.example"),
+          }
+          wrapper_paths = {
+              path for path in Path("apps/api/.mvn").rglob("*")
+              if path.is_file()
+          }
+          require(
+              all(path.is_file() for path in dependency_runtime_paths)
+              and wrapper_paths == {
+                  Path("apps/api/.mvn/wrapper/maven-wrapper.properties")
+              }
+              and len(dependency_runtime_paths) == 9
+              and digest(dependency_runtime_paths)
+                  == "25677e07b9f511dd8899bf69fb5c435247d4996313a60361faf354002b8555bd",
+              "ADR-034 must preserve exact dependency/runtime/provider configuration",
+          )
+
+          workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+          guard_step = (
+              "\n      - name: Guard point-in-time raw-window coverage foundation\n"
+          )
+          guard_start = workflow.index(guard_step)
+          guard_end = workflow.index("\n      - name: ", guard_start + len(guard_step))
+          workflow_without_this_guard = (
+              workflow[:guard_start] + workflow[guard_end:]
+          )
+          forbidden_workflow_markers = (
+              "raw-window coverage golden runtime cardinality",
+              "rawwindowcoverage",
+              "TRADE_TICK_ONLY_V1",
+              "RawWindowCoveragePolicyVersion",
+              "RawWindowPriceEvent",
+              "RawWindowCoverageManifest",
+              "RawWindowCoverageRequest",
+              "RawWindowCoverageResolution",
+              "RawWindowCoverageResolver",
+          )
+          require(
+              all(
+                  marker.lower() not in workflow_without_this_guard.lower()
+                  for marker in forbidden_workflow_markers
+              ),
+              "Decision-only ADR-034 must not add an API runtime-cardinality gate",
+          )
+          outcomes = json.loads(
+              Path("fixtures/v1/call-outcomes.json").read_text(encoding="utf-8")
+          )
+          require(
+              all(
+                  outcome[metric] is None
+                  for outcome in outcomes["outcomes"]
+                  for metric in ("mfe", "mae")
+              ),
+              "ADR-034 must not publish MFE or MAE",
+          )
+
+          print(
+              "Validated ADR-034 decision-only raw-window coverage semantics, "
+              "four-document parity, mature endpoint anchor, reserved conceptual "
+              "branches, raw/provider/runtime firewalls, unchanged ADR-033 "
+              "baselines, and null MFE/MAE publication"
+          )
+          PYTHON
+
       - name: Guard point-in-time target eligibility
         shell: bash
         run: |

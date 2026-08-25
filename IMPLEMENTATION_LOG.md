@@ -4468,3 +4468,124 @@ ADR-033 classifies benchmark and sector return readiness independently from thei
   reviewed foundation. Lifecycle, methodology/fingerprint, lineage,
   persistence, API/UI publication, alpha, and sector alpha remain separate;
   alpha stays last.
+
+## 2026-08-25 — ADR-034 point-in-time raw-window coverage foundation
+
+Status: complete for the provider-neutral decision-only contract, dedicated
+repository guard, full regression, negative mutations, and independent closure
+review.
+
+ADR-034 freezes provider-neutral point-in-time raw-window coverage semantics before any executable raw aggregation or MFE/MAE calculation.
+
+### Decision scope
+
+- Treat ADR-019's `EXACT_CAUSAL_WINDOW_SESSION_UNION` only as the existing
+  caller-supplied aggregate attestation. It is not a raw tick/bar verification
+  receipt and cannot be cast, wrapped, or promoted into ADR-034 evidence.
+- Freeze future V1 raw evidence as `TRADE_TICK_ONLY_V1` over the exact ordered
+  primary-venue regular-session union and exact causal interval
+  `(basis.eventTime, endpointSession.closesAt]`. Quotes, indications,
+  alternate venues, off-hours, inter-session gaps, OHLC/intraday/session bars,
+  bar-straddle inference, and all price fallbacks are excluded.
+- Require a future executable request to anchor to one complete ADR-016
+  `AssetReturnPricePairResolution.Resolved`, which supplies a mature endpoint,
+  exact basis price and outcome basis, evaluation cutoff, asset/venue/currency,
+  source/calendar/catalog revisions, adjustment basis, and continuity. Target-
+  specific ADR-018/ADR-019 output is not an anchor.
+- Require raw trade and manifest evidence to preserve provider-event and
+  revision identity, event time, trade condition, exact price, ordered
+  sessions, source sequence/watermark and correction/bust coverage,
+  provenance, `availableAt`, and `capturedAt`. Both PIT timestamps must be at or
+  before the inherited `evaluationAsOf` before evidence can affect any result.
+  Raw events require
+  `eventTime <= availableAt <= capturedAt <= evaluationAsOf`; manifests require
+  `upperBound <= availableAt <= capturedAt <= evaluationAsOf`, preventing
+  impossible evidence availability before a trade or attested window exists.
+- Apply only complete visible predecessor-linked correction/bust chains.
+  Future revisions remain invisible to an earlier result; later availability
+  creates a later replay instead of rewriting prior point-in-time evidence.
+- Distinguish a source-proven complete window with zero eligible trades from a
+  missing/gapped window. Halts create no price, auction trades require an
+  explicit versioned condition mapping, unknown conditions and internal source
+  gaps fail closed, and silence alone proves nothing. Zero trades never invents
+  zero MFE/MAE or a basis/endpoint fallback.
+- Keep one future raw receipt co-identified across the source population used
+  for both high and low. This is shared source evidence only; MFE and MAE retain
+  separate formula, polarity, calculator, readiness, and ownership work.
+  Coverage does not set `OutcomeEvaluationStatus`, `dataComplete`, retry,
+  freshness, cancellation, scheduling, methodology, fingerprint, persistence,
+  aggregation, ranking, or publication.
+
+### Repository surface
+
+- Add `decisions/ADR-034-point-in-time-raw-window-coverage-foundation.md` plus
+  matching README, P3 acceptance, implementation-log, and CI guard updates.
+- Add no Java production or test file and no executable policy bytes/hash,
+  source-local golden, schema, canonical fixture, manifest member, OpenAPI,
+  Flyway, database, repository, controller, provider adapter, resource, API, or
+  web behavior. Existing DEMO MFE/MAE values remain null.
+- Reserve the future `rawwindowcoverage` package and conceptual `Covered`,
+  `CompleteWithoutEligibleTrade`, and `EvidenceUnavailable` meanings without
+  creating their runtime types, exact reason order, or canonical policy.
+
+### CI and verification
+
+- Add one decision-only ADR-034 guard after ADR-033. It locks exact four-file
+  marker parity, title/status/date, interval, anchor, trade-tick/PIT/correction,
+  no-trade/halt/auction/bar/gap rules, ADR-019 and MFE/MAE ownership firewalls,
+  absent runtime surface across the whole workflow, recursive fixture coverage,
+  exact nine-file dependency/runtime configuration, unchanged null DEMO values,
+  and the external-rights boundary.
+- Protected production must remain 232 files / SHA-256
+  `2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941`;
+  API-test/web must remain 205 files / SHA-256
+  `fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75`.
+- The dedicated ADR-034 guard passes. All 39/39 embedded workflow Python bodies
+  syntax-compile and all 32/32 locally runnable bodies pass. Six bodies that
+  require unavailable local `jsonschema`/`referencing` modules and the final
+  cross-stack runtime body remain syntax-only at their documented boundaries.
+  SnakeYAML 2.5 parses exactly the four jobs `repository-contracts`, `web`,
+  `call-audit-integration`, and `api`; Compose configuration validates.
+- Full API `mvnw.cmd -B -ntp verify`: **PASS** — 2066/2066 tests, zero
+  failures, errors, or skips, `BUILD SUCCESS`, PostgreSQL 17.10 Testcontainers,
+  Flyway migrations, compilation, packaging, and Spring repackage all execute.
+- Web ESLint: **PASS** with zero warnings. Vitest: **PASS**, 42/42 files and
+  569/569 tests. Next 16.2.11 production build: **PASS**, including TypeScript
+  and 12/12 static page-generation work items; no web source or responsive
+  surface changes in this decision-only slice.
+- Deliberately changing the README marker, removing the `NotApplicable`
+  exclusion, weakening the raw-event causal chain, temporarily adding the
+  forbidden `rawwindowcoverage/RawWindowCoveragePolicyVersion.java`, and
+  adding a raw-provider line to `.env.example` each make the dedicated guard
+  exit 1 at the matching parity, semantic, runtime, or configuration firewall.
+  Every mutation and the temporary empty directory are removed; the final
+  guard, Compose, and `git diff --check` pass. The exact nine-file normalized
+  dependency/runtime configuration digest is
+  `25677e07b9f511dd8899bf69fb5c435247d4996313a60361faf354002b8555bd`.
+- The web build rewrote `apps/web/next-env.d.ts`; its user-owned pre-build
+  content was immediately restored to exact SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`
+  and remains unstaged. Independent semantic and evidence reviews report no
+  remaining P0-P3 finding after the `NotApplicable`, causal-time, recursive-
+  fixture, exact configuration-digest, and whole-workflow guard gaps were
+  corrected and rechecked.
+
+### External boundary and next work
+
+- No API key, account, paid plan, provider license, named secret, or network is
+  needed for ADR-034.
+- Before an executable non-DEMO resolver can be built, the user and P5 must
+  approve the exact historical primary-venue trade-tick product/feed and
+  written rights for history, provider event/revision identity,
+  correction/bust streams, sequence/watermark semantics, trade-condition and
+  auction/halt classifications, calendars, corporate actions, storage/cache,
+  derived calculations, display, and redistribution. Publisher and
+  redistributor grants are separate when they differ.
+- Only after those approvals will the implementation request a provider-scoped
+  credential and name its untracked local/CI/deployment secret location. No
+  secret belongs in chat or Git.
+- The executable raw coverage policy and golden matrix follow that external
+  decision. Separate MFE/MAE arithmetic and readiness come afterward; bearish
+  and neutral polarity, denominator, sign, rounding, and representability are
+  not inferred from the existing bullish example. Alpha and sector alpha stay
+  last.
