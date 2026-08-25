@@ -1848,3 +1848,77 @@ ADR-032 calculates a signed sector price-index return from one complete ADR-030 
 - Source-local comparative readiness is the next reviewed slice. Lifecycle,
   methodology/fingerprint, lineage, persistence, API/UI publication,
   raw-window coverage, MFE/MAE, alpha, and sector alpha remain later work.
+
+## Independent comparative-return readiness boundary
+
+ADR-033 classifies benchmark and sector return readiness independently from their complete supplied ADR-031 and ADR-032 result receipts without mapping either leaf to canonical lifecycle status.
+
+- Two unrelated four-type packages consume one complete matching return result
+  each. There is no combined request, correlation, shared generic readiness,
+  cast, alias, reflection path, or cross-kind dependency.
+- `Available` and intentional `NotApplicable` are `Settled`. Only the exact
+  nested return/pair evidence chain ending in `ENDPOINT_NOT_REACHED_AS_OF` is
+  `AwaitingEndpoint`. Assignment, endpoint-anchor, other reference evidence,
+  and output-representability branches are `EvidenceUnavailable`.
+- Each resolution preserves the exact whole supplied return result. Context
+  contains only its readiness policy and digest; no reason is copied or
+  flattened. Constructors and resolvers share the exact classification check.
+- These variants remain source-local evidence. They do not establish outcome
+  status, `dataComplete`, retry, permanence, freshness, cancellation,
+  scheduling, methodology, fingerprint, persistence, publication, or
+  cross-metric completeness.
+- No fixture, schema, manifest, OpenAPI, Flyway, database, controller,
+  repository, adapter, API, or web behavior is added. DEMO comparative values
+  remain null.
+
+## Independent comparative-return readiness contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-CRR01 | Independent source surfaces | `benchmarkreturnreadiness` and `sectorreturnreadiness` each contain exactly PolicyVersion, Request, sealed Resolution, Resolver, and one matching golden; no combined or generic package exists. |
+| P3-CRR02 | Exact policy identities | Benchmark contains only `SUPPLIED_LEAF_BENCHMARK_RETURN_READINESS_V1`; sector contains only `SUPPLIED_LEAF_SECTOR_RETURN_READINESS_V1`. |
+| P3-CRR03 | Exact canonical bytes | Benchmark is 2622 bytes / `2dedaf014a149ed81e75941ee3677e3c8b77243b9987d9496709266aad721daf`; sector is 2592 bytes / `5737f44ebc6e65270300889dd5c2e92da0c4f3a2f04e4c6c43e4483e522187d4`; bytes are defensive. |
+| P3-CRR04 | Exact source policies | Requests accept only complete ADR-031 hash `96d0aab8e8e784b80a12b16c99f6ba8c5f44eff7a342fd14c075b944a0a7de79` or ADR-032 hash `5aecd42c32ba69f0d21ab6e1ee1e3128cd31584724a6f46e176acd470204d0f7`, respectively. |
+| P3-CRR05 | Sealed result shape | Each result has exactly `Settled(context,sourceResult)`, `AwaitingEndpoint(context,sourceResult)`, and `EvidenceUnavailable(context,sourceResult)`; context has only policy and hash. |
+| P3-CRR06 | Settled rule | Available and every intentional N/A source are settled without endpoint waiting or nested-reason inspection. |
+| P3-CRR07 | Exact awaiting chain | Awaiting requires top-level return `EvidenceUnavailable`, preserved pair `EvidenceUnavailable`, and pair reason exactly `ENDPOINT_NOT_REACHED_AS_OF`. |
+| P3-CRR08 | Evidence firewall | Assignment and anchor branches remain evidence-unavailable even with a future endpoint; all other pair reasons and output-unavailable remain evidence-unavailable. |
+| P3-CRR09 | Source preservation | Every resolution retains the exact supplied whole source object and no outer reason; equal-but-distinct inputs replay equally while preserving their own identity. |
+| P3-CRR10 | Constructor and invocation boundary | Direct wrong variant construction fails closed through shared classification validation; only `resolve` attests request-to-result invocation. |
+| P3-CRR11 | Import and ownership firewall | Benchmark imports only JDK, benchmark return, and benchmark pair; sector is symmetric. No cross package, asset-return, generic helper, lifecycle, persistence, API, or web edge exists. ADR-025's nine-input future ownership remains unchanged. |
+| P3-CRR12 | Exhaustive benchmark golden | Exactly 81 source vectors plus six fixed tests execute 87 invocations: 5 settled, 1 awaiting, 75 evidence-unavailable. |
+| P3-CRR13 | Exhaustive sector golden | Exactly 98 source vectors plus six fixed tests execute 104 invocations: 2 settled, 1 awaiting, 95 evidence-unavailable. |
+| P3-CRR14 | Determinism | Locale, time zone, prior calls, source identity, and environment state cannot affect either resolver. |
+| P3-CRR15 | Product firewall | No publication or runtime wiring occurs and all DEMO comparative fields remain null. |
+| P3-CRR16 | External boundary | No key, account, plan, license, secret, or network is needed. P5 must approve exact products/feeds, history/revisions, calendars, continuity, sector binding, and storage/cache/display/derived/redistribution rights before scoped credentials are placed only in untracked local/CI/deployment secret stores. |
+
+## Required ADR-033 verification checks
+
+- Both focused goldens pass at exactly 87/87 and 104/104 with zero failures,
+  errors, or skips. Normalized source hashes are benchmark
+  `f61e82ba7766effe4954f4c96db745a49bb49a03d06de583c39c32d76e3c1b3d`
+  and sector
+  `1b2aa1eea5d5c8efcddd048c54d8b53be87b14cdfd96a6df43e11a7f55bc9f8c`.
+- Protected production is 232 /
+  `2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941`
+  and API-test/web is 205 /
+  `fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75`.
+  Exact ADR-033 8+2 exclusion reproduces ADR-032 production 224 /
+  `bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055`
+  and test/web 203 /
+  `5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce`.
+- Full API verification passes exactly 2066/2066—191 above the ADR-032
+  baseline—with zero failures, errors, or skips and `BUILD SUCCESS`, including
+  Testcontainers PostgreSQL 17.10 and Flyway.
+- The dedicated guard locks four-document marker parity, exact policy
+  bytes/hashes and 8+2 surface, classification rules, imports and reverse
+  isolation, runtime cardinality, current/exclusion baselines, and null DEMO
+  publication. Exact 87/87 and 104/104 runtime gates pass; workflow Python
+  syntax is 38/38 and local execution is 31/31; SnakeYAML parses four jobs and
+  Compose validates.
+- Web lint, 569/569 Vitest, and production build pass. Marker, canonical-byte,
+  and runtime 87-to-86 mutations fail and are restored. Independent review has
+  no remaining P0/P1/P2 finding after future-endpoint anchor coverage was
+  corrected. `git diff --check` passes and the user-owned `next-env.d.ts` is
+  restored to SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.

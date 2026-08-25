@@ -4362,3 +4362,109 @@ endpoint-observation, horizon, lifecycle, persistence, API, or web types.
 - Keep lifecycle composition, methodology activation/fingerprint, lineage,
   persistence, API/UI publication, canonical evidence, raw-window coverage,
   MFE/MAE, alpha, and sector alpha separate. Alpha and sector alpha remain last.
+
+## 2026-08-25 — ADR-033 independent benchmark/sector return readiness
+
+Status: the two policy contracts and production packages are frozen for the
+twenty-sixth disconnected P3 slice. Focused/full regression, Docker-backed
+PostgreSQL integration, dedicated/static/runtime CI guards, current and legacy
+repository baselines, web verification, mutation tripwires, independent
+review, and final repository hygiene are **PASS**. No provider, runtime wiring,
+lifecycle, persistence, API, database, fixture, or web publication is added.
+
+ADR-033 classifies benchmark and sector return readiness independently from their complete supplied ADR-031 and ADR-032 result receipts without mapping either leaf to canonical lifecycle status.
+
+### Scope
+
+- Add separate four-type `benchmarkreturnreadiness` and
+  `sectorreturnreadiness` packages and one exhaustive golden for each. Preserve
+  ADR-025's nine-input future aggregate ownership; do not add a combined
+  comparative receipt, correlation, shared generic helper, cast, or alias.
+- Accept one complete matching ADR-031 or ADR-032 source result. Treat
+  Available and intentional N/A as settled. Treat only the exact nested pair
+  `ENDPOINT_NOT_REACHED_AS_OF` evidence chain as awaiting. Treat assignment,
+  anchor, all other evidence, and output failures as evidence-unavailable.
+- Preserve the exact whole supplied source result, inspect the nested reason
+  only in the matching resolver, share fail-closed classification validation
+  with public constructors, and make no lifecycle or completeness claim.
+- Add no fixture, schema, manifest, OpenAPI, Flyway, database, controller,
+  repository, provider, API, web runtime, or DEMO publication behavior.
+
+### Frozen contracts
+
+- Benchmark readiness policy:
+  `SUPPLIED_LEAF_BENCHMARK_RETURN_READINESS_V1`, exact 2622 UTF-8 bytes,
+  SHA-256
+  `2dedaf014a149ed81e75941ee3677e3c8b77243b9987d9496709266aad721daf`,
+  requiring ADR-031 hash
+  `96d0aab8e8e784b80a12b16c99f6ba8c5f44eff7a342fd14c075b944a0a7de79`.
+- Sector readiness policy:
+  `SUPPLIED_LEAF_SECTOR_RETURN_READINESS_V1`, exact 2592 UTF-8 bytes,
+  SHA-256
+  `5737f44ebc6e65270300889dd5c2e92da0c4f3a2f04e4c6c43e4483e522187d4`,
+  requiring ADR-032 hash
+  `5aecd42c32ba69f0d21ab6e1ee1e3128cd31584724a6f46e176acd470204d0f7`.
+- Two independent reconstructions agree on both exact byte sequences, lengths,
+  hashes, first/last bytes, and no-trailing-newline convention. The selected
+  definitions explicitly lock the absence of the other comparative input,
+  cross-return correlation, and shared generic readiness, plus N/A and
+  assignment/anchor precedence.
+
+### Verification results
+
+- Both independent production packages compile successfully with Java 21.
+  Runtime extraction confirms the benchmark 2622-byte and sector 2592-byte
+  canonical definitions and their declared hashes.
+- Exhaustive focused verification passes benchmark 87/87 and sector 104/104,
+  191 total, with zero failures, errors, or skips. Normalized golden hashes are
+  benchmark
+  `f61e82ba7766effe4954f4c96db745a49bb49a03d06de583c39c32d76e3c1b3d`
+  and sector
+  `1b2aa1eea5d5c8efcddd048c54d8b53be87b14cdfd96a6df43e11a7f55bc9f8c`.
+- Protected production measures 232 files /
+  `2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941`;
+  API-test/web measures 205 /
+  `fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75`.
+  Exact eight-plus-two exclusion reproduces ADR-032 at 224 /
+  `bc31bb72f14289e6a8b3c344e356f900a2d23a9fb9efd48ce935586c0e336055`
+  and 203 /
+  `5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce`.
+- Full API Maven verification passes 2066/2066 with zero failures, errors, or
+  skips and `BUILD SUCCESS`, including Testcontainers PostgreSQL 17.10 and
+  Flyway. The Docker Desktop process required only approved local start
+  permission; no credential or provider access was used.
+- The dedicated ADR-033 guard and exact 87/87 and 104/104 runtime gates pass.
+  All 38/38 workflow Python heredoc bodies syntax-compile and all 31/31 locally
+  runnable bodies pass. Six `jsonschema`/`referencing` bodies remain syntax-only
+  because those bundled modules are absent, and the final cross-stack body is
+  syntax-only by design. SnakeYAML 2.5 parses exactly four jobs and Compose
+  config validates.
+- Web lint, 569/569 Vitest tests, and the production build pass. This slice
+  changes no API or web route and adds no responsive/UI surface. The build's
+  generated `apps/web/next-env.d.ts` change was immediately restored to the
+  exact user-owned SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Deliberately mutating the README marker, a benchmark canonical policy byte,
+  or benchmark expected runtime cardinality from 87 to 86 makes the dedicated
+  guard or runtime gate exit nonzero. Every mutation is restored; the final
+  guard and `git diff --check` pass.
+- Independent review found no P0/P1/P2 production or contract issue. Its one
+  actionable golden gap—explicit future-endpoint anchor branches remaining
+  evidence-unavailable—was added to both legs without changing cardinality and
+  reverified at 191/191. Final re-review reports only the now-corrected stale
+  implementation-log status.
+
+### External boundary and next work
+
+- No API key, account, paid plan, provider license, named secret, or network is
+  needed for this slice. Before non-DEMO use, P5 must approve the exact
+  benchmark/sector-index products and feeds, exact-time history/revisions,
+  reference calendars, divisor/methodology continuity, sector-node binding,
+  and storage/cache/display/derived-return/redistribution rights. Publisher and
+  redistributor grants are separate when the parties differ. Scoped credentials
+  may follow only in untracked local, CI, and deployment secret stores, never
+  chat or Git.
+- Point-in-time raw-window coverage and evidence for MFE/MAE is the next
+  reviewed foundation. Lifecycle, methodology/fingerprint, lineage,
+  persistence, API/UI publication, alpha, and sector alpha remain separate;
+  alpha stays last.
