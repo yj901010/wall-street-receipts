@@ -453,6 +453,9 @@ ADR-038 establishes the SEC historical-segment descriptor catalog.
 ADR-039 establishes append-only SEC root-capture persistence and exact-byte
 replay.
 
+ADR-040 establishes controlled single-descriptor historical-segment capture,
+exact-byte replay, and append-only persistence.
+
 ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
 submissions metadata. It is disabled by default and remains server-only. When
 `SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
@@ -462,7 +465,7 @@ defaults to that official origin. Provider errors, malformed parallel arrays,
 and missing timestamps fail closed without fixture or empty-result fallback.
 
 The adapter maps filing metadata into a provider-neutral filing catalog.
-ADR-039 adds a one-shot PostgreSQL writer, but there is still no scheduler,
+ADR-039 and ADR-040 add one-shot PostgreSQL writers, but there is still no scheduler,
 command-line trigger, HTTP product endpoint, or web publication.
 `BLS_REGISTRATION_KEY`, `BEA_USER_ID`, and `EIA_API_KEY` may be
 present in the local secret file but are deliberately not consumed until their
@@ -485,8 +488,9 @@ independent tools aggregate-safe, so schedulers, multi-replica activation,
 autonomous live capture, API/UI publication, and production collection remain
 prohibited.
 The opt-in manual smoke needs no new API key or account and makes one Apple CIK
-request to the exact official origin; see `apps/api/README.md`. Default tests,
-`verify`, and CI remain offline.
+root request plus one request for its captured first descriptor at the exact
+official origin; see `apps/api/README.md`. Default tests, `verify`, and CI remain
+offline.
 
 The receipt foundation binds each accepted HTTP `200 application/json`
 submissions catalog to the exact fully read bytes exposed after one advertised
@@ -562,10 +566,44 @@ existing `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and
 chat or Git. Enabling configuration does not start ingestion because no
 scheduler, controller, or autonomous trigger exists.
 
-The next SEC gate is controlled retrieval and exact-body replay of referenced
-historical segments, followed by observed-versus-advertised range/cardinality
-and accession reconciliation without inventing completeness. Scheduler/global
-coordination, read API, and attributed Korean public UI remain later gates.
+ADR-040 accepts only an exact durable root `captureId` and captured descriptor
+ordinal. It reconstructs that root, derives
+`https://data.sec.gov/submissions/{capturedFileName}` internally, and performs
+at most one segment GET. Callers cannot supply a URI, filename, host, CIK,
+query, or fragment, and there is no fetch-all loop, retry, scheduler, CLI, or
+controller.
+
+Each accepted segment has its own product/parser identity
+`edgar-submissions-historical-segment-api` /
+`SEC_SUBMISSIONS_HISTORICAL_SEGMENT_V1`, receipt, exact decoded body, and
+provider-ordered canonical rows. Historical rows use a segment-specific
+`HistoricalFilingRecord`: an observed empty or null `primaryDocument` remains a
+null URI instead of an invented Archives URL, while a present URI retains the
+existing strict SEC Archives and catalog-CIK checks. The root catalog's
+non-null `FilingRecord` contract is unchanged.
+
+Flyway V7 binds every segment capture to the exact immutable root descriptor,
+reuses the content-addressed decoded-body store, and appends the receipt,
+observed rows, actual count, and actual filing-date minimum/maximum in one
+transaction. `MATCHES_ADVERTISED` means the observed count equals the advertised
+count and every observed filing date is inside the advertised inclusive range;
+the advertised endpoints need not equal the actual extrema. Count and/or range
+escapes remain explicit mismatch evidence and are retained rather than hidden
+or promoted into a verified union. An empty observed segment keeps null extrema
+and is a count mismatch.
+
+A descriptor is knowable at the root capture time, but its rows become knowable
+only at the later segment `capturedAt`. Segment PIT reads therefore require the
+exact root, ordinal, parser, and `capturedAt <= evaluationAsOf`. ADR-040 does not
+merge or deduplicate accessions across recent/history/segments and never claims
+complete SEC history, an atomic SEC snapshot, or absence of later corrections.
+It needs no new key, account, paid plan, plugin, or environment variable: live
+requests reuse `SEC_CONTACT_EMAIL` and persistence reuses PostgreSQL settings.
+
+The next SEC gate is an ordered collection manifest and explicit cross-segment
+accession reconciliation relative to one immutable root, still without a
+complete-history claim. Scheduler/global coordination, read API, and attributed
+Korean public UI remain later gates.
 
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,

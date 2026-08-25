@@ -36,6 +36,9 @@ ADR-038 establishes the SEC historical-segment descriptor catalog.
 ADR-039 establishes append-only SEC root-capture persistence and exact-byte
 replay.
 
+ADR-040 establishes controlled single-descriptor historical-segment capture,
+exact-byte replay, and append-only persistence.
+
 SEC submissions metadata adapter는 기본 비활성화다. 로컬에서 명시적으로
 활성화하려면 루트 `.env`에 다음 서버 전용 변수가 있어야 한다.
 
@@ -47,7 +50,7 @@ SEC_CONTACT_EMAIL=operations-contact@example.com
 
 SEC는 API key 대신 선언된 연락처 User-Agent를 요구한다. 실제 연락처 값은
 `.env.example`, 로그, HTTP 응답, Git에 넣지 않는다. 현재 adapter에는 one-shot
-DB persistence service가 있지만 scheduler, controller, command-line trigger 또는
+DB persistence services가 있지만 scheduler, controller, command-line trigger 또는
 web consumer가 없으므로 활성화만으로 외부 요청이나 DB 적재가 발생하지 않는다.
 
 SEC 공식 fair-access 상한은 여러 머신을 합쳐 초당 10회다. 애플리케이션 내부
@@ -169,19 +172,71 @@ redistribution은 별도 결정이 필요하다.
 Git에 넣지 않는다. persistence bean은 SEC provider가 명시적으로 enabled일 때만
 one-shot service로 연결되지만 scheduler/controller가 없어 자동 실행되지 않는다.
 
-다음 SEC gate는 captured CIK-bound filename만 사용하는 referenced historical
-segment retrieval이다. 각 segment도 exact decoded body, versioned receipt/parser,
-replay 검증을 가져야 하며 observed rows/count/range와 root advertised metadata를
-비교하되 completeness를 추정하지 않는다. scheduler/global coordination, read API,
-attributed Korean UI는 별도 후속 gate다.
+### Controlled historical segment capture persistence
+
+ADR-040의 one-shot service는 caller가 지정한 exact durable root `captureId`와
+nonnegative descriptor ordinal만 받는다. PostgreSQL에서 ADR-039 root를 다시 읽고
+해당 provider-order descriptor를 선택한 뒤
+`https://data.sec.gov/submissions/{capturedFileName}`을 내부에서 구성해 최대 한 번
+GET한다. caller는 CIK, filename, URI, host, query 또는 fragment를 넣을 수 없다.
+invalid input에는 provider request가 없고 descriptor loop, automatic retry,
+conditional request, alternate source 또는 fallback도 없다.
+
+segment는 root와 별도인 product/parser
+`edgar-submissions-historical-segment-api` /
+`SEC_SUBMISSIONS_HISTORICAL_SEGMENT_V1`을 사용한다. WSR V1 parser는 현재 관찰한
+top-level 14개 parallel array가 모두 존재하고 cardinality가 같으며, 각 값이 strict
+type/date/timestamp/accession/path contract를 만족하는지 fail closed로 검증한다. 이
+wire shape와 filename/URL 규칙은 SEC narrative documentation의 보장이 아니라
+versioned local contract다.
+
+historical row는 segment 전용 `HistoricalFilingRecord`로 보존한다. 오래된 Apple
+segment에서 실제 관찰된 empty/null `primaryDocument`는 nullable
+`primaryDocumentUri`로 남기고 빈 URI, 합성 파일명 또는 root 값을 만들지 않는다.
+nonempty document path에는 기존 SEC Archives/catalog CIK 검증을 그대로 적용한다.
+root recent row의 `FilingRecord` non-null contract는 변경하지 않는다.
+
+accepted segment는 독립 receipt와 hash/parse에 사용한 exact decoded bytes를
+`DECODED_BODY_ATTACHED_PENDING_PERSISTENCE`로 소유한다. Flyway V7은 exact root
+descriptor tuple을 foreign key로 고정하고 content-addressed body store를 재사용해
+segment receipt, provider-order rows, observed count와 actual filing-date extrema를 한
+transaction으로 append한다. verified round-trip 이후에만
+`DURABLE_DECODED_BODY_RETAINED`가 된다. exact replay는 idempotent이고 같은 bytes의
+later observation은 새 capture를 만들면서 body만 공유한다. conflicting identity,
+partial child insert 또는 replay disagreement는 전체 transaction을 rollback한다.
+repository에는 segment update/delete 경로가 없다. 이는 application append-only
+계약이며, 별도 SQL 권한을 가진 DB administrator까지 막는 cryptographic WORM
+보장은 아니다. database role/audit와 WORM storage는 별도 운영 결정이다.
+
+`MATCHES_ADVERTISED`는 observed count가 advertised count와 같고 모든 observed
+`filingDate`가 captured inclusive advertised range 안에 있다는 뜻뿐이다. advertised
+endpoints가 observed minimum/maximum과 같을 필요는 없다. count와 range escape의
+네 상태를 그대로 저장하며 structurally valid mismatch evidence를 버리거나 광고값에
+맞춰 고치지 않는다. empty segment는 count 0, null extrema,
+`COUNT_MISMATCH`로 남는다.
+
+descriptor는 root `capturedAt`에 알 수 있지만 segment rows는 later segment
+`capturedAt` 전에는 알 수 없다. PIT read는 exact root capture, descriptor ordinal,
+parser와 `capturedAt <= evaluationAsOf`만 사용한다. root와 segment는 SEC가 제공한
+atomic snapshot이 아니며 recent/history union, cross-segment dedupe, correction/removal
+reconciliation 또는 complete-history claim을 만들지 않는다.
+
+새 API key, 계정, 유료 플랜, OAuth, plugin 또는 environment variable은 필요 없다.
+live GET은 기존 `SEC_CONTACT_EMAIL`, persistence는 기존 PostgreSQL connection
+설정을 재사용한다. scheduler, poller, startup collector, CLI, controller, public API,
+browser/UI publication은 이 gate에 없다. 다음 SEC gate는 immutable root에 상대적인
+ordered collection manifest와 cross-segment accession reconciliation이며,
+complete-history claim은 별도 evidence/correction policy 전까지 금지한다.
 
 ### Manual SEC live smoke
 
 수동 점검에는 새 API key, 계정, 유료 플랜이 필요 없다. 루트 `.env`에 이미 둔
 실제 모니터링 가능한 `SEC_CONTACT_EMAIL`만 사용하며, 값을 채팅·명령 출력·Git에
-노출하지 않는다. 점검은 `https://data.sec.gov`에 Apple CIK `0000320193`를
-정확히 한 번 요청하고 응답 body, 연락처, 전체 User-Agent, header를 저장하거나
-로그하지 않는다.
+노출하지 않는다. 점검은 `https://data.sec.gov`에 Apple CIK `0000320193` root를
+정확히 한 번 요청하고, 그 응답에서 capture한 첫 descriptor의 segment를 정확히 한
+번 요청한다. 총 두 request이며 body, 연락처, 전체 User-Agent 또는 arbitrary
+header를 저장하거나 로그하지 않는다. 이 shape 점검은 persistence나 complete-history
+evidence가 아니다.
 
 저장소 루트의 PowerShell에서 다음처럼 두 개의 opt-in gate를 모두 명시한다.
 
@@ -209,8 +264,9 @@ provider 활성화와 exact official origin을 강제하므로 `.env`에서
 실행한다.
 
 일반 `test`/`verify`, 기본 Maven profile, CI는 이 점검을 실행하지 않으며 외부
-SEC 네트워크를 사용하지 않는다. 성공한 수동 점검도 스케줄러, 다중 replica,
-운영 DB 적재 자동화, API/UI 공개를 승인하지 않는다.
+SEC 네트워크를 사용하지 않는다. 성공한 수동 점검도 advertised count equality,
+advertised endpoint equality, segment immutability, 완전한 filing history,
+스케줄러, 다중 replica, 운영 DB 적재 자동화 또는 API/UI 공개를 승인하지 않는다.
 
 ## Test
 

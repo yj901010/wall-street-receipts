@@ -18,8 +18,14 @@ import org.springframework.web.client.RestClient;
 
 import com.wallstreetreceipts.api.domain.filing.FilingCatalog;
 import com.wallstreetreceipts.api.domain.filing.FilingCatalogCapture;
+import com.wallstreetreceipts.api.domain.filing.HistoricalFilingSegment;
+import com.wallstreetreceipts.api.domain.filing.HistoricalFilingSegmentCapture;
 import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRetention;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecEdgarFilingCatalogProvider;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecEdgarHistoricalFilingSegmentProvider;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecFilingCatalogCaptureReplayVerifier;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecRequestRateLimiter;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecRetryAfterPolicy;
 
 class SecEdgarLiveSmokeIT {
 
@@ -30,7 +36,7 @@ class SecEdgarLiveSmokeIT {
             URI.create("https://data.sec.gov/submissions/CIK0000320193.json");
 
     @Test
-    void loadsOneOfficialAppleCatalogOnlyAfterBothExplicitOptIns() {
+    void loadsOneOfficialAppleRootAndOneCapturedDescriptorOnlyAfterBothOptIns() {
         requireExplicitOptIn();
 
         new ApplicationContextRunner()
@@ -99,6 +105,48 @@ class SecEdgarLiveSmokeIT {
                                     .RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED,
                             catalog.historicalSegmentStatus(),
                             "SEC live smoke must not claim fetched or complete history");
+
+                    FilingCatalogCapture replayCheckedRoot =
+                            new SecFilingCatalogCaptureReplayVerifier().verify(
+                                    capture.withBodyRetention(
+                                            BodyRetention.DURABLE_DECODED_BODY_RETAINED));
+                    SecEdgarHistoricalFilingSegmentProvider segmentProvider =
+                            new SecEdgarHistoricalFilingSegmentProvider(
+                                    context.getBean("secEdgarRestClient", RestClient.class),
+                                    URI.create("https://data.sec.gov"),
+                                    context.getBean(Clock.class),
+                                    context.getBean(SecRequestRateLimiter.class),
+                                    context.getBean(SecRetryAfterPolicy.class));
+                    HistoricalFilingSegmentCapture segmentCapture =
+                            segmentProvider.loadHistoricalSegmentCapture(
+                                    replayCheckedRoot, 0);
+                    HistoricalFilingSegment segment = segmentCapture.segment();
+                    String expectedSegmentUri = "https://data.sec.gov/submissions/"
+                            + catalog.historicalSegments().getFirst().fileName();
+
+                    assertEquals(
+                            expectedSegmentUri,
+                            segment.sourceUri().toASCIIString(),
+                            "SEC segment must resolve only the captured descriptor filename");
+                    assertFalse(
+                            segment.filings().isEmpty(),
+                            "SEC Apple historical segment must contain observed filings");
+                    assertEquals(
+                            "SEC_SUBMISSIONS_HISTORICAL_SEGMENT_V1",
+                            segment.sourceReceipt().parserVersion(),
+                            "SEC live segment must use its distinct V1 parser");
+                    assertEquals(
+                            segment.sourceReceipt().decodedBodyLength(),
+                            segmentCapture.decodedBody().length,
+                            "SEC live segment must retain the exact decoded body in memory");
+                    assertEquals(
+                            BodyRetention.DECODED_BODY_ATTACHED_PENDING_PERSISTENCE,
+                            segment.sourceReceipt().bodyRetention(),
+                            "SEC live segment must not claim durability before commit");
+                    assertEquals(
+                            HistoricalFilingSegment.AdvertisedComparison.MATCHES_ADVERTISED,
+                            segment.advertisedComparison(),
+                            "observed Apple count and filing-date extrema changed from its root descriptor");
                 });
     }
 

@@ -2,6 +2,7 @@ package com.wallstreetreceipts.api.migration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -29,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wallstreetreceipts.api.application.port.out.AnalystCallDataSet;
 import com.wallstreetreceipts.api.application.port.out.CallContextDataSet;
 import com.wallstreetreceipts.api.application.port.out.FilingCatalogCaptureAppendResult;
+import com.wallstreetreceipts.api.application.port.out.HistoricalFilingSegmentCaptureAppendResult;
 import com.wallstreetreceipts.api.domain.context.EventContext;
 import com.wallstreetreceipts.api.domain.call.AnalystCall;
 import com.wallstreetreceipts.api.domain.call.AnalystCallRevision;
@@ -43,13 +45,16 @@ import com.wallstreetreceipts.api.infrastructure.persistence.JdbcCallContextRepo
 import com.wallstreetreceipts.api.infrastructure.persistence.JdbcAnalystCallRepository;
 import com.wallstreetreceipts.api.infrastructure.persistence.JdbcAnalystCallRevisionRepository;
 import com.wallstreetreceipts.api.infrastructure.persistence.JdbcFilingCatalogCaptureRepository;
+import com.wallstreetreceipts.api.infrastructure.persistence.JdbcHistoricalFilingSegmentCaptureRepository;
 import com.wallstreetreceipts.api.infrastructure.persistence.JdbcScoringMethodologyRepository;
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallProvider;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecFilingCatalogCaptureReplayVerifier;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecHistoricalFilingSegmentCaptureReplayVerifier;
 import com.wallstreetreceipts.api.domain.source.SourceDocument;
 import com.wallstreetreceipts.api.domain.source.SourceReference;
 import com.wallstreetreceipts.api.domain.source.SourceType;
 import com.wallstreetreceipts.api.support.SecFilingCatalogCaptureTestFixture;
+import com.wallstreetreceipts.api.support.SecHistoricalFilingSegmentCaptureTestFixture;
 
 @Testcontainers(disabledWithoutDocker = true)
 class PostgreSqlMigrationTest {
@@ -67,7 +72,7 @@ class PostgreSqlMigrationTest {
 
         flyway.migrate();
 
-        assertThat(flyway.info().applied()).hasSize(6);
+        assertThat(flyway.info().applied()).hasSize(7);
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
@@ -925,7 +930,7 @@ class PostgreSqlMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
         latest.migrate();
-        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("6");
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("7");
 
         try (Connection connection = POSTGRES.createConnection("");
                 Statement statement = connection.createStatement()) {
@@ -1053,7 +1058,7 @@ class PostgreSqlMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
         latest.migrate();
-        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("6");
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("7");
 
         JdbcCallContextRepository contextRepository = new JdbcCallContextRepository(jdbc);
         Integer contextsImported = transactions.execute(
@@ -1098,6 +1103,7 @@ class PostgreSqlMigrationTest {
                 .schemas(schema)
                 .defaultSchema(schema)
                 .locations("classpath:db/migration")
+                .target("6")
                 .load();
         flyway.migrate();
         assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("6");
@@ -1275,6 +1281,247 @@ class PostgreSqlMigrationTest {
         assertThat(repository.findByCaptureId(first.captureId())).isPresent();
     }
 
+    @Test
+    void v7UpgradesV6AndAppendsHistoricalSegmentsAtomicallyOnPostgreSql()
+            throws Exception {
+        String schema = "sec_segment_v7";
+        Flyway throughV6 = Flyway.configure()
+                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .target("6")
+                .load();
+        throughV6.migrate();
+        assertThat(throughV6.info().current().getVersion().getVersion()).isEqualTo("6");
+
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        String scopedUrl = POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema;
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(
+                scopedUrl, POSTGRES.getUsername(), POSTGRES.getPassword());
+        NamedParameterJdbcTemplate jdbc = new NamedParameterJdbcTemplate(dataSource);
+        JdbcFilingCatalogCaptureRepository rootRepository =
+                new JdbcFilingCatalogCaptureRepository(
+                        jdbc, new SecFilingCatalogCaptureReplayVerifier());
+        TransactionTemplate transactions = new TransactionTemplate(
+                new DataSourceTransactionManager(dataSource));
+        Instant rootTime = Instant.parse("2026-08-25T02:02:03.123456Z");
+        var pendingRoot = SecFilingCatalogCaptureTestFixture.capture(rootTime);
+        FilingCatalogCaptureAppendResult rootAppend =
+                transactions.execute(status -> rootRepository.append(pendingRoot));
+        assertThat(rootAppend)
+                .isEqualTo(FilingCatalogCaptureAppendResult.INSERTED);
+
+        Flyway latest = Flyway.configure()
+                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .load();
+        latest.migrate();
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("7");
+
+        var durableRoot = rootRepository.findByCaptureId(
+                pendingRoot.captureId()).orElseThrow();
+        JdbcHistoricalFilingSegmentCaptureRepository segmentRepository =
+                new JdbcHistoricalFilingSegmentCaptureRepository(
+                        jdbc,
+                        new SecHistoricalFilingSegmentCaptureReplayVerifier(),
+                        rootRepository);
+        Instant firstTime = rootTime.plusSeconds(600);
+        var first = SecHistoricalFilingSegmentCaptureTestFixture
+                .captureWithMissingPrimaryDocument(
+                durableRoot, firstTime);
+        var later = SecHistoricalFilingSegmentCaptureTestFixture
+                .captureWithMissingPrimaryDocument(
+                durableRoot, firstTime.plusSeconds(60));
+
+        HistoricalFilingSegmentCaptureAppendResult firstAppend =
+                transactions.execute(status -> segmentRepository.append(first));
+        HistoricalFilingSegmentCaptureAppendResult replayAppend =
+                transactions.execute(status -> segmentRepository.append(first));
+        HistoricalFilingSegmentCaptureAppendResult laterAppend =
+                transactions.execute(status -> segmentRepository.append(later));
+        assertThat(firstAppend)
+                .isEqualTo(HistoricalFilingSegmentCaptureAppendResult.INSERTED);
+        assertThat(replayAppend)
+                .isEqualTo(HistoricalFilingSegmentCaptureAppendResult.IDENTICAL_REPLAY);
+        assertThat(laterAppend)
+                .isEqualTo(HistoricalFilingSegmentCaptureAppendResult.INSERTED);
+        assertThat(segmentRepository.count()).isEqualTo(2);
+        assertThat(segmentRepository.findLatestAtOrBefore(
+                durableRoot.captureId(),
+                0,
+                firstTime.plusSeconds(30),
+                SecHistoricalFilingSegmentCaptureTestFixture.PARSER_VERSION))
+                .get()
+                .extracting(capture -> capture.captureId())
+                .isEqualTo(first.captureId());
+        assertThat(segmentRepository.findByCaptureId(first.captureId()))
+                .get()
+                .extracting(capture -> capture.segment().filings().getFirst()
+                        .primaryDocumentUri())
+                .isNull();
+        assertThat(jdbc.getJdbcOperations().queryForObject(
+                """
+                        SELECT COUNT(*)
+                        FROM sec_historical_filing_segment_filings
+                        WHERE segment_capture_id = ?
+                          AND ordinal = 0
+                          AND primary_document_uri IS NULL
+                        """,
+                Long.class,
+                first.captureId()))
+                .isEqualTo(1);
+        assertThat(jdbc.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sec_decoded_response_bodies", Long.class))
+                .isEqualTo(2);
+
+        var concurrentCapture =
+                SecHistoricalFilingSegmentCaptureTestFixture.capture(
+                        durableRoot, firstTime.plusSeconds(120));
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var left = executor.submit(() -> concurrentSegmentAppend(
+                    dataSource, concurrentCapture, ready, start));
+            var right = executor.submit(() -> concurrentSegmentAppend(
+                    dataSource, concurrentCapture, ready, start));
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            assertThat(List.of(
+                    left.get(20, TimeUnit.SECONDS),
+                    right.get(20, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(
+                            HistoricalFilingSegmentCaptureAppendResult.INSERTED,
+                            HistoricalFilingSegmentCaptureAppendResult.IDENTICAL_REPLAY);
+        } finally {
+            executor.shutdownNow();
+        }
+        assertThat(segmentRepository.count()).isEqualTo(3);
+
+        Instant conflictingTime = firstTime.plusSeconds(180);
+        var conflictingLeft = SecHistoricalFilingSegmentCaptureTestFixture.capture(
+                durableRoot, conflictingTime, "10-K/A");
+        var conflictingRight = SecHistoricalFilingSegmentCaptureTestFixture.capture(
+                durableRoot, conflictingTime, "20-F");
+        long bodiesBeforeConflict = jdbc.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sec_decoded_response_bodies", Long.class);
+        CountDownLatch conflictReady = new CountDownLatch(2);
+        CountDownLatch conflictStart = new CountDownLatch(1);
+        var conflictExecutor = Executors.newFixedThreadPool(2);
+        List<ConcurrentSegmentAppendAttempt> conflictAttempts;
+        try {
+            var left = conflictExecutor.submit(() -> concurrentSegmentAppendAttempt(
+                    dataSource, conflictingLeft, conflictReady, conflictStart));
+            var right = conflictExecutor.submit(() -> concurrentSegmentAppendAttempt(
+                    dataSource, conflictingRight, conflictReady, conflictStart));
+            assertThat(conflictReady.await(10, TimeUnit.SECONDS)).isTrue();
+            conflictStart.countDown();
+            conflictAttempts = List.of(
+                    left.get(20, TimeUnit.SECONDS),
+                    right.get(20, TimeUnit.SECONDS));
+        } finally {
+            conflictExecutor.shutdownNow();
+        }
+        assertThat(conflictAttempts)
+                .filteredOn(attempt -> attempt.result()
+                        == HistoricalFilingSegmentCaptureAppendResult.INSERTED)
+                .singleElement()
+                .extracting(ConcurrentSegmentAppendAttempt::conflictMessage)
+                .isNull();
+        assertThat(conflictAttempts)
+                .filteredOn(attempt -> attempt.conflictMessage() != null)
+                .singleElement()
+                .extracting(ConcurrentSegmentAppendAttempt::conflictMessage)
+                .asString()
+                .startsWith(
+                        "conflicting historical segment capture for natural capture identity");
+        String losingCaptureId = conflictAttempts.stream()
+                .filter(attempt -> attempt.conflictMessage() != null)
+                .findFirst()
+                .orElseThrow()
+                .captureId();
+        assertThat(segmentRepository.findByCaptureId(losingCaptureId)).isEmpty();
+        assertThat(segmentRepository.count()).isEqualTo(4);
+        assertThat(jdbc.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sec_decoded_response_bodies", Long.class))
+                .isEqualTo(bodiesBeforeConflict + 1);
+        assertThat(jdbc.getJdbcOperations().queryForObject("""
+                SELECT COUNT(*)
+                FROM sec_decoded_response_bodies b
+                LEFT JOIN sec_filing_catalog_captures r
+                  ON r.decoded_body_sha256 = b.decoded_body_sha256
+                 AND r.decoded_body_length = b.decoded_body_length
+                LEFT JOIN sec_historical_filing_segment_captures s
+                  ON s.decoded_body_sha256 = b.decoded_body_sha256
+                 AND s.decoded_body_length = b.decoded_body_length
+                WHERE r.capture_id IS NULL
+                  AND s.segment_capture_id IS NULL
+                """, Long.class)).isZero();
+
+        var oversizedChild = SecHistoricalFilingSegmentCaptureTestFixture.capture(
+                durableRoot, firstTime.plusSeconds(240), "X".repeat(129));
+        long capturesBeforeChildFailure = segmentRepository.count();
+        long bodiesBeforeChildFailure = jdbc.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sec_decoded_response_bodies", Long.class);
+        long filingsBeforeChildFailure = jdbc.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sec_historical_filing_segment_filings", Long.class);
+
+        Throwable childFailure = catchThrowable(() -> transactions.executeWithoutResult(
+                status -> segmentRepository.append(oversizedChild)));
+        assertThat(childFailure).isNotNull();
+        Throwable deepestChildFailure = childFailure;
+        while (deepestChildFailure.getCause() != null) {
+            deepestChildFailure = deepestChildFailure.getCause();
+        }
+        assertThat(deepestChildFailure)
+                .isInstanceOfSatisfying(SQLException.class,
+                        sqlFailure -> assertThat(sqlFailure.getSQLState()).isEqualTo("22001"));
+        assertThat(segmentRepository.findByCaptureId(oversizedChild.captureId())).isEmpty();
+        assertThat(segmentRepository.count()).isEqualTo(capturesBeforeChildFailure);
+        assertThat(jdbc.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sec_decoded_response_bodies", Long.class))
+                .isEqualTo(bodiesBeforeChildFailure);
+        assertThat(jdbc.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sec_historical_filing_segment_filings", Long.class))
+                .isEqualTo(filingsBeforeChildFailure);
+        assertThat(jdbc.getJdbcOperations().queryForObject(
+                """
+                        SELECT COUNT(*)
+                        FROM sec_decoded_response_bodies
+                        WHERE decoded_body_sha256 = ?
+                          AND decoded_body_length = ?
+                        """,
+                Long.class,
+                oversizedChild.segment().sourceReceipt().decodedBodySha256(),
+                oversizedChild.segment().sourceReceipt().decodedBodyLength()))
+                .isZero();
+
+        assertThatThrownBy(() -> jdbc.getJdbcOperations().update(
+                """
+                        UPDATE sec_historical_filing_segment_captures
+                        SET observed_filing_count = advertised_filing_count,
+                            advertised_comparison = 'COUNT_MISMATCH'
+                        WHERE segment_capture_id = ?
+                        """,
+                first.captureId()))
+                .isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> jdbc.getJdbcOperations().update(
+                """
+                        DELETE FROM sec_filing_catalog_historical_segments
+                        WHERE capture_id = ? AND ordinal = 0
+                        """,
+                durableRoot.captureId()))
+                .isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> jdbc.update(
+                "DELETE FROM sec_decoded_response_bodies",
+                new MapSqlParameterSource()))
+                .isInstanceOf(RuntimeException.class);
+        assertThat(segmentRepository.findByCaptureId(first.captureId())).isPresent();
+    }
+
     private static FilingCatalogCaptureAppendResult concurrentCaptureAppend(
             DriverManagerDataSource dataSource,
             com.wallstreetreceipts.api.domain.filing.FilingCatalogCapture capture,
@@ -1291,6 +1538,46 @@ class PostgreSqlMigrationTest {
             throw new IllegalStateException("concurrent SEC capture append did not start");
         }
         return transaction.execute(status -> repository.append(capture));
+    }
+
+    private static HistoricalFilingSegmentCaptureAppendResult concurrentSegmentAppend(
+            DriverManagerDataSource dataSource,
+            com.wallstreetreceipts.api.domain.filing.HistoricalFilingSegmentCapture capture,
+            CountDownLatch ready,
+            CountDownLatch start) throws Exception {
+        NamedParameterJdbcTemplate jdbc = new NamedParameterJdbcTemplate(dataSource);
+        JdbcFilingCatalogCaptureRepository rootRepository =
+                new JdbcFilingCatalogCaptureRepository(
+                        jdbc, new SecFilingCatalogCaptureReplayVerifier());
+        JdbcHistoricalFilingSegmentCaptureRepository segmentRepository =
+                new JdbcHistoricalFilingSegmentCaptureRepository(
+                        jdbc,
+                        new SecHistoricalFilingSegmentCaptureReplayVerifier(),
+                        rootRepository);
+        TransactionTemplate transaction = new TransactionTemplate(
+                new DataSourceTransactionManager(dataSource));
+        ready.countDown();
+        if (!start.await(10, TimeUnit.SECONDS)) {
+            throw new IllegalStateException(
+                    "concurrent SEC historical segment append did not start");
+        }
+        return transaction.execute(status -> segmentRepository.append(capture));
+    }
+
+    private static ConcurrentSegmentAppendAttempt concurrentSegmentAppendAttempt(
+            DriverManagerDataSource dataSource,
+            com.wallstreetreceipts.api.domain.filing.HistoricalFilingSegmentCapture capture,
+            CountDownLatch ready,
+            CountDownLatch start) throws Exception {
+        try {
+            return new ConcurrentSegmentAppendAttempt(
+                    capture.captureId(),
+                    concurrentSegmentAppend(dataSource, capture, ready, start),
+                    null);
+        } catch (IllegalArgumentException exception) {
+            return new ConcurrentSegmentAppendAttempt(
+                    capture.captureId(), null, exception.getMessage());
+        }
     }
 
     private static ConcurrentCaptureAppendAttempt concurrentCaptureAppendAttempt(
@@ -1337,6 +1624,12 @@ class PostgreSqlMigrationTest {
     private record ConcurrentCaptureAppendAttempt(
             String captureId,
             FilingCatalogCaptureAppendResult result,
+            String conflictMessage) {
+    }
+
+    private record ConcurrentSegmentAppendAttempt(
+            String captureId,
+            HistoricalFilingSegmentCaptureAppendResult result,
             String conflictMessage) {
     }
 

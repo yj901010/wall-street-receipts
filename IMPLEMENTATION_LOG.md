@@ -5093,3 +5093,116 @@ complete filing history.
 - Keep polling, distributed/global rate coordination, public read API,
   authentication decision, and attributed Korean UI behind later independent
   gates.
+
+## 2026-08-25 — ADR-040 controlled SEC historical-segment capture persistence
+
+Status: exact single-segment capture, replay, and append-only persistence
+implemented and verified.
+
+ADR-040 lets one explicitly selected descriptor from one exact durable ADR-039
+root become independently attributable evidence. It does not fetch every
+descriptor, merge resources, or claim complete SEC filing history.
+
+### Scope and decisions
+
+- Accept only an exact persisted root `captureId` and provider-order descriptor
+  ordinal. Reconstruct that root, select its immutable CIK-bound descriptor, and
+  derive `https://data.sec.gov/submissions/{capturedFileName}` internally.
+  Invalid input makes no provider request; valid input makes at most one GET.
+  Callers cannot supply a URI, filename, host, CIK, query, or fragment.
+- Give the segment its own product/parser identity,
+  `edgar-submissions-historical-segment-api` and
+  `SEC_SUBMISSIONS_HISTORICAL_SEGMENT_V1`. Require the currently observed 14
+  top-level parallel arrays, equal cardinality, strict scalar/date/timestamp
+  types, unique segment-local accession identity, and no coercion, partial
+  salvage, or fallback. Treat this wire contract and URI rule as versioned WSR
+  V1 assumptions rather than SEC guarantees.
+- Preserve provider order in segment-specific `HistoricalFilingRecord` rows.
+  A live Apple segment showed that old rows can have an empty
+  `primaryDocument`; preserve that absence as nullable `primaryDocumentUri`
+  without inventing a path. Keep the root recent-row `FilingRecord` non-null URI
+  invariant unchanged and retain strict SEC Archives/catalog-CIK validation for
+  every present historical document path.
+- Attach the exact decoded bytes used for hash and parse to an independent
+  receipt in `DECODED_BODY_ATTACHED_PENDING_PERSISTENCE`. Only verified append
+  and reconstruction promote it to `DURABLE_DECODED_BODY_RETAINED`. Keep request
+  headers, contact email, complete User-Agent, arbitrary response headers, and
+  body text out of logs and receipt metadata.
+- Add Flyway V7 tables for immutable segment captures and contiguous
+  provider-order rows. Bind each capture to the complete persisted root
+  descriptor tuple, reuse the SHA-256 content-addressed exact-body table, and
+  append body/capture/children in one transaction. Exact replay is idempotent;
+  later observation of the same bytes appends a new capture and reuses the body;
+  conflicts and partial writes fail closed and roll back.
+- Preserve observed count and actual filing-date minimum/maximum separately.
+  A live Apple segment also showed that advertised range endpoints need not
+  equal actual extrema. `MATCHES_ADVERTISED` therefore means exact count equality
+  plus inclusive containment of every observed date, not endpoint equality.
+  Store count-only, range-only, and combined mismatch states as source evidence;
+  an empty segment retains count zero, null extrema, and `COUNT_MISMATCH`.
+- Make segment availability begin only at its own later `capturedAt`, never at
+  the root capture or advertised/filing dates. PIT reads select by exact root,
+  descriptor ordinal, parser, and `capturedAt <= evaluationAsOf`. Root and
+  segment are not an SEC-provided atomic snapshot.
+- Require no new API key, account, paid plan, OAuth credential, plugin, or
+  environment variable. Explicit live access reuses only the existing monitored
+  `SEC_CONTACT_EMAIL`; persistence reuses the existing PostgreSQL variables. No
+  configured secret value was read, printed, or committed.
+
+### Repository surface
+
+- Add `PersistHistoricalFilingSegmentCaptureService` and closed provider,
+  repository, append-result, and replay-verifier ports under the application
+  boundary.
+- Add the SEC historical raw-response envelope, strict V1 DTO/mapper, one-GET
+  provider, and exact replay verifier behind the vendor DTO -> adapter ->
+  canonical model -> domain boundary.
+- Add `HistoricalFilingRecord`, `HistoricalFilingSegment`, and
+  `HistoricalFilingSegmentCapture`, plus
+  `JdbcHistoricalFilingSegmentCaptureRepository` and property-gated Spring
+  wiring. No scheduler, controller, command-line trigger, OpenAPI route, public
+  API, or web route was added.
+- Add H2/domain/service/provider/replay coverage, PostgreSQL 17 Flyway upgrade,
+  constraint, concurrency, rollback, idempotency and PIT coverage, plus a manual
+  opt-in live shape check bounded to one root and its first captured descriptor.
+
+### Verification
+
+- Full API Maven verification with Docker Desktop 29.2.1: **PASS** — 2,233
+  tests, zero failures, errors, or skips; Spring Boot packaging completed.
+- PostgreSQL 17.10/Testcontainers V7 and upgrade-path suite: **PASS** — six
+  tests. It covers fresh/upgrade migration, exact and later-observation body
+  reuse, idempotent and conflicting append, concurrent convergence and
+  fail-closed rollback, nullable document evidence, constraints, restricting
+  deletion, parser-specific PIT, and complete round-trip reconstruction.
+- Manual opt-in SEC smoke: **PASS** — one Apple root GET and one captured first
+  descriptor GET, one test, and `BUILD SUCCESS`. It confirmed nullable historical
+  document evidence and inclusive range containment without logging body,
+  contact value, complete User-Agent, or provider rows.
+- Web regression: **PASS** — ESLint with zero warnings, 42 Vitest files / 569
+  tests, and the Next.js production build with all 12 static-generation steps.
+  The user-owned `apps/web/next-env.d.ts` was restored to SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Repository CI guard: **PASS** — all 45 embedded Python bodies compile and all
+  38 environment-independent bodies execute successfully, including the
+  ADR-034 through ADR-040 replay guards. Six schema bodies remain CI-only because
+  they require the workflow-pinned `jsonschema`; one integration body requires
+  `RUNNER_TEMP` and its preceding integration artifacts. Workflow YAML parsing
+  with duplicate keys rejected and `git diff --check` both pass.
+- Independent correctness review: **PASS** — no remaining P0–P3 finding. The
+  review identified one H2 rollback-coverage false-positive; it was removed and
+  replaced with committed-root PostgreSQL evidence for nullable URI round-trip,
+  exact child SQLSTATE `22001`, full transaction rollback, and orphan-body
+  absence. Direct database-administrator WORM enforcement remains explicitly
+  outside the ADR-039/040 repository boundary.
+
+### Next work
+
+- Define an ordered collection manifest relative to one immutable root and
+  explicitly select one durable capture per advertised descriptor.
+- Compare every source occurrence of accessions across root recent rows and
+  selected segments, then define duplicate/conflict/correction evidence without
+  overwriting or inventing a complete-history state.
+- Keep scheduler/global rate coordination, retry ownership, public read API,
+  authentication decision, and attributed Korean UI behind later independent
+  gates.
