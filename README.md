@@ -180,6 +180,21 @@ Validate the Compose configuration separately with:
 docker compose --env-file .env.example config --quiet
 ```
 
+Run the disposable offline operator acceptance gate from the repository root:
+
+```powershell
+pwsh -NoProfile -File ./scripts/verify-local-operator-api.ps1
+```
+
+This ADR-044 command packages the API, starts a unique PostgreSQL 17 Compose
+project and loopback-only API, verifies authentication/replay/conflict/status
+over real HTTP, inspects the disposable ledger, and then removes only the
+process, project, volume, and temporary files it created. It never reads or
+changes the root `.env`, never touches the default `postgres-data` volume, and
+forces SEC traffic off. It needs PowerShell 7, Java 21, and a running Docker
+daemon; macOS/Linux also uses the standard POSIX `sh` to launch the Maven
+wrapper. It needs no domain, API key, SEC contact email, or user-supplied token.
+
 ## Fixture contract
 
 Canonical demo data lives under [`fixtures/v1`](fixtures/v1). Every fixture has
@@ -722,6 +737,17 @@ exclusion owner protects every caller. ADR-043 adds no retry, resume, cancel,
 abandon, resolve, list, latest, UI, or public-read route; an indeterminate
 dispatch remains inspect-only.
 
+ADR-044 adds the preferred one-command pre-deployment acceptance gate for that
+local boundary. `scripts/verify-local-operator-api.ps1` uses a packaged JAR,
+real loopback TCP, and a uniquely named disposable PostgreSQL 17 Compose
+project. Its 32-byte Bearer token, digest, database password, ports, logs, and
+volume are generated or scoped per run; the raw token is never printed or
+written. The gate proves the `401`, provider-disabled `200`, immutable replay,
+exact GET, `409`, and `422` contracts plus the exact one-attempt/zero-dispatch/
+one-outcome database state, then validates and removes only its own resources.
+It does not read or edit `.env`, contact SEC, add a route, or approve remote
+deployment.
+
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,
 package, resolver, or test: the exact ADR-022 receipt is consumed once while a
@@ -1197,6 +1223,7 @@ contracts/       OpenAPI contracts
 schemas/         Canonical JSON Schemas
 quality/         Phase acceptance checks
 decisions/       Versioned architecture decisions
+scripts/         Disposable local acceptance tooling
 .github/         Continuous integration workflows
 compose.yaml     PostgreSQL service
 ```

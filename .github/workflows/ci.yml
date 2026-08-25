@@ -32433,20 +32433,26 @@ jobs:
           adr_path = Path(
               "decisions/ADR-043-default-disabled-local-single-operator-sec-attempt-api.md"
           )
+          adr044_path = Path(
+              "decisions/ADR-044-disposable-offline-local-operator-api-acceptance-harness.md"
+          )
+          harness_path = Path("scripts/verify-local-operator-api.ps1")
           document_paths = {
               adr_path,
+              adr044_path,
               Path("README.md"),
               Path("apps/api/README.md"),
               Path("IMPLEMENTATION_LOG.md"),
           }
           require(
               all(path.is_file() for path in document_paths),
-              "Missing ADR-043 decision, README, or implementation-log surface",
+              "Missing ADR-043/ADR-044 decision, README, script, or implementation-log surface",
           )
           documents = {
               path: path.read_text(encoding="utf-8") for path in document_paths
           }
           adr = documents[adr_path]
+          adr044 = documents[adr044_path]
           require(
               adr.startswith(
                   "# ADR-043 — Default-Disabled Local Single-Operator SEC Attempt API\n\n"
@@ -32454,6 +32460,18 @@ jobs:
               )
               and all("ADR-043" in documents[path] for path in document_paths),
               "ADR-043 title, accepted status, date, or documentation parity changed",
+          )
+          require(
+              adr044.startswith(
+                  "# ADR-044 — Disposable Offline Local Operator API Acceptance Harness\n\n"
+                  "- Status: Accepted\n- Date: 2026-08-26\n"
+              )
+              and all(
+                  "ADR-044" in documents[path]
+                  for path in document_paths
+                  if path != adr_path
+              ),
+              "ADR-044 title, accepted status, date, or documentation parity changed",
           )
           required_adr_terms = (
               "OPERATOR_API_ENABLED=true",
@@ -32474,6 +32492,197 @@ jobs:
           require(
               all(term in compact(adr) for term in required_adr_terms),
               "ADR-043 local-only, default-off, exact-route, or no-retry semantics changed",
+          )
+
+          harness_command = (
+              "pwsh -NoProfile -File ./scripts/verify-local-operator-api.ps1"
+          )
+          required_adr044_terms = (
+              "scripts/verify-local-operator-api.ps1",
+              harness_command,
+              "Java 21, Docker with Compose v2, and PowerShell 7",
+              "platform's POSIX `sh`; Windows uses `mvnw.cmd`",
+              "The root `.env`, the default Compose project, its `postgres-data` volume",
+              "OPERATOR_API_ENABLED=true",
+              "SEC_PROVIDER_ENABLED=false",
+              "SEC_BASE_URL=http://127.0.0.1:1",
+              "No domain, DNS change, API key, SEC account, paid plan, OAuth client",
+              "401 OPERATOR_AUTHENTICATION_REQUIRED",
+              "409 OPERATOR_REQUEST_CONFLICT",
+              "422 EXACT_EVIDENCE_NOT_ADMITTED",
+              "one attempt, zero provider dispatches, and one terminal outcome",
+              "CI parses the PowerShell source and statically guards",
+              "It does not execute this additional composed harness",
+          )
+          require(
+              all(term in compact(adr044) for term in required_adr044_terms)
+              and all(
+                  harness_command in documents[path]
+                  for path in (Path("README.md"), Path("apps/api/README.md"))
+              )
+              and all(
+                  "POSIX `sh`" in compact(documents[path])
+                  for path in (
+                      adr044_path,
+                      Path("README.md"),
+                      Path("apps/api/README.md"),
+                      Path("IMPLEMENTATION_LOG.md"),
+                  )
+              ),
+              "ADR-044 disposable topology, offline boundary, acceptance matrix, or local command changed",
+          )
+
+          script_paths = {
+              path for path in Path("scripts").rglob("*") if path.is_file()
+          }
+          require(
+              script_paths == {harness_path},
+              "ADR-044 must remain the exact one-file repository script surface",
+          )
+          harness = harness_path.read_text(encoding="utf-8")
+          required_harness_markers = (
+              "#Requires -Version 7.0",
+              "[ValidateRange(30, 600)]",
+              "[switch] $SkipPackage",
+              "Set-StrictMode -Version Latest",
+              "[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)",
+              "[Security.Cryptography.RandomNumberGenerator]::Create()",
+              "[byte[]]::new(32)",
+              "[Convert]::ToBase64String($operatorBytes)",
+              "$operatorTokenBytes = [Text.Encoding]::ASCII.GetBytes($operatorToken)",
+              "$operatorSha = [Security.Cryptography.SHA256]::Create()",
+              "$operatorDigestBytes = $operatorSha.ComputeHash($operatorTokenBytes)",
+              "$operatorSha.Dispose()",
+              'Join-Path $repositoryRoot ".env.example"',
+              '$mavenCommand = $mavenWrapper',
+              'Get-Command sh -CommandType Application -ErrorAction Stop',
+              '$mavenArgumentPrefix = @($mavenWrapper)',
+              '$packageArguments = $mavenArgumentPrefix + @(',
+              '$value = $Variables[$name]',
+              'if ($null -eq $value)',
+              'Remove-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue',
+              'if ($null -eq $previous[$name])',
+              'SPRING_PROFILES_ACTIVE      = "acceptance"',
+              '$springApplicationJson = @{',
+              'flyway = @{',
+              'SPRING_APPLICATION_JSON     = $springApplicationJson',
+              'SPRING_CONFIG_LOCATION      = $null',
+              'SPRING_CONFIG_ADDITIONAL_LOCATION = $null',
+              'SPRING_CONFIG_IMPORT        = $null',
+              'SPRING_CONFIG_NAME          = "application"',
+              'SPRING_PROFILES_INCLUDE     = $null',
+              'SPRING_PROFILES_GROUP_ACCEPTANCE = $null',
+              'WSR_LOCAL_ENV_FILE          =',
+              '(Join-Path $temporaryDirectory "never-import-root-env")',
+              'JAVA_TOOL_OPTIONS           = $null',
+              'JDK_JAVA_OPTIONS            = $null',
+              '_JAVA_OPTIONS               = $null',
+              'ssl = @{ enabled = $false }',
+              'SERVER_SSL_ENABLED          = "false"',
+              'SPRING_DATASOURCE_DRIVER_CLASS_NAME = "org.postgresql.Driver"',
+              'SPRING_FLYWAY_ENABLED       = "true"',
+              'SPRING_FLYWAY_URL           = $jdbcUrl',
+              'SPRING_FLYWAY_USER          = "wsr_operator_acceptance"',
+              'SPRING_FLYWAY_PASSWORD      = $databasePassword',
+              'SPRING_FLYWAY_LOCATIONS     = "classpath:db/migration"',
+              'SEC_PROVIDER_ENABLED        = "false"',
+              'SEC_BASE_URL                = "http://127.0.0.1:1"',
+              'SEC_CONTACT_EMAIL           = ""',
+              'OPERATOR_API_ENABLED        = "true"',
+              "OPERATOR_API_TOKEN_SHA256   = $operatorDigest",
+              'APP_PUBLIC_DATA_SEC_ENABLED = "false"',
+              'APP_PUBLIC_DATA_SEC_BASE_URL = "http://127.0.0.1:1"',
+              'APP_PUBLIC_DATA_SEC_CONTACT_EMAIL = ""',
+              'MANAGEMENT_SERVER_PORT      = $null',
+              'MANAGEMENT_SERVER_ADDRESS   = $null',
+              'MANAGEMENT_SERVER_SSL_ENABLED = $null',
+              '$httpHandler = [Net.Http.HttpClientHandler]::new()',
+              '$httpHandler.UseProxy = $false',
+              '$httpHandler.AllowAutoRedirect = $false',
+              '$httpClient = [Net.Http.HttpClient]::new($httpHandler, $false)',
+              '[Uri]::new("http://127.0.0.1:$apiPort")',
+              '"/internal/v1/sec/collection-attempts/root"',
+              '"/internal/v1/sec/collection-attempts/exact-root"',
+              '"OPERATOR_AUTHENTICATION_REQUIRED"',
+              '"TERMINAL_FAILED_KNOWN"',
+              '"PROVIDER_GATE_CLOSED"',
+              '"PROVIDER_INVOCATION_NOT_STARTED"',
+              '"OPERATOR_REQUEST_CONFLICT"',
+              '"EXACT_EVIDENCE_NOT_ADMITTED"',
+              "$unauthenticated.StatusCode -eq 401",
+              "$first.StatusCode -eq 200",
+              "$replay.StatusCode -eq 200",
+              "$status.StatusCode -eq 200",
+              "$conflict.StatusCode -eq 409",
+              "$missingEvidence.StatusCode -eq 422",
+              "($null -eq $firstJson.providerDispatch)",
+              "($firstJson.automaticRetryAllowed -eq $false)",
+              "$replay.Content -ceq $first.Content",
+              "$status.Content -ceq $first.Content",
+              '"1|0|1"',
+              'down --volumes --remove-orphans',
+              'Stop-Process -Id $apiProcess.Id -Force',
+              '$stopped = $apiProcess.WaitForExit(10000)',
+              'if (-not $stopped)',
+              '"The exact API process did not exit within 10 seconds."',
+              'Remove-Item -LiteralPath $resolvedPath -Recurse -Force',
+              '[Array]::Clear($operatorBytes, 0, $operatorBytes.Length)',
+              '[Array]::Clear($operatorDigestBytes, 0, $operatorDigestBytes.Length)',
+              '[Array]::Clear($operatorTokenBytes, 0, $operatorTokenBytes.Length)',
+              'Get-SanitizedLogTail',
+              'Remove-VerifiedTemporaryDirectory $temporaryDirectory',
+          )
+          require(
+              all(marker in harness for marker in required_harness_markers)
+              and harness.count(
+                  'Remove-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue'
+              ) == 2,
+              "ADR-044 token, loopback, provider-off, HTTP, ledger, redaction, or cleanup marker changed",
+          )
+          live_smoke_variable = "SEC_" + "LIVE_SMOKE"
+          sec_origin = "https://data." + "sec.gov"
+          require(
+              f'{live_smoke_variable}              = "false"' in harness
+              and sec_origin not in harness
+              and 'Join-Path $repositoryRoot ".env"' not in harness
+              and re.search(
+                  r"(?m)^\s*OPERATOR_API_TOKEN\s*=", harness
+              ) is None
+              and 'SEC_PROVIDER_ENABLED        = "true"' not in harness
+              and 'SERVER_ADDRESS              = "0.0.0.0"' not in harness
+              and "Invoke-WebRequest" not in harness
+              and "Invoke-RestMethod" not in harness
+              and "curl " not in harness
+              and "wget " not in harness
+              and re.search(
+                  r"(?im)(?:Write-Host|Write-Output|Write-Information)[^\n]*"
+                  r"(?:operatorToken|operatorDigest|databasePassword)",
+                  harness,
+              ) is None
+              and re.search(
+                  r"(?im)(?:Set-Content|Add-Content|Out-File)[^\n]*"
+                  r"(?:operatorToken|operatorDigest|databasePassword)",
+                  harness,
+              ) is None,
+              "ADR-044 harness must not read local secrets, persist a raw token, expose the server, or contact SEC",
+          )
+          http_origins = re.findall(r'https?://[^"\s]+', harness)
+          require(
+              http_origins.count("http://127.0.0.1:1") == 3
+              and http_origins.count("http://127.0.0.1:$apiPort") == 1
+              and len(http_origins) == 4,
+              "ADR-044 harness HTTP origins must remain exact closed or dynamic loopback addresses",
+          )
+          require(
+              "--project-name" in harness
+              and "$composeProject" in harness
+              and "^wsr-operator-[0-9]+-[a-f0-9]{8}$" in harness
+              and "^wsr-local-operator-[a-f0-9]{12}$" in harness
+              and "Invoke-WithProcessEnvironment" in harness
+              and "finally {" in harness
+              and "Cleanup complete: no test API process, Compose project, volume, or token file remains."
+                  in harness,
+              "ADR-044 isolated project ownership, process environment, or cleanup proof changed",
           )
 
           main_root = Path("apps/api/src/main/java/com/wallstreetreceipts/api")
@@ -32655,6 +32864,10 @@ jobs:
           start = workflow.index(step)
           end = workflow.index("\n      - name: ", start + len(step))
           workflow_without_guard = workflow[:start] + workflow[end:]
+          parse_step_name = (
+              "Parse disposable offline local operator API acceptance harness"
+          )
+          parse_step = f"\n      - name: {parse_step_name}\n"
           focused_command = (
               "./mvnw -B -ntp "
               "-Dtest=OperatorApiPropertiesTest,OperatorApiDisabledSecurityTest,"
@@ -32665,6 +32878,12 @@ jobs:
           )
           require(
               compact(workflow_without_guard).count(focused_command) == 1
+              and workflow[end:].startswith(parse_step)
+              and workflow_without_guard.count(parse_step) == 1
+              and workflow_without_guard.count(harness_path.as_posix()) == 1
+              and "[System.Management.Automation.Language.Parser]::ParseFile("
+                  in workflow_without_guard
+              and harness_command not in workflow_without_guard
               and "OPERATOR_API_ENABLED: 'true'" not in workflow_without_guard
               and re.search(
                   r"(?:curl|wget|Invoke-WebRequest)[^\n]*data\.sec\.gov",
@@ -32677,9 +32896,25 @@ jobs:
           print(
               "Validated ADR-043 exact 17+8 surface, default-disabled loopback-only "
               "opaque Bearer boundary, exact immutable routes and allowlist, sanitized "
-              "no-store failures, offline integration, and no public web/OpenAPI/live SEC path"
+              "no-store failures, offline integration, and no public web/OpenAPI/live SEC path; "
+              "validated ADR-044 one-file disposable loopback/PostgreSQL harness, "
+              "credential isolation, owned cleanup, and parse-only CI"
           )
           PYTHON
+
+      - name: Parse disposable offline local operator API acceptance harness
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path "scripts/verify-local-operator-api.ps1").Path,
+            [ref] $tokens,
+            [ref] $parseErrors
+          ) | Out-Null
+          if ($parseErrors.Count -ne 0) {
+            throw "PowerShell parser reported $($parseErrors.Count) error(s) in the local operator acceptance harness."
+          }
 
       - name: Guard point-in-time target eligibility
         shell: bash

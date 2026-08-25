@@ -5526,3 +5526,94 @@ authentication, TLS, or actor-audit control.
 - Keep any browser/BFF operator UI, multi-operator authorization, token
   rotation endpoint, indeterminate resolution, and multi-replica coordinator
   behind separate reviewed contracts.
+
+## 2026-08-26 — ADR-044 disposable offline local operator acceptance harness
+
+ADR-044 closes the remaining pre-deployment local evidence gap between the
+separately tested HTTP, loopback-server, and PostgreSQL boundaries. It adds one
+operator-owned command that exercises the packaged application over real TCP
+against a disposable PostgreSQL 17 Compose project while SEC remains unable to
+receive traffic.
+
+### Scope and decisions
+
+- Add `scripts/verify-local-operator-api.ps1` as the only executable surface.
+  Add no application source, test-only runtime bean/profile, migration, route,
+  provider, public OpenAPI operation, fixture, or web behavior.
+- Require PowerShell 7, Java 21, Docker, and Compose v2, plus standard POSIX
+  `sh` for the non-executable Maven wrapper checkout on macOS/Linux. Package
+  through the checked-in wrapper, start the repackaged Spring Boot JAR as one
+  directly owned child process, and use distinct dynamically selected loopback
+  ports.
+- Create a unique validated Compose project and therefore a unique PostgreSQL
+  volume for every run. Never read or edit the ignored root `.env`, select the
+  default Compose project, reuse `postgres-data`, or fall back to an existing
+  developer database.
+- Generate a canonical standard-Base64 32-byte Bearer token, its lowercase
+  SHA-256 digest, and a disposable database password in process memory. Do not
+  print or write the raw token/digest, pass them on a command line, or retain a
+  token file. Redact failure logs and clear mutable credential arrays during
+  cleanup.
+- Override inherited Spring JSON, profile, datasource, Flyway, and Java-option
+  configuration for the child process with matching high-precedence disposable
+  database settings. Force the operator boundary on, the SEC provider and live-
+  smoke gate off, and the provider origin to an unavailable loopback address.
+  The whole API listener remains loopback-only through ADR-043.
+- Verify real health and HTTP `401`, provider-disabled `200`, exact replay,
+  exact GET, `409`, and `422` responses. Require the durable failure to remain
+  `PROVIDER_GATE_CLOSED` / `PROVIDER_INVOCATION_NOT_STARTED`, with null dispatch
+  and automatic retry false.
+- Inspect the disposable database from its own container and require exactly
+  one attempt, zero provider dispatches, and one outcome. Validate cleanup
+  targets before stopping the exact child PID, removing the exact Compose
+  project/volume, and recursively removing only the harness-owned OS temporary
+  directory.
+- Keep CI deterministic by statically guarding the harness and parsing its
+  PowerShell AST, while leaving composed process/container execution as the
+  explicit local pre-deployment gate.
+
+### Operator requirements
+
+- No domain, DNS change, API key, SEC account, paid plan, OAuth client,
+  `SEC_CONTACT_EMAIL`, root `.env` edit, or user-provided token is needed.
+- Docker Desktop or another Docker daemon must be running, and Java 21 plus
+  PowerShell 7 must be on `PATH`. The first run may download normal Maven
+  dependencies or `postgres:17-alpine` if uncached; it is not authorized to
+  contact SEC.
+- Run from the repository root with
+  `pwsh -NoProfile -File ./scripts/verify-local-operator-api.ps1`. Use
+  `-SkipPackage` only when the current source has already been packaged.
+
+### Verification
+
+- PowerShell AST parse: **PASS**.
+- Extended ADR-043/044 static guard and all nine SEC guard slices: **PASS**;
+  all 48 embedded Python bodies compile, workflow YAML parses, the PowerShell
+  parse-only step occurs once, and CI contains zero executable full-harness
+  invocations.
+- Full disposable composed acceptance run: **PASS** — packaged JAR, real
+  loopback TCP, PostgreSQL 17 health/migrations, authentication, immutable
+  replay/status, conflict/admission rejection, exact `1|0|1` ledger counts, and
+  owned-resource cleanup all completed successfully.
+- Immediate `-SkipPackage` replay: **PASS** with the same contract; a Docker
+  inventory check found zero harness-named containers or volumes afterward.
+- Startup-failure cleanup was also exercised during environment-isolation
+  hardening; after the correction and final successful run, inventory again
+  found zero harness-named containers or volumes.
+- Final API `verify`: **PASS** — 2,347 tests, zero failures/errors/skips,
+  PostgreSQL 17 Testcontainers/Flyway paths, JAR packaging, and Spring repackage
+  all completed with `BUILD SUCCESS`.
+- Final web regression: **PASS** — ESLint, 42 Vitest files / 569 tests,
+  production build with all 12 static-generation work items, and 72/72
+  Playwright checks at the existing 1440, 1280, and 390 px viewports.
+- Compose interpolation through `.env.example` and final patch whitespace:
+  **PASS**.
+- Live SEC verification: **NOT RUN BY DESIGN** — the provider flag and live-
+  smoke flag were false and the configured provider origin was closed loopback.
+
+### Next work
+
+- Keep this command as the final local acceptance gate before deployment work.
+  The next deployment decision still must choose hosting topology, TLS, managed
+  identity, private origin enforcement, durable actor audit, and secret
+  lifecycle; the existing domain alone is not sufficient.

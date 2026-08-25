@@ -338,6 +338,36 @@ POST /internal/v1/sec/collection-attempts/exact-root
 GET  /internal/v1/sec/collection-attempts/{attemptId}
 ```
 
+ADR-044의 권장 배포 전 점검은 저장소 루트에서 실행하는 한 명령이다.
+
+```powershell
+pwsh -NoProfile -File ./scripts/verify-local-operator-api.ps1
+```
+
+이 명령은 PowerShell 7, Java 21, 실행 중인 Docker daemon/Compose v2가 필요하며
+macOS/Linux에서는 Maven wrapper를 실행할 표준 POSIX `sh`도 사용한다.
+API를 package하고 고유 Compose project의 PostgreSQL 17과 임의 loopback port의 실제
+JAR을 띄운 뒤, health, `401`, provider-disabled `200`, exact replay, GET, `409`,
+`422`, 그리고 database의 attempt 1개 / dispatch 0개 / outcome 1개를 검증한다.
+매 실행마다 32-byte random token과 digest, database password를 memory에서 만들며
+raw token을 출력하거나 파일에 쓰지 않는다. root `.env`, 기본 Compose project,
+기존 `postgres-data` volume은 읽거나 변경하지 않고 성공·실패 모두 자신이 만든
+process/project/volume/temp directory만 검증 후 정리한다. SEC provider는 false이고
+datasource와 Flyway는 같은 disposable database로 강제하며 base URL도 닫힌
+loopback origin으로 덮어쓴다. 도메인, API key, OAuth client,
+`SEC_CONTACT_EMAIL`, 사용자가 제공할 token은 필요 없다. 최초 실행에서 cache가
+없으면 Maven dependency 또는 PostgreSQL image의 일반 download가 발생할 수 있지만
+SEC 요청은 허용되지 않는다.
+
+이미 package가 끝난 동일 source를 재점검할 때만 `-SkipPackage`를 사용할 수 있다.
+
+```powershell
+pwsh -NoProfile -File ./scripts/verify-local-operator-api.ps1 -SkipPackage
+```
+
+아래 절차는 장시간 띄운 local process를 직접 조사해야 할 때만 사용하는 수동
+대안이다.
+
 이 경계는 loopback에서 한 API JVM과 PostgreSQL로 HTTP 계약을 확인할 때만 쓴다.
 도메인, DNS, Cloudflare, OAuth client, SEC API key 또는 `SEC_CONTACT_EMAIL`은 필요
 없다. SEC network를 확실히 차단한 다음 루트 `.env`에서 다음 값만 설정한다.
