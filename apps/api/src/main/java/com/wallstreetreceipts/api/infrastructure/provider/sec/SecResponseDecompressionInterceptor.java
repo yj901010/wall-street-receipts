@@ -26,9 +26,27 @@ public final class SecResponseDecompressionInterceptor implements ClientHttpRequ
     private static final class DecompressingResponse implements ClientHttpResponse {
 
         private final ClientHttpResponse delegate;
+        private final HttpHeaders headers;
 
         private DecompressingResponse(ClientHttpResponse delegate) {
             this.delegate = delegate;
+            HttpHeaders decodedHeaders = new HttpHeaders();
+            decodedHeaders.addAll(delegate.getHeaders());
+            String contentEncoding = decodedHeaders.getFirst(HttpHeaders.CONTENT_ENCODING);
+            if (isSupportedCompression(contentEncoding)) {
+                decodedHeaders.remove(HttpHeaders.CONTENT_LENGTH);
+            }
+            this.headers = HttpHeaders.readOnlyHttpHeaders(decodedHeaders);
+        }
+
+        private static boolean isSupportedCompression(String contentEncoding) {
+            if (contentEncoding == null || contentEncoding.isBlank()) {
+                return false;
+            }
+            return switch (contentEncoding.strip().toLowerCase(Locale.ROOT)) {
+                case "gzip", "x-gzip", "deflate" -> true;
+                default -> false;
+            };
         }
 
         @Override
@@ -43,7 +61,7 @@ public final class SecResponseDecompressionInterceptor implements ClientHttpRequ
 
         @Override
         public HttpHeaders getHeaders() {
-            return delegate.getHeaders();
+            return headers;
         }
 
         @Override

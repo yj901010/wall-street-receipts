@@ -30,6 +30,7 @@ class SecResponseSizeLimitInterceptorTest {
                 .intercept(REQUEST, new byte[0], execution(response(payload, null, payload.length)));
 
         try (response; InputStream body = response.getBody()) {
+            assertThat(response.getHeaders().getContentLength()).isEqualTo(payload.length);
             assertThat(body.readAllBytes()).isEqualTo(payload);
         }
     }
@@ -140,6 +141,10 @@ class SecResponseSizeLimitInterceptorTest {
                         request, body, execution(raw)));
 
         try (response; InputStream body = response.getBody()) {
+            assertThat(response.getHeaders().getContentLength()).isEqualTo(-1);
+            assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING))
+                    .isEqualTo("gzip");
+            assertThat(raw.getHeaders().getContentLength()).isEqualTo(compressed.length);
             assertThatThrownBy(body::readAllBytes)
                     .isInstanceOf(IOException.class)
                     .matches(SecResponseSizeLimitInterceptor::causedByLimitExceeded);
@@ -161,6 +166,10 @@ class SecResponseSizeLimitInterceptorTest {
                         request, body, execution(raw)));
 
         try (response; InputStream body = response.getBody()) {
+            assertThat(response.getHeaders().getContentLength()).isEqualTo(-1);
+            assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING))
+                    .isEqualTo("deflate");
+            assertThat(raw.getHeaders().getContentLength()).isEqualTo(compressed.length);
             assertThatThrownBy(body::readAllBytes)
                     .isInstanceOf(IOException.class)
                     .matches(SecResponseSizeLimitInterceptor::causedByLimitExceeded);

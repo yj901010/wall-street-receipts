@@ -8,14 +8,18 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import java.net.URI;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
+import java.util.HexFormat;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +36,9 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import com.wallstreetreceipts.api.domain.filing.FilingCatalog;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRepresentation;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRetention;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.TransportContentEncoding;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecEdgarFilingCatalogProvider;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecProviderConfigurationException;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecProviderException;
@@ -79,7 +86,11 @@ class SecEdgarConfigurationTest {
                         "WallStreetReceipts/0.1 (" + CONTACT_EMAIL + ")"))
                 .andExpect(header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(header(HttpHeaders.ACCEPT_ENCODING, "gzip, deflate"))
-                .andRespond(withSuccess(validSubmissionsJson(), MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(validSubmissionsJson(), MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.ETAG, "\"revision-1\"")
+                        .header(
+                                HttpHeaders.LAST_MODIFIED,
+                                "Thu, 20 Aug 2026 20:00:00 GMT"));
 
         FilingCatalog catalog = provider.loadRecentFilings("320193");
 
@@ -87,6 +98,26 @@ class SecEdgarConfigurationTest {
         assertThat(catalog.sourceUri()).hasToString(EXPECTED_ENDPOINT);
         assertThat(catalog.processingTime()).isEqualTo(RECEIVED_AT.truncatedTo(ChronoUnit.MICROS));
         assertThat(catalog.capturedAt()).isEqualTo(RECEIVED_AT.truncatedTo(ChronoUnit.MICROS));
+        assertThat(catalog.sourceReceipt()).satisfies(receipt -> {
+            assertThat(receipt.sourceUri()).hasToString(EXPECTED_ENDPOINT);
+            assertThat(receipt.httpStatus()).isEqualTo(200);
+            assertThat(receipt.mediaType()).isEqualTo("application/json");
+            assertThat(receipt.transportContentEncoding())
+                    .isEqualTo(TransportContentEncoding.IDENTITY);
+            assertThat(receipt.etag()).isEqualTo("\"revision-1\"");
+            assertThat(receipt.lastModified())
+                    .isEqualTo(Instant.parse("2026-08-20T20:00:00Z"));
+            assertThat(receipt.parserVersion()).isEqualTo("SEC_SUBMISSIONS_RECENT_V1");
+            assertThat(receipt.decodedBodySha256()).isEqualTo(sha256(validSubmissionsJson()));
+            assertThat(receipt.decodedBodyLength())
+                    .isEqualTo(validSubmissionsJson().getBytes(StandardCharsets.UTF_8).length);
+            assertThat(receipt.capturedAt())
+                    .isEqualTo(RECEIVED_AT.truncatedTo(ChronoUnit.MICROS));
+            assertThat(receipt.bodyRepresentation())
+                    .isEqualTo(BodyRepresentation.DECODED_HTTP_ENTITY_BODY);
+            assertThat(receipt.bodyRetention())
+                    .isEqualTo(BodyRetention.RECEIPT_ONLY_BODY_NOT_RETAINED);
+        });
         assertThat(catalog.filings()).hasSize(1);
         assertThat(catalog.filings().getFirst().accessionNumber())
                 .isEqualTo("0000320193-26-000001");
@@ -95,19 +126,52 @@ class SecEdgarConfigurationTest {
 
     @Test
     void decodesAdvertisedGzipResponses() throws IOException {
+        byte[] compressedBody = gzip(validSubmissionsJson());
+        byte[] decodedBody = validSubmissionsJson().getBytes(StandardCharsets.UTF_8);
+        assertThat(compressedBody.length).isLessThan(decodedBody.length);
         server.expect(once(), requestTo(EXPECTED_ENDPOINT))
-                .andRespond(withSuccess(gzip(validSubmissionsJson()), MediaType.APPLICATION_JSON)
-                        .header(HttpHeaders.CONTENT_ENCODING, "gzip"));
+                .andRespond(withSuccess(compressedBody, MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.CONTENT_ENCODING, "gzip")
+                        .header(
+                                HttpHeaders.CONTENT_LENGTH,
+                                Integer.toString(compressedBody.length)));
 
         FilingCatalog catalog = provider.loadRecentFilings("320193");
 
         assertThat(catalog.filings()).hasSize(1);
+        assertThat(catalog.sourceReceipt().transportContentEncoding())
+                .isEqualTo(TransportContentEncoding.GZIP);
+        assertThat(catalog.sourceReceipt().decodedBodySha256())
+                .isEqualTo(sha256(validSubmissionsJson()));
+        assertThat(catalog.sourceReceipt().decodedBodyLength()).isEqualTo(decodedBody.length);
+        server.verify();
+    }
+
+    @Test
+    void decodesAdvertisedDeflateResponsesAndHashesTheSameDecodedBytes() throws IOException {
+        byte[] compressedBody = deflate(validSubmissionsJson());
+        byte[] decodedBody = validSubmissionsJson().getBytes(StandardCharsets.UTF_8);
+        assertThat(compressedBody.length).isLessThan(decodedBody.length);
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(compressedBody, MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.CONTENT_ENCODING, "deflate")
+                        .header(
+                                HttpHeaders.CONTENT_LENGTH,
+                                Integer.toString(compressedBody.length)));
+
+        FilingCatalog catalog = provider.loadRecentFilings("320193");
+
+        assertThat(catalog.sourceReceipt().transportContentEncoding())
+                .isEqualTo(TransportContentEncoding.DEFLATE);
+        assertThat(catalog.sourceReceipt().decodedBodySha256())
+                .isEqualTo(sha256(validSubmissionsJson()));
+        assertThat(catalog.sourceReceipt().decodedBodyLength()).isEqualTo(decodedBody.length);
         server.verify();
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {302, 404, 503})
-    void turnsEveryNonSuccessStatusIntoASanitizedExceptionWithoutRetry(int statusCode) {
+    @ValueSource(ints = {206, 302, 404, 503})
+    void turnsEveryNonExactSuccessStatusIntoASanitizedExceptionWithoutRetry(int statusCode) {
         server.expect(once(), requestTo(EXPECTED_ENDPOINT))
                 .andRespond(withStatus(HttpStatusCode.valueOf(statusCode))
                         .contentType(MediaType.TEXT_PLAIN)
@@ -184,6 +248,72 @@ class SecEdgarConfigurationTest {
                 .hasNoCause()
                 .message()
                 .doesNotContain("320193", "127.0.0.1", CONTACT_EMAIL, "do-not-expose");
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"cik\":\"0000320193\",\"cik\":\"0000320193\"}",
+            "{\"cik\":\"0000320193\",\"filings\":{\"recent\":{\"size\":[\"1\"]}}}",
+            "{\"cik\":\"0000320193\",\"filings\":{\"recent\":{\"isXBRL\":[1.5]}}}",
+            "{\"cik\":\"0000320193\",\"filings\":{\"recent\":{\"form\":[10]}}}",
+            "{'cik':'0000320193'}",
+            "{/*comment*/\"cik\":\"0000320193\"}"
+    })
+    void rejectsDuplicateKeysAndNumericCoercionWithSanitizedFailure(String body) {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain(body, "0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @Test
+    void rejectsMissingMediaTypeWithoutExposingTheBody() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withStatus(HttpStatusCode.valueOf(200))
+                        .body("secret-body-do-not-expose"));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain("secret-body-do-not-expose", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @Test
+    void rejectsBomlessUtf16PayloadEvenWhenTheMediaTypeOmitsACharset() {
+        byte[] utf16Body = validSubmissionsJson().getBytes(StandardCharsets.UTF_16LE);
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(utf16Body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain("0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @Test
+    void rejectsNonJsonMediaTypeWithoutExposingTheBody() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess("secret-body-do-not-expose", MediaType.TEXT_PLAIN));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain("secret-body-do-not-expose", CONTACT_EMAIL);
         server.verify();
     }
 
@@ -338,6 +468,24 @@ class SecEdgarConfigurationTest {
         return compressed.toByteArray();
     }
 
+    private static byte[] deflate(String value) throws IOException {
+        ByteArrayOutputStream compressed = new ByteArrayOutputStream();
+        try (DeflaterOutputStream deflate = new DeflaterOutputStream(compressed)) {
+            deflate.write(value.getBytes(StandardCharsets.UTF_8));
+        }
+        return compressed.toByteArray();
+    }
+
+    private static String sha256(String value) {
+        try {
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256")
+                            .digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new AssertionError(exception);
+        }
+    }
+
     @Configuration(proxyBeanMethods = false)
     static class TestDependencies {
 
@@ -350,5 +498,6 @@ class SecEdgarConfigurationTest {
         Clock clock() {
             return FIXED_CLOCK;
         }
+
     }
 }

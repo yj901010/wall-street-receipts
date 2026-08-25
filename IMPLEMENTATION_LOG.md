@@ -4786,3 +4786,99 @@ ADR-036 establishes the single-process SEC live-operation safety gate.
 - Approve the attributed read API and Korean public UI only after provenance,
   point-in-time semantics, rights notices, and stale/error/empty behavior are
   explicit. No live filing value is published by this slice.
+
+## 2026-08-25 — ADR-037 SEC EDGAR decoded-response receipt foundation
+
+Status: in-memory receipt foundation implemented and verified.
+
+ADR-037 establishes the in-memory SEC decoded-response receipt foundation.
+It binds one accepted SEC submissions catalog to the exact decoded bytes
+supplied to its versioned parser without claiming durable source retention.
+
+### Scope and decisions
+
+- Accept only a fully read HTTP `200 application/json` entity. After exactly
+  one advertised gzip/deflate transport decode, hash the exact decoded bytes as
+  lowercase SHA-256 and record their positive byte length.
+- Preserve transport `Content-Encoding` for the receipt but remove the stale
+  encoded `Content-Length` from the decoded downstream header view for
+  gzip/x-gzip/deflate. Keep the provider headers unmodified and let the decoded
+  streaming cap plus the captured decoded length govern the decoded entity.
+- Do not perform charset conversion, JSON normalization, whitespace or line-end
+  normalization, field reordering, or parsed-object reserialization. Use the
+  same owned defensive byte copy as both digest input and parser input, and
+  reject trailing JSON tokens. Validate strict UTF-8 without stripping a valid
+  UTF-8 BOM or transforming the hashed bytes; reject UTF-16, UTF-32, and
+  malformed UTF-8 before receipt creation. Lock the versioned reader against
+  duplicate keys, scalar coercion, floating-point-to-integer coercion, and
+  trailing JSON tokens.
+- Record source URI, UTC-microsecond `capturedAt`, status, media type, normalized
+  transport encoding, optional `ETag`/`Last-Modified`, parser version
+  `SEC_SUBMISSIONS_RECENT_V1`, decoded length, and digest. Attach the receipt to
+  its filing catalog with matching provider, product, URI, and capture time.
+- Apply a deny-by-default response-metadata policy. Preserve only the explicit
+  allowlist above; retain no arbitrary response header, request header, contact
+  email, or complete `User-Agent`.
+- Declare `RECEIPT_ONLY_BODY_NOT_RETAINED`: the bounded decoded body exists only
+  in memory for hashing and parsing and is not part of the receipt. Treat the
+  digest as a local exact-byte identifier, not an SEC signature or proof that
+  SEC authored or sent the response.
+- Require no new API key, account, paid plan, OAuth credential, registration,
+  or plugin. Live operation continues to use only the existing monitored
+  `SEC_CONTACT_EMAIL`, which is outside the receipt.
+
+### Repository surface
+
+- Add the provider-neutral immutable `SourceResponseReceipt` and transient
+  SEC-owned decoded-response capture boundary.
+- Change the SEC provider to obtain the bounded entity as bytes, capture the
+  receipt after complete read, and parse that same owned byte sequence with the
+  dedicated versioned strict reader.
+- Carry the complete receipt through `SecSubmissionsMapper` into
+  `FilingCatalog`, whose invariants reject cross-provider/product/URI/time
+  attachment. Keep decode-plus-map on the package-private capture path; do not
+  claim cryptographic binding against arbitrary in-process construction.
+- Preserve sanitized provider failures for empty bodies, unsupported or
+  ambiguous media/encoding/validator metadata, and unreadable or trailing JSON.
+
+### Retention and non-scope
+
+- Add no durable raw-body store, replay reader, append-only persistence,
+  Flyway migration, database table or row, repository, scheduler, polling loop,
+  controller, OpenAPI contract, or public API/UI publication.
+- Do not claim historical completeness. Historical `filings.files` segment
+  modeling and validation is the next gate; append-only persistence follows
+  that gate. Durable raw-body retention and replay require their own explicit
+  policy before any database write.
+
+### Verification
+
+- Focused SEC configuration, transport, receipt, domain, and mapper suite:
+  **PASS** — 91 tests with zero failures, errors, or skips.
+- Full API Maven verification: **PASS** — 2,157 tests with zero failures,
+  errors, or skips. PostgreSQL 17 Testcontainers/Flyway, H2/Spring/API tests,
+  and Spring Boot packaging completed successfully.
+- Manual live diagnosis made four read-only Apple submissions requests without
+  logging or retaining the body, response values, contact address, or complete
+  User-Agent. It isolated deterministic JSON truncation to Spring consuming the
+  compressed representation's 28,518-byte `Content-Length` against the decoded
+  stream. After the header-boundary fix, the final fifth request passed the
+  complete strict receipt/parser/catalog smoke. The failed attempts produced no
+  product data or durable source artifact.
+- Web regression: **PASS** — ESLint, 42 Vitest files / 569 tests, and the Next.js
+  production build with 12 static-generation steps. Compose validation passed.
+- Repository CI guard: **PASS** — all 42 embedded Python bodies compile and all
+  35 environment-independent bodies execute successfully. Seven bodies are
+  environment-only locally (six require `jsonschema`, one `RUNNER_TEMP`); no
+  guard failed. ADR-034/035/036 reverse projections, ADR-037 exact-manifest and
+  semantics, workflow P0/P1 review, and patch hygiene all pass.
+
+### Next work
+
+- Implement and review the historical submissions-segment contract, including
+  safe filenames, range/cardinality coherence, and deterministic overlap,
+  duplicate, revision, and recent-versus-complete-history handling.
+- Then design append-only receipt and filing persistence, including durable
+  raw-body retention/replay policy, idempotency, revisions, and Flyway schema.
+- Keep scheduling, multi-instance rate coordination, read API, and attributed
+  Korean public UI publication behind their later independent gates.

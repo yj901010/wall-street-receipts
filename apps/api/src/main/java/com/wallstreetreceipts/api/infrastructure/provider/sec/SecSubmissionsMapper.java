@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import com.wallstreetreceipts.api.domain.PersistentInstant;
 import com.wallstreetreceipts.api.domain.filing.FilingCatalog;
 import com.wallstreetreceipts.api.domain.filing.FilingRecord;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecSubmissionsResponse.SecRecentFilings;
 
 /** Pure SEC vendor-to-canonical mapping with no I/O or clock access. */
@@ -19,6 +20,7 @@ public final class SecSubmissionsMapper {
 
     public static final String PROVIDER_NAME = "sec-edgar";
     public static final String PRODUCT_NAME = "edgar-submissions-api";
+    public static final String PARSER_VERSION = "SEC_SUBMISSIONS_RECENT_V1";
 
     private static final String ARCHIVES_BASE_URI =
             "https://www.sec.gov/Archives/edgar/data/";
@@ -28,12 +30,20 @@ public final class SecSubmissionsMapper {
     private SecSubmissionsMapper() {
     }
 
-    public static FilingCatalog toCanonical(
+    static FilingCatalog toCanonical(
             SecSubmissionsResponse source,
-            URI sourceUri,
-            Instant processingTime,
-            Instant capturedAt) {
+            SourceResponseReceipt sourceReceipt,
+            Instant processingTime) {
         Objects.requireNonNull(source, "source must not be null");
+        Objects.requireNonNull(sourceReceipt, "sourceReceipt must not be null");
+        URI sourceUri = sourceReceipt.sourceUri();
+        Instant capturedAt = sourceReceipt.capturedAt();
+        if (!PROVIDER_NAME.equals(sourceReceipt.provider())
+                || !PRODUCT_NAME.equals(sourceReceipt.product())
+                || !PARSER_VERSION.equals(sourceReceipt.parserVersion())) {
+            throw new IllegalArgumentException(
+                    "sourceReceipt must use the SEC submissions parser identity");
+        }
         String cik = canonicalCik(source.cik());
         requireCanonicalSourceUri(cik, sourceUri);
         PersistentInstant.requireMicrosecondPrecision(processingTime, "processingTime");
@@ -88,6 +98,7 @@ public final class SecSubmissionsMapper {
                 sourceUri,
                 processingTime,
                 capturedAt,
+                sourceReceipt,
                 canonical);
     }
 

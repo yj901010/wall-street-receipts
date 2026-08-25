@@ -13,6 +13,10 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRepresentation;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRetention;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.TransportContentEncoding;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecSubmissionsResponse.SecFilings;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecSubmissionsResponse.SecRecentFilings;
 
@@ -58,7 +62,7 @@ class SecSubmissionsMapperTest {
         SecSubmissionsResponse response =
                 new ObjectMapper().readValue(json, SecSubmissionsResponse.class);
         var result = SecSubmissionsMapper.toCanonical(
-                response, SOURCE_URI, PROCESSING_TIME, CAPTURED_AT);
+                response, receipt(CAPTURED_AT), PROCESSING_TIME);
 
         assertThat(result.provider()).isEqualTo("sec-edgar");
         assertThat(result.product()).isEqualTo("edgar-submissions-api");
@@ -130,7 +134,7 @@ class SecSubmissionsMapperTest {
                 recent.isInlineXBRL(), recent.primaryDocument(), recent.primaryDocDescription());
 
         var result = SecSubmissionsMapper.toCanonical(
-                response(nullValue), SOURCE_URI, PROCESSING_TIME, CAPTURED_AT);
+                response(nullValue), receipt(CAPTURED_AT), PROCESSING_TIME);
         assertThat(result.filings().get(1).reportDate()).isNull();
     }
 
@@ -174,31 +178,78 @@ class SecSubmissionsMapperTest {
     void rejectsNonCanonicalCikSourceIdentityAndCaptureTimeline() {
         assertThatThrownBy(() -> SecSubmissionsMapper.toCanonical(
                 new SecSubmissionsResponse("12345678901", new SecFilings(validRecent())),
-                SOURCE_URI, PROCESSING_TIME, CAPTURED_AT))
+                receipt(CAPTURED_AT), PROCESSING_TIME))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("10-digit JSON string");
 
         assertThatThrownBy(() -> SecSubmissionsMapper.toCanonical(
                 response(validRecent()),
-                URI.create("https://data.sec.gov/submissions/CIK0000789019.json"),
-                PROCESSING_TIME,
-                CAPTURED_AT))
+                receipt(
+                        URI.create("https://data.sec.gov/submissions/CIK0000789019.json"),
+                        CAPTURED_AT),
+                PROCESSING_TIME))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("requested SEC submissions path");
 
         assertThatThrownBy(() -> SecSubmissionsMapper.toCanonical(
-                response(validRecent()), SOURCE_URI, CAPTURED_AT, PROCESSING_TIME))
+                response(validRecent()), receipt(PROCESSING_TIME), CAPTURED_AT))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("capturedAt must not precede processingTime");
     }
 
+    @Test
+    void rejectsAReceiptFromAnotherParserIdentity() {
+        SourceResponseReceipt wrongParser = new SourceResponseReceipt(
+                SecSubmissionsMapper.PROVIDER_NAME,
+                SecSubmissionsMapper.PRODUCT_NAME,
+                SOURCE_URI,
+                200,
+                "application/json",
+                TransportContentEncoding.IDENTITY,
+                null,
+                null,
+                "DIFFERENT_PARSER_V1",
+                "0".repeat(64),
+                1,
+                CAPTURED_AT,
+                BodyRepresentation.DECODED_HTTP_ENTITY_BODY,
+                BodyRetention.RECEIPT_ONLY_BODY_NOT_RETAINED);
+
+        assertThatThrownBy(() -> SecSubmissionsMapper.toCanonical(
+                response(validRecent()), wrongParser, PROCESSING_TIME))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("sourceReceipt must use the SEC submissions parser identity");
+    }
+
     private static Object map(SecRecentFilings recent) {
         return SecSubmissionsMapper.toCanonical(
-                response(recent), SOURCE_URI, PROCESSING_TIME, CAPTURED_AT);
+                response(recent), receipt(CAPTURED_AT), PROCESSING_TIME);
     }
 
     private static SecSubmissionsResponse response(SecRecentFilings recent) {
         return new SecSubmissionsResponse(CIK, new SecFilings(recent));
+    }
+
+    private static SourceResponseReceipt receipt(Instant capturedAt) {
+        return receipt(SOURCE_URI, capturedAt);
+    }
+
+    private static SourceResponseReceipt receipt(URI sourceUri, Instant capturedAt) {
+        return new SourceResponseReceipt(
+                SecSubmissionsMapper.PROVIDER_NAME,
+                SecSubmissionsMapper.PRODUCT_NAME,
+                sourceUri,
+                200,
+                "application/json",
+                TransportContentEncoding.IDENTITY,
+                null,
+                null,
+                SecSubmissionsMapper.PARSER_VERSION,
+                "0".repeat(64),
+                1,
+                capturedAt,
+                BodyRepresentation.DECODED_HTTP_ENTITY_BODY,
+                BodyRetention.RECEIPT_ONLY_BODY_NOT_RETAINED);
     }
 
     private static SecRecentFilings validRecent() {

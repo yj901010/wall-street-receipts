@@ -29,6 +29,8 @@ ADR-035 establishes the default-disabled SEC EDGAR public-provider foundation.
 
 ADR-036 establishes the single-process SEC live-operation safety gate.
 
+ADR-037 establishes the in-memory SEC decoded-response receipt foundation.
+
 SEC submissions metadata adapter는 기본 비활성화다. 로컬에서 명시적으로
 활성화하려면 루트 `.env`에 다음 서버 전용 변수가 있어야 한다.
 
@@ -59,6 +61,36 @@ JSON mapper가 읽을 수 있는 decoded response는 8 MiB로 제한된다.
 이는 SEC가 보장한 응답 크기나 `429`/`Retry-After` 계약이 아니라, SEC의 공식
 aggregate 상한과 차단 후 10분 정책을 바탕으로 정한 내부 보수 정책이다.
 
+### In-memory decoded response receipt
+
+HTTP `200 application/json` 응답을 끝까지 읽고, 전송 계층이 광고한 gzip 또는
+deflate를 정확히 한 번 해제한 뒤의 exact bytes에 SHA-256을 계산한다. digest는
+64자리 lowercase hex다. charset 변환, 공백·줄바꿈·필드 순서 등 JSON 정규화,
+파싱 후 재직렬화를 하지 않으며, digest에 사용한 동일한 owned bytes를 parser
+version `SEC_SUBMISSIONS_RECENT_V1`이 읽는다. charset이 없거나 UTF-8로 선언된
+`application/json`만 허용한다. decoded entity 자체도 strict UTF-8이어야 하며
+UTF-16/UTF-32와 malformed UTF-8은 receipt 생성 전에 거부한다. 이 검증은 valid
+UTF-8 BOM을 제거하거나 digest input을 변환하지 않는다. versioned reader는
+duplicate key, scalar coercion, float-to-integer coercion, trailing token도 거부한다.
+gzip/x-gzip/deflate의 원본 `Content-Length`는 압축된 표현의 길이이므로 decoded
+downstream header view에서는 제거하고, receipt용 `Content-Encoding`은 유지한다.
+decoded stream cap과 완독 후 기록한 decoded byte length만 decoded 크기 사실로
+사용한다.
+
+receipt에는 source URI, 완독 뒤 UTC microsecond precision으로 기록한
+`capturedAt`, HTTP status, media type, transport encoding, optional `ETag` 및
+`Last-Modified`, parser version, decoded byte length와 lowercase SHA-256만
+허용된 응답 metadata로 보존한다. 그 밖의 response header는 버리며 request
+header, `SEC_CONTACT_EMAIL`, 전체 `User-Agent`는 보존하지 않는다.
+
+body retention은 `RECEIPT_ONLY_BODY_NOT_RETAINED`다. decoded body는 bounded
+response를 hash하고 parse하는 동안만 메모리에 있고 receipt에는 남지 않는다.
+digest는 동일 bytes 확인용 local identifier일 뿐 SEC 서명이나 SEC 발신 인증이
+아니다. durable raw body, replay, persistence, Flyway/DB, scheduler, controller,
+public API/UI publication은 구현하지 않았다. 다음은 historical submissions
+segment이며, append-only persistence는 그 다음 gate다. 이 foundation에는 새 API
+key, 계정, 유료 플랜 또는 plugin이 필요 없다.
+
 ### Manual SEC live smoke
 
 수동 점검에는 새 API key, 계정, 유료 플랜이 필요 없다. 루트 `.env`에 이미 둔
@@ -72,10 +104,15 @@ aggregate 상한과 차단 후 10분 정책을 바탕으로 정한 내부 보수
 ```powershell
 Set-Location apps/api
 $env:SEC_LIVE_SMOKE = "true"
+$secSmokeExit = 0
 try {
-    .\mvnw.cmd -B -ntp -Psec-live-smoke verify
+    & .\mvnw.cmd -B -ntp -Psec-live-smoke verify
+    $secSmokeExit = $LASTEXITCODE
 } finally {
     Remove-Item Env:SEC_LIVE_SMOKE -ErrorAction SilentlyContinue
+}
+if ($secSmokeExit -ne 0) {
+    throw "SEC live smoke failed with Maven exit code $secSmokeExit"
 }
 ```
 

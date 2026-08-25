@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.wallstreetreceipts.api.domain.PersistentInstant;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt;
 
 /** Immutable capture of a provider response in the provider's published order. */
 public record FilingCatalog(
@@ -18,6 +19,7 @@ public record FilingCatalog(
         URI sourceUri,
         Instant processingTime,
         Instant capturedAt,
+        SourceResponseReceipt sourceReceipt,
         List<FilingRecord> filings) {
 
     private static final Pattern TEN_DIGIT_CIK = Pattern.compile("[0-9]{10}");
@@ -32,6 +34,14 @@ public record FilingCatalog(
         if (capturedAt.isBefore(processingTime)) {
             throw new IllegalArgumentException(
                     "capturedAt must not precede processingTime");
+        }
+        Objects.requireNonNull(sourceReceipt, "sourceReceipt must not be null");
+        if (!provider.equals(sourceReceipt.provider())
+                || !product.equals(sourceReceipt.product())
+                || !sourceUri.equals(sourceReceipt.sourceUri())
+                || !capturedAt.equals(sourceReceipt.capturedAt())) {
+            throw new IllegalArgumentException(
+                    "sourceReceipt must identify this exact catalog capture");
         }
 
         Objects.requireNonNull(filings, "filings must not be null");

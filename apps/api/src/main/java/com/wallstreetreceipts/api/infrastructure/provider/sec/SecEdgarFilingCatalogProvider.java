@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -40,11 +41,13 @@ public final class SecEdgarFilingCatalogProvider implements FilingCatalogProvide
     public FilingCatalog loadRecentFilings(String cik) {
         String paddedCik = normalizeCik(cik);
         URI endpoint = baseUrl.resolve(SUBMISSIONS_PATH_TEMPLATE.formatted(paddedCik));
-        SecSubmissionsResponse response = retrieve(endpoint);
-        Instant receivedAt = clock.instant().truncatedTo(ChronoUnit.MICROS);
+        SecRawResponseCapture capture = retrieve(endpoint);
+        Instant receivedAt = capture.receipt().capturedAt();
 
         try {
-            return SecSubmissionsMapper.toCanonical(response, endpoint, receivedAt, receivedAt);
+            return capture.toCanonical(receivedAt);
+        } catch (java.io.IOException exception) {
+            throw SecProviderException.unreadableResponse();
         } catch (RuntimeException exception) {
             throw SecProviderException.invalidResponse();
         }
@@ -55,13 +58,13 @@ public final class SecEdgarFilingCatalogProvider implements FilingCatalogProvide
         return PROVIDER_NAME;
     }
 
-    private SecSubmissionsResponse retrieve(URI endpoint) {
+    private SecRawResponseCapture retrieve(URI endpoint) {
         try {
-            SecSubmissionsResponse response = restClient.get()
+            ResponseEntity<byte[]> response = restClient.get()
                     .uri(endpoint)
                     .retrieve()
                     .onStatus(
-                            status -> !status.is2xxSuccessful(),
+                            status -> status.value() != 200,
                             (request, providerResponse) -> {
                                 int statusCode = providerResponse.getStatusCode().value();
                                 if (statusCode == 429) {
@@ -71,12 +74,19 @@ public final class SecEdgarFilingCatalogProvider implements FilingCatalogProvide
                                 }
                                 throw SecProviderException.httpStatus(statusCode);
                             })
-                    .body(SecSubmissionsResponse.class);
+                    .toEntity(byte[].class);
 
-            if (response == null) {
+            byte[] decodedBody = response.getBody();
+            if (decodedBody == null || decodedBody.length == 0) {
                 throw SecProviderException.unreadableResponse();
             }
-            return response;
+            Instant capturedAt = clock.instant().truncatedTo(ChronoUnit.MICROS);
+            return SecRawResponseCapture.capture(
+                    endpoint,
+                    response.getStatusCode().value(),
+                    response.getHeaders(),
+                    decodedBody,
+                    capturedAt);
         } catch (SecProviderException exception) {
             throw exception;
         } catch (RestClientException exception) {

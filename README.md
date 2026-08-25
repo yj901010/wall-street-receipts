@@ -446,6 +446,8 @@ ADR-035 establishes the default-disabled SEC EDGAR public-provider foundation.
 
 ADR-036 establishes the single-process SEC live-operation safety gate.
 
+ADR-037 establishes the in-memory SEC decoded-response receipt foundation.
+
 ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
 submissions metadata. It is disabled by default and remains server-only. When
 `SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
@@ -478,6 +480,32 @@ persistence, API/UI publication, and production collection remain prohibited.
 The opt-in manual smoke needs no new API key or account and makes one Apple CIK
 request to the exact official origin; see `apps/api/README.md`. Default tests,
 `verify`, and CI remain offline.
+
+The receipt foundation binds each accepted HTTP `200 application/json`
+submissions catalog to the exact fully read bytes exposed after one advertised
+gzip/deflate transport decode. SHA-256 is lowercase and covers those bytes
+without charset conversion, JSON normalization, or reserialization; the same
+owned bytes are then parsed by `SEC_SUBMISSIONS_RECENT_V1`. UTF-16, UTF-32, and
+malformed UTF-8 fail before receipt creation without transforming valid UTF-8
+bytes or removing their BOM. Duplicate keys, scalar coercion,
+floating-point-to-integer coercion, and trailing JSON tokens also fail closed.
+For gzip/x-gzip/deflate, the encoded representation's stale `Content-Length`
+is removed from the decoded downstream header view while `Content-Encoding`
+is retained for the receipt; the decoded stream cap and captured decoded byte
+length remain authoritative.
+The receipt carries the source URI, `capturedAt`,
+status, media type, transport encoding, optional
+`ETag`/`Last-Modified`, parser version, decoded length, and digest. Only that
+response metadata allowlist is retained. Request headers, contact email, and
+complete `User-Agent` are not receipt data.
+
+`RECEIPT_ONLY_BODY_NOT_RETAINED` is literal: the bounded decoded body is
+transient parsing memory and is not durably retained. Its digest is a local
+byte-identity check, not an SEC signature or sender authentication. ADR-037
+adds no durable raw body, replay, persistence, database, scheduler, controller,
+or publication surface. Historical submissions-segment modeling is next;
+append-only persistence follows it. Neither step nor ADR-037 requires a new API
+key or account.
 
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,

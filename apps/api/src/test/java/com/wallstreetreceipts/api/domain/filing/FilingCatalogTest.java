@@ -10,6 +10,11 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRepresentation;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRetention;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.TransportContentEncoding;
+
 class FilingCatalogTest {
 
     private static final Instant ACCEPTED_AT =
@@ -73,14 +78,14 @@ class FilingCatalogTest {
         assertThatThrownBy(() -> new FilingCatalog(
                 "sec-edgar", " ", "0000320193",
                 URI.create("https://data.sec.gov/submissions/CIK0000320193.json"),
-                PROCESSING_TIME, CAPTURED_AT, List.of()))
+                PROCESSING_TIME, CAPTURED_AT, receipt(), List.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("product must be nonblank and trimmed");
 
         assertThatThrownBy(() -> new FilingCatalog(
                 "sec-edgar", "edgar-submissions-api", "0000320193",
                 URI.create("https://data.sec.gov/submissions/CIK0000320193.json"),
-                PROCESSING_TIME.plusNanos(1), CAPTURED_AT, List.of()))
+                PROCESSING_TIME.plusNanos(1), CAPTURED_AT, receipt(), List.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("microsecond precision");
 
@@ -94,11 +99,60 @@ class FilingCatalogTest {
                 .hasMessageContaining("processingTime must not precede filing acceptedAt");
     }
 
+    @Test
+    void rejectsAReceiptForADifferentCatalogCapture() {
+        SourceResponseReceipt wrongCapture = new SourceResponseReceipt(
+                "sec-edgar",
+                "edgar-submissions-api",
+                URI.create("https://data.sec.gov/submissions/CIK0000789019.json"),
+                200,
+                "application/json",
+                TransportContentEncoding.IDENTITY,
+                null,
+                null,
+                "SEC_SUBMISSIONS_RECENT_V1",
+                "0".repeat(64),
+                1,
+                CAPTURED_AT,
+                BodyRepresentation.DECODED_HTTP_ENTITY_BODY,
+                BodyRetention.RECEIPT_ONLY_BODY_NOT_RETAINED);
+
+        assertThatThrownBy(() -> new FilingCatalog(
+                "sec-edgar",
+                "edgar-submissions-api",
+                "0000320193",
+                URI.create("https://data.sec.gov/submissions/CIK0000320193.json"),
+                PROCESSING_TIME,
+                CAPTURED_AT,
+                wrongCapture,
+                List.of()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("sourceReceipt must identify this exact catalog capture");
+    }
+
     private static FilingCatalog catalog(List<FilingRecord> filings) {
         return new FilingCatalog(
                 "sec-edgar", "edgar-submissions-api", "0000320193",
                 URI.create("https://data.sec.gov/submissions/CIK0000320193.json"),
-                PROCESSING_TIME, CAPTURED_AT, filings);
+                PROCESSING_TIME, CAPTURED_AT, receipt(), filings);
+    }
+
+    private static SourceResponseReceipt receipt() {
+        return new SourceResponseReceipt(
+                "sec-edgar",
+                "edgar-submissions-api",
+                URI.create("https://data.sec.gov/submissions/CIK0000320193.json"),
+                200,
+                "application/json",
+                TransportContentEncoding.IDENTITY,
+                null,
+                null,
+                "SEC_SUBMISSIONS_RECENT_V1",
+                "0".repeat(64),
+                1,
+                CAPTURED_AT,
+                BodyRepresentation.DECODED_HTTP_ENTITY_BODY,
+                BodyRetention.RECEIPT_ONLY_BODY_NOT_RETAINED);
     }
 
     private static FilingRecord filing(String accessionNumber) {
