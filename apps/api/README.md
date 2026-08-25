@@ -27,6 +27,8 @@ $env:SPRING_PROFILES_ACTIVE = "local"
 
 ADR-035 establishes the default-disabled SEC EDGAR public-provider foundation.
 
+ADR-036 establishes the single-process SEC live-operation safety gate.
+
 SEC submissions metadata adapter는 기본 비활성화다. 로컬에서 명시적으로
 활성화하려면 루트 `.env`에 다음 서버 전용 변수가 있어야 한다.
 
@@ -40,6 +42,54 @@ SEC는 API key 대신 선언된 연락처 User-Agent를 요구한다. 실제 연
 `.env.example`, 로그, HTTP 응답, Git에 넣지 않는다. 현재 adapter에는 DB 적재,
 스케줄러, controller 또는 web consumer가 없으므로 활성화만으로 외부 요청이
 발생하지 않는다.
+
+SEC 공식 fair-access 상한은 여러 머신을 합쳐 초당 10회다. 애플리케이션 내부
+정책은 단일 JVM에서 모든 SEC 요청을 하나의 limiter로 묶어 초당 8회, 요청 사이
+최소 125ms로 고정하고 유휴 permit을 모아 burst하지 않는다. 이 제한은
+process-local이므로 여러 replica, 독립 실행 도구, scheduler를 함께 실행할
+근거가 아니다.
+
+JSON mapper가 읽을 수 있는 decoded response는 8 MiB로 제한된다.
+`Content-Length`가 없거나 chunked인 응답, gzip/deflate 압축이 8 MiB보다 크게
+풀리는 응답도 stream 경계에서 fail closed한다. HTTP `429`는 자동 재시도하지
+않는다. 유효한 delta-seconds 또는 RFC 1123 `Retry-After`는 cooldown 기간에만
+사용하고, 누락·오류·과거 시각·10분 미만이면 최소 10분을 적용한다. cooldown
+중인 호출은 요청 스레드를 10분간 재우지 않고 네트워크 전에 즉시 실패한다.
+
+이는 SEC가 보장한 응답 크기나 `429`/`Retry-After` 계약이 아니라, SEC의 공식
+aggregate 상한과 차단 후 10분 정책을 바탕으로 정한 내부 보수 정책이다.
+
+### Manual SEC live smoke
+
+수동 점검에는 새 API key, 계정, 유료 플랜이 필요 없다. 루트 `.env`에 이미 둔
+실제 모니터링 가능한 `SEC_CONTACT_EMAIL`만 사용하며, 값을 채팅·명령 출력·Git에
+노출하지 않는다. 점검은 `https://data.sec.gov`에 Apple CIK `0000320193`를
+정확히 한 번 요청하고 응답 body, 연락처, 전체 User-Agent, header를 저장하거나
+로그하지 않는다.
+
+저장소 루트의 PowerShell에서 다음처럼 두 개의 opt-in gate를 모두 명시한다.
+
+```powershell
+Set-Location apps/api
+$env:SEC_LIVE_SMOKE = "true"
+try {
+    .\mvnw.cmd -B -ntp -Psec-live-smoke verify
+} finally {
+    Remove-Item Env:SEC_LIVE_SMOKE -ErrorAction SilentlyContinue
+}
+```
+
+`sec-live-smoke` profile과 `SEC_LIVE_SMOKE=true` 중 하나라도 빠지면 live
+request를 시작하지 않는다. profile이 `local` Spring profile을 사용해 루트
+`../../.env`의 `SEC_CONTACT_EMAIL`을 서버 설정으로 읽는다. smoke 전용 test가
+provider 활성화와 exact official origin을 강제하므로 `.env`에서
+`SEC_PROVIDER_ENABLED`를 `true`로 바꿀 필요는 없다. 연락처가 없거나 유효하지
+않으면 네트워크 요청 전에 실패하므로 루트 `.env`에만 값을 추가한 뒤 다시
+실행한다.
+
+일반 `test`/`verify`, 기본 Maven profile, CI는 이 점검을 실행하지 않으며 외부
+SEC 네트워크를 사용하지 않는다. 성공한 수동 점검도 스케줄러, 다중 replica,
+DB 적재, API/UI 공개를 승인하지 않는다.
 
 ## Test
 

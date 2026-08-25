@@ -20,11 +20,20 @@ public final class SecEdgarFilingCatalogProvider implements FilingCatalogProvide
     private final RestClient restClient;
     private final URI baseUrl;
     private final Clock clock;
+    private final SecRequestRateLimiter rateLimiter;
+    private final SecRetryAfterPolicy retryAfterPolicy;
 
-    public SecEdgarFilingCatalogProvider(RestClient restClient, URI baseUrl, Clock clock) {
+    public SecEdgarFilingCatalogProvider(
+            RestClient restClient,
+            URI baseUrl,
+            Clock clock,
+            SecRequestRateLimiter rateLimiter,
+            SecRetryAfterPolicy retryAfterPolicy) {
         this.restClient = Objects.requireNonNull(restClient, "restClient");
         this.baseUrl = Objects.requireNonNull(baseUrl, "baseUrl");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.rateLimiter = Objects.requireNonNull(rateLimiter, "rateLimiter");
+        this.retryAfterPolicy = Objects.requireNonNull(retryAfterPolicy, "retryAfterPolicy");
     }
 
     @Override
@@ -54,7 +63,13 @@ public final class SecEdgarFilingCatalogProvider implements FilingCatalogProvide
                     .onStatus(
                             status -> !status.is2xxSuccessful(),
                             (request, providerResponse) -> {
-                                throw SecProviderException.httpStatus(providerResponse.getStatusCode().value());
+                                int statusCode = providerResponse.getStatusCode().value();
+                                if (statusCode == 429) {
+                                    rateLimiter.applyCooldown(
+                                            retryAfterPolicy.cooldownFor(
+                                                    providerResponse.getHeaders()));
+                                }
+                                throw SecProviderException.httpStatus(statusCode);
                             })
                     .body(SecSubmissionsResponse.class);
 
@@ -65,6 +80,9 @@ public final class SecEdgarFilingCatalogProvider implements FilingCatalogProvide
         } catch (SecProviderException exception) {
             throw exception;
         } catch (RestClientException exception) {
+            if (SecResponseSizeLimitInterceptor.causedByLimitExceeded(exception)) {
+                throw SecProviderException.responseTooLarge();
+            }
             throw SecProviderException.unreadableResponse();
         }
     }

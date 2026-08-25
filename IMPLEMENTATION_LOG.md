@@ -4688,3 +4688,101 @@ ADR-035 establishes the default-disabled SEC EDGAR public-provider foundation.
   storage, display, and redistribution contract is approved. BEA and EIA need
   new canonical product surfaces rather than being forced into the closed
   six-series call-context snapshot.
+
+## 2026-08-25 — ADR-036 SEC EDGAR single-process live-operation guardrails
+
+Status: implementation and repository verification complete for the bounded
+single-JVM request path and explicit one-request live smoke boundary.
+
+ADR-036 establishes the single-process SEC live-operation safety gate.
+
+### Scope and decisions
+
+- Preserve the SEC-published aggregate ceiling of 10 requests/second and its
+  post-limit 10-minute recovery rule as external constraints. Apply a stricter
+  internal one-JVM limit of 8 requests/second with fixed 125 ms spacing and no
+  accumulated idle burst. This is not aggregate coordination across replicas,
+  hosts, or independent tools.
+- Bound successful SEC submissions bodies at 8 MiB after decompression. Reject
+  oversized identity `Content-Length` before parsing, stream-cap missing or
+  chunked lengths, and count gzip/deflate expansion against the decoded limit.
+  Malformed lengths and limit overruns fail closed with sanitized errors and
+  close both the limited body and provider response.
+- Never retry HTTP `429` automatically. Parse valid delta-seconds and RFC 1123
+  `Retry-After` only to calculate a process-local cooldown. Missing, invalid,
+  expired, or sub-10-minute values use the 10-minute minimum; longer valid
+  values are honored without overflow. Calls during cooldown fail before
+  network I/O instead of sleeping a request thread for 10 minutes.
+- Keep spacing sleeps outside the shared state monitor. A concurrent 429 can
+  publish cooldown while another caller waits for its spacing permit; the
+  waiter rechecks monotonic progress and cooldown before any permit is issued.
+  A deterministic latch test preserves this ordering.
+- Add a separate `sec-live-smoke` Maven profile and
+  `SEC_LIVE_SMOKE=true` environment gate. The isolated test activates the
+  real production SEC configuration at exactly `https://data.sec.gov`, reads
+  the existing root `.env` contact through the `local` profile, and makes one
+  Apple CIK `0000320193` request. Ordinary builds do not add or compile that
+  source and never run it.
+- Require no new API key, account, paid plan, OAuth credential, or plugin. The
+  existing monitored `SEC_CONTACT_EMAIL` remains the only operator-provided
+  identity. Neither that value nor response bodies or headers are logged,
+  persisted, committed, or supplied through chat.
+- Continue to prohibit a scheduler, polling loop, multi-replica activation,
+  database writer, raw receipt, controller, public API, and UI publication.
+  Those remain separate provenance, persistence, orchestration, and product
+  gates.
+
+### Repository surface
+
+- Add the shared rate limiter and HTTP interceptor, decoded response-size
+  interceptor, and `Retry-After` cooldown policy behind the existing
+  conditional SEC RestClient configuration.
+- Extend the SEC provider to open cooldown on 429 before inspecting any error
+  body and preserve sanitized provider failures for rate-gate, malformed-body,
+  and response-size cases.
+- Add deterministic tests for concurrent spacing, cooldown preemption,
+  interrupt/time failure, retry-header forms and overflow, declared/chunked
+  body sizes, repeat body access, stream closure, and gzip/deflate expansion.
+- Add the profile-only Failsafe smoke source, ADR-036, and operator instructions
+  in both READMEs. Preserve the default-disabled provider, official-origin
+  restriction, existing `.env` contract, and all ADR-035 non-publication
+  boundaries.
+- Preserve the user-owned unstaged `apps/web/next-env.d.ts` content and keep the
+  actual root `.env` ignored and untracked.
+
+### Verification
+
+- Focused SEC configuration/domain/provider suite: **PASS** — 66 tests, zero
+  failures, errors, or skips.
+- Manual opt-in SEC live smoke: **PASS** — one test and exactly one read-only
+  Apple submissions request to the official origin. No response body, filing
+  row, contact value, complete User-Agent, or header was printed or persisted.
+- Default smoke isolation: **PASS** — default `test-compile` excluded the live
+  source; the profile included exactly one Failsafe IT; profile invocation
+  without the environment gate failed before context creation or network I/O.
+- Full API Maven verification with Docker Desktop 29.2.1: **PASS** — 2,132
+  tests, zero failures, errors, or skips. Testcontainers 1.21.3 ran all four
+  PostgreSQL 17.10 migration tests against `postgres:17-alpine`.
+- Web lint: **PASS** with zero warnings. Vitest: **PASS** — 42 files and 569
+  tests. Next.js production build: **PASS** — TypeScript and all 12 static-page
+  generation steps completed; all product routes remain server-rendered on
+  demand.
+- `docker compose --env-file .env.example config --quiet`: **PASS**.
+- CI workflow guard verification: **PASS** — all 41 embedded Python bodies
+  syntax-compile. The ADR-034 historical projection, ADR-035 foundation replay,
+  new ADR-036 exact 16+7+1 surface contract, and all ten affected historical
+  broad-baseline exclusions execute successfully in the local environment.
+- `git diff --check`: **PASS**. The production build rewrote the user-owned
+  `apps/web/next-env.d.ts`, so its original content was restored; its SHA-256
+  remains `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+
+### Next work
+
+- Decide the immutable raw SEC response receipt, digest, capture timestamp,
+  source URI, and retention boundary before any filing metadata persistence.
+- Then add historical submissions-segment completeness and revision handling,
+  followed by append-only persistence. Scheduling requires distributed/global
+  rate and cooldown coordination first.
+- Approve the attributed read API and Korean public UI only after provenance,
+  point-in-time semantics, rights notices, and stale/error/empty behavior are
+  explicit. No live filing value is published by this slice.

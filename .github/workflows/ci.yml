@@ -3346,23 +3346,38 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
-          # Later ADR-035 files are proven by their own exact guard. Replay this
-          # historical boundary against its pre-ADR-035 filesystem/config view.
+          # Later ADR-035/036 files are proven by their own exact guards. Replay
+          # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalog.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingRecord.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderConfigurationException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseDecompressionInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecStringCikDeserializer.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsResponse.java"),
               Path("apps/api/src/main/resources/application-local.yml"),
               Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapperTest.java"),
           }
           require(
-              len(adr035_later_paths) == 16
+              len(adr035_later_paths) == 24
               and all(path.is_file() for path in adr035_later_paths),
-              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+              "SEC historical replay exclusion must remain the exact 17+7 files through ADR-036",
           )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
@@ -4118,23 +4133,38 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035 files are proven by their own exact guard. Replay this
-          # historical boundary against its pre-ADR-035 filesystem/config view.
+          # Later ADR-035/036 files are proven by their own exact guards. Replay
+          # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalog.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingRecord.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderConfigurationException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseDecompressionInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecStringCikDeserializer.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsResponse.java"),
               Path("apps/api/src/main/resources/application-local.yml"),
               Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapperTest.java"),
           }
           require(
-              len(adr035_later_paths) == 16
+              len(adr035_later_paths) == 24
               and all(path.is_file() for path in adr035_later_paths),
-              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+              "SEC historical replay exclusion must remain the exact 17+7 files through ADR-036",
           )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
@@ -10396,23 +10426,38 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035 files are proven by their own exact guard. Replay this
-          # historical boundary against its pre-ADR-035 filesystem/config view.
+          # Later ADR-035/036 files are proven by their own exact guards. Replay
+          # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalog.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingRecord.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderConfigurationException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseDecompressionInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecStringCikDeserializer.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsResponse.java"),
               Path("apps/api/src/main/resources/application-local.yml"),
               Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapperTest.java"),
           }
           require(
-              len(adr035_later_paths) == 16
+              len(adr035_later_paths) == 24
               and all(path.is_file() for path in adr035_later_paths),
-              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+              "SEC historical replay exclusion must remain the exact 17+7 files through ADR-036",
           )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
@@ -12114,23 +12159,38 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035 files are proven by their own exact guard. Replay this
-          # historical boundary against its pre-ADR-035 filesystem/config view.
+          # Later ADR-035/036 files are proven by their own exact guards. Replay
+          # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalog.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingRecord.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderConfigurationException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseDecompressionInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecStringCikDeserializer.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsResponse.java"),
               Path("apps/api/src/main/resources/application-local.yml"),
               Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapperTest.java"),
           }
           require(
-              len(adr035_later_paths) == 16
+              len(adr035_later_paths) == 24
               and all(path.is_file() for path in adr035_later_paths),
-              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+              "SEC historical replay exclusion must remain the exact 17+7 files through ADR-036",
           )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
@@ -12927,23 +12987,38 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035 files are proven by their own exact guard. Replay this
-          # historical boundary against its pre-ADR-035 filesystem/config view.
+          # Later ADR-035/036 files are proven by their own exact guards. Replay
+          # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalog.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingRecord.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderConfigurationException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseDecompressionInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecStringCikDeserializer.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsResponse.java"),
               Path("apps/api/src/main/resources/application-local.yml"),
               Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapperTest.java"),
           }
           require(
-              len(adr035_later_paths) == 16
+              len(adr035_later_paths) == 24
               and all(path.is_file() for path in adr035_later_paths),
-              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+              "SEC historical replay exclusion must remain the exact 17+7 files through ADR-036",
           )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
@@ -13722,23 +13797,38 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035 files are proven by their own exact guard. Replay this
-          # historical boundary against its pre-ADR-035 filesystem/config view.
+          # Later ADR-035/036 files are proven by their own exact guards. Replay
+          # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalog.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingRecord.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderConfigurationException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseDecompressionInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecStringCikDeserializer.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsResponse.java"),
               Path("apps/api/src/main/resources/application-local.yml"),
               Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapperTest.java"),
           }
           require(
-              len(adr035_later_paths) == 16
+              len(adr035_later_paths) == 24
               and all(path.is_file() for path in adr035_later_paths),
-              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+              "SEC historical replay exclusion must remain the exact 17+7 files through ADR-036",
           )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
@@ -14456,23 +14546,38 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035 files are proven by their own exact guard. Replay this
-          # historical boundary against its pre-ADR-035 filesystem/config view.
+          # Later ADR-035/036 files are proven by their own exact guards. Replay
+          # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalog.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingRecord.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderConfigurationException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseDecompressionInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecStringCikDeserializer.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsResponse.java"),
               Path("apps/api/src/main/resources/application-local.yml"),
               Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapperTest.java"),
           }
           require(
-              len(adr035_later_paths) == 16
+              len(adr035_later_paths) == 24
               and all(path.is_file() for path in adr035_later_paths),
-              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+              "SEC historical replay exclusion must remain the exact 17+7 files through ADR-036",
           )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
@@ -15664,23 +15769,38 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035 files are proven by their own exact guard. Replay this
-          # historical boundary against its pre-ADR-035 filesystem/config view.
+          # Later ADR-035/036 files are proven by their own exact guards. Replay
+          # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalog.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingRecord.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderConfigurationException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseDecompressionInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecStringCikDeserializer.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsResponse.java"),
               Path("apps/api/src/main/resources/application-local.yml"),
               Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapperTest.java"),
           }
           require(
-              len(adr035_later_paths) == 16
+              len(adr035_later_paths) == 24
               and all(path.is_file() for path in adr035_later_paths),
-              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+              "SEC historical replay exclusion must remain the exact 17+7 files through ADR-036",
           )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
@@ -16468,23 +16588,38 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035 files are proven by their own exact guard. Replay this
-          # historical boundary against its pre-ADR-035 filesystem/config view.
+          # Later ADR-035/036 files are proven by their own exact guards. Replay
+          # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalog.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingRecord.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderConfigurationException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseDecompressionInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecStringCikDeserializer.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsResponse.java"),
               Path("apps/api/src/main/resources/application-local.yml"),
               Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapperTest.java"),
           }
           require(
-              len(adr035_later_paths) == 16
+              len(adr035_later_paths) == 24
               and all(path.is_file() for path in adr035_later_paths),
-              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+              "SEC historical replay exclusion must remain the exact 17+7 files through ADR-036",
           )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
@@ -17253,23 +17388,38 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035 files are proven by their own exact guard. Replay this
-          # historical boundary against its pre-ADR-035 filesystem/config view.
+          # Later ADR-035/036 files are proven by their own exact guards. Replay
+          # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
-              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalog.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingRecord.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderConfigurationException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseDecompressionInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecStringCikDeserializer.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsResponse.java"),
               Path("apps/api/src/main/resources/application-local.yml"),
               Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecSubmissionsMapperTest.java"),
           }
           require(
-              len(adr035_later_paths) == 16
+              len(adr035_later_paths) == 24
               and all(path.is_file() for path in adr035_later_paths),
-              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+              "SEC historical replay exclusion must remain the exact 17+7 files through ADR-036",
           )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
@@ -18107,21 +18257,193 @@ jobs:
         shell: bash
         run: |
           python <<'PYTHON'
+          import base64
           import hashlib
           import json
           import re
+          import zlib
           from pathlib import Path
 
           def require(condition, message):
               if not condition:
                   raise ValueError(message)
 
+          adr036_new_main_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+          }
+          adr036_new_test_paths = {
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+          }
+          require(
+              len(adr036_new_main_paths) == 4
+              and len(adr036_new_test_paths) == 4
+              and all(path.is_file()
+                      for path in adr036_new_main_paths | adr036_new_test_paths),
+              "ADR-034 historical replay must normalize the exact ADR-036 4+4 delta",
+          )
+
+          historical_overrides = {
+              Path("apps/api/pom.xml"): (
+                  "6db3f998c82f0c399b66075216b0cab22693ff91e8a7c495becf7e3fea7e28a3",
+                  "d4037b95885ca135a794c9cfe2287b8a8ac4a7cd4e1297705b2a39afad1c3206",
+                  (
+                      "eNrVV91v2zYQf/dfIRh9GVCRsdIVRaCo6MuwDs0aNF03YE80Rct0JVIhKX+g6P/eo2jJki1LclB0XZAA0X3+7nh3PIavt1nq"
+                      "rZnSXIrb6QxdTT0mqIy5SG6nf338zX81fR1NwlzJFaPGA2mhb6dLY/IbjDOyZgKRnNAlQ1Il+P79HX6BrsDKxKt+SpWbrea1"
+                      "2mazQZvrUiG4uprhf+7ePYCFjPhcaEMEZU11zW90yX0nKTElzEH3npXQXSJbHTuiXwoi+J5GpbcwkzFLP7lURCU3xC3axMnl"
+                      "RDFhohpimChZ5G/jCOwjnStI3UKRjG2k+ozmUpoQVxIHHaIMXxBqgOhUfCvpQ/jKMOU7HyFuiB1098cVXaNf0exliKvvg4Ri"
+                      "KaRqze6JWeJ9eLjCPWmBpjJDG5Km2ijG4I8ynht9BLkJ1wr7TtqvxH2S81OwNVCb6Jn/8Oeb+4ff3388AhwKyFWP1ZLtJGOm"
+                      "qQKO1f0bFLyHUsH7sFfwHgumdt6b+7ceEbFHiZCCU5J6scwIF95cFiImahfipqXqWJXMGUTAdCORK7ImqIIbzELcIhzkDNOG"
+                      "SmHAC/BqgRkKZug6xGfY1cE0PFeB5kzE0Ii7OyJIwrJ2wdXsFtgjzTbjpFDbkDpKtKtU20pQsll3iZ6U6rMv3Sn42lG9h6Tu"
+                      "chbl1kf536mAppC4iGe5VNAr7qudDtyVjwa1TmBTspnzSU/Czyb7KRNhzFTYsPmZkdAd54/GB5yCGKl+apCreE6/P8BFutuQ"
+                      "XTwfAcqJ+lQq9jPgiIkhc6KZn0ttEsX0Y/r9YTVtDwIbAtLofVUIwzN20vxtrBeAtdfhMqhyMgLsMhgEaUffAML/rBscth8d"
+                      "wKjLpwl9VQhu/FWRcwD9P8B7QQmPBHt8aTnivOBp3Fr8tCwUPVkLKnrHJRpz2LdgaO8irSi2exKurYDTmnt0sXZbHOfo2Zf9"
+                      "ewLZJgP6V4yQ/V3wrSnABF7Pzrp2qwFRCTN2vY1aOg36qRIXNC3i49wcs6OMaNsZdgaglZYixBWnXw+2hnSnjU/tNv1kTdh+"
+                      "19wuRJeZyIj6DKuzFiTXS2kuUy79ygJKPGNP0LSdwbbDPmuWHi6mA625cOVpkcAb8UjdUQf23QtmZt/cdG9H57GntXEXpnFA"
+                      "949V93LdBzwSqAPHxEJC3tQgyqPH5EsU9G3jbMtoYR9M5/qnFujmu7qJoz08376koCLiHulEklSf59cylU1Ik/06bxAPWAyh"
+                      "lBc8KRTpj8ONuiJlA+j2I/GxgFH2B8T76Vx2OxWrs/g3mD0Pgl96Duc00EudgkZ/OCEekZsQ9xRBg6mH2qWi1K+z/UVXPpbt"
+                      "zRFNvgG9OV/C"
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"): (
+                  "f6c3782ce133a471ee94048e036c54c4405b67d8faf1a96aa77e7ce6dd7dbd55",
+                  "7c20a233a7c0b9fa90caf4873da6006cb235fa14a330d3e305f972868df26810",
+                  (
+                      "eNqlWHtX2zYU/z+fQnjdZpcgoGfdzmCshGDa9PBIk9CdM8oyxVESDcfyJJlHKfvsu/IjtmPFQJtzCLZ07+8+de9VQuJdkSlF"
+                      "Hp/jG+L7UglK4c+jLFQSk5BhjwcTNt1tNNg85EKhf8g1wQFV+LzX2a0szpQK8Tv4avuMBqpMoNic4rbPvSvD+mEkiGI8KG9F"
+                      "ivlY0Cm9xV2iFBVBrgkXUyxDwYLpRJA5veHiCo8oCSSeEE9xcYdJEHAVo+IPEfHZhFGxW8vOucIkUjyxOhJU2z9mMUQ7eyL+"
+                      "WdAVPKRC3T0OBwCK3iocJhyMSuwGZOTTdiojVrC72K1FzMAKlh2Ayc/lKYmuZV4E9B0lYyrk48QndMzI4C6kj5N6cZLg9+Or"
+                      "JF20nB79N6JSHSUhrMW4oaMMogcsWcplLDVJzQJAgfXIUzrGEJprBtZhST3cp547nhJxxHyQ1iaK+HzaTSl2vx08gyrFwL31"
+                      "aFgKxtcLAF+EPJD0kAJGKKiUgNuBHBBaBgcbGvsl4TYg3N7pPDqhasbHEu2hCfEldRr7talqZ77KlyAgREonllA9LXYDpR/Q"
+                      "a8JuQZBFwhCH0chn3sYYnK2tsJoLugCCralorMe4sDMj1xCfj8SPYgJwB7WcRoKEYi1Qpl5JfXTfaCQasGuiKJL6THhowkBT"
+                      "1Fc6xdB53+0NW2/d08Gw2zs7PG8PtIg/IBz9OBy9NBybW3jb2l0NBzUSnR0dddqd1vHwoNV3h+e9Y4CCdewJCvS2pU+C3Nnc"
+                      "zIzHU35tOTWgWaVE7bPTU7c9GA46J+7ZuVYx28J8ArZDBKT9+klQPbd1WI+zvVUHlBZnrdKgBSq5J62ONjRdxzoTmU/z+OuP"
+                      "9ddFa+NPsvF5a+PXte9efP/Djy/XN/fe/DX8+/7Lw38bl+tWiTz7rCPLfrPz6RN+hNt5ub8SIGe9BKz8bePyfqv58/ZDYd95"
+                      "82Q1noDlrL/QwS15MnEhNAsfjiDyOQ9H0JcHUNIOiKTnwm/5Pr+h44wtSXFjctsOpHemoZoxaScHOQndQwJg5nxc/jI2Xk0K"
+                      "oa+zo6DMvq478VNew5FMNcyX7PwRH0TMh3qHxGIpXWmiakFCed8t6i8o1M4ALfp8QVIFFmoaD6jtNItYeKQ37bJnDUqaJJTy"
+                      "6UmGlTiebKQuP6PE9RAQAZ2VCQoVk43TgNiFoSQltJ3UpFhSUg71BAH92J0TVgBqF1aLQEXqElo+F6JZ/rhXWIcZ8iY12XYq"
+                      "p04jB9RTA5gXeaTspfpnYJhwnXE9mEiggSppFyRli/jU/ej2DLyl+OpPzZgSu6TwuofAkDoGO3dAQUIZBZoBNBoyzswt1uis"
+                      "hBRSuZI0BpPSEKf/seJJgCFKVeIxnZDIV8ncZxdGQJx3x6apU0JhRLYF/0ppA6uO9SwxrXbb7YKIxUCJW93ucafdGnTOTofv"
+                      "+/D1sXV87n4F6NA9bZ8ddk7fNpE1/czCJgIOH2qxScM0KoUJytbRfcKkZfRrOch2+dVZURtrh9JFuTTulqvN/uIiZFvVKms5"
+                      "xSqcZ9Qz6k+ZNL7twTQG34bqm7qxRveCCshUq5opdsltSxNKWsRMVSuvb0mNHsfLRU3ZBNlL22gPjnfk++jLl2VOzOSBT4Ir"
+                      "CHwBI+mXgt9kBtdfAWzjuGH13TbKRn3EJEonYjSKFIK9YXn0AgK47RX0swp15qHxSIVfNgsuGyws1kLtlrWSRDwnyptByIpQ"
+                      "Troqv80hltE+FlzrVlY2rNrfF8oYc0S3SFNj1Ou5F9LV5cSojPYYkGDesqucy+Yvzx8ZoTFI2Wgmo1DfDem4Dz5N7kXx7cFK"
+                      "5XamAYcMB6SqBnhKVcJmqkqQyjHUs5F2K0oKzhWM/bNSGhVY9R6MqekhMmlSwwYHzJ2HcJE0m7BprYxAjrGcxlVSJlsjyf0I"
+                      "rmdGOWurZ1sj+VLcjDRMHqeg77hUZv3jHXP01jK3P9mh55KKTjDhEIu1Z8biQ0Shcz2f70iQ6VwPwAvWb60KeUXULQHp2/XT"
+                      "K4Pp5JlbSJbbS0FKi+cMnpdLg17LcnzF2Y9vZiYNNb8FbY34GsVwJGOBxgOws7O9OAKrqS6A7LJMt0JH/atKTd+4uETcU1Tp"
+                      "X4w0DJahz5Rtwa3YaqKN7aWjltBinwZTqA+QAj/FqWttv/ploU1Cc7F16TzXbRMuUBaSGAXtpNpVsgxG9PuKZxiMPNfpz0l6"
+                      "iJvCzS8kQlJ4SdQqmFM0K2H6DW1pa5KX39Gr169j4zKkxawdEzglcyum1ptcNT1+Q57utcg+jeYjKo64gN67OC2IZk8mWavl"
+                      "PKw+QXluPDQeGv8DiDqoeQ=="
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"): (
+                  "22eaf1fe072f5b00ee4f00a6e0669fb7317c35529c3af9311a484fb5538be2cb",
+                  "d03297372b7794c4349f8607849580da3c3c4dcaa7938eec184f85bbd856f652",
+                  (
+                      "eNqdVm1v2zYQ/p5fwQoYSqEOm+yr0aGe52HGZjuwkn0qENDS2WZCkRpJ2WlT//cdZcmSbNnpRkAQRfLennvuxIzHz3wFJNYp"
+                      "23IprTMA+MQgMmcZzwQTamk4ruexyw2wzOiNSMAwC3H/6kqkmTaOPPENZwoce5iP+61FJ1JgQ6nj5471sbKOK9ex48CvcMmG"
+                      "a6OVflDi6FTuhGSzxRPEztZ+aLNiNjNCrdDpFLbaPLMtLFgsBSjH5mDdsJj2/7PE6CWGzAmtamsXUONZJkXM/XnmzzKdO/a7"
+                      "kGhnyB2XenVXAtn/AW2JTrlQbFnIt9WgN1m+QFtkKRSXJJbcWhJBPEpW3HRaJGhQQooxWdJ94PXqiuBAWDbcAcEkuYOByHmw"
+                      "yN189vf4t9H8cTqYjMgnEiAfrsHbDPpvCkcPv07GUTSeTaPHu8H9H4/3o8ndX4P7QtFHmy9SYS1CZz8Ox3/+ZNmT1QrVtvTu"
+                      "Fdb5IaaR3NODSEyy4BYejOzaLhiK4BU83e/vUb2IJO0032sa6zVVh4gsKYdbC8tqIYy8ZDMu/pMLA1OtprmUtKk4qD+CsN/W"
+                      "VRo8r+jgUVDOTlQUTp5XUGyjePGuhHd7uD7PNmAMgtIErwUakZonc6S1cvt1S0s6xKKFTLma8SSBZCi8Q0qblEvxDfCT+uO1"
+                      "4x5rUEmmRQFiGZpHVssN0LNUY0uv0zlI6MFS2NCLiY9qImKiM3yBT/N+8gmn6Cigjcp8Q7rsbKQo4w0kA+9bgRs21GKLhgyb"
+                      "qsIeAcm9pnWfY5PxcD6LwpKHRXLM1wY+fqDt3KgjJyfYdbAzOz3kSitsPwV5Cnd7B4x6DZ+a84bzO4JexWtC57ny3fjQ+ghU"
+                      "s/DIH4fub707VWkcZDDeDaYuqRCkTUNvMqjiQql1ii2aNm2XOLS6UYuXVZmfTWeZwyaNWmV6Av2PEKMqUrYCTHRLvBosN6Jm"
+                      "TveRg3dn9rWKsLvmlnZuV8MWZ8j1L+TdfsqE/fnlJcrjGKxd5pKGvYsKqO8DGFPvkIcq6tBrfb0o/AY71s5lZRDHyj14+62h"
+                      "ThADhjzK8d0gUNfYnQFroZOvtDt5rPhrNivOD7EktM4qNiHsgWFHtBeiy5UBnvCFhC761yVwROfKakdJdpl5qyyhvrqclvjp"
+                      "Bed/VfnlSHddJVneDMoSb7X47h+DT0js/wf7XJwk4vt38g73WepDA0uDL1+S19ve7c0uCLsO+7PxmhuL3MKL18SLUb/AY4e3"
+                      "IKR2/YE239+8D7sRUbAlYylhxeXArPK0iSYN8A5D0tz6G55yeI8jC3BbAEVuCVcJub0hiVgJZ4MTwBqUCG4CbAcZcEdR4Lrw"
+                      "XYJauTUWBPngv6u+t7v6FzZCuKM="
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"): (
+                  "9b8a7687f31d560c5eca072cf1c01e184769a6a70ab5e19baa9b2a80d65a27ee",
+                  "0c32bfe660c07cab9dbd8ba5828c3d5949d26580732116f6fc7446eab7439626",
+                  (
+                      "eNqtkcFqwzAMhu95CtFTxiAv0GMp7DIoTV9AsZVWzHVcS04Ko+8+re1oBz0UNoEP1i/9/2ec0H3glsAN+2bCEEQzkR1HnFQa"
+                      "TNxw7DNavzgtmZqUh5E95UbIzasqlS6wg54jBnABRaAlt7oOLY+OkvIQgY5K0QusS1Te0034rCqwSplHVHq4XLeaOW5BsKd3"
+                      "EjHgF9uDa0lJlOt7cX7WThdnUVQjfEi1U02t6UVqjnoeLbIY/C//TPbwCJGmx3SzdrkwiG7PInYXWzgUEoUeOZCHiXUHb5vN"
+                      "Cmbwep/xNGaJmdBjF2hNkiyC6j8CXlzs20vwEAeFjuA7Y/Y8FMcRA/t/JppQfpxvLKfqCyOx6ks="
+                  ),
+              ),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"): (
+                  "162220c172ded6c8c94a0a8cadea4597b9f9d9c3b70707465d230d1f699b313d",
+                  "6962541db5d5c5cfbe667fb0eb4b7fb54424a96e186afb2b6ab7cbac05a241a5",
+                  (
+                      "eNrtWm1T27gW/s6v0PiTM0tEAix94bJ3gzFttkC4iWk73e4wiq0EFcf2WjKQdvjv90iWEzt+IaWUmb1z3TZpZJ2jo6PnvEmK"
+                      "iHtNphS54QzfEt/nIqYU/rmURYJjEjHshsGETfc3NtgsCmOBuCCCuSiMp5hwTmPxBbrEVPXtqQYWBly/c66I2H80pXMVh7fB"
+                      "4byKA49iFkwnMZnR2zC+xoJygW/pGLs+o4HA9l1EXUE9K0zgVxi49DFcZkS4V/g0dK+H8GZI/07g61Q20pjjK0o8Gj893zj9"
+                      "7YSPYR1THoEaaY572mDFlIgQ2N8ycTUChgn/ifwT16WcL2HzhdwQHFCBL4b9/UIjC/HhXNBeHJP5IBFRIkaAQDIr9eoP7DuX"
+                      "RhIlxXeCzSi2fJCnor0fwOQCUfHmUxjQwWTC6crLAMZyr0gMLzDoKfBI7Fnpb17BRlDZQnxsAVyD8CJgK/wSwXz8lUX4zaf+"
+                      "eXGGWT+p+C8JUMJnxASNlVEc0gnYh03cq/3mjg4sQ0OXiMBqcnwuvyg0sK/UW48kisMbBhjH74mf0FGYxDk7qkLLOAxFChnw"
+                      "G4LeAV6SIAAGvSjymUvk4lnpm6F60cgt40GCIBSKFnRCgu+lsZQLS2JSgE4V8ZUQEX4LH2+VafP1OqfGZIUefbj/KfUYceZR"
+                      "c9dVo8tsbUTjG+ZS+fWA6nLEktBS/10CrsHhe+GMsABPmA8M8bH6soggfjjdX4OcBSAEtCeuSMC5LxDEqYtH1LW9KYkLTM91"
+                      "jydgnrEqLHjZafz4ADmeG64PEQtlUysMLY0MfdvYQPDA+twQQTNXO2EB8RE4Q+TYI+fysDeyLy+GJ+hAtmFX+lJqGhIy/PXW"
+                      "Vnf7Be7An+7rV7u7O0Zrv54luBbQLbIGZ07Pci7t015fcjXCiKZC8d/pHZlFPlUoMxpYadeJhrZl99/bR5c9BzjpVukiOIi4"
+                      "3dnea3detre7TqfzWv3F3e2d3V/3Xrx89alRVOWy0XH/I7C2TgbWO+Cu2gB8d9Qzc+NuoqW3xheOtYYG7I/ntuUAtX12dD7o"
+                      "n4HsiiZ7apS7xZPxjHEuNbVl9d914NnZ7nRf7eAvPAxAX4WRl8aFDxPmAzZQvGjSLUVZK20ZcW3S+Z6N5oKihd0oot+X0UL9"
+                      "vgmZB1zFRWS2AIPZrDOewCaSGRflklH236KG5BPQ2woaEyyEbhahu1nEnF4h+ZQUAuuc51uwGcW6VZJD56FglEuNmznlj1PO"
+                      "ZmszN5+cDKl+YeBK9eMxCzwnNEuStlLGZktrWT7LUXMzA84l4iVtRpqt2YoCKhc4J0xJ0zmb0dzvNQqky1muv84k+TnxPMiF"
+                      "2fUHyM2OKLismHoXoJPeFNj3Au+URFznbJPEz1K6AnJSDWKqEmtTZtRS2Ytc1SzZW6tiFSGbSjNzM02ezVKX7MlFYXwxsoeX"
+                      "vTf2mbNZ29/4AB59pDz6UHv0LbBpZBrolxVv+AsyWsZa0uWF6FmWfQ6OaBHBce/8/KRv9Zz+4OzyjxF8vO+dXNiPZAxqswZH"
+                      "/bM3m8iYQra4iTw68cEN1EmaLpJn5tJt84b4zBstHdgf4LHkKtXL3Moju4BD5OrvgwVssR8ST2o3EGlXbhqpbzTybJYVnKl5"
+                      "YJddm60WZtz+OyE+oMVY+lUjZyAVpFxlnRcxkwyuCHfC1MFXAK6RD0xC6ggoHUjbi9LkIg0G/xMADZX+YJnS49O+NRyMWs1j"
+                      "uCSSeYPXEz+H/0RrPdXECBJ5s7smBZ5SWLSYg2SYKLQAQM6S2Vg6zQqEVS5VW8Z6+XSNkm/F8I9N5majQ/KoC2ky73k30kNz"
+                      "6r0BqGfuBqREQtb8HOVqvZ/ggqpMR9pcjf00G1CtR8IVti4dEbixVWM3nskMH8BP40KWyse0OVcZmiwQkEOgbzud7U2029mF"
+                      "j+1Xm+jXzs59a4kBsJCA2zDI/CwMtPrTEqofiLA3ImAOcowFAmTQChNw6yKeyzFUupcWXK2fjQ41klms8vCNnPNgYubkaICB"
+                      "qkgDIdFjLnHk2B+dy/OTXr8JQePQm5sGFB8xFW35A0GR0r6m8wMvbEN924bJhpyiUoxrVQMh21EzwdLav60FqErXkNYArtRB"
+                      "VVWEVU1UQQmgO4XVJlMoHEa2hXK5drZQaEKYTz0ktY/eOs65mlxO05Vcz0KLJDJhKb+d6QErXnkhBUohNySg5F3MGYxyURMY"
+                      "K2ktvCuo/pF+MKZfAKT8lPiQtM+od07mcg000m3JGpbhEFZ8ENuBF4UAe7P1TK6wPsf69tmASP7ZeP05D8p2QSOfjU2jPk1b"
+                      "MxP5p0A2DVzIDRPfQ6ADNKbQSjzjnwrTNbw8V+mXcvSGFALJj476WDypcHoXoNNNf/aUzO2ukY8G2hL6gYq9UKKkdewpuYZB"
+                      "enpr3NQ1PVv0ytvCY8CS4/QQXPq+T6fE78XTZAYcvg8yVv8dmiVcbjqp1QOAiFtKA9RFYH2o20EemzLBHwLMj3iZs8T36xT7"
+                      "o3oMgPf/tAblZig/YpyMISodzo/ohCR+UW9ufkMb0mtI8E3dJrX3rSBXPitL+7RSMcWxCnx5Qev6a4fwltxQuR9uNu4jaCUv"
+                      "ud43zhh0xZ0reix34AaTCXMZ8Q8JhwLM/3BFg7NwAHqLgXGfZ/s2Uuj1t5jqtpQmxOd0E0lApZ81ueySFx6nchVrrar9Uw9U"
+                      "ovZwp+GN0Wqcv0w/ZDoaiySSE7YDtfI6Misf7AobUOH3Au8oXQgVr2lxG6sBIGWcyuirVTFXrrYpCJMowlEy9pnbXsyLplIe"
+                      "yM2zhuhbSSu12E5i/6BSW9/JzE0V1JZ24x9U2WSjdTxgJdUmUk8ki169lpIUoGo2ZOqZyxiGEGyl06jOGapPF+p8WXHuGWfz"
+                      "YSkKWcdi45BxpNcajROB4N1lcXMLOsg8ZLFdWpWKrJl4NCUhdXu96zkZHZh68ZiJmMRz7WD4Sv4Lfmj2FK6lJJ3avi61VnkO"
+                      "XW/9ngRAwwX1sD492UoT4H+XijGjVea8qq2HQ279/vhT7Y1/R5b8fYivB6/0NEiecgFIdQL2UxPlxaLJvFOvpFFKjasPLqqB"
+                      "C1PxElefYi91MkzxfBKG0Zi415ImC5PPiN/iIcH/QfhkIFzDlWX1Sy4/WHFm/WLSWKxoFIE8pi1Cc/9Zzu3yMvwgLp7y8O7Z"
+                      "sFGOoM/gnFaU3gQwDxDFC1NcrmgKoyGNYspBleXc8/lDZjHZfpQfyif5IjvvaVUDS2qTm0YxA0aGrg0O/pXqj3q/yVY3Z5/5"
+                      "V2sEk2JW3BQzsvP7ujtPq/VAbrUgo0jiQC1KHXVd/SCPc4vGWGmiqVGADwCQHdGIBh4NXKnnfJl4X3lnRbus6kOS8iQMwyhJ"
+                      "WpXtyy1F4zXKnwhWFR2GPryArtU1gxGrnYna97JiKR58Qdc/q0+3/qore7QUR/JgVlIvrr90GmhiKu8drdDstbdfNNBIUSPl"
+                      "6iSdPLJcGc/ZLl63+dTITCjqnd2mmYXxTPXqdtr/adYALeiv297Ze7G700wyy5Fs7+m9wQYSJuiMq94NnTj7qtSSsmtgxj8e"
+                      "Dk9Uz6ZO/QDWlq7RFQxjBmXLUeiqDS0l5h33j0GKj529LanJXXw38411WBxR7sZMRayc+ivp7jfWaSu3gCk2GfZ4LuiffyF1"
+                      "BLo0cojkzcexldd25e06GYw4VKhpdKnslq/hRTxH5urlWCWN5rD6zlyO0WqtWLskw7cxwMdUc5BbAFICbq7e5cUXzvHly/yJ"
+                      "+/2qC1uOA2FoMY/VhLDodSF03c3lttwphfzPkzFWbW2lbltrPL00uOqDs7uC+j4XCSruHNVfMzNXVaEnUZVo5edcM2R6O8+V"
+                      "n3Wcc9eQVpV4v3G/8V9826DI"
+                  ),
+              ),
+          }
+
+          def historical_bytes(path):
+              current_bytes = path.read_bytes().replace(b"\r\n", b"\n")
+              override = historical_overrides.get(path)
+              if override is None:
+                  return current_bytes
+              current_sha256, historical_sha256, compressed = override
+              require(
+                  hashlib.sha256(current_bytes).hexdigest() == current_sha256,
+                  f"ADR-036 normalized delta changed: {path}",
+              )
+              historical = zlib.decompress(base64.b64decode(compressed))
+              require(
+                  hashlib.sha256(historical).hexdigest() == historical_sha256,
+                  f"ADR-034 embedded b620 historical snapshot is invalid: {path}",
+              )
+              return historical
+
           def digest(paths):
               result = hashlib.sha256()
               for path in sorted(paths, key=lambda value: value.as_posix()):
                   result.update(path.as_posix().encode("utf-8"))
                   result.update(b"\0")
-                  result.update(path.read_bytes().replace(b"\r\n", b"\n"))
+                  result.update(historical_bytes(path))
                   result.update(b"\0")
               return result.hexdigest()
 
@@ -18295,7 +18617,7 @@ jobs:
                   *(path for path in Path("fixtures/v1").rglob("*")
                     if path.is_file()),
                   *(path for path in Path("apps/api/src/main").rglob("*")
-                    if path.is_file()),
+                    if path.is_file() and path not in adr036_new_main_paths),
               },
               key=lambda path: path.as_posix(),
           )
@@ -18308,7 +18630,7 @@ jobs:
           test_web_paths = sorted(
               {
                   *(path for path in Path("apps/api/src/test").rglob("*")
-                    if path.is_file()),
+                    if path.is_file() and path not in adr036_new_test_paths),
                   *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
                     for path in root.rglob("*") if path.is_file()),
                   *(path for path in Path("apps/web").glob("*")
@@ -18399,20 +18721,171 @@ jobs:
         shell: bash
         run: |
           python <<'PYTHON'
+          import base64
           import hashlib
           import re
+          import zlib
           from pathlib import Path
 
           def require(condition, message):
               if not condition:
                   raise ValueError(message)
 
+          adr036_new_main_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicy.java"),
+          }
+          adr036_new_test_paths = {
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiterTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRetryAfterPolicyTest.java"),
+          }
+          require(
+              len(adr036_new_main_paths) == 4
+              and len(adr036_new_test_paths) == 4
+              and all(path.is_file()
+                      for path in adr036_new_main_paths | adr036_new_test_paths),
+              "ADR-035 historical replay must normalize the exact ADR-036 4+4 delta",
+          )
+
+          historical_overrides = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"): (
+                  "f6c3782ce133a471ee94048e036c54c4405b67d8faf1a96aa77e7ce6dd7dbd55",
+                  "7c20a233a7c0b9fa90caf4873da6006cb235fa14a330d3e305f972868df26810",
+                  (
+                      "eNqlWHtX2zYU/z+fQnjdZpcgoGfdzmCshGDa9PBIk9CdM8oyxVESDcfyJJlHKfvsu/IjtmPFQJtzCLZ07+8+de9VQuJdkSlF"
+                      "Hp/jG+L7UglK4c+jLFQSk5BhjwcTNt1tNNg85EKhf8g1wQFV+LzX2a0szpQK8Tv4avuMBqpMoNic4rbPvSvD+mEkiGI8KG9F"
+                      "ivlY0Cm9xV2iFBVBrgkXUyxDwYLpRJA5veHiCo8oCSSeEE9xcYdJEHAVo+IPEfHZhFGxW8vOucIkUjyxOhJU2z9mMUQ7eyL+"
+                      "WdAVPKRC3T0OBwCK3iocJhyMSuwGZOTTdiojVrC72K1FzMAKlh2Ayc/lKYmuZV4E9B0lYyrk48QndMzI4C6kj5N6cZLg9+Or"
+                      "JF20nB79N6JSHSUhrMW4oaMMogcsWcplLDVJzQJAgfXIUzrGEJprBtZhST3cp547nhJxxHyQ1iaK+HzaTSl2vx08gyrFwL31"
+                      "aFgKxtcLAF+EPJD0kAJGKKiUgNuBHBBaBgcbGvsl4TYg3N7pPDqhasbHEu2hCfEldRr7talqZ77KlyAgREonllA9LXYDpR/Q"
+                      "a8JuQZBFwhCH0chn3sYYnK2tsJoLugCCralorMe4sDMj1xCfj8SPYgJwB7WcRoKEYi1Qpl5JfXTfaCQasGuiKJL6THhowkBT"
+                      "1Fc6xdB53+0NW2/d08Gw2zs7PG8PtIg/IBz9OBy9NBybW3jb2l0NBzUSnR0dddqd1vHwoNV3h+e9Y4CCdewJCvS2pU+C3Nnc"
+                      "zIzHU35tOTWgWaVE7bPTU7c9GA46J+7ZuVYx28J8ArZDBKT9+klQPbd1WI+zvVUHlBZnrdKgBSq5J62ONjRdxzoTmU/z+OuP"
+                      "9ddFa+NPsvF5a+PXte9efP/Djy/XN/fe/DX8+/7Lw38bl+tWiTz7rCPLfrPz6RN+hNt5ub8SIGe9BKz8bePyfqv58/ZDYd95"
+                      "82Q1noDlrL/QwS15MnEhNAsfjiDyOQ9H0JcHUNIOiKTnwm/5Pr+h44wtSXFjctsOpHemoZoxaScHOQndQwJg5nxc/jI2Xk0K"
+                      "oa+zo6DMvq478VNew5FMNcyX7PwRH0TMh3qHxGIpXWmiakFCed8t6i8o1M4ALfp8QVIFFmoaD6jtNItYeKQ37bJnDUqaJJTy"
+                      "6UmGlTiebKQuP6PE9RAQAZ2VCQoVk43TgNiFoSQltJ3UpFhSUg71BAH92J0TVgBqF1aLQEXqElo+F6JZ/rhXWIcZ8iY12XYq"
+                      "p04jB9RTA5gXeaTspfpnYJhwnXE9mEiggSppFyRli/jU/ej2DLyl+OpPzZgSu6TwuofAkDoGO3dAQUIZBZoBNBoyzswt1uis"
+                      "hBRSuZI0BpPSEKf/seJJgCFKVeIxnZDIV8ncZxdGQJx3x6apU0JhRLYF/0ppA6uO9SwxrXbb7YKIxUCJW93ucafdGnTOTofv"
+                      "+/D1sXV87n4F6NA9bZ8ddk7fNpE1/czCJgIOH2qxScM0KoUJytbRfcKkZfRrOch2+dVZURtrh9JFuTTulqvN/uIiZFvVKms5"
+                      "xSqcZ9Qz6k+ZNL7twTQG34bqm7qxRveCCshUq5opdsltSxNKWsRMVSuvb0mNHsfLRU3ZBNlL22gPjnfk++jLl2VOzOSBT4Ir"
+                      "CHwBI+mXgt9kBtdfAWzjuGH13TbKRn3EJEonYjSKFIK9YXn0AgK47RX0swp15qHxSIVfNgsuGyws1kLtlrWSRDwnyptByIpQ"
+                      "Troqv80hltE+FlzrVlY2rNrfF8oYc0S3SFNj1Ou5F9LV5cSojPYYkGDesqucy+Yvzx8ZoTFI2Wgmo1DfDem4Dz5N7kXx7cFK"
+                      "5XamAYcMB6SqBnhKVcJmqkqQyjHUs5F2K0oKzhWM/bNSGhVY9R6MqekhMmlSwwYHzJ2HcJE0m7BprYxAjrGcxlVSJlsjyf0I"
+                      "rmdGOWurZ1sj+VLcjDRMHqeg77hUZv3jHXP01jK3P9mh55KKTjDhEIu1Z8biQ0Shcz2f70iQ6VwPwAvWb60KeUXULQHp2/XT"
+                      "K4Pp5JlbSJbbS0FKi+cMnpdLg17LcnzF2Y9vZiYNNb8FbY34GsVwJGOBxgOws7O9OAKrqS6A7LJMt0JH/atKTd+4uETcU1Tp"
+                      "X4w0DJahz5Rtwa3YaqKN7aWjltBinwZTqA+QAj/FqWttv/ploU1Cc7F16TzXbRMuUBaSGAXtpNpVsgxG9PuKZxiMPNfpz0l6"
+                      "iJvCzS8kQlJ4SdQqmFM0K2H6DW1pa5KX39Gr169j4zKkxawdEzglcyum1ptcNT1+Q57utcg+jeYjKo64gN67OC2IZk8mWavl"
+                      "PKw+QXluPDQeGv8DiDqoeQ=="
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java"): (
+                  "22eaf1fe072f5b00ee4f00a6e0669fb7317c35529c3af9311a484fb5538be2cb",
+                  "d03297372b7794c4349f8607849580da3c3c4dcaa7938eec184f85bbd856f652",
+                  (
+                      "eNqdVm1v2zYQ/p5fwQoYSqEOm+yr0aGe52HGZjuwkn0qENDS2WZCkRpJ2WlT//cdZcmSbNnpRkAQRfLennvuxIzHz3wFJNYp"
+                      "23IprTMA+MQgMmcZzwQTamk4ruexyw2wzOiNSMAwC3H/6kqkmTaOPPENZwoce5iP+61FJ1JgQ6nj5471sbKOK9ex48CvcMmG"
+                      "a6OVflDi6FTuhGSzxRPEztZ+aLNiNjNCrdDpFLbaPLMtLFgsBSjH5mDdsJj2/7PE6CWGzAmtamsXUONZJkXM/XnmzzKdO/a7"
+                      "kGhnyB2XenVXAtn/AW2JTrlQbFnIt9WgN1m+QFtkKRSXJJbcWhJBPEpW3HRaJGhQQooxWdJ94PXqiuBAWDbcAcEkuYOByHmw"
+                      "yN189vf4t9H8cTqYjMgnEiAfrsHbDPpvCkcPv07GUTSeTaPHu8H9H4/3o8ndX4P7QtFHmy9SYS1CZz8Ox3/+ZNmT1QrVtvTu"
+                      "Fdb5IaaR3NODSEyy4BYejOzaLhiK4BU83e/vUb2IJO0032sa6zVVh4gsKYdbC8tqIYy8ZDMu/pMLA1OtprmUtKk4qD+CsN/W"
+                      "VRo8r+jgUVDOTlQUTp5XUGyjePGuhHd7uD7PNmAMgtIErwUakZonc6S1cvt1S0s6xKKFTLma8SSBZCi8Q0qblEvxDfCT+uO1"
+                      "4x5rUEmmRQFiGZpHVssN0LNUY0uv0zlI6MFS2NCLiY9qImKiM3yBT/N+8gmn6Cigjcp8Q7rsbKQo4w0kA+9bgRs21GKLhgyb"
+                      "qsIeAcm9pnWfY5PxcD6LwpKHRXLM1wY+fqDt3KgjJyfYdbAzOz3kSitsPwV5Cnd7B4x6DZ+a84bzO4JexWtC57ny3fjQ+ghU"
+                      "s/DIH4fub707VWkcZDDeDaYuqRCkTUNvMqjiQql1ii2aNm2XOLS6UYuXVZmfTWeZwyaNWmV6Av2PEKMqUrYCTHRLvBosN6Jm"
+                      "TveRg3dn9rWKsLvmlnZuV8MWZ8j1L+TdfsqE/fnlJcrjGKxd5pKGvYsKqO8DGFPvkIcq6tBrfb0o/AY71s5lZRDHyj14+62h"
+                      "ThADhjzK8d0gUNfYnQFroZOvtDt5rPhrNivOD7EktM4qNiHsgWFHtBeiy5UBnvCFhC761yVwROfKakdJdpl5qyyhvrqclvjp"
+                      "Bed/VfnlSHddJVneDMoSb7X47h+DT0js/wf7XJwk4vt38g73WepDA0uDL1+S19ve7c0uCLsO+7PxmhuL3MKL18SLUb/AY4e3"
+                      "IKR2/YE239+8D7sRUbAlYylhxeXArPK0iSYN8A5D0tz6G55yeI8jC3BbAEVuCVcJub0hiVgJZ4MTwBqUCG4CbAcZcEdR4Lrw"
+                      "XYJauTUWBPngv6u+t7v6FzZCuKM="
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecProviderException.java"): (
+                  "9b8a7687f31d560c5eca072cf1c01e184769a6a70ab5e19baa9b2a80d65a27ee",
+                  "0c32bfe660c07cab9dbd8ba5828c3d5949d26580732116f6fc7446eab7439626",
+                  (
+                      "eNqtkcFqwzAMhu95CtFTxiAv0GMp7DIoTV9AsZVWzHVcS04Ko+8+re1oBz0UNoEP1i/9/2ec0H3glsAN+2bCEEQzkR1HnFQa"
+                      "TNxw7DNavzgtmZqUh5E95UbIzasqlS6wg54jBnABRaAlt7oOLY+OkvIQgY5K0QusS1Te0034rCqwSplHVHq4XLeaOW5BsKd3"
+                      "EjHgF9uDa0lJlOt7cX7WThdnUVQjfEi1U02t6UVqjnoeLbIY/C//TPbwCJGmx3SzdrkwiG7PInYXWzgUEoUeOZCHiXUHb5vN"
+                      "Cmbwep/xNGaJmdBjF2hNkiyC6j8CXlzs20vwEAeFjuA7Y/Y8FMcRA/t/JppQfpxvLKfqCyOx6ks="
+                  ),
+              ),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"): (
+                  "162220c172ded6c8c94a0a8cadea4597b9f9d9c3b70707465d230d1f699b313d",
+                  "6962541db5d5c5cfbe667fb0eb4b7fb54424a96e186afb2b6ab7cbac05a241a5",
+                  (
+                      "eNrtWm1T27gW/s6v0PiTM0tEAix94bJ3gzFttkC4iWk73e4wiq0EFcf2WjKQdvjv90iWEzt+IaWUmb1z3TZpZJ2jo6PnvEmK"
+                      "iHtNphS54QzfEt/nIqYU/rmURYJjEjHshsGETfc3NtgsCmOBuCCCuSiMp5hwTmPxBbrEVPXtqQYWBly/c66I2H80pXMVh7fB"
+                      "4byKA49iFkwnMZnR2zC+xoJygW/pGLs+o4HA9l1EXUE9K0zgVxi49DFcZkS4V/g0dK+H8GZI/07g61Q20pjjK0o8Gj893zj9"
+                      "7YSPYR1THoEaaY572mDFlIgQ2N8ycTUChgn/ifwT16WcL2HzhdwQHFCBL4b9/UIjC/HhXNBeHJP5IBFRIkaAQDIr9eoP7DuX"
+                      "RhIlxXeCzSi2fJCnor0fwOQCUfHmUxjQwWTC6crLAMZyr0gMLzDoKfBI7Fnpb17BRlDZQnxsAVyD8CJgK/wSwXz8lUX4zaf+"
+                      "eXGGWT+p+C8JUMJnxASNlVEc0gnYh03cq/3mjg4sQ0OXiMBqcnwuvyg0sK/UW48kisMbBhjH74mf0FGYxDk7qkLLOAxFChnw"
+                      "G4LeAV6SIAAGvSjymUvk4lnpm6F60cgt40GCIBSKFnRCgu+lsZQLS2JSgE4V8ZUQEX4LH2+VafP1OqfGZIUefbj/KfUYceZR"
+                      "c9dVo8tsbUTjG+ZS+fWA6nLEktBS/10CrsHhe+GMsABPmA8M8bH6soggfjjdX4OcBSAEtCeuSMC5LxDEqYtH1LW9KYkLTM91"
+                      "jydgnrEqLHjZafz4ADmeG64PEQtlUysMLY0MfdvYQPDA+twQQTNXO2EB8RE4Q+TYI+fysDeyLy+GJ+hAtmFX+lJqGhIy/PXW"
+                      "Vnf7Be7An+7rV7u7O0Zrv54luBbQLbIGZ07Pci7t015fcjXCiKZC8d/pHZlFPlUoMxpYadeJhrZl99/bR5c9BzjpVukiOIi4"
+                      "3dnea3detre7TqfzWv3F3e2d3V/3Xrx89alRVOWy0XH/I7C2TgbWO+Cu2gB8d9Qzc+NuoqW3xheOtYYG7I/ntuUAtX12dD7o"
+                      "n4HsiiZ7apS7xZPxjHEuNbVl9d914NnZ7nRf7eAvPAxAX4WRl8aFDxPmAzZQvGjSLUVZK20ZcW3S+Z6N5oKihd0oot+X0UL9"
+                      "vgmZB1zFRWS2AIPZrDOewCaSGRflklH236KG5BPQ2woaEyyEbhahu1nEnF4h+ZQUAuuc51uwGcW6VZJD56FglEuNmznlj1PO"
+                      "ZmszN5+cDKl+YeBK9eMxCzwnNEuStlLGZktrWT7LUXMzA84l4iVtRpqt2YoCKhc4J0xJ0zmb0dzvNQqky1muv84k+TnxPMiF"
+                      "2fUHyM2OKLismHoXoJPeFNj3Au+URFznbJPEz1K6AnJSDWKqEmtTZtRS2Ytc1SzZW6tiFSGbSjNzM02ezVKX7MlFYXwxsoeX"
+                      "vTf2mbNZ29/4AB59pDz6UHv0LbBpZBrolxVv+AsyWsZa0uWF6FmWfQ6OaBHBce/8/KRv9Zz+4OzyjxF8vO+dXNiPZAxqswZH"
+                      "/bM3m8iYQra4iTw68cEN1EmaLpJn5tJt84b4zBstHdgf4LHkKtXL3Moju4BD5OrvgwVssR8ST2o3EGlXbhqpbzTybJYVnKl5"
+                      "YJddm60WZtz+OyE+oMVY+lUjZyAVpFxlnRcxkwyuCHfC1MFXAK6RD0xC6ggoHUjbi9LkIg0G/xMADZX+YJnS49O+NRyMWs1j"
+                      "uCSSeYPXEz+H/0RrPdXECBJ5s7smBZ5SWLSYg2SYKLQAQM6S2Vg6zQqEVS5VW8Z6+XSNkm/F8I9N5majQ/KoC2ky73k30kNz"
+                      "6r0BqGfuBqREQtb8HOVqvZ/ggqpMR9pcjf00G1CtR8IVti4dEbixVWM3nskMH8BP40KWyse0OVcZmiwQkEOgbzud7U2029mF"
+                      "j+1Xm+jXzs59a4kBsJCA2zDI/CwMtPrTEqofiLA3ImAOcowFAmTQChNw6yKeyzFUupcWXK2fjQ41klms8vCNnPNgYubkaICB"
+                      "qkgDIdFjLnHk2B+dy/OTXr8JQePQm5sGFB8xFW35A0GR0r6m8wMvbEN924bJhpyiUoxrVQMh21EzwdLav60FqErXkNYArtRB"
+                      "VVWEVU1UQQmgO4XVJlMoHEa2hXK5drZQaEKYTz0ktY/eOs65mlxO05Vcz0KLJDJhKb+d6QErXnkhBUohNySg5F3MGYxyURMY"
+                      "K2ktvCuo/pF+MKZfAKT8lPiQtM+od07mcg000m3JGpbhEFZ8ENuBF4UAe7P1TK6wPsf69tmASP7ZeP05D8p2QSOfjU2jPk1b"
+                      "MxP5p0A2DVzIDRPfQ6ADNKbQSjzjnwrTNbw8V+mXcvSGFALJj476WDypcHoXoNNNf/aUzO2ukY8G2hL6gYq9UKKkdewpuYZB"
+                      "enpr3NQ1PVv0ytvCY8CS4/QQXPq+T6fE78XTZAYcvg8yVv8dmiVcbjqp1QOAiFtKA9RFYH2o20EemzLBHwLMj3iZs8T36xT7"
+                      "o3oMgPf/tAblZig/YpyMISodzo/ohCR+UW9ufkMb0mtI8E3dJrX3rSBXPitL+7RSMcWxCnx5Qev6a4fwltxQuR9uNu4jaCUv"
+                      "ud43zhh0xZ0reix34AaTCXMZ8Q8JhwLM/3BFg7NwAHqLgXGfZ/s2Uuj1t5jqtpQmxOd0E0lApZ81ueySFx6nchVrrar9Uw9U"
+                      "ovZwp+GN0Wqcv0w/ZDoaiySSE7YDtfI6Misf7AobUOH3Au8oXQgVr2lxG6sBIGWcyuirVTFXrrYpCJMowlEy9pnbXsyLplIe"
+                      "yM2zhuhbSSu12E5i/6BSW9/JzE0V1JZ24x9U2WSjdTxgJdUmUk8ki169lpIUoGo2ZOqZyxiGEGyl06jOGapPF+p8WXHuGWfz"
+                      "YSkKWcdi45BxpNcajROB4N1lcXMLOsg8ZLFdWpWKrJl4NCUhdXu96zkZHZh68ZiJmMRz7WD4Sv4Lfmj2FK6lJJ3avi61VnkO"
+                      "XW/9ngRAwwX1sD492UoT4H+XijGjVea8qq2HQ279/vhT7Y1/R5b8fYivB6/0NEiecgFIdQL2UxPlxaLJvFOvpFFKjasPLqqB"
+                      "C1PxElefYi91MkzxfBKG0Zi415ImC5PPiN/iIcH/QfhkIFzDlWX1Sy4/WHFm/WLSWKxoFIE8pi1Cc/9Zzu3yMvwgLp7y8O7Z"
+                      "sFGOoM/gnFaU3gQwDxDFC1NcrmgKoyGNYspBleXc8/lDZjHZfpQfyif5IjvvaVUDS2qTm0YxA0aGrg0O/pXqj3q/yVY3Z5/5"
+                      "V2sEk2JW3BQzsvP7ujtPq/VAbrUgo0jiQC1KHXVd/SCPc4vGWGmiqVGADwCQHdGIBh4NXKnnfJl4X3lnRbus6kOS8iQMwyhJ"
+                      "WpXtyy1F4zXKnwhWFR2GPryArtU1gxGrnYna97JiKR58Qdc/q0+3/qore7QUR/JgVlIvrr90GmhiKu8drdDstbdfNNBIUSPl"
+                      "6iSdPLJcGc/ZLl63+dTITCjqnd2mmYXxTPXqdtr/adYALeiv297Ze7G700wyy5Fs7+m9wQYSJuiMq94NnTj7qtSSsmtgxj8e"
+                      "Dk9Uz6ZO/QDWlq7RFQxjBmXLUeiqDS0l5h33j0GKj529LanJXXw38411WBxR7sZMRayc+ivp7jfWaSu3gCk2GfZ4LuiffyF1"
+                      "BLo0cojkzcexldd25e06GYw4VKhpdKnslq/hRTxH5urlWCWN5rD6zlyO0WqtWLskw7cxwMdUc5BbAFICbq7e5cUXzvHly/yJ"
+                      "+/2qC1uOA2FoMY/VhLDodSF03c3lttwphfzPkzFWbW2lbltrPL00uOqDs7uC+j4XCSruHNVfMzNXVaEnUZVo5edcM2R6O8+V"
+                      "n3Wcc9eQVpV4v3G/8V9826DI"
+                  ),
+              ),
+          }
+
+          def historical_bytes(path):
+              current_bytes = path.read_bytes().replace(b"\r\n", b"\n")
+              override = historical_overrides.get(path)
+              if override is None:
+                  return current_bytes
+              current_sha256, historical_sha256, compressed = override
+              require(
+                  hashlib.sha256(current_bytes).hexdigest() == current_sha256,
+                  f"ADR-036 normalized delta changed: {path}",
+              )
+              historical = zlib.decompress(base64.b64decode(compressed))
+              require(
+                  hashlib.sha256(historical).hexdigest() == historical_sha256,
+                  f"ADR-035 embedded b620 historical snapshot is invalid: {path}",
+              )
+              return historical
+
           def digest(paths):
               result = hashlib.sha256()
               for path in sorted(paths, key=lambda value: value.as_posix()):
                   result.update(path.as_posix().encode("utf-8"))
                   result.update(b"\0")
-                  result.update(path.read_bytes().replace(b"\r\n", b"\n"))
+                  result.update(historical_bytes(path))
                   result.update(b"\0")
               return result.hexdigest()
 
@@ -18486,8 +18959,12 @@ jobs:
                   main_root / "domain/filing"
               ).glob("*.java"),
               *(
-                  main_root / "infrastructure/provider/sec"
-              ).glob("*.java"),
+                  path
+                  for path in (
+                      main_root / "infrastructure/provider/sec"
+                  ).glob("*.java")
+                  if path not in adr036_new_main_paths
+              ),
               *(
                   path for path in (
                       main_root / "application/port/out/FilingCatalogProvider.java",
@@ -18515,8 +18992,12 @@ jobs:
                   test_root / "domain/filing"
               ).glob("*.java"),
               *(
-                  test_root / "infrastructure/provider/sec"
-              ).glob("*.java"),
+                  path
+                  for path in (
+                      test_root / "infrastructure/provider/sec"
+                  ).glob("*.java")
+                  if path not in adr036_new_test_paths
+              ),
               *(
                   path for path in (
                       test_root / "config/SecEdgarConfigurationTest.java",
@@ -18637,11 +19118,11 @@ jobs:
           )
 
           sources = {
-              path.name: path.read_text(encoding="utf-8")
+              path.name: historical_bytes(path).decode("utf-8")
               for path in expected_main_paths
           }
           tests = {
-              path.name: path.read_text(encoding="utf-8")
+              path.name: historical_bytes(path).decode("utf-8")
               for path in expected_test_paths
           }
           configuration = sources["SecEdgarConfiguration.java"]
@@ -18805,9 +19286,9 @@ jobs:
               *(path for path in Path("fixtures/v1").rglob("*") if path.is_file()),
               *(main_resources / "db/migration").glob("*.sql"),
               *(path for path in main_root.rglob("*.java")
-                if path not in expected_main_paths),
+                if path not in expected_main_paths | adr036_new_main_paths),
               *(path for path in test_root.rglob("*.java")
-                if path not in expected_test_paths),
+                if path not in expected_test_paths | adr036_new_test_paths),
               *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
                 for path in root.rglob("*") if path.is_file()),
           }
@@ -18863,7 +19344,7 @@ jobs:
               *(path for path in Path("fixtures/v1").rglob("*")
                 if path.is_file()),
               *(path for path in Path("apps/api/src/main").rglob("*")
-                if path.is_file()),
+                if path.is_file() and path not in adr036_new_main_paths),
           }
           require(
               len(protected_paths) == 245
@@ -18873,7 +19354,7 @@ jobs:
           )
           test_web_paths = {
               *(path for path in Path("apps/api/src/test").rglob("*")
-                if path.is_file()),
+                if path.is_file() and path not in adr036_new_test_paths),
               *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
                 for path in root.rglob("*") if path.is_file()),
               *(path for path in Path("apps/web").glob("*")
@@ -18892,6 +19373,555 @@ jobs:
               "official one-request transport, strict CIK/document identity, "
               "sanitized failures, publication firewall, locked current "
               "baselines, and mock-only tests"
+          )
+          PYTHON
+
+      - name: Guard SEC EDGAR single-process live-operation safety gate
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import re
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def digest(paths):
+              result = hashlib.sha256()
+              for path in sorted(paths, key=lambda value: value.as_posix()):
+                  result.update(path.as_posix().encode("utf-8"))
+                  result.update(b"\0")
+                  result.update(path.read_bytes().replace(b"\r\n", b"\n"))
+                  result.update(b"\0")
+              return result.hexdigest()
+
+          marker = (
+              "ADR-036 establishes the single-process SEC live-operation "
+              "safety gate."
+          )
+          adr_path = Path(
+              "decisions/ADR-036-sec-edgar-live-operation-guardrails.md"
+          )
+          marker_paths = (
+              adr_path,
+              Path("README.md"),
+              Path("apps/api/README.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+          )
+          documents = {}
+          for path in marker_paths:
+              require(path.is_file(), f"Missing ADR-036 contract document: {path}")
+              source = path.read_text(encoding="utf-8")
+              documents[path] = source
+              require(
+                  source.count(marker) == 1,
+                  f"ADR-036 marker must occur exactly once: {path}",
+              )
+          adr = documents[adr_path]
+          require(
+              adr.startswith(
+                  "# ADR-036 — SEC EDGAR Single-Process Live-Operation Guardrails\n\n"
+                  "- Status: Accepted\n- Date: 2026-08-25\n"
+              ),
+              "ADR-036 title, accepted status, or date changed",
+          )
+          required_adr_terms = (
+              "10 requests per second in aggregate",
+              "at most 8 requests per second with fixed 125 millisecond spacing",
+              "8 MiB (8,388,608 bytes) after",
+              "HTTP `429` never causes an automatic retry",
+              "conservative 10-minute minimum",
+              "Request threads are not put to sleep for 10 minutes",
+              "Maven profile `sec-live-smoke`",
+              "`SEC_LIVE_SMOKE=true`",
+              "Apple CIK `0000320193`",
+              "exactly one request",
+              "Ordinary `test`/`verify`",
+              "no database table",
+              "scheduler",
+              "controller",
+              "web consumer",
+          )
+          require(
+              all(term in adr for term in required_adr_terms),
+              "ADR-036 operational, live-smoke, or non-publication semantics changed",
+          )
+
+          main_root = Path("apps/api/src/main/java/com/wallstreetreceipts/api")
+          test_root = Path("apps/api/src/test/java/com/wallstreetreceipts/api")
+          expected_main_paths = {
+              main_root / "application/port/out/FilingCatalogProvider.java",
+              main_root / "config/SecEdgarConfiguration.java",
+              main_root / "config/SecEdgarProperties.java",
+              main_root / "domain/filing/FilingCatalog.java",
+              main_root / "domain/filing/FilingRecord.java",
+              main_root / "infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java",
+              main_root / "infrastructure/provider/sec/SecProviderConfigurationException.java",
+              main_root / "infrastructure/provider/sec/SecProviderException.java",
+              main_root / "infrastructure/provider/sec/SecRequestRateLimitInterceptor.java",
+              main_root / "infrastructure/provider/sec/SecRequestRateLimiter.java",
+              main_root / "infrastructure/provider/sec/SecResponseDecompressionInterceptor.java",
+              main_root / "infrastructure/provider/sec/SecResponseSizeLimitInterceptor.java",
+              main_root / "infrastructure/provider/sec/SecRetryAfterPolicy.java",
+              main_root / "infrastructure/provider/sec/SecStringCikDeserializer.java",
+              main_root / "infrastructure/provider/sec/SecSubmissionsMapper.java",
+              main_root / "infrastructure/provider/sec/SecSubmissionsResponse.java",
+          }
+          actual_main_paths = {
+              *(main_root / "domain/filing").glob("*.java"),
+              *(main_root / "infrastructure/provider/sec").glob("*.java"),
+              *(path for path in (
+                  main_root / "application/port/out/FilingCatalogProvider.java",
+                  main_root / "config/SecEdgarConfiguration.java",
+                  main_root / "config/SecEdgarProperties.java",
+              ) if path.is_file()),
+          }
+          require(
+              actual_main_paths == expected_main_paths
+              and len(actual_main_paths) == 16
+              and digest(actual_main_paths)
+                  == "ba498fe945ee318417a9115b3a1a3a593eefe4f114d45efe8a7de1da064370cb",
+              "ADR-036 exact 16-file SEC production surface changed",
+          )
+
+          expected_test_paths = {
+              test_root / "config/SecEdgarConfigurationTest.java",
+              test_root / "domain/filing/FilingCatalogTest.java",
+              test_root / "infrastructure/provider/sec/SecRequestRateLimitInterceptorTest.java",
+              test_root / "infrastructure/provider/sec/SecRequestRateLimiterTest.java",
+              test_root / "infrastructure/provider/sec/SecResponseSizeLimitInterceptorTest.java",
+              test_root / "infrastructure/provider/sec/SecRetryAfterPolicyTest.java",
+              test_root / "infrastructure/provider/sec/SecSubmissionsMapperTest.java",
+          }
+          actual_test_paths = {
+              *(test_root / "domain/filing").glob("*.java"),
+              *(test_root / "infrastructure/provider/sec").glob("*.java"),
+              test_root / "config/SecEdgarConfigurationTest.java",
+          }
+          require(
+              actual_test_paths == expected_test_paths
+              and len(actual_test_paths) == 7
+              and digest(actual_test_paths)
+                  == "fc6b6f4dfcf25ac1da694595fd1614f1361484e04c7777973a7c9a0171f572c9",
+              "ADR-036 exact seven-file SEC focused test surface changed",
+          )
+
+          live_path = Path(
+              "apps/api/src/sec-live-smoke-test/java/com/wallstreetreceipts/"
+              "api/config/SecEdgarLiveSmokeIT.java"
+          )
+          live_paths = {
+              path for path in Path("apps/api/src/sec-live-smoke-test").rglob("*")
+              if path.is_file()
+          }
+          require(
+              live_paths == {live_path}
+              and digest(live_paths)
+                  == "2e62a932995ce6d4d31bac7698f1d8a7daf0a067eff3d2c79b81fe00cb03460e",
+              "ADR-036 isolated live-smoke source surface changed",
+          )
+
+          pom_path = Path("apps/api/pom.xml")
+          require(
+              pom_path.is_file()
+              and digest({pom_path})
+                  == "faee0805dae9dcf5e090a73d03fa16ead4a79c64fac6f2eb87bd87a1e91d3682",
+              "ADR-036 Maven profile bytes changed",
+          )
+          namespace = {"m": "http://maven.apache.org/POM/4.0.0"}
+          pom_root = ET.parse(pom_path).getroot()
+          profiles = pom_root.findall("m:profiles/m:profile", namespace)
+          require(
+              len(profiles) == 1
+              and profiles[0].findtext("m:id", namespaces=namespace)
+                  == "sec-live-smoke"
+              and profiles[0].find("m:activation", namespace) is None,
+              "SEC live smoke must remain one non-activated Maven profile",
+          )
+          profile = profiles[0]
+          plugins = profile.findall("m:build/m:plugins/m:plugin", namespace)
+          by_artifact = {
+              plugin.findtext("m:artifactId", namespaces=namespace): plugin
+              for plugin in plugins
+          }
+          require(
+              set(by_artifact) == {
+                  "build-helper-maven-plugin",
+                  "maven-surefire-plugin",
+                  "maven-failsafe-plugin",
+              },
+              "SEC live-smoke profile plugin set changed",
+          )
+          helper_sources = by_artifact[
+              "build-helper-maven-plugin"
+          ].findall(
+              "m:executions/m:execution/m:configuration/m:sources/m:source",
+              namespace,
+          )
+          require(
+              [node.text for node in helper_sources]
+                  == ["src/sec-live-smoke-test/java"]
+              and by_artifact["maven-surefire-plugin"].findtext(
+                  "m:configuration/m:skipTests", namespaces=namespace
+              ) == "true",
+              "Default tests and isolated live source must remain separated",
+          )
+          failsafe = by_artifact["maven-failsafe-plugin"]
+          require(
+              [node.text for node in failsafe.findall(
+                  "m:executions/m:execution/m:configuration/m:includes/m:include",
+                  namespace,
+              )] == ["**/SecEdgarLiveSmokeIT.java"]
+              and failsafe.findtext(
+                  "m:executions/m:execution/m:configuration/m:failIfNoTests",
+                  namespaces=namespace,
+              ) == "true"
+              and failsafe.findtext(
+                  "m:executions/m:execution/m:configuration/m:forkCount",
+                  namespaces=namespace,
+              ) == "1"
+              and failsafe.findtext(
+                  "m:executions/m:execution/m:configuration/m:reuseForks",
+                  namespaces=namespace,
+              ) == "false"
+              and failsafe.findtext(
+                  "m:executions/m:execution/m:configuration/"
+                  "m:systemPropertyVariables/m:sec.live-smoke.profile",
+                  namespaces=namespace,
+              ) == "true"
+              and failsafe.findtext(
+                  "m:executions/m:execution/m:configuration/"
+                  "m:systemPropertyVariables/m:spring.profiles.active",
+                  namespaces=namespace,
+              ) == "local",
+              "SEC live smoke Failsafe double-opt-in execution contract changed",
+          )
+
+          sources = {
+              path.name: path.read_text(encoding="utf-8")
+              for path in expected_main_paths
+          }
+          tests = {
+              path.name: path.read_text(encoding="utf-8")
+              for path in expected_test_paths
+          }
+          configuration = sources["SecEdgarConfiguration.java"]
+          provider = sources["SecEdgarFilingCatalogProvider.java"]
+          limiter = sources["SecRequestRateLimiter.java"]
+          rate_interceptor = sources["SecRequestRateLimitInterceptor.java"]
+          size_limit = sources["SecResponseSizeLimitInterceptor.java"]
+          retry_after = sources["SecRetryAfterPolicy.java"]
+          configuration_test = tests["SecEdgarConfigurationTest.java"]
+          limiter_test = tests["SecRequestRateLimiterTest.java"]
+          size_test = tests["SecResponseSizeLimitInterceptorTest.java"]
+          retry_test = tests["SecRetryAfterPolicyTest.java"]
+          main_source = "\n".join(sources.values())
+          test_source = "\n".join(tests.values())
+
+          require(
+              'OFFICIAL_BASE_URL = URI.create("https://data.sec.gov")'
+                  in configuration
+              and "loopbackTestBaseUrlAllowed" in configuration
+              and "productionConfigurationRejectsLoopbackTestOverride"
+                  in configuration_test
+              and '"/submissions/CIK%s.json"' in provider
+              and provider.count("restClient.get()") == 1
+              and provider.count(".retrieve()") == 1
+              and ".post()" not in provider,
+              "SEC official-origin-only one-request transport changed",
+          )
+          interceptor_markers = (
+              ".requestInterceptor(new SecRequestRateLimitInterceptor(rateLimiter))",
+              ".requestInterceptor(new SecResponseSizeLimitInterceptor())",
+              ".requestInterceptor(new SecResponseDecompressionInterceptor())",
+          )
+          require(
+              all(marker in configuration for marker in interceptor_markers)
+              and [configuration.index(marker) for marker in interceptor_markers]
+                  == sorted(configuration.index(marker)
+                            for marker in interceptor_markers),
+              "SEC rate, decoded-size, and decompression interceptor order changed",
+          )
+
+          size_methods = (
+              "acceptsAResponseAtTheExactDecompressedBoundary",
+              "rejectsADeclaredResponseLengthBeforeReadingTheBody",
+              "rejectsMalformedDeclaredLengthWithoutExposingIt",
+              "detectsAnUndeclaredStreamingOverrunWithoutRetainingThePayload",
+              "countsSkippedBytesAgainstTheStreamingLimit",
+              "reusesOneLimitedBodySoRepeatedAccessCannotResetTheCounter",
+              "closesTheLimitedBodyAndResponseDelegate",
+              "appliesTheLimitAfterGzipDecompression",
+              "appliesTheLimitAfterDeflateDecompression",
+          )
+          require(
+              "MAX_DECOMPRESSED_RESPONSE_BYTES = 8L * 1024L * 1024L"
+                  in size_limit
+              and size_limit.index("if (!response.getStatusCode().is2xxSuccessful())")
+                  < size_limit.index("declaredLength =")
+              and "declaredLength > maxResponseBytes" in size_limit
+              and "response.close();" in size_limit
+              and "limitedBody = new SizeLimitedInputStream" in size_limit
+              and "limitedBody.close();" in size_limit
+              and "finally" in size_limit
+              and "delegate.close();" in size_limit
+              and "return requireEndOfStream(super.read());" in size_limit
+              and all(method in size_test for method in size_methods)
+              and "opensFailClosedCooldownAfter429BeforeInspectingAnOversizedErrorBody"
+                  in configuration_test
+              and "rejectsDeclaredIdentityResponseOverDecodedLimitBeforeParsing"
+                  in configuration_test,
+              "Decoded 8 MiB boundary, 429 precedence, or close coverage changed",
+          )
+
+          limiter_methods = (
+              "defaultsToEightRequestsPerSecondWithoutAccumulatingAnIdleBurst",
+              "serializesConcurrentCallersIntoOneAggregateMinimumInterval",
+              "rejectsRatesAboveConservativeCeilingAndNonPositiveRates",
+              "blocksImmediatelyDuringCooldownWithoutSleepingOrIssuingAPermit",
+              "remainsBlockedImmediatelyBeforeExpiryAndPermitsAtExpiry",
+              "shorterCooldownDoesNotReduceExistingLongerRemainingCooldown",
+              "rejectsInvalidOrOverflowingCooldownWithoutChangingLimiterState",
+              "cooldownExpiryIsSafeAcrossNanoTimeWraparound",
+              "cooldownPreemptsACallerAlreadyWaitingForRequestSpacing",
+          )
+          require(
+              "DEFAULT_MAX_REQUESTS_PER_SECOND = 8" in limiter
+              and "ceilDivide(NANOS_PER_SECOND, maximumRequestsPerSecond)"
+                  in limiter
+              and "synchronized (monitor)" in limiter
+              and "sleepOrFailClosed(remainingNanos);" in limiter
+              and limiter.index("sleepOrFailClosed(remainingNanos);")
+                  < limiter.index("private static void requireMonotonicProgress")
+              and "rejectActiveCooldown(observedNanos);" in limiter
+              and "TimeUnit.NANOSECONDS.sleep(durationNanos)" in limiter
+              and "Thread.sleep(" not in main_source
+              and "DEFAULT_INTERVAL_NANOS = 125_000_000L" in limiter_test
+              and "callerCount = 24" in limiter_test
+              and all(method in limiter_test for method in limiter_methods),
+              "Single-JVM max-8 fixed-spacing, no-burst, or race boundary changed",
+          )
+          require(
+              main_source.count("new SecRequestRateLimiter()") == 1
+              and "new SecRequestRateLimitInterceptor(rateLimiter)"
+                  in configuration
+              and rate_interceptor.count("rateLimiter.acquirePermit();") == 1
+              and provider.count("rateLimiter.applyCooldown(") == 1,
+              "Every SEC request and cooldown must share one limiter instance",
+          )
+
+          retry_methods = (
+              "usesMinimumCooldownWhenHeaderIsMissing",
+              "usesMinimumCooldownForInvalidValue",
+              "usesMinimumCooldownForNegativeDeltaSeconds",
+              "raisesSubMinimumDeltaSecondsToMinimumCooldown",
+              "honorsLongerDeltaSeconds",
+              "honorsFutureRfc1123DateBeyondMinimum",
+              "usesMinimumCooldownForPastRfc1123Date",
+              "failsClosedForDeltaSecondsThatOverflowSafeNanosecondRange",
+          )
+          require(
+              "if (statusCode == 429)" in provider
+              and "retryAfterPolicy.cooldownFor(" in provider
+              and "throw SecProviderException.httpStatus(statusCode);" in provider
+              and "Duration.ofMinutes(10)" in retry_after
+              and "DateTimeFormatter.RFC_1123_DATE_TIME" in retry_after
+              and "FAIL_CLOSED_MAXIMUM_COOLDOWN" in retry_after
+              and all(method in retry_test for method in retry_methods)
+              and '"599"' in retry_test
+              and '"901"' in retry_test
+              and all(value not in main_source for value in (
+                  "@Retryable", "RetryTemplate", ".retry(", "Thread.sleep("
+              ))
+              and "while (" not in provider
+              and "for (" not in provider,
+              "429 cooldown-only, minimum-10-minute, or no-retry policy changed",
+          )
+
+          live_source = live_path.read_text(encoding="utf-8")
+          require(
+              live_source.count("@Test") == 1
+              and live_source.count("provider.loadRecentFilings(APPLE_CIK)") == 1
+              and 'APPLE_CIK = "0000320193"' in live_source
+              and 'URI.create("https://data.sec.gov/submissions/CIK0000320193.json")'
+                  in live_source
+              and '"app.public-data.sec.base-url=https://data.sec.gov"'
+                  in live_source
+              and 'OPT_IN_ENVIRONMENT_VARIABLE = "SEC_LIVE_SMOKE"'
+                  in live_source
+              and 'System.getProperty(PROFILE_MARKER_PROPERTY)' in live_source
+              and live_source.index("requireExplicitOptIn();")
+                  < live_source.index("new ApplicationContextRunner()")
+                  < live_source.index("provider.loadRecentFilings(APPLE_CIK)")
+              and re.search(
+                  r"\blog\.(?:debug|info|warn|error|trace)\s*\(",
+                  live_source,
+              ) is None
+              and all(value not in live_source for value in (
+                  "@RepeatedTest", "@ParameterizedTest", "System.out",
+                  "System.err", "println(", "printf(", "printStackTrace(",
+                  "Logger", "Slf4j", "Repository", "DataSource",
+                  "Jdbc", "EntityManager", ".save(", ".insert(", "Files.",
+                  "ObjectMapper", "getHeaders(", "USER_AGENT",
+                  "SEC_CONTACT_EMAIL", "HttpClient.new", "WebClient.create",
+              )),
+              "Double-opt-in one-call Apple live smoke or no-output boundary changed",
+          )
+
+          forbidden_layer_markers = (
+              "@RestController", "@Controller", "@Repository",
+              "@RequestMapping", "@GetMapping", "@PostMapping",
+              "@Scheduled", "SchedulingConfigurer", "CommandLineRunner",
+              "ApplicationRunner", "JdbcTemplate", "EntityManager",
+              "Flyway", "OpenAPI", "Kafka",
+          )
+          require(
+              all(value not in main_source + live_source
+                  for value in forbidden_layer_markers),
+              "ADR-036 must not add controller, persistence, scheduler, or publication wiring",
+          )
+          migration_paths = {
+              path.name for path in Path(
+                  "apps/api/src/main/resources/db/migration"
+              ).glob("*.sql")
+          }
+          require(
+              migration_paths == {
+                  "V1__baseline.sql",
+                  "V2__analyst_calls.sql",
+                  "V3__analyst_call_revisions.sql",
+                  "V4__call_outcomes.sql",
+                  "V5__call_contexts.sql",
+              },
+              "ADR-036 must not add a Flyway migration",
+          )
+          publication_markers = (
+              "secedgar", "secsubmissions", "filingcatalog", "sec-edgar",
+              "edgar-submissions-api", "app.public-data.sec",
+              "/submissions/cik", "/archives/edgar/data",
+          )
+          publication_paths = {
+              Path("contracts/openapi.yaml"),
+              *Path("schemas").glob("*.json"),
+              *(path for path in Path("fixtures/v1").rglob("*") if path.is_file()),
+              *(path for path in main_root.rglob("*.java")
+                if path not in expected_main_paths),
+              *(path for path in test_root.rglob("*.java")
+                if path not in expected_test_paths),
+              *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                for path in root.rglob("*") if path.is_file()),
+          }
+          for path in publication_paths:
+              source = path.read_text(
+                  encoding="utf-8", errors="ignore"
+              ).lower()
+              require(
+                  not any(marker in source for marker in publication_markers),
+                  f"ADR-036 must not publish SEC data or configuration: {path}",
+              )
+
+          require(
+              "MockRestServiceServer.bindTo(restClientBuilder)"
+                  in configuration_test
+              and all(value not in test_source for value in (
+                  "HttpClient.newHttpClient(", "RestClient.create(",
+                  "WebClient.create(", ".openConnection(", "new Socket(",
+              )),
+              "Ordinary SEC tests must remain deterministic and offline",
+          )
+          workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+          guard_step = (
+              "\n      - name: Guard SEC EDGAR single-process "
+              "live-operation safety gate\n"
+          )
+          guard_start = workflow.index(guard_step)
+          guard_end = workflow.index(
+              "\n      - name: ", guard_start + len(guard_step)
+          )
+          workflow_without_this_guard = workflow[:guard_start] + workflow[guard_end:]
+          require(
+              workflow_without_this_guard.count(
+                  "run: ./mvnw -B -ntp verify"
+              ) == 1
+              and all(marker not in workflow_without_this_guard for marker in (
+                  "SEC_LIVE_SMOKE", "-Psec-live-smoke",
+                  "src/sec-live-smoke-test", "SecEdgarLiveSmokeIT",
+                  "sec.live-smoke.profile",
+              ))
+              and re.search(
+                  r"(?:curl|wget|Invoke-WebRequest)[^\n]*data\.sec\.gov",
+                  workflow_without_this_guard,
+                  re.IGNORECASE,
+              ) is None,
+              "Default Maven/CI must never activate or invoke the SEC live smoke",
+          )
+
+          config_paths = {
+              Path(".env.example"),
+              Path("apps/api/src/main/resources/application.yml"),
+              Path("apps/api/src/main/resources/application-local.yml"),
+              Path("apps/api/src/test/resources/application-test.yml"),
+          }
+          require(
+              len(config_paths) == 4
+              and digest(config_paths)
+                  == "c667d625d56663217470dd9652ae0c6da9225c48427919009717e1148bc5c328",
+              "ADR-036 must preserve the disabled server-only SEC configuration",
+          )
+          protected_paths = {
+              Path("contracts/openapi.yaml"),
+              *Path("schemas").glob("*.json"),
+              *(path for path in Path("fixtures/v1").rglob("*") if path.is_file()),
+              *(path for path in Path("apps/api/src/main").rglob("*")
+                if path.is_file()),
+          }
+          test_web_paths = {
+              *(path for path in Path("apps/api/src/test").rglob("*")
+                if path.is_file()),
+              *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                for path in root.rglob("*") if path.is_file()),
+              *(path for path in Path("apps/web").glob("*")
+                if path.is_file() and path.name != "next-env.d.ts"),
+          }
+          dependency_runtime_paths = {
+              Path("apps/api/pom.xml"),
+              Path("apps/api/mvnw"),
+              Path("apps/api/mvnw.cmd"),
+              Path("apps/api/.mvn/wrapper/maven-wrapper.properties"),
+              Path("package.json"),
+              Path("pnpm-lock.yaml"),
+              Path("pnpm-workspace.yaml"),
+              Path("compose.yaml"),
+              Path(".env.example"),
+          }
+          require(
+              len(protected_paths) == 249
+              and digest(protected_paths)
+                  == "f569133da2228f1fc110f53d7c132a47a946a2655f05d0f899213ff30537d0e4",
+              "ADR-036 protected production/config baseline changed",
+          )
+          require(
+              len(test_web_paths) == 212
+              and digest(test_web_paths)
+                  == "2446b5971971cd737aa4221e1ecdea576e9684717b50a40a36f35e10862720fc",
+              "ADR-036 API-test/web baseline changed",
+          )
+          require(
+              len(dependency_runtime_paths) == 9
+              and all(path.is_file() for path in dependency_runtime_paths)
+              and digest(dependency_runtime_paths)
+                  == "8cccb8b3593eddc92713eab6972edaf91b6adf0db63009de20aa799220adf691",
+              "ADR-036 dependency/runtime baseline changed",
+          )
+
+          print(
+              "Validated ADR-036 exact 16+7+1 SEC surfaces, official-only "
+              "single-request transport, decoded 8 MiB bound, shared max-8 "
+              "fixed spacing, 429 cooldown-only handling, double-opt-in "
+              "one-call Apple smoke, default-offline CI, and publication firewall"
           )
           PYTHON
 

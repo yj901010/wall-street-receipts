@@ -17,4 +17,13 @@ public final class SecProviderException extends RuntimeException {
     static SecProviderException invalidResponse() {
         return new SecProviderException("SEC submissions response was invalid");
     }
+
+    static SecProviderException responseTooLarge() {
+        return new SecProviderException("SEC submissions response exceeded the size limit");
+    }
+
+    static SecProviderException requestNotStarted() {
+        return new SecProviderException(
+                "SEC submissions request was not started because the provider gate is closed");
+    }
 }

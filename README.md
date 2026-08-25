@@ -444,6 +444,8 @@ or environment-variable name in P3.
 
 ADR-035 establishes the default-disabled SEC EDGAR public-provider foundation.
 
+ADR-036 establishes the single-process SEC live-operation safety gate.
+
 ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
 submissions metadata. It is disabled by default and remains server-only. When
 `SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
@@ -458,6 +460,24 @@ publication. `BLS_REGISTRATION_KEY`, `BEA_USER_ID`, and `EIA_API_KEY` may be
 present in the local secret file but are deliberately not consumed until their
 own P5 source, revision, canonical-model, and publication decisions are
 approved.
+
+The live-operation guard is intentionally narrower than production ingestion.
+The official SEC ceiling is 10 requests/second in aggregate across machines;
+the internal one-JVM policy instead spaces calls at 8 requests/second (125 ms,
+no accumulated burst). Decoded submissions JSON is capped at 8 MiB even when
+`Content-Length` is absent or compression expands past the limit. HTTP `429`
+is never retried automatically: valid delta-seconds or RFC 1123 `Retry-After`
+only lengthens a process-local cooldown, while missing, invalid, expired, or
+sub-10-minute values use a 10-minute minimum. Calls during cooldown fail before
+network I/O rather than sleeping a request thread.
+
+These are conservative internal controls, not additional SEC service
+guarantees. Process-local enforcement does not make multiple replicas or
+independent tools aggregate-safe, so schedulers, multi-replica activation,
+persistence, API/UI publication, and production collection remain prohibited.
+The opt-in manual smoke needs no new API key or account and makes one Apple CIK
+request to the exact official origin; see `apps/api/README.md`. Default tests,
+`verify`, and CI remain offline.
 
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,

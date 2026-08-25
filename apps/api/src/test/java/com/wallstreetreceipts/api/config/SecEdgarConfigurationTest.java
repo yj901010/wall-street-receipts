@@ -35,6 +35,9 @@ import com.wallstreetreceipts.api.domain.filing.FilingCatalog;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecEdgarFilingCatalogProvider;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecProviderConfigurationException;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecProviderException;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecRequestRateLimiter;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecResponseSizeLimitInterceptor;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecRetryAfterPolicy;
 
 class SecEdgarConfigurationTest {
 
@@ -48,17 +51,24 @@ class SecEdgarConfigurationTest {
     private RestClient.Builder restClientBuilder;
     private MockRestServiceServer server;
     private SecEdgarFilingCatalogProvider provider;
+    private SecRequestRateLimiter rateLimiter;
 
     @BeforeEach
     void setUp() {
         SecEdgarProperties properties =
                 new SecEdgarProperties(true, TEST_BASE_URL, CONTACT_EMAIL);
+        rateLimiter = new SecRequestRateLimiter();
         restClientBuilder = new SecEdgarConfiguration(true)
-                .configureRestClient(RestClient.builder(), properties);
+                .configureRestClient(RestClient.builder(), properties, rateLimiter);
         server = MockRestServiceServer.bindTo(restClientBuilder).build();
 
         RestClient restClient = restClientBuilder.build();
-        provider = new SecEdgarFilingCatalogProvider(restClient, TEST_BASE_URL, FIXED_CLOCK);
+        provider = new SecEdgarFilingCatalogProvider(
+                restClient,
+                TEST_BASE_URL,
+                FIXED_CLOCK,
+                rateLimiter,
+                new SecRetryAfterPolicy(FIXED_CLOCK));
     }
 
     @Test
@@ -96,7 +106,7 @@ class SecEdgarConfigurationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {302, 404, 429, 503})
+    @ValueSource(ints = {302, 404, 503})
     void turnsEveryNonSuccessStatusIntoASanitizedExceptionWithoutRetry(int statusCode) {
         server.expect(once(), requestTo(EXPECTED_ENDPOINT))
                 .andRespond(withStatus(HttpStatusCode.valueOf(statusCode))
@@ -109,6 +119,55 @@ class SecEdgarConfigurationTest {
                 .hasNoCause()
                 .message()
                 .doesNotContain("320193", "127.0.0.1", CONTACT_EMAIL, "do-not-expose");
+        server.verify();
+    }
+
+    @Test
+    void opensFailClosedCooldownAfter429BeforeInspectingAnOversizedErrorBody() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withStatus(HttpStatusCode.valueOf(429))
+                        .header(HttpHeaders.RETRY_AFTER, "1200")
+                        .header(
+                                HttpHeaders.CONTENT_LENGTH,
+                                Long.toString(
+                                        SecResponseSizeLimitInterceptor
+                                                        .MAX_DECOMPRESSED_RESPONSE_BYTES
+                                                + 1))
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body("secret-body api-key=do-not-expose " + CONTACT_EMAIL));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions request failed with HTTP 429")
+                .hasNoCause()
+                .message()
+                .doesNotContain("1200", "320193", CONTACT_EMAIL, "do-not-expose");
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage(
+                        "SEC submissions request was not started because the provider gate is closed")
+                .hasNoCause()
+                .message()
+                .doesNotContain("1200", "320193", CONTACT_EMAIL, "do-not-expose");
+        server.verify();
+    }
+
+    @Test
+    void rejectsDeclaredIdentityResponseOverDecodedLimitBeforeParsing() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON)
+                        .header(
+                                HttpHeaders.CONTENT_LENGTH,
+                                Long.toString(
+                                        SecResponseSizeLimitInterceptor
+                                                        .MAX_DECOMPRESSED_RESPONSE_BYTES
+                                                + 1)));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response exceeded the size limit")
+                .hasNoCause();
         server.verify();
     }
 
@@ -188,7 +247,8 @@ class SecEdgarConfigurationTest {
                 CONTACT_EMAIL);
 
         assertThatThrownBy(() -> new SecEdgarConfiguration()
-                .configureRestClient(RestClient.builder(), properties))
+                .configureRestClient(
+                        RestClient.builder(), properties, new SecRequestRateLimiter()))
                 .isInstanceOf(SecProviderConfigurationException.class)
                 .hasMessage("SEC provider base URL is invalid")
                 .hasNoCause()
@@ -204,7 +264,8 @@ class SecEdgarConfigurationTest {
                 CONTACT_EMAIL);
 
         assertThatThrownBy(() -> new SecEdgarConfiguration()
-                .configureRestClient(RestClient.builder(), properties))
+                .configureRestClient(
+                        RestClient.builder(), properties, new SecRequestRateLimiter()))
                 .isInstanceOf(SecProviderConfigurationException.class)
                 .hasMessage("SEC provider base URL is invalid")
                 .hasNoCause();
@@ -217,7 +278,8 @@ class SecEdgarConfigurationTest {
                 new SecEdgarProperties(true, TEST_BASE_URL, invalidEmail);
 
         assertThatThrownBy(() -> new SecEdgarConfiguration(true)
-                .configureRestClient(RestClient.builder(), properties))
+                .configureRestClient(
+                        RestClient.builder(), properties, new SecRequestRateLimiter()))
                 .isInstanceOf(SecProviderConfigurationException.class)
                 .hasMessage("SEC_CONTACT_EMAIL is invalid")
                 .hasNoCause()

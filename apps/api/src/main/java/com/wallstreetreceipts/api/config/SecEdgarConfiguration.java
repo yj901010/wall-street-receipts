@@ -18,7 +18,11 @@ import org.springframework.web.client.RestClient;
 
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecEdgarFilingCatalogProvider;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecProviderConfigurationException;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecRequestRateLimitInterceptor;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecRequestRateLimiter;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecResponseDecompressionInterceptor;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecResponseSizeLimitInterceptor;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecRetryAfterPolicy;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(SecEdgarProperties.class)
@@ -49,13 +53,27 @@ public class SecEdgarConfiguration {
     }
 
     @Bean
-    RestClient secEdgarRestClient(RestClient.Builder restClientBuilder, SecEdgarProperties properties) {
-        return configureRestClient(restClientBuilder.clone(), properties).build();
+    SecRequestRateLimiter secRequestRateLimiter() {
+        return new SecRequestRateLimiter();
+    }
+
+    @Bean
+    SecRetryAfterPolicy secRetryAfterPolicy(Clock clock) {
+        return new SecRetryAfterPolicy(clock);
+    }
+
+    @Bean
+    RestClient secEdgarRestClient(
+            RestClient.Builder restClientBuilder,
+            SecEdgarProperties properties,
+            SecRequestRateLimiter rateLimiter) {
+        return configureRestClient(restClientBuilder.clone(), properties, rateLimiter).build();
     }
 
     RestClient.Builder configureRestClient(
             RestClient.Builder restClientBuilder,
-            SecEdgarProperties properties) {
+            SecEdgarProperties properties,
+            SecRequestRateLimiter rateLimiter) {
         URI baseUrl = requireValidBaseUrl(properties.baseUrl());
         String contactEmail = requireContactEmail(properties.contactEmail());
         HttpClient httpClient = HttpClient.newBuilder()
@@ -70,6 +88,8 @@ public class SecEdgarConfiguration {
                 .defaultHeader(HttpHeaders.USER_AGENT, USER_AGENT_PRODUCT + " (" + contactEmail + ")")
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.ACCEPT_ENCODING, "gzip, deflate")
+                .requestInterceptor(new SecRequestRateLimitInterceptor(rateLimiter))
+                .requestInterceptor(new SecResponseSizeLimitInterceptor())
                 .requestInterceptor(new SecResponseDecompressionInterceptor())
                 .requestFactory(requestFactory);
     }
@@ -78,8 +98,15 @@ public class SecEdgarConfiguration {
     SecEdgarFilingCatalogProvider secEdgarFilingCatalogProvider(
             @Qualifier("secEdgarRestClient") RestClient restClient,
             SecEdgarProperties properties,
-            Clock clock) {
-        return new SecEdgarFilingCatalogProvider(restClient, properties.baseUrl(), clock);
+            Clock clock,
+            SecRequestRateLimiter rateLimiter,
+            SecRetryAfterPolicy retryAfterPolicy) {
+        return new SecEdgarFilingCatalogProvider(
+                restClient,
+                properties.baseUrl(),
+                clock,
+                rateLimiter,
+                retryAfterPolicy);
     }
 
     private static String requireContactEmail(String configuredEmail) {
