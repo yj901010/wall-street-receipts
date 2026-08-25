@@ -72,7 +72,7 @@ class PostgreSqlMigrationTest {
 
         flyway.migrate();
 
-        assertThat(flyway.info().applied()).hasSize(7);
+        assertThat(flyway.info().applied()).hasSize(8);
 
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
@@ -930,7 +930,7 @@ class PostgreSqlMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
         latest.migrate();
-        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("7");
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("8");
 
         try (Connection connection = POSTGRES.createConnection("");
                 Statement statement = connection.createStatement()) {
@@ -1058,7 +1058,7 @@ class PostgreSqlMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
         latest.migrate();
-        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("7");
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("8");
 
         JdbcCallContextRepository contextRepository = new JdbcCallContextRepository(jdbc);
         Integer contextsImported = transactions.execute(
@@ -1319,7 +1319,7 @@ class PostgreSqlMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
         latest.migrate();
-        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("7");
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("8");
 
         var durableRoot = rootRepository.findByCaptureId(
                 pendingRoot.captureId()).orElseThrow();

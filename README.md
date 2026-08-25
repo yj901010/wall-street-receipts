@@ -456,6 +456,9 @@ replay.
 ADR-040 establishes controlled single-descriptor historical-segment capture,
 exact-byte replay, and append-only persistence.
 
+ADR-041 establishes a zero-network, root-relative filing-history collection
+manifest with occurrence-preserving accession reconciliation.
+
 ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
 submissions metadata. It is disabled by default and remains server-only. When
 `SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
@@ -465,8 +468,9 @@ defaults to that official origin. Provider errors, malformed parallel arrays,
 and missing timestamps fail closed without fixture or empty-result fallback.
 
 The adapter maps filing metadata into a provider-neutral filing catalog.
-ADR-039 and ADR-040 add one-shot PostgreSQL writers, but there is still no scheduler,
-command-line trigger, HTTP product endpoint, or web publication.
+ADR-039 through ADR-041 add one-shot PostgreSQL persistence and assembly
+services, but there is still no scheduler, command-line trigger, HTTP product
+endpoint, or web publication.
 `BLS_REGISTRATION_KEY`, `BEA_USER_ID`, and `EIA_API_KEY` may be
 present in the local secret file but are deliberately not consumed until their
 own P5 source, revision, canonical-model, and publication decisions are
@@ -600,10 +604,50 @@ complete SEC history, an atomic SEC snapshot, or absence of later corrections.
 It needs no new key, account, paid plan, plugin, or environment variable: live
 requests reuse `SEC_CONTACT_EMAIL` and persistence reuses PostgreSQL settings.
 
-The next SEC gate is an ordered collection manifest and explicit cross-segment
-accession reconciliation relative to one immutable root, still without a
-complete-history claim. Scheduler/global coordination, read API, and attributed
-Korean public UI remain later gates.
+ADR-041 accepts one exact durable root `captureId` plus an explicit finite list
+of captured descriptor ordinal and exact durable historical-segment `captureId`
+pairs. It reads only existing ADR-039/040 PostgreSQL evidence, performs zero
+provider requests, and never selects a latest root or segment from CIK,
+filename, descriptor, or the current clock. Every segment must bind to the exact
+selected root and ordinal; a later same-CIK root or equal-looking descriptor
+cannot be substituted.
+
+The deterministic WSR-local order is root recent rows in captured provider
+order followed by selected additional-file members in ascending captured root
+descriptor ordinal, each retaining its own provider row order. SEC public
+submissions documentation calls these resources "additional JSON files";
+`Historical Segment` is WSR local terminology and not the unrelated EDGAR
+filing-construction term `Segment`. No local ordering is presented as SEC
+chronology.
+
+Every selected row remains a provenance-bearing occurrence. Exact canonical
+accession identity groups occurrences as `SINGLE_SOURCE_OCCURRENCE`,
+`MULTIPLE_OCCURRENCES_EXACT_AGREEMENT`, or
+`MULTIPLE_OCCURRENCES_CANONICAL_CONFLICT`; agreement means only equality under
+the versioned local projection, and conflict preserves every candidate without
+a root winner, segment winner, last-write-wins merge, or inferred field.
+Accession prefixes are not entity-CIK checks because the prefix may identify a
+filing agent's login CIK. Different amendment or correction accessions remain
+separate submission identities.
+
+Coverage means only that the exact root recent evidence and every explicitly
+selected segment reference were included once. Omitted root descriptors remain
+`NOT_SELECTED`; selected descriptors are `SELECTED_EXACT_CAPTURE`. Coverage is
+`NO_ADVERTISED_DESCRIPTORS`, `PARTIAL_ADVERTISED_DESCRIPTORS_SELECTED`, or
+`ALL_ADVERTISED_DESCRIPTORS_SELECTED` relative only to the captured root.
+Selecting zero of a nonempty advertised set is explicitly partial, and even
+selecting every advertised descriptor does not prove atomic, current, all-time,
+or complete SEC history. The manifest derives
+`evidenceAvailableAt` from the latest selected source `capturedAt` and records a
+later-or-equal `assembledAt`; it retains all individual capture times and never
+backdates the non-atomic collection to a single SEC `asOf`.
+
+ADR-041 needs no new key, account, paid plan, OAuth, EDGAR token, plugin, secret,
+or environment variable, and its zero-network assembly does not consult
+`SEC_CONTACT_EMAIL`. Existing PostgreSQL configuration is sufficient. There is
+still no scheduler, fetch-all coordinator, retry owner, controller, public read
+API, browser consumer, or UI. Operator-controlled capture coordination and
+conflict-aware, attributed Korean publication remain later gates.
 
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,

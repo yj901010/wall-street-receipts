@@ -39,6 +39,9 @@ replay.
 ADR-040 establishes controlled single-descriptor historical-segment capture,
 exact-byte replay, and append-only persistence.
 
+ADR-041 establishes zero-network root-relative collection manifests and
+occurrence-preserving accession reconciliation.
+
 SEC submissions metadata adapter는 기본 비활성화다. 로컬에서 명시적으로
 활성화하려면 루트 `.env`에 다음 서버 전용 변수가 있어야 한다.
 
@@ -50,8 +53,9 @@ SEC_CONTACT_EMAIL=operations-contact@example.com
 
 SEC는 API key 대신 선언된 연락처 User-Agent를 요구한다. 실제 연락처 값은
 `.env.example`, 로그, HTTP 응답, Git에 넣지 않는다. 현재 adapter에는 one-shot
-DB persistence services가 있지만 scheduler, controller, command-line trigger 또는
-web consumer가 없으므로 활성화만으로 외부 요청이나 DB 적재가 발생하지 않는다.
+DB persistence/assembly services가 있지만 scheduler, controller, command-line
+trigger 또는 web consumer가 없으므로 활성화만으로 외부 요청이나 DB 적재가
+발생하지 않는다.
 
 SEC 공식 fair-access 상한은 여러 머신을 합쳐 초당 10회다. 애플리케이션 내부
 정책은 단일 JVM에서 모든 SEC 요청을 하나의 limiter로 묶어 초당 8회, 요청 사이
@@ -224,9 +228,39 @@ reconciliation 또는 complete-history claim을 만들지 않는다.
 새 API key, 계정, 유료 플랜, OAuth, plugin 또는 environment variable은 필요 없다.
 live GET은 기존 `SEC_CONTACT_EMAIL`, persistence는 기존 PostgreSQL connection
 설정을 재사용한다. scheduler, poller, startup collector, CLI, controller, public API,
-browser/UI publication은 이 gate에 없다. 다음 SEC gate는 immutable root에 상대적인
-ordered collection manifest와 cross-segment accession reconciliation이며,
-complete-history claim은 별도 evidence/correction policy 전까지 금지한다.
+browser/UI publication은 이 gate에 없다. ADR-041의 immutable-root-relative
+collection과 reconciliation은 아래의 별도 zero-network gate다.
+
+### Root-relative filing-history collection manifest
+
+ADR-041 assembly는 exact durable root `captureId`와 caller가 명시한 captured
+descriptor ordinal/exact durable historical-segment `captureId` pair만 읽는다. CIK,
+filename, descriptor 또는 현재 시각으로 latest root/segment를 자동 선택하지 않고
+SEC를 포함한 외부 네트워크를 전혀 호출하지 않는다. 각 segment는 exact root와
+captured descriptor ordinal에 묶여야 하며, local order는 root recent provider
+order 다음에 selected descriptor ordinal 순서다. SEC 공식 문서는 이를
+`additional JSON files`라고 부른다. `Historical Segment`는 WSR local 용어다.
+
+selected root/segment의 모든 row는 source capture와 row ordinal을 가진 occurrence로
+남는다. 같은 exact accession의 반복은 versioned canonical projection으로
+`SINGLE_SOURCE_OCCURRENCE`, `MULTIPLE_OCCURRENCES_EXACT_AGREEMENT`,
+`MULTIPLE_OCCURRENCES_CANONICAL_CONFLICT`만 계산하고, conflict에서 root, segment,
+latest 또는 majority winner를 만들지 않는다. descriptor는 `NOT_SELECTED` 또는
+`SELECTED_EXACT_CAPTURE`로 남고 coverage는 `NO_ADVERTISED_DESCRIPTORS`,
+`PARTIAL_ADVERTISED_DESCRIPTORS_SELECTED`,
+`ALL_ADVERTISED_DESCRIPTORS_SELECTED` 중 하나다. 이는 explicit selected reference
+범위뿐이며 source correction/removal, atomic SEC snapshot 또는 complete filing
+history를 보증하지 않는다.
+
+각 source `capturedAt`은 그대로 보존한다. `evidenceAvailableAt`은 selected evidence의
+가장 늦은 capture time이고 `assembledAt`은 injected-clock assembly time이며, 이 둘을
+SEC-authored `asOf`로 표시하거나 filing date로 backdate하지 않는다.
+
+이 서비스는 zero-network이므로 `SEC_CONTACT_EMAIL`을 읽지 않으며 새 API key,
+account, paid plan, OAuth/EDGAR token, plugin, secret 또는 environment variable이
+필요 없다. 기존 PostgreSQL connection만 재사용한다. 활성화 설정만으로 실행되는
+scheduler, startup collector, fetch-all loop, retry, CLI, controller, OpenAPI/public
+read API, browser consumer 또는 UI는 없다.
 
 ### Manual SEC live smoke
 

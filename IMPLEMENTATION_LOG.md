@@ -5206,3 +5206,119 @@ descriptor, merge resources, or claim complete SEC filing history.
 - Keep scheduler/global rate coordination, retry ownership, public read API,
   authentication decision, and attributed Korean UI behind later independent
   gates.
+
+## 2026-08-25 — ADR-041 root-relative SEC filing-history collection manifest
+
+Status: zero-network ordered collection assembly, occurrence-preserving
+accession reconciliation, and append-only persistence implemented and verified.
+
+ADR-041 combines only exact durable ADR-039/040 evidence under one immutable
+root. It records which root-advertised additional JSON files were explicitly
+selected and compares repeated accession projections without choosing a winner
+or claiming complete SEC history.
+
+### Scope and decisions
+
+- Accept one exact durable root `captureId` plus an explicit finite list of
+  `(descriptorOrdinal, segmentCaptureId)` selections. Resolve only those exact
+  identities, reject a repository result with another identity, and never use a CIK,
+  filename, current clock, or `findLatestAtOrBefore` to substitute evidence.
+  Assembly performs zero SEC or other provider requests.
+- Materialize every captured root descriptor in provider ordinal order as
+  `NOT_SELECTED` or `SELECTED_EXACT_CAPTURE`. Preserve root recent rows first,
+  then selected additional-file rows by descriptor ordinal and their original
+  provider row order. This is a WSR reproducibility rule, not SEC chronology.
+- Preserve every source row as a separate occurrence with source kind, exact
+  capture identity, descriptor and row ordinal where applicable, selected
+  canonical projection, and versioned projection fingerprint. Do not dedupe,
+  merge, overwrite, infer a missing field, or select root/latest/majority truth.
+- Group only by the exact stored accession. Compare provider event/accession,
+  form, filing and nullable report date, accepted time, and nullable primary
+  document URI by actual field equality. Classify only
+  `SINGLE_SOURCE_OCCURRENCE`, `MULTIPLE_OCCURRENCES_EXACT_AGREEMENT`, or
+  `MULTIPLE_OCCURRENCES_CANONICAL_CONFLICT`; retain all conflicting candidates.
+- Define coverage only relative to the captured root as
+  `NO_ADVERTISED_DESCRIPTORS`, `PARTIAL_ADVERTISED_DESCRIPTORS_SELECTED`, or
+  `ALL_ADVERTISED_DESCRIPTORS_SELECTED`. Selecting zero from a nonempty set is
+  partial. Selecting every advertised reference is not current, atomic,
+  all-time, legally authoritative, or complete SEC history.
+- Derive `evidenceAvailableAt` as the maximum root/selected-segment
+  `capturedAt`, require microsecond `assembledAt >= evidenceAvailableAt`, and
+  expose PIT lookup only by exact manifest ID plus assembly cutoff. Do not offer
+  root-relative latest-manifest lookup because different partial selections do
+  not supersede one another.
+- Derive stable length-prefixed `selectionSha256` and `manifestId` values from
+  the exact root, full selected/absent descriptor vector, schema, product, and
+  reconciliation policy. Exclude attempted assembly time so concurrent or later
+  same-content append converges on the first durable manifest and its original
+  `assembledAt`.
+- Require no new API key, account, payment, OAuth/EDGAR token, plugin, secret,
+  or environment variable. Existing PostgreSQL configuration is sufficient;
+  zero-network assembly does not consult `SEC_CONTACT_EMAIL`. No configured
+  secret value was read, printed, or committed.
+
+### Repository surface
+
+- Add `PersistFilingHistoryCollectionManifestService`, an exact-selection
+  command value, append outcome, and read/append-only repository port under the
+  application boundary. Add unconditional internal Spring wiring because the
+  service has no startup action or network side effect.
+- Add immutable `FilingHistoryCollectionManifest` domain assembly with ordered
+  descriptor members, source occurrences, accession groups, stable identities,
+  coverage and availability facts. `sameContentAs` intentionally excludes only
+  the attempted assembly time for idempotent winner replay.
+- Add `JdbcFilingHistoryCollectionManifestRepository`. Every write first
+  reassembles from replay-verified source repositories, appends parent and
+  ordered children in one transaction, reconstructs again, and requires exact
+  domain equality before returning. Reads re-run ADR-039/040 exact-byte replay
+  and compare every stored summary, descriptor, group, occurrence, fingerprint,
+  ordinal, nullable field, and source binding.
+- Add Flyway V8 manifest, descriptor, accession-group, and occurrence tables.
+  Exact composite `ON DELETE RESTRICT` FKs bind the manifest root, every
+  advertised descriptor, selected segment, selected source row, and accession
+  group. Closed checks cover identities, time, counts, selection/source XOR,
+  group classification, and application-level immutable flags.
+- Add domain, exact-ID service, H2 persistence, replay-valid fixture, and
+  isolated PostgreSQL 17 upgrade/concurrency/rollback/restrict tests. Existing
+  product routes, OpenAPI, controllers, browser consumers, and the manual live
+  smoke are unchanged; no scheduler, CLI, startup collector, fetch-all loop, or
+  autonomous trigger was added.
+
+### Verification
+
+- Focused ADR-041 domain/service/H2 persistence suite: **PASS** — 22 tests,
+  zero failures, errors, or skips.
+- Full API Maven verification with Docker Desktop 29.2.1: **PASS** — 2,259
+  tests, zero failures, errors, or skips; Spring Boot packaging completed.
+- PostgreSQL 17.10/Testcontainers migration suite: **PASS** — existing six plus
+  four ADR-041 tests, ten total with zero failures, errors, or skips. It covers
+  isolated V7→V8 upgrade, fresh V8 application, identical-selection concurrent
+  winner/replay convergence, different-selection concurrency, child-failure
+  rollback with no orphans, and exact source-delete restriction.
+- Web regression: **PASS** — ESLint with zero warnings, 42 Vitest files / 569
+  tests, and the Next.js production build with all 12 static-generation steps.
+  The build-mutated user-owned `apps/web/next-env.d.ts` was restored to SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Repository CI guard: **PASS** — all 46 embedded Python bodies compile and all
+  39 environment-independent bodies execute successfully, including the
+  dedicated ADR-041 contract guard and ADR-034 through ADR-040 reverse replay.
+  Six schema bodies remain CI-only because they require the workflow-pinned
+  `jsonschema`; one integration body requires `RUNNER_TEMP` and its preceding
+  artifacts. Workflow YAML parsing with duplicate keys rejected and
+  `git diff --check` both pass.
+- Independent correctness review: **PASS** — no remaining P0–P3 finding.
+  Application append-only storage still does not claim privileged PostgreSQL
+  administration is cryptographic WORM.
+
+### Next work
+
+- Define an operator-controlled collection attempt that creates or selects the
+  prerequisite exact captures under one aggregate SEC fair-access owner, while
+  preserving per-request outcomes and the non-atomic capture window. Do not add
+  autonomous scheduling until multi-replica coordination and retry ownership
+  are explicit.
+- Define correction/removal/amendment evidence and public conflict presentation
+  separately. Do not turn ADR-041 agreement, conflict, or selected-reference
+  coverage into a winner or complete-history claim.
+- Keep public read API, authentication decision, freshness/source attribution,
+  and Korean community UI behind a later publication gate.
