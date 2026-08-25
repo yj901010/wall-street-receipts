@@ -462,6 +462,9 @@ manifest with occurrence-preserving accession reconciliation.
 ADR-042 establishes an operator-controlled, bounded SEC collection-attempt
 ledger and exact-evidence execution boundary.
 
+ADR-043 establishes a default-disabled, local-only single-operator HTTP
+boundary for offline execution and immutable attempt inspection.
+
 ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
 submissions metadata. It is disabled by default and remains server-only. When
 `SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
@@ -472,8 +475,9 @@ and missing timestamps fail closed without fixture or empty-result fallback.
 
 The adapter maps filing metadata into a provider-neutral filing catalog.
 ADR-039 through ADR-042 add internal one-shot PostgreSQL persistence, assembly,
-and attempt-execution services, but there is still no scheduler, command-line
-trigger, HTTP product endpoint, or web publication.
+and attempt-execution services. ADR-043 adds only a separately disabled local
+operator transport; there is still no scheduler, startup collector,
+command-line trigger, public HTTP product endpoint, or web publication.
 `BLS_REGISTRATION_KEY`, `BEA_USER_ID`, and `EIA_API_KEY` may be
 present in the local secret file but are deliberately not consumed until their
 own P5 source, revision, canonical-model, and publication decisions are
@@ -652,7 +656,7 @@ still no scheduler, fetch-all coordinator, retry owner, controller, public read
 API, browser consumer, or UI. Operator-controlled capture coordination and
 conflict-aware, attributed Korean publication remain later gates.
 
-ADR-042 remains an internal application service only: it adds no controller,
+The ADR-042 service itself remains an internal application boundary with no
 CLI, scheduler, startup hook, public route, or browser surface. `CAPTURE_ROOT`
 authorizes at most one root capture. `COLLECT_EXACT_ROOT` binds one exact durable
 root to zero or more `SELECT_EXACT` descriptor actions and at most one
@@ -692,9 +696,31 @@ requires server-only root `.env` settings `SEC_PROVIDER_ENABLED=true`,
 `SEC_BASE_URL=https://data.sec.gov`, a monitored `SEC_CONTACT_EMAIL`, and the
 existing `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and
 `POSTGRES_PASSWORD` settings. No ADR-042 live SEC request was made, and CI stays
-offline. An authenticated explicit operator surface with indeterminate-state
-inspection, or distributed/global coordination for more than one replica,
-requires a separate ADR before implementation.
+offline.
+
+ADR-043 exposes exactly two authenticated command routes and one exact status
+route under `/internal/v1/sec/collection-attempts`. They are absent by default.
+Isolated local testing requires `OPERATOR_API_ENABLED=true` and only the
+lowercase SHA-256 digest of one locally generated, standard-Base64-encoded
+exactly-32-byte-random Bearer token in
+`OPERATOR_API_TOKEN_SHA256`; enabling the boundary programmatically forces the
+whole embedded API server to loopback regardless of another bind setting. The
+raw token stays in the invoking shell or a password manager and never enters
+`.env`, Git, chat, a URL, browser storage, or logs. Keep
+`SEC_PROVIDER_ENABLED=false` throughout ADR-043 testing. No domain,
+DNS change, Cloudflare account, SEC key, OAuth client, or `SEC_CONTACT_EMAIL` is
+needed, and no SEC request is made. See `apps/api/README.md` for exact routes,
+safe PowerShell setup, replay/status checks, and cleanup.
+
+This static-token boundary is restricted to one loopback/local API process and
+must not be deployed or exposed over a LAN. Remote use still requires a
+separate decision for TLS, managed identity, private origin enforcement,
+durable actor audit, CSRF when cookies are introduced, secret rotation, and
+private actuator access. Live collection remains limited to exactly one API
+replica until a reviewed distributed SEC limiter, cooldown, and mutual-
+exclusion owner protects every caller. ADR-043 adds no retry, resume, cancel,
+abandon, resolve, list, latest, UI, or public-read route; an indeterminate
+dispatch remains inspect-only.
 
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,

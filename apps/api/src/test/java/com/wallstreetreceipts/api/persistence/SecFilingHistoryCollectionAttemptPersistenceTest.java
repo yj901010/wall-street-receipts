@@ -17,6 +17,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;
+import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;
 import com.wallstreetreceipts.api.application.port.out.FilingCatalogCaptureAppendResult;
 import com.wallstreetreceipts.api.application.port.out.FilingCatalogCaptureRepository;
 import com.wallstreetreceipts.api.application.port.out.FilingHistoryCollectionManifestRepository;
@@ -86,7 +88,7 @@ class SecFilingHistoryCollectionAttemptPersistenceTest {
         assertThatThrownBy(() -> attemptRepository.claim(
                 SecFilingHistoryCollectionAttempt.planCaptureRoot(
                         planned.operatorRequestId(), "1", BASE.plusSeconds(120))))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isExactlyInstanceOf(OperatorRequestConflictException.class)
                 .hasMessage("operatorRequestId is already bound to another command");
 
         Instant dispatchedAt = BASE.plusSeconds(1);
@@ -188,7 +190,7 @@ class SecFilingHistoryCollectionAttemptPersistenceTest {
                         BASE.plusSeconds(40));
 
         assertThatThrownBy(() -> attemptRepository.claim(planned))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isExactlyInstanceOf(ExactEvidenceNotAdmittedException.class)
                 .hasMessage("collection attempt exact evidence was not accepted");
 
         assertThat(attemptRepository.count()).isEqualTo(attemptsBefore);
@@ -213,7 +215,7 @@ class SecFilingHistoryCollectionAttemptPersistenceTest {
                         BASE.plusSeconds(60));
 
         assertThatThrownBy(() -> attemptRepository.claim(planned))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isExactlyInstanceOf(ExactEvidenceNotAdmittedException.class)
                 .hasMessage("collection attempt exact evidence was not accepted");
 
         assertThat(attemptRepository.count()).isEqualTo(attemptsBefore);

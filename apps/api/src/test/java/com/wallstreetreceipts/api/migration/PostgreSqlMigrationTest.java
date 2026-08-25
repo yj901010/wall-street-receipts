@@ -1148,8 +1148,10 @@ class PostgreSqlMigrationTest {
                 .extracting(capture -> capture.captureId())
                 .isEqualTo(first.captureId());
 
-        var concurrentCapture =
-                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));
+        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(
+                firstTime.plusSeconds(120), "6-K");
+        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sec_decoded_response_bodies", Long.class);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         var executor = Executors.newFixedThreadPool(2);
@@ -1168,6 +1170,20 @@ class PostgreSqlMigrationTest {
             executor.shutdownNow();
         }
         assertThat(repository.count()).isEqualTo(3);
+        assertThat(jdbc.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sec_decoded_response_bodies", Long.class))
+                .isEqualTo(bodiesBeforeConcurrentReplay + 1);
+        assertThat(jdbc.getJdbcOperations().queryForObject(
+                """
+                        SELECT COUNT(*)
+                        FROM sec_decoded_response_bodies
+                        WHERE decoded_body_sha256 = ?
+                          AND decoded_body_length = ?
+                        """,
+                Long.class,
+                concurrentCapture.catalog().sourceReceipt().decodedBodySha256(),
+                concurrentCapture.catalog().sourceReceipt().decodedBodyLength()))
+                .isEqualTo(1);
 
         Instant conflictingTime = firstTime.plusSeconds(180);
         var conflictingLeft =
@@ -1380,6 +1396,8 @@ class PostgreSqlMigrationTest {
         var concurrentCapture =
                 SecHistoricalFilingSegmentCaptureTestFixture.capture(
                         durableRoot, firstTime.plusSeconds(120));
+        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sec_decoded_response_bodies", Long.class);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         var executor = Executors.newFixedThreadPool(2);
@@ -1400,6 +1418,20 @@ class PostgreSqlMigrationTest {
             executor.shutdownNow();
         }
         assertThat(segmentRepository.count()).isEqualTo(3);
+        assertThat(jdbc.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sec_decoded_response_bodies", Long.class))
+                .isEqualTo(bodiesBeforeConcurrentReplay + 1);
+        assertThat(jdbc.getJdbcOperations().queryForObject(
+                """
+                        SELECT COUNT(*)
+                        FROM sec_decoded_response_bodies
+                        WHERE decoded_body_sha256 = ?
+                          AND decoded_body_length = ?
+                        """,
+                Long.class,
+                concurrentCapture.segment().sourceReceipt().decodedBodySha256(),
+                concurrentCapture.segment().sourceReceipt().decodedBodyLength()))
+                .isEqualTo(1);
 
         Instant conflictingTime = firstTime.plusSeconds(180);
         var conflictingLeft = SecHistoricalFilingSegmentCaptureTestFixture.capture(

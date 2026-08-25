@@ -45,6 +45,9 @@ occurrence-preserving accession reconciliation.
 ADR-042 establishes an operator-controlled bounded collection-attempt ledger
 and exact-evidence execution boundary.
 
+ADR-043 establishes a default-disabled, local-only single-operator HTTP
+boundary for executing and inspecting those attempts without live SEC traffic.
+
 SEC submissions metadata adapter는 기본 비활성화다. 로컬에서 명시적으로
 활성화하려면 루트 `.env`에 다음 서버 전용 변수가 있어야 한다.
 
@@ -56,9 +59,10 @@ SEC_CONTACT_EMAIL=operations-contact@example.com
 
 SEC는 API key 대신 선언된 연락처 User-Agent를 요구한다. 실제 연락처 값은
 `.env.example`, 로그, HTTP 응답, Git에 넣지 않는다. 현재 adapter에는 one-shot
-DB persistence/assembly services가 있지만 scheduler, controller, command-line
-trigger 또는 web consumer가 없으므로 활성화만으로 외부 요청이나 DB 적재가
-발생하지 않는다.
+DB persistence/assembly services가 있지만 scheduler, command-line trigger,
+startup collector 또는 public web consumer가 없다. ADR-043 local operator
+controller는 별도 설정으로 기본 비활성화되므로 SEC provider 설정만으로 외부
+요청이나 DB 적재가 발생하지 않는다.
 
 SEC 공식 fair-access 상한은 여러 머신을 합쳐 초당 10회다. 애플리케이션 내부
 정책은 단일 JVM에서 모든 SEC 요청을 하나의 limiter로 묶어 초당 8회, 요청 사이
@@ -320,9 +324,105 @@ POSTGRES_PASSWORD=local-secret
 
 연락처와 DB credential의 실제 값은 채팅, 로그, 문서, Git에 넣지 않는다. ADR-042
 검증에서는 SEC live traffic을 발생시키지 않았고 일반 test/verify 및 CI도 계속
-offline이다. authenticated explicit operator trigger/status 및 indeterminate-state
-inspection, 또는 multi-replica global coordination을 추가하기 전에는 별도 ADR이
-필요하다.
+offline이다. ADR-043은 local-only authenticated trigger/status를 추가하지만 remote
+deployment, browser login, durable actor audit, indeterminate recovery 또는
+multi-replica global coordination은 승인하지 않는다.
+
+### Local single-operator attempt API
+
+ADR-043의 세 route는 기본적으로 등록되지 않는다.
+
+```text
+POST /internal/v1/sec/collection-attempts/root
+POST /internal/v1/sec/collection-attempts/exact-root
+GET  /internal/v1/sec/collection-attempts/{attemptId}
+```
+
+이 경계는 loopback에서 한 API JVM과 PostgreSQL로 HTTP 계약을 확인할 때만 쓴다.
+도메인, DNS, Cloudflare, OAuth client, SEC API key 또는 `SEC_CONTACT_EMAIL`은 필요
+없다. SEC network를 확실히 차단한 다음 루트 `.env`에서 다음 값만 설정한다.
+
+```dotenv
+OPERATOR_API_ENABLED=true
+OPERATOR_API_TOKEN_SHA256=<lowercase SHA-256 digest>
+SEC_PROVIDER_ENABLED=false
+```
+
+raw Bearer token은 정확히 32 random byte를 standard Base64로 인코딩한 44자
+문자열(`=`로 끝남)이어야 하며 `.env`, Git, 채팅, URL, browser storage 또는 로그에
+넣지 않는다. PowerShell terminal A에서 token을 만들고 raw
+token은 그 shell memory에만 보관한다. 화면에 표시된 digest만 gitignored root
+`.env`의 `OPERATOR_API_TOKEN_SHA256`에 복사한다.
+
+```powershell
+$operatorRandom = [Security.Cryptography.RandomNumberGenerator]::Create()
+$operatorBytes = [byte[]]::new(32)
+$operatorRandom.GetBytes($operatorBytes)
+$operatorRandom.Dispose()
+$operatorToken = [Convert]::ToBase64String($operatorBytes)
+$operatorSha = [Security.Cryptography.SHA256]::Create()
+$operatorTokenBytes = [Text.Encoding]::UTF8.GetBytes($operatorToken)
+$operatorDigestBytes = $operatorSha.ComputeHash($operatorTokenBytes)
+$operatorSha.Dispose()
+$operatorDigest = -join ($operatorDigestBytes | ForEach-Object { $_.ToString("x2") })
+$operatorDigest
+```
+
+terminal B에서 기존 local profile 방식으로 API를 시작한다. operator API가
+활성화되면 애플리케이션이 다른 server address 설정보다 우선해 embedded server
+전체를 loopback에만 bind한다. 같은 컴퓨터에서 두 번째 API process를 띄우지
+않는다. API가 시작되면 token을 보관한 terminal A에서 provider-disabled root
+command와 exact replay를 확인할 수 있다.
+
+```powershell
+$operatorRequestId = [Guid]::NewGuid().ToString().ToLowerInvariant()
+$operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
+$operatorBody = @{
+    operatorRequestId = $operatorRequestId
+    cik = "0000320193"
+} | ConvertTo-Json
+
+$attempt = Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:8080/internal/v1/sec/collection-attempts/root" `
+    -Headers $operatorHeaders `
+    -ContentType "application/json" `
+    -Body $operatorBody
+$attempt | ConvertTo-Json -Depth 8
+
+$replay = Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:8080/internal/v1/sec/collection-attempts/root" `
+    -Headers $operatorHeaders `
+    -ContentType "application/json" `
+    -Body $operatorBody
+
+Invoke-RestMethod `
+    -Method Get `
+    -Uri ("http://localhost:8080/internal/v1/sec/collection-attempts/" + $attempt.attemptId) `
+    -Headers $operatorHeaders
+```
+
+`SEC_PROVIDER_ENABLED=false`이므로 이 root command의 정상적인 local 결과는 SEC
+성공이 아니라 ADR-042의 durable provider-gate failure다. 중요한 검증점은 HTTP가
+SEC로 나가지 않고, 같은 UUID와 같은 body가 같은 `attemptId`로 수렴하며, GET이
+그 immutable 상태를 그대로 재구성하는 것이다. POST와 GET의 `200`은 provider
+성공을 뜻하지 않으므로 반드시 `lifecycleState`와 `terminalOutcome`을 확인한다.
+
+작업 후에는 `.env`의 `OPERATOR_API_ENABLED=false`를 복원하고 terminal A에서
+token을 담았던 배열을 지운 뒤 관련 변수를 제거한다.
+
+```powershell
+[Array]::Clear($operatorBytes, 0, $operatorBytes.Length)
+[Array]::Clear($operatorTokenBytes, 0, $operatorTokenBytes.Length)
+[Array]::Clear($operatorDigestBytes, 0, $operatorDigestBytes.Length)
+Remove-Variable -Name operatorToken, operatorBytes, operatorTokenBytes, `
+    operatorDigestBytes, operatorDigest, operatorHeaders -ErrorAction SilentlyContinue
+```
+
+remote host나 LAN에 이 static-token API를 노출하지 않는다. TLS, managed identity,
+durable actor audit, private origin, secret store와 one-replica deployment가 별도
+승인되기 전에는 배포에 사용할 수 없다.
 
 ### Manual SEC live smoke
 

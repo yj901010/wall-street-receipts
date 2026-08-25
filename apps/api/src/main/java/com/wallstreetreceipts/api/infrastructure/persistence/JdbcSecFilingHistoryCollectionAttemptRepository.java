@@ -21,6 +21,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;
+import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;
 import com.wallstreetreceipts.api.application.filinghistory.PersistFilingHistoryCollectionManifestService;
 import com.wallstreetreceipts.api.application.filinghistory.PersistFilingHistoryCollectionManifestService.DescriptorCaptureSelection;
 import com.wallstreetreceipts.api.application.port.out.FilingCatalogCaptureAppendResult;
@@ -361,8 +363,7 @@ public class JdbcSecFilingHistoryCollectionAttemptRepository
             SecFilingHistoryCollectionAttempt existing,
             SecFilingHistoryCollectionAttempt proposed) {
         if (!existing.sameCommandAs(proposed)) {
-            throw new IllegalArgumentException(
-                    "operatorRequestId is already bound to another command");
+            throw new OperatorRequestConflictException();
         }
         return new SecFilingHistoryCollectionAttemptClaimOutcome(
                 SecFilingHistoryCollectionAttemptClaimOutcome.Status.IDENTICAL_REPLAY,
@@ -372,8 +373,7 @@ public class JdbcSecFilingHistoryCollectionAttemptRepository
     private static RuntimeException rejectedClaim(
             SecFilingHistoryCollectionAttempt plannedAttempt) {
         if (plannedAttempt.commandKind() == CommandKind.COLLECT_EXACT_ROOT) {
-            return new IllegalArgumentException(
-                    "collection attempt exact evidence was not accepted");
+            return new ExactEvidenceNotAdmittedException();
         }
         return new IllegalStateException("collection attempt claim could not be persisted");
     }

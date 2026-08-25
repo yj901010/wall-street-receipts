@@ -41,6 +41,9 @@ info:
     data-mode: ${DATA_MODE:fixture}
 
 app:
+  operator-api:
+    enabled: ${OPERATOR_API_ENABLED:false}
+    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}
   providers:
     market: ${MARKET_PROVIDER:fixture}
     analyst: ${ANALYST_PROVIDER:fixture}

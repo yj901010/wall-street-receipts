@@ -312,7 +312,8 @@ public class JdbcHistoricalFilingSegmentCaptureRepository
                 )
                 """;
         if (isPostgreSql()) {
-            sql += " ON CONFLICT (decoded_body_sha256) DO NOTHING";
+            // Cover both body identity constraints; a losing race is verified below.
+            sql += " ON CONFLICT DO NOTHING";
         }
         int inserted = jdbc.update(sql, new MapSqlParameterSource()
                 .addValue("digest", receipt.decodedBodySha256())

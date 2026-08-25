@@ -5418,3 +5418,111 @@ not as a complete or current filing-history claim.
 - Keep correction/removal semantics, public read API, freshness/source
   attribution, and Korean community UI behind their independent evidence and
   publication gates.
+
+## 2026-08-26 — ADR-043 default-disabled local single-operator SEC attempt API
+
+ADR-043 opens only the local HTTP verification boundary that ADR-042 deferred.
+It keeps the public community product anonymous and read-only, keeps SEC live
+access disabled, and does not treat the developer's existing domain as an
+authentication, TLS, or actor-audit control.
+
+### Scope and decisions
+
+- Add exactly two command routes and one exact status route under
+  `/internal/v1/sec/collection-attempts`: POST `root`, POST `exact-root`, and
+  GET `{attemptId}`. Add no list, search, latest, retry, resume, cancel,
+  abandon, resolve, scheduler, startup collector, browser consumer, or public
+  OpenAPI product operation.
+- Keep the complete surface absent unless `OPERATOR_API_ENABLED=true`. Require
+  one valid lowercase 64-hex `OPERATOR_API_TOKEN_SHA256` when enabled and fail
+  startup closed otherwise. Authenticate an opaque raw Bearer value by hashing
+  it and using constant-time comparison; missing, malformed, and wrong tokens
+  share one sanitized `401 OPERATOR_AUTHENTICATION_REQUIRED` result.
+- Treat this token as one local authority only, not as a durable human actor.
+  Store no token, digest, authorization header, raw provider payload, arbitrary
+  exception, User-Agent, contact email, or database detail in a response or
+  log. The canonical standard-Base64 token for exactly 32 random bytes stays in
+  the invoking shell or a password
+  manager; only its digest may enter the gitignored local `.env`.
+- Preserve ADR-042 exactly. New and identical-replay POSTs both return the
+  immutable representation with `200`, `Location`, and `Cache-Control:
+  no-store`; GET returns `200` and `no-store`. A reused UUID with changed
+  canonical command is `409 OPERATOR_REQUEST_CONFLICT`. Invalid command shapes
+  are `400 INVALID_OPERATOR_COMMAND`. A valid unknown attempt is `404
+  SEC_COLLECTION_ATTEMPT_NOT_FOUND`.
+- Distinguish an initial FK admission rejection from a durable validation
+  terminal. Missing/incompatible root or segment evidence that the database
+  cannot admit is sanitized `422 EXACT_EVIDENCE_NOT_ADMITTED` with no ledger
+  or provider request. Evidence admitted and then failing exact reconstruction
+  returns `200` with the durable ADR-042
+  `EXACT_EVIDENCE_VALIDATION_FAILED` terminal. Provider failure and
+  `PROVIDER_DISPATCHED_INDETERMINATE` are also represented as durable `200`
+  state rather than rewritten as transport failure or retry permission.
+- Project only the closed command identity, lifecycle, descriptor action,
+  provider dispatch, terminal disposition/failure, exact artifact identity,
+  timestamp, and three explicit safety fields. `attemptIndeterminate` and
+  `providerStartOrResponseUnknown` conservatively expose uncertainty, while
+  `automaticRetryAllowed` is always false. Preserve unavailable facts as JSON
+  `null`; do not add a replay Boolean or infer missing facts.
+- Restrict this phase to one loopback/local API JVM and PostgreSQL. Keep
+  the entire embedded server programmatically bound to
+  `InetAddress.getLoopbackAddress()` whenever the operator boundary is enabled,
+  overriding a broader configured address. Keep `SEC_PROVIDER_ENABLED=false`
+  for every ADR-043 test so a provider-bound command can exercise the durable
+  gate-closed result but cannot contact SEC. Default test, `verify`, and CI
+  remain offline.
+- Preserve Spring Security's strict HTTP firewall and adapt its pre-MVC
+  rejections to the existing closed `400 INVALID_QUERY` problem contract. Use
+  a constant safe instance, reflect no rejected URI/query/credential content,
+  and add `no-store` for the operator prefix.
+- Fix the PostgreSQL 17 equal-body insert race exposed by full verification.
+  Both SEC capture repositories now use targetless `ON CONFLICT DO NOTHING` so
+  either of the table's two body-identity constraints can arbitrate the race;
+  the existing reread still compares the exact stored length and bytes before
+  accepting an identical replay.
+- Prohibit remote deployment of the static-token boundary. A future deployment
+  decision must add HTTPS, managed issuer/audience-bound identity, a private
+  API origin, durable append-only actor audit, CSRF/origin controls if cookies
+  are introduced, secret rotation, private actuator access, and ingress
+  controls. Live operation remains exactly one API replica until distributed
+  rate, cooldown, and mutex ownership is reviewed.
+
+### Operator requirements
+
+- Local ADR-043 verification needs no domain, DNS change, Cloudflare account,
+  OAuth client, SEC API key/account/payment, or monitored `SEC_CONTACT_EMAIL`.
+  It needs only one locally generated raw token retained outside the repository,
+  its SHA-256 digest in `OPERATOR_API_TOKEN_SHA256`, the explicit local enable
+  flag, and the existing PostgreSQL configuration. The application enforces
+  the loopback bind automatically while enabled.
+- The exact PowerShell generation, root `.env` placement, provider-disabled
+  replay/status smoke, and cleanup steps are recorded in `apps/api/README.md`.
+  The operator must not send the raw token, database password, contact email,
+  or any future identity-provider secret in chat.
+
+### Verification
+
+- ADR-043 decision, root/API README parity, safe `.env.example` defaults, exact
+  route/status table, secret boundary, one-replica rule, and deployment
+  prerequisites: **PASS** by documentation/static review.
+- Focused ADR-043 operator properties, security, loopback, query, controller,
+  and offline integration suite: **PASS** — 45 tests, zero failures/errors/skips.
+- Full API `verify`: **PASS** — 2,347 tests, zero failures/errors/skips,
+  including PostgreSQL 17 Testcontainers, Flyway v1-to-v9 paths, both
+  equal-body concurrency regressions, authenticated offline execution/replay,
+  strict-firewall handling, and a real loopback-bound Tomcat instance.
+- Web regression verification: **PASS** — ESLint, 569/569 Vitest tests,
+  production build, and 72/72 Playwright checks across 1440, 1280, and 390 px.
+- Compose interpolation with `.env.example`: **PASS**.
+- Live SEC verification: **NOT RUN BY DESIGN** — `SEC_PROVIDER_ENABLED` remains
+  false and ADR-043 authorizes no live provider check.
+
+### Next work
+
+- Before deployment, choose the actual web/API hosting topology and managed
+  identity provider, then add durable actor attribution and verify that the API
+  origin cannot bypass it. The current domain alone satisfies none of those
+  requirements.
+- Keep any browser/BFF operator UI, multi-operator authorization, token
+  rotation endpoint, indeterminate resolution, and multi-replica coordinator
+  behind separate reviewed contracts.

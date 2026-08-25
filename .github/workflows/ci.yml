@@ -3500,6 +3500,25 @@ jobs:
               "Historical replay must exclude the exact ADR-042 10+7 surface",
           )
           adr041_later_paths |= adr042_later_paths
+          adr043_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+          }
+          require(
+              len(adr043_later_paths) == 25
+              and all(path.is_file() for path in adr043_later_paths),
+              "Historical replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr041_later_paths |= adr043_later_paths
 
           adr042_provider_exception_path = Path(
               "apps/api/src/main/java/com/wallstreetreceipts/api/"
@@ -3542,6 +3561,58 @@ jobs:
                       "ADR-042 embedded pre-typed-provider snapshot is invalid",
                   )
               elif path == adr042_postgres_test_path:
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1c96ed547d518d97be37a3dd914de1d2d305dd89074df86dfc1c910cd9f92534",
+                      "PostgreSQL decoded-body race current delta changed",
+                  )
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body race setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  assertion_start = (
+                      b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  )
+                  assertion_end = b"                .isEqualTo(1);\n"
+                  for accessor in (b"catalog", b"segment"):
+                      marker = (
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                      )
+                      marker_index = source.find(marker)
+                      second_start = source.rfind(assertion_start, 0, marker_index)
+                      first_start = source.rfind(assertion_start, 0, second_start)
+                      end = source.find(assertion_end, marker_index)
+                      require(
+                          marker_index >= 0 and first_start >= 0
+                          and second_start > first_start and end >= marker_index,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      end += len(assertion_end)
+                      removed = source[first_start:end]
+                      require(
+                          removed.count(assertion_start) == 2
+                          and b"bodiesBeforeConcurrentReplay + 1" in removed
+                          and b"decoded_body_sha256 = ?" in removed
+                          and b"decoded_body_length = ?" in removed,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion shape changed",
+                      )
+                      source = source[:first_start] + source[end:]
                   require(
                       hashlib.sha256(source).hexdigest()
                           == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -3599,12 +3670,54 @@ jobs:
           def historical_read_bytes(path):
               source = original_read_bytes(path).replace(b"\r\n", b"\n")
               if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  operator_api_addition = (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n"
+                  )
+                  require(
+                      source.count(operator_api_addition) == 1,
+                      "ADR-043 application.yml authorized later delta changed",
+                  )
+                  source = source.replace(operator_api_addition, b"app:\n")
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+                      "ADR-043 application.yml historical reverse projection changed",
+                  )
                   for addition in adr035_application_config_additions:
                       require(
                           source.count(addition) == 1,
                           "ADR-035 application.yml historical delta changed",
                       )
                       source = source.replace(addition, b"")
+              if path.as_posix() == (
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/web/"
+                  "RequestIdFilter.java"
+              ):
+                  request_id_replacements = (
+                      (
+                          b"import org.springframework.core.Ordered;\n"
+                          b"import org.springframework.core.annotation.Order;\n",
+                          b"",
+                      ),
+                      (
+                          b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                          b"@Component\n",
+                      ),
+                  )
+                  for current, historical in request_id_replacements:
+                      require(
+                          source.count(current) == 1,
+                          "ADR-043 request-id filter authorized later delta changed",
+                      )
+                      source = source.replace(current, historical)
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+                      "ADR-043 request-id filter historical reverse projection changed",
+                  )
               if path.as_posix() == (
                   "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
                   "PostgreSqlMigrationTest.java"
@@ -4592,6 +4705,25 @@ jobs:
               "Historical replay must exclude the exact ADR-042 10+7 surface",
           )
           adr041_later_paths |= adr042_later_paths
+          adr043_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+          }
+          require(
+              len(adr043_later_paths) == 25
+              and all(path.is_file() for path in adr043_later_paths),
+              "Historical replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr041_later_paths |= adr043_later_paths
 
           adr042_provider_exception_path = Path(
               "apps/api/src/main/java/com/wallstreetreceipts/api/"
@@ -4634,6 +4766,58 @@ jobs:
                       "ADR-042 embedded pre-typed-provider snapshot is invalid",
                   )
               elif path == adr042_postgres_test_path:
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1c96ed547d518d97be37a3dd914de1d2d305dd89074df86dfc1c910cd9f92534",
+                      "PostgreSQL decoded-body race current delta changed",
+                  )
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body race setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  assertion_start = (
+                      b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  )
+                  assertion_end = b"                .isEqualTo(1);\n"
+                  for accessor in (b"catalog", b"segment"):
+                      marker = (
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                      )
+                      marker_index = source.find(marker)
+                      second_start = source.rfind(assertion_start, 0, marker_index)
+                      first_start = source.rfind(assertion_start, 0, second_start)
+                      end = source.find(assertion_end, marker_index)
+                      require(
+                          marker_index >= 0 and first_start >= 0
+                          and second_start > first_start and end >= marker_index,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      end += len(assertion_end)
+                      removed = source[first_start:end]
+                      require(
+                          removed.count(assertion_start) == 2
+                          and b"bodiesBeforeConcurrentReplay + 1" in removed
+                          and b"decoded_body_sha256 = ?" in removed
+                          and b"decoded_body_length = ?" in removed,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion shape changed",
+                      )
+                      source = source[:first_start] + source[end:]
                   require(
                       hashlib.sha256(source).hexdigest()
                           == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -4691,12 +4875,54 @@ jobs:
           def historical_read_bytes(path):
               source = original_read_bytes(path).replace(b"\r\n", b"\n")
               if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  operator_api_addition = (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n"
+                  )
+                  require(
+                      source.count(operator_api_addition) == 1,
+                      "ADR-043 application.yml authorized later delta changed",
+                  )
+                  source = source.replace(operator_api_addition, b"app:\n")
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+                      "ADR-043 application.yml historical reverse projection changed",
+                  )
                   for addition in adr035_application_config_additions:
                       require(
                           source.count(addition) == 1,
                           "ADR-035 application.yml historical delta changed",
                       )
                       source = source.replace(addition, b"")
+              if path.as_posix() == (
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/web/"
+                  "RequestIdFilter.java"
+              ):
+                  request_id_replacements = (
+                      (
+                          b"import org.springframework.core.Ordered;\n"
+                          b"import org.springframework.core.annotation.Order;\n",
+                          b"",
+                      ),
+                      (
+                          b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                          b"@Component\n",
+                      ),
+                  )
+                  for current, historical in request_id_replacements:
+                      require(
+                          source.count(current) == 1,
+                          "ADR-043 request-id filter authorized later delta changed",
+                      )
+                      source = source.replace(current, historical)
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+                      "ADR-043 request-id filter historical reverse projection changed",
+                  )
               if path.as_posix() == (
                   "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
                   "PostgreSqlMigrationTest.java"
@@ -11222,6 +11448,25 @@ jobs:
               "Historical replay must exclude the exact ADR-042 10+7 surface",
           )
           adr041_later_paths |= adr042_later_paths
+          adr043_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+          }
+          require(
+              len(adr043_later_paths) == 25
+              and all(path.is_file() for path in adr043_later_paths),
+              "Historical replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr041_later_paths |= adr043_later_paths
 
           adr042_provider_exception_path = Path(
               "apps/api/src/main/java/com/wallstreetreceipts/api/"
@@ -11264,6 +11509,58 @@ jobs:
                       "ADR-042 embedded pre-typed-provider snapshot is invalid",
                   )
               elif path == adr042_postgres_test_path:
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1c96ed547d518d97be37a3dd914de1d2d305dd89074df86dfc1c910cd9f92534",
+                      "PostgreSQL decoded-body race current delta changed",
+                  )
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body race setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  assertion_start = (
+                      b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  )
+                  assertion_end = b"                .isEqualTo(1);\n"
+                  for accessor in (b"catalog", b"segment"):
+                      marker = (
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                      )
+                      marker_index = source.find(marker)
+                      second_start = source.rfind(assertion_start, 0, marker_index)
+                      first_start = source.rfind(assertion_start, 0, second_start)
+                      end = source.find(assertion_end, marker_index)
+                      require(
+                          marker_index >= 0 and first_start >= 0
+                          and second_start > first_start and end >= marker_index,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      end += len(assertion_end)
+                      removed = source[first_start:end]
+                      require(
+                          removed.count(assertion_start) == 2
+                          and b"bodiesBeforeConcurrentReplay + 1" in removed
+                          and b"decoded_body_sha256 = ?" in removed
+                          and b"decoded_body_length = ?" in removed,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion shape changed",
+                      )
+                      source = source[:first_start] + source[end:]
                   require(
                       hashlib.sha256(source).hexdigest()
                           == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -11321,12 +11618,54 @@ jobs:
           def historical_read_bytes(path):
               source = original_read_bytes(path).replace(b"\r\n", b"\n")
               if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  operator_api_addition = (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n"
+                  )
+                  require(
+                      source.count(operator_api_addition) == 1,
+                      "ADR-043 application.yml authorized later delta changed",
+                  )
+                  source = source.replace(operator_api_addition, b"app:\n")
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+                      "ADR-043 application.yml historical reverse projection changed",
+                  )
                   for addition in adr035_application_config_additions:
                       require(
                           source.count(addition) == 1,
                           "ADR-035 application.yml historical delta changed",
                       )
                       source = source.replace(addition, b"")
+              if path.as_posix() == (
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/web/"
+                  "RequestIdFilter.java"
+              ):
+                  request_id_replacements = (
+                      (
+                          b"import org.springframework.core.Ordered;\n"
+                          b"import org.springframework.core.annotation.Order;\n",
+                          b"",
+                      ),
+                      (
+                          b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                          b"@Component\n",
+                      ),
+                  )
+                  for current, historical in request_id_replacements:
+                      require(
+                          source.count(current) == 1,
+                          "ADR-043 request-id filter authorized later delta changed",
+                      )
+                      source = source.replace(current, historical)
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+                      "ADR-043 request-id filter historical reverse projection changed",
+                  )
               if path.as_posix() == (
                   "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
                   "PostgreSqlMigrationTest.java"
@@ -13260,6 +13599,25 @@ jobs:
               "Historical replay must exclude the exact ADR-042 10+7 surface",
           )
           adr041_later_paths |= adr042_later_paths
+          adr043_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+          }
+          require(
+              len(adr043_later_paths) == 25
+              and all(path.is_file() for path in adr043_later_paths),
+              "Historical replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr041_later_paths |= adr043_later_paths
 
           adr042_provider_exception_path = Path(
               "apps/api/src/main/java/com/wallstreetreceipts/api/"
@@ -13302,6 +13660,58 @@ jobs:
                       "ADR-042 embedded pre-typed-provider snapshot is invalid",
                   )
               elif path == adr042_postgres_test_path:
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1c96ed547d518d97be37a3dd914de1d2d305dd89074df86dfc1c910cd9f92534",
+                      "PostgreSQL decoded-body race current delta changed",
+                  )
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body race setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  assertion_start = (
+                      b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  )
+                  assertion_end = b"                .isEqualTo(1);\n"
+                  for accessor in (b"catalog", b"segment"):
+                      marker = (
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                      )
+                      marker_index = source.find(marker)
+                      second_start = source.rfind(assertion_start, 0, marker_index)
+                      first_start = source.rfind(assertion_start, 0, second_start)
+                      end = source.find(assertion_end, marker_index)
+                      require(
+                          marker_index >= 0 and first_start >= 0
+                          and second_start > first_start and end >= marker_index,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      end += len(assertion_end)
+                      removed = source[first_start:end]
+                      require(
+                          removed.count(assertion_start) == 2
+                          and b"bodiesBeforeConcurrentReplay + 1" in removed
+                          and b"decoded_body_sha256 = ?" in removed
+                          and b"decoded_body_length = ?" in removed,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion shape changed",
+                      )
+                      source = source[:first_start] + source[end:]
                   require(
                       hashlib.sha256(source).hexdigest()
                           == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -13359,12 +13769,54 @@ jobs:
           def historical_read_bytes(path):
               source = original_read_bytes(path).replace(b"\r\n", b"\n")
               if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  operator_api_addition = (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n"
+                  )
+                  require(
+                      source.count(operator_api_addition) == 1,
+                      "ADR-043 application.yml authorized later delta changed",
+                  )
+                  source = source.replace(operator_api_addition, b"app:\n")
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+                      "ADR-043 application.yml historical reverse projection changed",
+                  )
                   for addition in adr035_application_config_additions:
                       require(
                           source.count(addition) == 1,
                           "ADR-035 application.yml historical delta changed",
                       )
                       source = source.replace(addition, b"")
+              if path.as_posix() == (
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/web/"
+                  "RequestIdFilter.java"
+              ):
+                  request_id_replacements = (
+                      (
+                          b"import org.springframework.core.Ordered;\n"
+                          b"import org.springframework.core.annotation.Order;\n",
+                          b"",
+                      ),
+                      (
+                          b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                          b"@Component\n",
+                      ),
+                  )
+                  for current, historical in request_id_replacements:
+                      require(
+                          source.count(current) == 1,
+                          "ADR-043 request-id filter authorized later delta changed",
+                      )
+                      source = source.replace(current, historical)
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+                      "ADR-043 request-id filter historical reverse projection changed",
+                  )
               if path.as_posix() == (
                   "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
                   "PostgreSqlMigrationTest.java"
@@ -14393,6 +14845,25 @@ jobs:
               "Historical replay must exclude the exact ADR-042 10+7 surface",
           )
           adr041_later_paths |= adr042_later_paths
+          adr043_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+          }
+          require(
+              len(adr043_later_paths) == 25
+              and all(path.is_file() for path in adr043_later_paths),
+              "Historical replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr041_later_paths |= adr043_later_paths
 
           adr042_provider_exception_path = Path(
               "apps/api/src/main/java/com/wallstreetreceipts/api/"
@@ -14435,6 +14906,58 @@ jobs:
                       "ADR-042 embedded pre-typed-provider snapshot is invalid",
                   )
               elif path == adr042_postgres_test_path:
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1c96ed547d518d97be37a3dd914de1d2d305dd89074df86dfc1c910cd9f92534",
+                      "PostgreSQL decoded-body race current delta changed",
+                  )
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body race setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  assertion_start = (
+                      b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  )
+                  assertion_end = b"                .isEqualTo(1);\n"
+                  for accessor in (b"catalog", b"segment"):
+                      marker = (
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                      )
+                      marker_index = source.find(marker)
+                      second_start = source.rfind(assertion_start, 0, marker_index)
+                      first_start = source.rfind(assertion_start, 0, second_start)
+                      end = source.find(assertion_end, marker_index)
+                      require(
+                          marker_index >= 0 and first_start >= 0
+                          and second_start > first_start and end >= marker_index,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      end += len(assertion_end)
+                      removed = source[first_start:end]
+                      require(
+                          removed.count(assertion_start) == 2
+                          and b"bodiesBeforeConcurrentReplay + 1" in removed
+                          and b"decoded_body_sha256 = ?" in removed
+                          and b"decoded_body_length = ?" in removed,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion shape changed",
+                      )
+                      source = source[:first_start] + source[end:]
                   require(
                       hashlib.sha256(source).hexdigest()
                           == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -14492,12 +15015,54 @@ jobs:
           def historical_read_bytes(path):
               source = original_read_bytes(path).replace(b"\r\n", b"\n")
               if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  operator_api_addition = (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n"
+                  )
+                  require(
+                      source.count(operator_api_addition) == 1,
+                      "ADR-043 application.yml authorized later delta changed",
+                  )
+                  source = source.replace(operator_api_addition, b"app:\n")
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+                      "ADR-043 application.yml historical reverse projection changed",
+                  )
                   for addition in adr035_application_config_additions:
                       require(
                           source.count(addition) == 1,
                           "ADR-035 application.yml historical delta changed",
                       )
                       source = source.replace(addition, b"")
+              if path.as_posix() == (
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/web/"
+                  "RequestIdFilter.java"
+              ):
+                  request_id_replacements = (
+                      (
+                          b"import org.springframework.core.Ordered;\n"
+                          b"import org.springframework.core.annotation.Order;\n",
+                          b"",
+                      ),
+                      (
+                          b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                          b"@Component\n",
+                      ),
+                  )
+                  for current, historical in request_id_replacements:
+                      require(
+                          source.count(current) == 1,
+                          "ADR-043 request-id filter authorized later delta changed",
+                      )
+                      source = source.replace(current, historical)
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+                      "ADR-043 request-id filter historical reverse projection changed",
+                  )
               if path.as_posix() == (
                   "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
                   "PostgreSqlMigrationTest.java"
@@ -15504,6 +16069,25 @@ jobs:
               "Historical replay must exclude the exact ADR-042 10+7 surface",
           )
           adr041_later_paths |= adr042_later_paths
+          adr043_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+          }
+          require(
+              len(adr043_later_paths) == 25
+              and all(path.is_file() for path in adr043_later_paths),
+              "Historical replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr041_later_paths |= adr043_later_paths
 
           adr042_provider_exception_path = Path(
               "apps/api/src/main/java/com/wallstreetreceipts/api/"
@@ -15546,6 +16130,58 @@ jobs:
                       "ADR-042 embedded pre-typed-provider snapshot is invalid",
                   )
               elif path == adr042_postgres_test_path:
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1c96ed547d518d97be37a3dd914de1d2d305dd89074df86dfc1c910cd9f92534",
+                      "PostgreSQL decoded-body race current delta changed",
+                  )
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body race setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  assertion_start = (
+                      b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  )
+                  assertion_end = b"                .isEqualTo(1);\n"
+                  for accessor in (b"catalog", b"segment"):
+                      marker = (
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                      )
+                      marker_index = source.find(marker)
+                      second_start = source.rfind(assertion_start, 0, marker_index)
+                      first_start = source.rfind(assertion_start, 0, second_start)
+                      end = source.find(assertion_end, marker_index)
+                      require(
+                          marker_index >= 0 and first_start >= 0
+                          and second_start > first_start and end >= marker_index,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      end += len(assertion_end)
+                      removed = source[first_start:end]
+                      require(
+                          removed.count(assertion_start) == 2
+                          and b"bodiesBeforeConcurrentReplay + 1" in removed
+                          and b"decoded_body_sha256 = ?" in removed
+                          and b"decoded_body_length = ?" in removed,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion shape changed",
+                      )
+                      source = source[:first_start] + source[end:]
                   require(
                       hashlib.sha256(source).hexdigest()
                           == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -15603,12 +16239,54 @@ jobs:
           def historical_read_bytes(path):
               source = original_read_bytes(path).replace(b"\r\n", b"\n")
               if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  operator_api_addition = (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n"
+                  )
+                  require(
+                      source.count(operator_api_addition) == 1,
+                      "ADR-043 application.yml authorized later delta changed",
+                  )
+                  source = source.replace(operator_api_addition, b"app:\n")
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+                      "ADR-043 application.yml historical reverse projection changed",
+                  )
                   for addition in adr035_application_config_additions:
                       require(
                           source.count(addition) == 1,
                           "ADR-035 application.yml historical delta changed",
                       )
                       source = source.replace(addition, b"")
+              if path.as_posix() == (
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/web/"
+                  "RequestIdFilter.java"
+              ):
+                  request_id_replacements = (
+                      (
+                          b"import org.springframework.core.Ordered;\n"
+                          b"import org.springframework.core.annotation.Order;\n",
+                          b"",
+                      ),
+                      (
+                          b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                          b"@Component\n",
+                      ),
+                  )
+                  for current, historical in request_id_replacements:
+                      require(
+                          source.count(current) == 1,
+                          "ADR-043 request-id filter authorized later delta changed",
+                      )
+                      source = source.replace(current, historical)
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+                      "ADR-043 request-id filter historical reverse projection changed",
+                  )
               if path.as_posix() == (
                   "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
                   "PostgreSqlMigrationTest.java"
@@ -16554,6 +17232,25 @@ jobs:
               "Historical replay must exclude the exact ADR-042 10+7 surface",
           )
           adr041_later_paths |= adr042_later_paths
+          adr043_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+          }
+          require(
+              len(adr043_later_paths) == 25
+              and all(path.is_file() for path in adr043_later_paths),
+              "Historical replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr041_later_paths |= adr043_later_paths
 
           adr042_provider_exception_path = Path(
               "apps/api/src/main/java/com/wallstreetreceipts/api/"
@@ -16596,6 +17293,58 @@ jobs:
                       "ADR-042 embedded pre-typed-provider snapshot is invalid",
                   )
               elif path == adr042_postgres_test_path:
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1c96ed547d518d97be37a3dd914de1d2d305dd89074df86dfc1c910cd9f92534",
+                      "PostgreSQL decoded-body race current delta changed",
+                  )
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body race setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  assertion_start = (
+                      b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  )
+                  assertion_end = b"                .isEqualTo(1);\n"
+                  for accessor in (b"catalog", b"segment"):
+                      marker = (
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                      )
+                      marker_index = source.find(marker)
+                      second_start = source.rfind(assertion_start, 0, marker_index)
+                      first_start = source.rfind(assertion_start, 0, second_start)
+                      end = source.find(assertion_end, marker_index)
+                      require(
+                          marker_index >= 0 and first_start >= 0
+                          and second_start > first_start and end >= marker_index,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      end += len(assertion_end)
+                      removed = source[first_start:end]
+                      require(
+                          removed.count(assertion_start) == 2
+                          and b"bodiesBeforeConcurrentReplay + 1" in removed
+                          and b"decoded_body_sha256 = ?" in removed
+                          and b"decoded_body_length = ?" in removed,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion shape changed",
+                      )
+                      source = source[:first_start] + source[end:]
                   require(
                       hashlib.sha256(source).hexdigest()
                           == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -16653,12 +17402,54 @@ jobs:
           def historical_read_bytes(path):
               source = original_read_bytes(path).replace(b"\r\n", b"\n")
               if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  operator_api_addition = (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n"
+                  )
+                  require(
+                      source.count(operator_api_addition) == 1,
+                      "ADR-043 application.yml authorized later delta changed",
+                  )
+                  source = source.replace(operator_api_addition, b"app:\n")
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+                      "ADR-043 application.yml historical reverse projection changed",
+                  )
                   for addition in adr035_application_config_additions:
                       require(
                           source.count(addition) == 1,
                           "ADR-035 application.yml historical delta changed",
                       )
                       source = source.replace(addition, b"")
+              if path.as_posix() == (
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/web/"
+                  "RequestIdFilter.java"
+              ):
+                  request_id_replacements = (
+                      (
+                          b"import org.springframework.core.Ordered;\n"
+                          b"import org.springframework.core.annotation.Order;\n",
+                          b"",
+                      ),
+                      (
+                          b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                          b"@Component\n",
+                      ),
+                  )
+                  for current, historical in request_id_replacements:
+                      require(
+                          source.count(current) == 1,
+                          "ADR-043 request-id filter authorized later delta changed",
+                      )
+                      source = source.replace(current, historical)
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+                      "ADR-043 request-id filter historical reverse projection changed",
+                  )
               if path.as_posix() == (
                   "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
                   "PostgreSqlMigrationTest.java"
@@ -18078,6 +18869,25 @@ jobs:
               "Historical replay must exclude the exact ADR-042 10+7 surface",
           )
           adr041_later_paths |= adr042_later_paths
+          adr043_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+          }
+          require(
+              len(adr043_later_paths) == 25
+              and all(path.is_file() for path in adr043_later_paths),
+              "Historical replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr041_later_paths |= adr043_later_paths
 
           adr042_provider_exception_path = Path(
               "apps/api/src/main/java/com/wallstreetreceipts/api/"
@@ -18120,6 +18930,58 @@ jobs:
                       "ADR-042 embedded pre-typed-provider snapshot is invalid",
                   )
               elif path == adr042_postgres_test_path:
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1c96ed547d518d97be37a3dd914de1d2d305dd89074df86dfc1c910cd9f92534",
+                      "PostgreSQL decoded-body race current delta changed",
+                  )
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body race setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  assertion_start = (
+                      b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  )
+                  assertion_end = b"                .isEqualTo(1);\n"
+                  for accessor in (b"catalog", b"segment"):
+                      marker = (
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                      )
+                      marker_index = source.find(marker)
+                      second_start = source.rfind(assertion_start, 0, marker_index)
+                      first_start = source.rfind(assertion_start, 0, second_start)
+                      end = source.find(assertion_end, marker_index)
+                      require(
+                          marker_index >= 0 and first_start >= 0
+                          and second_start > first_start and end >= marker_index,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      end += len(assertion_end)
+                      removed = source[first_start:end]
+                      require(
+                          removed.count(assertion_start) == 2
+                          and b"bodiesBeforeConcurrentReplay + 1" in removed
+                          and b"decoded_body_sha256 = ?" in removed
+                          and b"decoded_body_length = ?" in removed,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion shape changed",
+                      )
+                      source = source[:first_start] + source[end:]
                   require(
                       hashlib.sha256(source).hexdigest()
                           == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -18177,12 +19039,54 @@ jobs:
           def historical_read_bytes(path):
               source = original_read_bytes(path).replace(b"\r\n", b"\n")
               if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  operator_api_addition = (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n"
+                  )
+                  require(
+                      source.count(operator_api_addition) == 1,
+                      "ADR-043 application.yml authorized later delta changed",
+                  )
+                  source = source.replace(operator_api_addition, b"app:\n")
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+                      "ADR-043 application.yml historical reverse projection changed",
+                  )
                   for addition in adr035_application_config_additions:
                       require(
                           source.count(addition) == 1,
                           "ADR-035 application.yml historical delta changed",
                       )
                       source = source.replace(addition, b"")
+              if path.as_posix() == (
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/web/"
+                  "RequestIdFilter.java"
+              ):
+                  request_id_replacements = (
+                      (
+                          b"import org.springframework.core.Ordered;\n"
+                          b"import org.springframework.core.annotation.Order;\n",
+                          b"",
+                      ),
+                      (
+                          b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                          b"@Component\n",
+                      ),
+                  )
+                  for current, historical in request_id_replacements:
+                      require(
+                          source.count(current) == 1,
+                          "ADR-043 request-id filter authorized later delta changed",
+                      )
+                      source = source.replace(current, historical)
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+                      "ADR-043 request-id filter historical reverse projection changed",
+                  )
               if path.as_posix() == (
                   "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
                   "PostgreSqlMigrationTest.java"
@@ -19198,6 +20102,25 @@ jobs:
               "Historical replay must exclude the exact ADR-042 10+7 surface",
           )
           adr041_later_paths |= adr042_later_paths
+          adr043_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+          }
+          require(
+              len(adr043_later_paths) == 25
+              and all(path.is_file() for path in adr043_later_paths),
+              "Historical replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr041_later_paths |= adr043_later_paths
 
           adr042_provider_exception_path = Path(
               "apps/api/src/main/java/com/wallstreetreceipts/api/"
@@ -19240,6 +20163,58 @@ jobs:
                       "ADR-042 embedded pre-typed-provider snapshot is invalid",
                   )
               elif path == adr042_postgres_test_path:
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1c96ed547d518d97be37a3dd914de1d2d305dd89074df86dfc1c910cd9f92534",
+                      "PostgreSQL decoded-body race current delta changed",
+                  )
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body race setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  assertion_start = (
+                      b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  )
+                  assertion_end = b"                .isEqualTo(1);\n"
+                  for accessor in (b"catalog", b"segment"):
+                      marker = (
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                      )
+                      marker_index = source.find(marker)
+                      second_start = source.rfind(assertion_start, 0, marker_index)
+                      first_start = source.rfind(assertion_start, 0, second_start)
+                      end = source.find(assertion_end, marker_index)
+                      require(
+                          marker_index >= 0 and first_start >= 0
+                          and second_start > first_start and end >= marker_index,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      end += len(assertion_end)
+                      removed = source[first_start:end]
+                      require(
+                          removed.count(assertion_start) == 2
+                          and b"bodiesBeforeConcurrentReplay + 1" in removed
+                          and b"decoded_body_sha256 = ?" in removed
+                          and b"decoded_body_length = ?" in removed,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion shape changed",
+                      )
+                      source = source[:first_start] + source[end:]
                   require(
                       hashlib.sha256(source).hexdigest()
                           == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -19297,12 +20272,54 @@ jobs:
           def historical_read_bytes(path):
               source = original_read_bytes(path).replace(b"\r\n", b"\n")
               if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  operator_api_addition = (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n"
+                  )
+                  require(
+                      source.count(operator_api_addition) == 1,
+                      "ADR-043 application.yml authorized later delta changed",
+                  )
+                  source = source.replace(operator_api_addition, b"app:\n")
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+                      "ADR-043 application.yml historical reverse projection changed",
+                  )
                   for addition in adr035_application_config_additions:
                       require(
                           source.count(addition) == 1,
                           "ADR-035 application.yml historical delta changed",
                       )
                       source = source.replace(addition, b"")
+              if path.as_posix() == (
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/web/"
+                  "RequestIdFilter.java"
+              ):
+                  request_id_replacements = (
+                      (
+                          b"import org.springframework.core.Ordered;\n"
+                          b"import org.springframework.core.annotation.Order;\n",
+                          b"",
+                      ),
+                      (
+                          b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                          b"@Component\n",
+                      ),
+                  )
+                  for current, historical in request_id_replacements:
+                      require(
+                          source.count(current) == 1,
+                          "ADR-043 request-id filter authorized later delta changed",
+                      )
+                      source = source.replace(current, historical)
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+                      "ADR-043 request-id filter historical reverse projection changed",
+                  )
               if path.as_posix() == (
                   "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
                   "PostgreSqlMigrationTest.java"
@@ -20299,6 +21316,25 @@ jobs:
               "Historical replay must exclude the exact ADR-042 10+7 surface",
           )
           adr041_later_paths |= adr042_later_paths
+          adr043_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+          }
+          require(
+              len(adr043_later_paths) == 25
+              and all(path.is_file() for path in adr043_later_paths),
+              "Historical replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr041_later_paths |= adr043_later_paths
 
           adr042_provider_exception_path = Path(
               "apps/api/src/main/java/com/wallstreetreceipts/api/"
@@ -20341,6 +21377,58 @@ jobs:
                       "ADR-042 embedded pre-typed-provider snapshot is invalid",
                   )
               elif path == adr042_postgres_test_path:
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1c96ed547d518d97be37a3dd914de1d2d305dd89074df86dfc1c910cd9f92534",
+                      "PostgreSQL decoded-body race current delta changed",
+                  )
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body race setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  assertion_start = (
+                      b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  )
+                  assertion_end = b"                .isEqualTo(1);\n"
+                  for accessor in (b"catalog", b"segment"):
+                      marker = (
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                      )
+                      marker_index = source.find(marker)
+                      second_start = source.rfind(assertion_start, 0, marker_index)
+                      first_start = source.rfind(assertion_start, 0, second_start)
+                      end = source.find(assertion_end, marker_index)
+                      require(
+                          marker_index >= 0 and first_start >= 0
+                          and second_start > first_start and end >= marker_index,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      end += len(assertion_end)
+                      removed = source[first_start:end]
+                      require(
+                          removed.count(assertion_start) == 2
+                          and b"bodiesBeforeConcurrentReplay + 1" in removed
+                          and b"decoded_body_sha256 = ?" in removed
+                          and b"decoded_body_length = ?" in removed,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion shape changed",
+                      )
+                      source = source[:first_start] + source[end:]
                   require(
                       hashlib.sha256(source).hexdigest()
                           == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -20398,12 +21486,54 @@ jobs:
           def historical_read_bytes(path):
               source = original_read_bytes(path).replace(b"\r\n", b"\n")
               if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  operator_api_addition = (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n"
+                  )
+                  require(
+                      source.count(operator_api_addition) == 1,
+                      "ADR-043 application.yml authorized later delta changed",
+                  )
+                  source = source.replace(operator_api_addition, b"app:\n")
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+                      "ADR-043 application.yml historical reverse projection changed",
+                  )
                   for addition in adr035_application_config_additions:
                       require(
                           source.count(addition) == 1,
                           "ADR-035 application.yml historical delta changed",
                       )
                       source = source.replace(addition, b"")
+              if path.as_posix() == (
+                  "apps/api/src/main/java/com/wallstreetreceipts/api/web/"
+                  "RequestIdFilter.java"
+              ):
+                  request_id_replacements = (
+                      (
+                          b"import org.springframework.core.Ordered;\n"
+                          b"import org.springframework.core.annotation.Order;\n",
+                          b"",
+                      ),
+                      (
+                          b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                          b"@Component\n",
+                      ),
+                  )
+                  for current, historical in request_id_replacements:
+                      require(
+                          source.count(current) == 1,
+                          "ADR-043 request-id filter authorized later delta changed",
+                      )
+                      source = source.replace(current, historical)
+                  require(
+                      hashlib.sha256(source).hexdigest()
+                          == "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+                      "ADR-043 request-id filter historical reverse projection changed",
+                  )
               if path.as_posix() == (
                   "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
                   "PostgreSqlMigrationTest.java"
@@ -21482,6 +22612,25 @@ jobs:
               "Historical replay must exclude the exact ADR-042 10+7 surface",
           )
           adr041_later_paths |= adr042_later_paths
+          adr043_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/config").glob("Operator*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security").glob("*.java"),
+          }
+          require(
+              len(adr043_later_paths) == 25
+              and all(path.is_file() for path in adr043_later_paths),
+              "Historical replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr041_later_paths |= adr043_later_paths
 
           adr042_provider_exception_path = Path(
               "apps/api/src/main/java/com/wallstreetreceipts/api/"
@@ -21526,6 +22675,58 @@ jobs:
               elif path == adr042_postgres_test_path:
                   require(
                       hashlib.sha256(source).hexdigest()
+                          == "1c96ed547d518d97be37a3dd914de1d2d305dd89074df86dfc1c910cd9f92534",
+                      "PostgreSQL decoded-body race current delta changed",
+                  )
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body race setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  assertion_start = (
+                      b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  )
+                  assertion_end = b"                .isEqualTo(1);\n"
+                  for accessor in (b"catalog", b"segment"):
+                      marker = (
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                      )
+                      marker_index = source.find(marker)
+                      second_start = source.rfind(assertion_start, 0, marker_index)
+                      first_start = source.rfind(assertion_start, 0, second_start)
+                      end = source.find(assertion_end, marker_index)
+                      require(
+                          marker_index >= 0 and first_start >= 0
+                          and second_start > first_start and end >= marker_index,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      end += len(assertion_end)
+                      removed = source[first_start:end]
+                      require(
+                          removed.count(assertion_start) == 2
+                          and b"bodiesBeforeConcurrentReplay + 1" in removed
+                          and b"decoded_body_sha256 = ?" in removed
+                          and b"decoded_body_length = ?" in removed,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion shape changed",
+                      )
+                      source = source[:first_start] + source[end:]
+                  require(
+                      hashlib.sha256(source).hexdigest()
                           == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
                       "ADR-042 PostgreSQL migration-test delta changed",
                   )
@@ -21557,6 +22758,79 @@ jobs:
               return source
 
           Path.read_bytes = adr042_historical_read_bytes
+
+          adr043_replacements = {
+              Path(".env.example"): (
+                  b"\n# ADR-043 local-only single-operator HTTP boundary. This does not enable SEC\n"
+                  b"# network access. Keep disabled outside an isolated local API process; when\n"
+                  b"# enabled, provide only the lowercase SHA-256 digest of the canonical standard\n"
+                  b"# Base64 encoding of exactly 32 random bytes.\n"
+                  b"# Never put the raw Bearer token in this file.\n"
+                  b"OPERATOR_API_ENABLED=false\n"
+                  b"OPERATOR_API_TOKEN_SHA256=\n",
+                  b"",
+              ),
+              Path("apps/api/pom.xml"): (
+                  b"        <dependency>\n"
+                  b"            <groupId>org.springframework.boot</groupId>\n"
+                  b"            <artifactId>spring-boot-starter-security</artifactId>\n"
+                  b"        </dependency>\n",
+                  b"",
+              ),
+              Path("apps/api/src/main/resources/application.yml"): (
+                  b"app:\n"
+                  b"  operator-api:\n"
+                  b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                  b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n",
+                  b"app:\n",
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/RequestIdFilter.java"): (
+                  (
+                      b"import org.springframework.core.Ordered;\n"
+                      b"import org.springframework.core.annotation.Order;\n",
+                      b"",
+                  ),
+                  (
+                      b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                      b"@Component\n",
+                  ),
+              ),
+          }
+          adr043_historical_sha256 = {
+              Path(".env.example"): "d6687a67a4ad25d7ee2cd8ee5194d15e5b01b880e51d0708c3ce0efb3e4938f7",
+              Path("apps/api/pom.xml"): "6db3f998c82f0c399b66075216b0cab22693ff91e8a7c495becf7e3fea7e28a3",
+              Path("apps/api/src/main/resources/application.yml"): "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/RequestIdFilter.java"): "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+          }
+          adr043_original_read_bytes = Path.read_bytes
+
+          def pre_adr043_bytes(path):
+              source = adr043_original_read_bytes(path).replace(b"\r\n", b"\n")
+              replacements = adr043_replacements.get(path)
+              if replacements is None:
+                  return source
+              if path.name == "RequestIdFilter.java":
+                  for current, historical in replacements:
+                      require(
+                          source.count(current) == 1,
+                          f"ADR-043 authorized later delta changed: {path}",
+                      )
+                      source = source.replace(current, historical)
+              else:
+                  current, historical = replacements
+                  require(
+                      source.count(current) == 1,
+                      f"ADR-043 authorized later delta changed: {path}",
+                  )
+                  source = source.replace(current, historical)
+              require(
+                  hashlib.sha256(source).hexdigest()
+                      == adr043_historical_sha256[path],
+                  f"ADR-043 historical reverse projection changed: {path}",
+              )
+              return source
+
+          Path.read_bytes = pre_adr043_bytes
 
           adr040_new_main_paths |= adr041_later_paths
           adr040_new_test_paths |= adr041_later_paths
@@ -22329,6 +23603,207 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+          adr043_replacements = {
+              Path(".env.example"): (
+                  (
+                      b"\n# ADR-043 local-only single-operator HTTP boundary. This does not enable SEC\n"
+                      b"# network access. Keep disabled outside an isolated local API process; when\n"
+                      b"# enabled, provide only the lowercase SHA-256 digest of the canonical standard\n"
+                      b"# Base64 encoding of exactly 32 random bytes.\n"
+                      b"# Never put the raw Bearer token in this file.\n"
+                      b"OPERATOR_API_ENABLED=false\n"
+                      b"OPERATOR_API_TOKEN_SHA256=\n",
+                      b"",
+                      1,
+                  ),
+              ),
+              Path("apps/api/pom.xml"): (
+                  (
+                      b"        <dependency>\n"
+                      b"            <groupId>org.springframework.boot</groupId>\n"
+                      b"            <artifactId>spring-boot-starter-security</artifactId>\n"
+                      b"        </dependency>\n",
+                      b"",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/resources/application.yml"): (
+                  (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n",
+                      b"app:\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/RequestIdFilter.java"): (
+                  (
+                      b"import org.springframework.core.Ordered;\n"
+                      b"import org.springframework.core.annotation.Order;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                      b"@Component\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcSecFilingHistoryCollectionAttemptRepository.java"): (
+                  (
+                      b"import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;\n"
+                      b"import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b"            throw new OperatorRequestConflictException();\n",
+                      b"            throw new IllegalArgumentException(\n"
+                      b"                    \"operatorRequestId is already bound to another command\");\n",
+                      1,
+                  ),
+                  (
+                      b"            return new ExactEvidenceNotAdmittedException();\n",
+                      b"            return new IllegalArgumentException(\n"
+                      b"                    \"collection attempt exact evidence was not accepted\");\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/SecFilingHistoryCollectionAttemptPersistenceTest.java"): (
+                  (
+                      b"import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;\n"
+                      b"import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b".isExactlyInstanceOf(OperatorRequestConflictException.class)",
+                      b".isInstanceOf(IllegalArgumentException.class)",
+                      1,
+                  ),
+                  (
+                      b".isExactlyInstanceOf(ExactEvidenceNotAdmittedException.class)",
+                      b".isInstanceOf(IllegalArgumentException.class)",
+                      2,
+                  ),
+              ),
+          }
+          adr043_historical_sha256 = {
+              Path(".env.example"): "d6687a67a4ad25d7ee2cd8ee5194d15e5b01b880e51d0708c3ce0efb3e4938f7",
+              Path("apps/api/pom.xml"): "6db3f998c82f0c399b66075216b0cab22693ff91e8a7c495becf7e3fea7e28a3",
+              Path("apps/api/src/main/resources/application.yml"): "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/RequestIdFilter.java"): "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcSecFilingHistoryCollectionAttemptRepository.java"): "7d4633fca321607f0ee1f27700161891e3b85d37efeecf85e2d1042a39135566",
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/SecFilingHistoryCollectionAttemptPersistenceTest.java"): "e7baf3de28924f1862d0cb65062e4e21917863be74192291035e0273cf6b1448",
+          }
+          adr043_original_read_bytes = Path.read_bytes
+
+          def pre_adr043_bytes(path):
+              source = adr043_original_read_bytes(path).replace(b"\r\n", b"\n")
+              replacements = adr043_replacements.get(path)
+              if replacements is None:
+                  return source
+              for current, historical, count in replacements:
+                  require(
+                      source.count(current) == count,
+                      f"ADR-043 authorized later delta changed: {path}",
+                  )
+                  source = source.replace(current, historical)
+              require(
+                  hashlib.sha256(source).hexdigest()
+                      == adr043_historical_sha256[path],
+                  f"ADR-043 historical reverse projection changed: {path}",
+              )
+              return source
+
+          Path.read_bytes = pre_adr043_bytes
+
+          pg_body_race_repository_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcHistoricalFilingSegmentCaptureRepository.java"),
+          }
+          pg_body_race_test_path = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
+              "PostgreSqlMigrationTest.java"
+          )
+          pg_body_race_historical_sha256 = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"): "9ed38f90ffe6fdf045dbe2396db0d7205e64117da36b1cbf4fedab2bcbee9697",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcHistoricalFilingSegmentCaptureRepository.java"): "8824e770072f578d81d1cc312f64439f788a2c11ad3c1f8ef2493c2cac944d3d",
+              pg_body_race_test_path: "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
+          }
+          pg_body_race_original_read_bytes = Path.read_bytes
+
+          def pre_pg_body_race_bytes(path):
+              source = pg_body_race_original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path in pg_body_race_repository_paths:
+                  current = (
+                      b"            // Cover both body identity constraints; a losing race is verified below.\n"
+                      b"            sql += \" ON CONFLICT DO NOTHING\";"
+                  )
+                  historical = (
+                      b"            sql += \" ON CONFLICT (decoded_body_sha256) DO NOTHING\";"
+                  )
+                  require(
+                      source.count(current) == 1,
+                      f"PostgreSQL decoded-body race repository delta changed: {path}",
+                  )
+                  source = source.replace(current, historical)
+              elif path == pg_body_race_test_path:
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body concurrency setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  for accessor in (b"catalog", b"segment"):
+                      assertion = (
+                          b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                          b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class))\n"
+                          b"                .isEqualTo(bodiesBeforeConcurrentReplay + 1);\n"
+                          b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                          b"                \"\"\"\n"
+                          b"                        SELECT COUNT(*)\n"
+                          b"                        FROM sec_decoded_response_bodies\n"
+                          b"                        WHERE decoded_body_sha256 = ?\n"
+                          b"                          AND decoded_body_length = ?\n"
+                          b"                        \"\"\",\n"
+                          b"                Long.class,\n"
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodyLength()))\n"
+                          b"                .isEqualTo(1);\n"
+                      )
+                      require(
+                          source.count(assertion) == 1,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      source = source.replace(assertion, b"")
+              else:
+                  return source
+              require(
+                  hashlib.sha256(source).hexdigest()
+                      == pg_body_race_historical_sha256[path],
+                  f"PostgreSQL decoded-body race reverse projection changed: {path}",
+              )
+              return source
+
+          Path.read_bytes = pre_pg_body_race_bytes
+
           adr036_new_main_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimitInterceptor.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRequestRateLimiter.java"),
@@ -22348,6 +23823,45 @@ jobs:
                       for path in adr036_new_main_paths | adr036_new_test_paths),
               "ADR-035 historical replay must normalize the exact ADR-036 4+4 delta",
           )
+          adr043_new_main_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiSecurityConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorSecCollectionAttemptApiConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptController.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptExceptionHandler.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptRequests.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptResponseMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptResponses.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorApiSecurityProblemWriter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/ApiRequestRejectedHandler.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerAuthenticationToken.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerTokenAuthenticationFilter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerTokenAuthenticationProvider.java"),
+          }
+          adr043_new_test_paths = {
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorApiPropertiesTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorSecCollectionAttemptApiConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptApiTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptIntegrationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiDisabledSecurityTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiLoopbackBindingTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiSecurityTest.java"),
+          }
+          require(
+              len(adr043_new_main_paths) == 17
+              and len(adr043_new_test_paths) == 8
+              and all(path.is_file()
+                      for path in adr043_new_main_paths | adr043_new_test_paths),
+              "ADR-035 replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr036_new_main_paths |= adr043_new_main_paths
+          adr036_new_test_paths |= adr043_new_test_paths
+
           adr037_new_main_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/source/SourceResponseReceipt.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRawResponseCapture.java"),
@@ -23546,6 +25060,207 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+          adr043_replacements = {
+              Path(".env.example"): (
+                  (
+                      b"\n# ADR-043 local-only single-operator HTTP boundary. This does not enable SEC\n"
+                      b"# network access. Keep disabled outside an isolated local API process; when\n"
+                      b"# enabled, provide only the lowercase SHA-256 digest of the canonical standard\n"
+                      b"# Base64 encoding of exactly 32 random bytes.\n"
+                      b"# Never put the raw Bearer token in this file.\n"
+                      b"OPERATOR_API_ENABLED=false\n"
+                      b"OPERATOR_API_TOKEN_SHA256=\n",
+                      b"",
+                      1,
+                  ),
+              ),
+              Path("apps/api/pom.xml"): (
+                  (
+                      b"        <dependency>\n"
+                      b"            <groupId>org.springframework.boot</groupId>\n"
+                      b"            <artifactId>spring-boot-starter-security</artifactId>\n"
+                      b"        </dependency>\n",
+                      b"",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/resources/application.yml"): (
+                  (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n",
+                      b"app:\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/RequestIdFilter.java"): (
+                  (
+                      b"import org.springframework.core.Ordered;\n"
+                      b"import org.springframework.core.annotation.Order;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                      b"@Component\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcSecFilingHistoryCollectionAttemptRepository.java"): (
+                  (
+                      b"import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;\n"
+                      b"import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b"            throw new OperatorRequestConflictException();\n",
+                      b"            throw new IllegalArgumentException(\n"
+                      b"                    \"operatorRequestId is already bound to another command\");\n",
+                      1,
+                  ),
+                  (
+                      b"            return new ExactEvidenceNotAdmittedException();\n",
+                      b"            return new IllegalArgumentException(\n"
+                      b"                    \"collection attempt exact evidence was not accepted\");\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/SecFilingHistoryCollectionAttemptPersistenceTest.java"): (
+                  (
+                      b"import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;\n"
+                      b"import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b".isExactlyInstanceOf(OperatorRequestConflictException.class)",
+                      b".isInstanceOf(IllegalArgumentException.class)",
+                      1,
+                  ),
+                  (
+                      b".isExactlyInstanceOf(ExactEvidenceNotAdmittedException.class)",
+                      b".isInstanceOf(IllegalArgumentException.class)",
+                      2,
+                  ),
+              ),
+          }
+          adr043_historical_sha256 = {
+              Path(".env.example"): "d6687a67a4ad25d7ee2cd8ee5194d15e5b01b880e51d0708c3ce0efb3e4938f7",
+              Path("apps/api/pom.xml"): "6db3f998c82f0c399b66075216b0cab22693ff91e8a7c495becf7e3fea7e28a3",
+              Path("apps/api/src/main/resources/application.yml"): "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/RequestIdFilter.java"): "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcSecFilingHistoryCollectionAttemptRepository.java"): "7d4633fca321607f0ee1f27700161891e3b85d37efeecf85e2d1042a39135566",
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/SecFilingHistoryCollectionAttemptPersistenceTest.java"): "e7baf3de28924f1862d0cb65062e4e21917863be74192291035e0273cf6b1448",
+          }
+          adr043_original_read_bytes = Path.read_bytes
+
+          def pre_adr043_bytes(path):
+              source = adr043_original_read_bytes(path).replace(b"\r\n", b"\n")
+              replacements = adr043_replacements.get(path)
+              if replacements is None:
+                  return source
+              for current, historical, count in replacements:
+                  require(
+                      source.count(current) == count,
+                      f"ADR-043 authorized later delta changed: {path}",
+                  )
+                  source = source.replace(current, historical)
+              require(
+                  hashlib.sha256(source).hexdigest()
+                      == adr043_historical_sha256[path],
+                  f"ADR-043 historical reverse projection changed: {path}",
+              )
+              return source
+
+          Path.read_bytes = pre_adr043_bytes
+
+          pg_body_race_repository_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcHistoricalFilingSegmentCaptureRepository.java"),
+          }
+          pg_body_race_test_path = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
+              "PostgreSqlMigrationTest.java"
+          )
+          pg_body_race_historical_sha256 = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"): "9ed38f90ffe6fdf045dbe2396db0d7205e64117da36b1cbf4fedab2bcbee9697",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcHistoricalFilingSegmentCaptureRepository.java"): "8824e770072f578d81d1cc312f64439f788a2c11ad3c1f8ef2493c2cac944d3d",
+              pg_body_race_test_path: "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
+          }
+          pg_body_race_original_read_bytes = Path.read_bytes
+
+          def pre_pg_body_race_bytes(path):
+              source = pg_body_race_original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path in pg_body_race_repository_paths:
+                  current = (
+                      b"            // Cover both body identity constraints; a losing race is verified below.\n"
+                      b"            sql += \" ON CONFLICT DO NOTHING\";"
+                  )
+                  historical = (
+                      b"            sql += \" ON CONFLICT (decoded_body_sha256) DO NOTHING\";"
+                  )
+                  require(
+                      source.count(current) == 1,
+                      f"PostgreSQL decoded-body race repository delta changed: {path}",
+                  )
+                  source = source.replace(current, historical)
+              elif path == pg_body_race_test_path:
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(
+                      source.count(root_capture) == 1
+                      and source.count(bodies_before) == 2,
+                      "PostgreSQL decoded-body concurrency setup delta changed",
+                  )
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  for accessor in (b"catalog", b"segment"):
+                      assertion = (
+                          b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                          b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class))\n"
+                          b"                .isEqualTo(bodiesBeforeConcurrentReplay + 1);\n"
+                          b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                          b"                \"\"\"\n"
+                          b"                        SELECT COUNT(*)\n"
+                          b"                        FROM sec_decoded_response_bodies\n"
+                          b"                        WHERE decoded_body_sha256 = ?\n"
+                          b"                          AND decoded_body_length = ?\n"
+                          b"                        \"\"\",\n"
+                          b"                Long.class,\n"
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodyLength()))\n"
+                          b"                .isEqualTo(1);\n"
+                      )
+                      require(
+                          source.count(assertion) == 1,
+                          f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+                      )
+                      source = source.replace(assertion, b"")
+              else:
+                  return source
+              require(
+                  hashlib.sha256(source).hexdigest()
+                      == pg_body_race_historical_sha256[path],
+                  f"PostgreSQL decoded-body race reverse projection changed: {path}",
+              )
+              return source
+
+          Path.read_bytes = pre_pg_body_race_bytes
+
           adr037_new_main_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/source/SourceResponseReceipt.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecRawResponseCapture.java"),
@@ -23561,6 +25276,45 @@ jobs:
                       for path in adr037_new_main_paths | adr037_new_test_paths),
               "ADR-036 replay must exclude only the exact ADR-037 2+2 new files",
           )
+          adr043_new_main_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiSecurityConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorSecCollectionAttemptApiConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptController.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptExceptionHandler.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptRequests.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptResponseMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptResponses.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorApiSecurityProblemWriter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/ApiRequestRejectedHandler.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerAuthenticationToken.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerTokenAuthenticationFilter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerTokenAuthenticationProvider.java"),
+          }
+          adr043_new_test_paths = {
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorApiPropertiesTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorSecCollectionAttemptApiConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptApiTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptIntegrationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiDisabledSecurityTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiLoopbackBindingTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiSecurityTest.java"),
+          }
+          require(
+              len(adr043_new_main_paths) == 17
+              and len(adr043_new_test_paths) == 8
+              and all(path.is_file()
+                      for path in adr043_new_main_paths | adr043_new_test_paths),
+              "ADR-036 replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr037_new_main_paths |= adr043_new_main_paths
+          adr037_new_test_paths |= adr043_new_test_paths
+
           adr038_new_main_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/HistoricalFilingSegmentDescriptor.java"),
           }
@@ -24910,6 +26664,122 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+          adr043_replacements = {
+              Path(".env.example"): (
+                  (
+                      b"\n# ADR-043 local-only single-operator HTTP boundary. This does not enable SEC\n"
+                      b"# network access. Keep disabled outside an isolated local API process; when\n"
+                      b"# enabled, provide only the lowercase SHA-256 digest of the canonical standard\n"
+                      b"# Base64 encoding of exactly 32 random bytes.\n"
+                      b"# Never put the raw Bearer token in this file.\n"
+                      b"OPERATOR_API_ENABLED=false\n"
+                      b"OPERATOR_API_TOKEN_SHA256=\n",
+                      b"",
+                      1,
+                  ),
+              ),
+              Path("apps/api/pom.xml"): (
+                  (
+                      b"        <dependency>\n"
+                      b"            <groupId>org.springframework.boot</groupId>\n"
+                      b"            <artifactId>spring-boot-starter-security</artifactId>\n"
+                      b"        </dependency>\n",
+                      b"",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/resources/application.yml"): (
+                  (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n",
+                      b"app:\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/RequestIdFilter.java"): (
+                  (
+                      b"import org.springframework.core.Ordered;\n"
+                      b"import org.springframework.core.annotation.Order;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                      b"@Component\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcSecFilingHistoryCollectionAttemptRepository.java"): (
+                  (
+                      b"import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;\n"
+                      b"import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b"            throw new OperatorRequestConflictException();\n",
+                      b"            throw new IllegalArgumentException(\n"
+                      b"                    \"operatorRequestId is already bound to another command\");\n",
+                      1,
+                  ),
+                  (
+                      b"            return new ExactEvidenceNotAdmittedException();\n",
+                      b"            return new IllegalArgumentException(\n"
+                      b"                    \"collection attempt exact evidence was not accepted\");\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/SecFilingHistoryCollectionAttemptPersistenceTest.java"): (
+                  (
+                      b"import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;\n"
+                      b"import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b".isExactlyInstanceOf(OperatorRequestConflictException.class)",
+                      b".isInstanceOf(IllegalArgumentException.class)",
+                      1,
+                  ),
+                  (
+                      b".isExactlyInstanceOf(ExactEvidenceNotAdmittedException.class)",
+                      b".isInstanceOf(IllegalArgumentException.class)",
+                      2,
+                  ),
+              ),
+          }
+          adr043_historical_sha256 = {
+              Path(".env.example"): "d6687a67a4ad25d7ee2cd8ee5194d15e5b01b880e51d0708c3ce0efb3e4938f7",
+              Path("apps/api/pom.xml"): "6db3f998c82f0c399b66075216b0cab22693ff91e8a7c495becf7e3fea7e28a3",
+              Path("apps/api/src/main/resources/application.yml"): "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/RequestIdFilter.java"): "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcSecFilingHistoryCollectionAttemptRepository.java"): "7d4633fca321607f0ee1f27700161891e3b85d37efeecf85e2d1042a39135566",
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/SecFilingHistoryCollectionAttemptPersistenceTest.java"): "e7baf3de28924f1862d0cb65062e4e21917863be74192291035e0273cf6b1448",
+          }
+          adr043_original_read_bytes = Path.read_bytes
+
+          def pre_adr043_bytes(path):
+              source = adr043_original_read_bytes(path).replace(b"\r\n", b"\n")
+              replacements = adr043_replacements.get(path)
+              if replacements is None:
+                  return source
+              for current, historical, count in replacements:
+                  require(
+                      source.count(current) == count,
+                      f"ADR-043 authorized later delta changed: {path}",
+                  )
+                  source = source.replace(current, historical)
+              require(
+                  hashlib.sha256(source).hexdigest()
+                      == adr043_historical_sha256[path],
+                  f"ADR-043 historical reverse projection changed: {path}",
+              )
+              return source
+
+          Path.read_bytes = pre_adr043_bytes
+
           adr038_new_main_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/HistoricalFilingSegmentDescriptor.java"),
           }
@@ -24923,6 +26793,45 @@ jobs:
                       for path in adr038_new_main_paths | adr038_new_test_paths),
               "ADR-037 replay must exclude only the exact ADR-038 1+1 new files",
           )
+          adr043_new_main_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiSecurityConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorSecCollectionAttemptApiConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptController.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptExceptionHandler.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptRequests.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptResponseMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptResponses.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorApiSecurityProblemWriter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/ApiRequestRejectedHandler.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerAuthenticationToken.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerTokenAuthenticationFilter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerTokenAuthenticationProvider.java"),
+          }
+          adr043_new_test_paths = {
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorApiPropertiesTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorSecCollectionAttemptApiConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptApiTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptIntegrationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiDisabledSecurityTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiLoopbackBindingTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiSecurityTest.java"),
+          }
+          require(
+              len(adr043_new_main_paths) == 17
+              and len(adr043_new_test_paths) == 8
+              and all(path.is_file()
+                      for path in adr043_new_main_paths | adr043_new_test_paths),
+              "ADR-037 replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr038_new_main_paths |= adr043_new_main_paths
+          adr038_new_test_paths |= adr043_new_test_paths
+
           adr039_new_main_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
@@ -26084,6 +27993,10 @@ jobs:
               workflow_without_sec_guards,
               "Guard SEC EDGAR operator-controlled bounded collection attempt",
           )
+          workflow_without_sec_guards = without_step(
+              workflow_without_sec_guards,
+              "Guard default-disabled local single-operator SEC attempt API",
+          )
           require(
               workflow_without_sec_guards.count(
                   "run: ./mvnw -B -ntp verify"
@@ -26116,6 +28029,122 @@ jobs:
           def require(condition, message):
               if not condition:
                   raise ValueError(message)
+
+          adr043_replacements = {
+              Path(".env.example"): (
+                  (
+                      b"\n# ADR-043 local-only single-operator HTTP boundary. This does not enable SEC\n"
+                      b"# network access. Keep disabled outside an isolated local API process; when\n"
+                      b"# enabled, provide only the lowercase SHA-256 digest of the canonical standard\n"
+                      b"# Base64 encoding of exactly 32 random bytes.\n"
+                      b"# Never put the raw Bearer token in this file.\n"
+                      b"OPERATOR_API_ENABLED=false\n"
+                      b"OPERATOR_API_TOKEN_SHA256=\n",
+                      b"",
+                      1,
+                  ),
+              ),
+              Path("apps/api/pom.xml"): (
+                  (
+                      b"        <dependency>\n"
+                      b"            <groupId>org.springframework.boot</groupId>\n"
+                      b"            <artifactId>spring-boot-starter-security</artifactId>\n"
+                      b"        </dependency>\n",
+                      b"",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/resources/application.yml"): (
+                  (
+                      b"app:\n"
+                      b"  operator-api:\n"
+                      b"    enabled: ${OPERATOR_API_ENABLED:false}\n"
+                      b"    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}\n",
+                      b"app:\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/RequestIdFilter.java"): (
+                  (
+                      b"import org.springframework.core.Ordered;\n"
+                      b"import org.springframework.core.annotation.Order;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b"@Component\n@Order(Ordered.HIGHEST_PRECEDENCE)\n",
+                      b"@Component\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcSecFilingHistoryCollectionAttemptRepository.java"): (
+                  (
+                      b"import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;\n"
+                      b"import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b"            throw new OperatorRequestConflictException();\n",
+                      b"            throw new IllegalArgumentException(\n"
+                      b"                    \"operatorRequestId is already bound to another command\");\n",
+                      1,
+                  ),
+                  (
+                      b"            return new ExactEvidenceNotAdmittedException();\n",
+                      b"            return new IllegalArgumentException(\n"
+                      b"                    \"collection attempt exact evidence was not accepted\");\n",
+                      1,
+                  ),
+              ),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/SecFilingHistoryCollectionAttemptPersistenceTest.java"): (
+                  (
+                      b"import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;\n"
+                      b"import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;\n",
+                      b"",
+                      1,
+                  ),
+                  (
+                      b".isExactlyInstanceOf(OperatorRequestConflictException.class)",
+                      b".isInstanceOf(IllegalArgumentException.class)",
+                      1,
+                  ),
+                  (
+                      b".isExactlyInstanceOf(ExactEvidenceNotAdmittedException.class)",
+                      b".isInstanceOf(IllegalArgumentException.class)",
+                      2,
+                  ),
+              ),
+          }
+          adr043_historical_sha256 = {
+              Path(".env.example"): "d6687a67a4ad25d7ee2cd8ee5194d15e5b01b880e51d0708c3ce0efb3e4938f7",
+              Path("apps/api/pom.xml"): "6db3f998c82f0c399b66075216b0cab22693ff91e8a7c495becf7e3fea7e28a3",
+              Path("apps/api/src/main/resources/application.yml"): "fba88168c8ca0ce0c17eeea201fb624b556240ab52297f1bf33ca9388f568a42",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/RequestIdFilter.java"): "1cd35e0c8d728db84486ad626b6de6b7df6afa2777f2c35371946c58309212ec",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcSecFilingHistoryCollectionAttemptRepository.java"): "7d4633fca321607f0ee1f27700161891e3b85d37efeecf85e2d1042a39135566",
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/SecFilingHistoryCollectionAttemptPersistenceTest.java"): "e7baf3de28924f1862d0cb65062e4e21917863be74192291035e0273cf6b1448",
+          }
+          adr043_original_read_bytes = Path.read_bytes
+
+          def pre_adr043_bytes(path):
+              source = adr043_original_read_bytes(path).replace(b"\r\n", b"\n")
+              replacements = adr043_replacements.get(path)
+              if replacements is None:
+                  return source
+              for current, historical, count in replacements:
+                  require(
+                      source.count(current) == count,
+                      f"ADR-043 authorized later delta changed: {path}",
+                  )
+                  source = source.replace(current, historical)
+              require(
+                  hashlib.sha256(source).hexdigest()
+                      == adr043_historical_sha256[path],
+                  f"ADR-043 historical reverse projection changed: {path}",
+              )
+              return source
+
+          Path.read_bytes = pre_adr043_bytes
 
           def digest(paths):
               result = hashlib.sha256()
@@ -26218,6 +28247,45 @@ jobs:
                       for path in adr039_new_main_paths | adr039_new_test_paths),
               "ADR-038 replay must exclude the exact ADR-039 main/test persistence delta",
           )
+
+          adr043_new_main_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/ExactEvidenceNotAdmittedException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/OperatorRequestConflictException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiProperties.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiSecurityConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorSecCollectionAttemptApiConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptController.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptExceptionHandler.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptRequests.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptResponseMapper.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptResponses.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorApiSecurityProblemWriter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/ApiRequestRejectedHandler.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerAuthenticationToken.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerTokenAuthenticationFilter.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorBearerTokenAuthenticationProvider.java"),
+          }
+          adr043_new_test_paths = {
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorApiPropertiesTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorSecCollectionAttemptApiConfigurationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptApiTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorSecCollectionAttemptIntegrationTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiDisabledSecurityTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiLoopbackBindingTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/security/OperatorApiSecurityTest.java"),
+          }
+          require(
+              len(adr043_new_main_paths) == 17
+              and len(adr043_new_test_paths) == 8
+              and all(path.is_file()
+                      for path in adr043_new_main_paths | adr043_new_test_paths),
+              "ADR-038 replay must exclude the exact ADR-043 17+8 surface",
+          )
+          adr039_new_main_paths |= adr043_new_main_paths
+          adr039_new_test_paths |= adr043_new_test_paths
 
           adr040_new_main_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filingsegment/PersistHistoricalFilingSegmentCaptureService.java"),
@@ -26853,6 +28921,7 @@ jobs:
               "Guard SEC EDGAR historical-segment append-only persistence",
               "Guard SEC EDGAR ordered filing-history collection manifest",
               "Guard SEC EDGAR operator-controlled bounded collection attempt",
+              "Guard default-disabled local single-operator SEC attempt API",
           ):
               workflow_without_sec_guards = without_step(
                   workflow_without_sec_guards, name
@@ -26891,6 +28960,79 @@ jobs:
           def require(condition, message):
               if not condition:
                   raise ValueError(message)
+
+          pg_body_race_repository_path = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/"
+              "infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"
+          )
+          pg_body_race_test_path = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
+              "PostgreSqlMigrationTest.java"
+          )
+          pg_body_race_original_read_bytes = Path.read_bytes
+
+          def pre_pg_body_race_bytes(path):
+              source = pg_body_race_original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path == pg_body_race_repository_path:
+                  current = (
+                      b"            // Cover both body identity constraints; a losing race is verified below.\n"
+                      b"            sql += \" ON CONFLICT DO NOTHING\";"
+                  )
+                  historical = (
+                      b"            sql += \" ON CONFLICT (decoded_body_sha256) DO NOTHING\";"
+                  )
+                  require(source.count(current) == 1,
+                          "PostgreSQL decoded-body root-repository race delta changed")
+                  source = source.replace(current, historical)
+                  expected = "9ed38f90ffe6fdf045dbe2396db0d7205e64117da36b1cbf4fedab2bcbee9697"
+              elif path == pg_body_race_test_path:
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(source.count(root_capture) == 1
+                          and source.count(bodies_before) == 2,
+                          "PostgreSQL decoded-body concurrency setup delta changed")
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  for accessor in (b"catalog", b"segment"):
+                      assertion = (
+                          b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                          b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class))\n"
+                          b"                .isEqualTo(bodiesBeforeConcurrentReplay + 1);\n"
+                          b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                          b"                \"\"\"\n"
+                          b"                        SELECT COUNT(*)\n"
+                          b"                        FROM sec_decoded_response_bodies\n"
+                          b"                        WHERE decoded_body_sha256 = ?\n"
+                          b"                          AND decoded_body_length = ?\n"
+                          b"                        \"\"\",\n"
+                          b"                Long.class,\n"
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodyLength()))\n"
+                          b"                .isEqualTo(1);\n"
+                      )
+                      require(source.count(assertion) == 1,
+                              f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed")
+                      source = source.replace(assertion, b"")
+                  expected = "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914"
+              else:
+                  return source
+              require(hashlib.sha256(source).hexdigest() == expected,
+                      f"PostgreSQL decoded-body race reverse projection changed: {path}")
+              return source
+
+          Path.read_bytes = pre_pg_body_race_bytes
 
           adr_path = Path(
               "decisions/ADR-039-sec-edgar-append-only-capture-persistence.md"
@@ -27217,7 +29359,7 @@ jobs:
           )
 
           sources = {
-              path.name: path.read_text(encoding="utf-8")
+              path.name: path.read_bytes().decode("utf-8")
               for path in new_main_paths | modified_paths
               if path.suffix == ".java"
           }
@@ -27557,6 +29699,79 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+          pg_body_race_repository_path = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/"
+              "infrastructure/persistence/JdbcHistoricalFilingSegmentCaptureRepository.java"
+          )
+          pg_body_race_test_path = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
+              "PostgreSqlMigrationTest.java"
+          )
+          pg_body_race_original_read_bytes = Path.read_bytes
+
+          def pre_pg_body_race_bytes(path):
+              source = pg_body_race_original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path == pg_body_race_repository_path:
+                  current = (
+                      b"            // Cover both body identity constraints; a losing race is verified below.\n"
+                      b"            sql += \" ON CONFLICT DO NOTHING\";"
+                  )
+                  historical = (
+                      b"            sql += \" ON CONFLICT (decoded_body_sha256) DO NOTHING\";"
+                  )
+                  require(source.count(current) == 1,
+                          "PostgreSQL decoded-body segment-repository race delta changed")
+                  source = source.replace(current, historical)
+                  expected = "8824e770072f578d81d1cc312f64439f788a2c11ad3c1f8ef2493c2cac944d3d"
+              elif path == pg_body_race_test_path:
+                  root_capture = (
+                      b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+                      b"                firstTime.plusSeconds(120), \"6-K\");\n"
+                  )
+                  historical_root_capture = (
+                      b"        var concurrentCapture =\n"
+                      b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+                  )
+                  bodies_before = (
+                      b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+                      b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+                  )
+                  require(source.count(root_capture) == 1
+                          and source.count(bodies_before) == 2,
+                          "PostgreSQL decoded-body concurrency setup delta changed")
+                  source = source.replace(root_capture, historical_root_capture)
+                  source = source.replace(bodies_before, b"")
+                  for accessor in (b"catalog", b"segment"):
+                      assertion = (
+                          b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                          b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class))\n"
+                          b"                .isEqualTo(bodiesBeforeConcurrentReplay + 1);\n"
+                          b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                          b"                \"\"\"\n"
+                          b"                        SELECT COUNT(*)\n"
+                          b"                        FROM sec_decoded_response_bodies\n"
+                          b"                        WHERE decoded_body_sha256 = ?\n"
+                          b"                          AND decoded_body_length = ?\n"
+                          b"                        \"\"\",\n"
+                          b"                Long.class,\n"
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodySha256(),\n"
+                          b"                concurrentCapture." + accessor
+                          + b"().sourceReceipt().decodedBodyLength()))\n"
+                          b"                .isEqualTo(1);\n"
+                      )
+                      require(source.count(assertion) == 1,
+                              f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed")
+                      source = source.replace(assertion, b"")
+                  expected = "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914"
+              else:
+                  return source
+              require(hashlib.sha256(source).hexdigest() == expected,
+                      f"PostgreSQL decoded-body race reverse projection changed: {path}")
+              return source
+
+          Path.read_bytes = pre_pg_body_race_bytes
+
           adr_path = Path(
               "decisions/ADR-040-sec-edgar-historical-segment-capture-persistence.md"
           )
@@ -27811,7 +30026,7 @@ jobs:
           )
 
           sources = {
-              path.name: path.read_text(encoding="utf-8")
+              path.name: path.read_bytes().decode("utf-8")
               for path in new_main_paths
           }
           tests = {
@@ -28369,6 +30584,7 @@ jobs:
               "Guard SEC EDGAR historical-segment append-only persistence",
               "Guard SEC EDGAR ordered filing-history collection manifest",
               "Guard SEC EDGAR operator-controlled bounded collection attempt",
+              "Guard default-disabled local single-operator SEC attempt API",
           ):
               workflow_without_sec_guards = without_step(
                   workflow_without_sec_guards, name
@@ -28511,19 +30727,29 @@ jobs:
               test_root / "application/filinghistory/ExecuteSecFilingHistoryCollectionAttemptServiceTest.java",
               test_root / "application/filinghistory/SingleJvmSecFilingHistoryCollectionAttemptMutexTest.java",
           }
+          adr043_application_paths = {
+              main_root / "application/filinghistory/ExactEvidenceNotAdmittedException.java",
+              main_root / "application/filinghistory/OperatorRequestConflictException.java",
+              main_root / "application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java",
+              main_root / "application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java",
+          }
+          adr043_application_test_paths = {
+              test_root / "application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java",
+          }
           require(
               len(new_main_paths) == 7
               and len(new_test_paths) == 5
               and all(path.is_file() for path in new_main_paths | new_test_paths)
               and all(path.is_file() for path in (
                   adr042_application_paths | adr042_application_test_paths
+                  | adr043_application_paths | adr043_application_test_paths
               ))
               and postgres_test_path.is_file(),
               "ADR-041 exact 7 main and 5 test surfaces changed",
           )
           require(
               set((main_root / "application/filinghistory").glob("*.java"))
-                  - adr042_application_paths
+                  - adr042_application_paths - adr043_application_paths
                   == {
                       main_root / "application/filinghistory/PersistFilingHistoryCollectionManifestService.java"
                   }
@@ -28547,7 +30773,7 @@ jobs:
           )
           require(
               set((test_root / "application/filinghistory").glob("*.java"))
-                  - adr042_application_test_paths
+                  - adr042_application_test_paths - adr043_application_test_paths
                   == {
                       test_root / "application/filinghistory/PersistFilingHistoryCollectionManifestServiceTest.java"
                   }
@@ -29022,6 +31248,50 @@ jobs:
           )
 
           postgres_test_bytes = postgres_test_path.read_bytes().replace(b"\r\n", b"\n")
+          root_capture = (
+              b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+              b"                firstTime.plusSeconds(120), \"6-K\");\n"
+          )
+          historical_root_capture = (
+              b"        var concurrentCapture =\n"
+              b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+          )
+          bodies_before = (
+              b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+              b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+          )
+          require(
+              postgres_test_bytes.count(root_capture) == 1
+              and postgres_test_bytes.count(bodies_before) == 2,
+              "PostgreSQL decoded-body concurrency setup delta changed",
+          )
+          postgres_test_bytes = postgres_test_bytes.replace(
+              root_capture, historical_root_capture
+          ).replace(bodies_before, b"")
+          for accessor in (b"catalog", b"segment"):
+              assertion = (
+                  b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class))\n"
+                  b"                .isEqualTo(bodiesBeforeConcurrentReplay + 1);\n"
+                  b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  b"                \"\"\"\n"
+                  b"                        SELECT COUNT(*)\n"
+                  b"                        FROM sec_decoded_response_bodies\n"
+                  b"                        WHERE decoded_body_sha256 = ?\n"
+                  b"                          AND decoded_body_length = ?\n"
+                  b"                        \"\"\",\n"
+                  b"                Long.class,\n"
+                  b"                concurrentCapture." + accessor
+                  + b"().sourceReceipt().decodedBodySha256(),\n"
+                  b"                concurrentCapture." + accessor
+                  + b"().sourceReceipt().decodedBodyLength()))\n"
+                  b"                .isEqualTo(1);\n"
+              )
+              require(
+                  postgres_test_bytes.count(assertion) == 1,
+                  f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+              )
+              postgres_test_bytes = postgres_test_bytes.replace(assertion, b"")
           require(
               hashlib.sha256(postgres_test_bytes).hexdigest()
                   == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -29151,6 +31421,7 @@ jobs:
               "Guard SEC EDGAR historical-segment append-only persistence",
               "Guard SEC EDGAR ordered filing-history collection manifest",
               "Guard SEC EDGAR operator-controlled bounded collection attempt",
+              "Guard default-disabled local single-operator SEC attempt API",
           ):
               workflow_without_sec_guards = without_step(
                   workflow_without_sec_guards, name
@@ -29300,12 +31571,22 @@ jobs:
               postgres_test_path,
               manifest_postgres_test_path,
           }
+          adr043_application_paths = {
+              main_root / "application/filinghistory/ExactEvidenceNotAdmittedException.java",
+              main_root / "application/filinghistory/OperatorRequestConflictException.java",
+              main_root / "application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java",
+              main_root / "application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java",
+          }
+          adr043_application_test_paths = {
+              test_root / "application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java",
+          }
           require(
               len(new_main_paths) == 10
               and len(new_test_paths) == 7
               and len(modified_paths) == 3
               and all(path.is_file() for path in (
                   new_main_paths | new_test_paths | modified_paths
+                  | adr043_application_paths | adr043_application_test_paths
               )),
               "ADR-042 exact 10 main, 7 test, and 3 modified surfaces changed",
           )
@@ -29313,7 +31594,7 @@ jobs:
           require(
               set((main_root / "application/filinghistory").glob(
                   "*SecFilingHistoryCollectionAttempt*.java"
-              )) == {
+              )) - adr043_application_paths == {
                   main_root / "application/filinghistory/ExecuteSecFilingHistoryCollectionAttemptService.java",
                   main_root / "application/filinghistory/SingleJvmSecFilingHistoryCollectionAttemptMutex.java",
               }
@@ -29349,7 +31630,7 @@ jobs:
           require(
               set((test_root / "application/filinghistory").glob(
                   "*SecFilingHistoryCollectionAttempt*.java"
-              )) == {
+              )) - adr043_application_test_paths == {
                   test_root / "application/filinghistory/ExecuteSecFilingHistoryCollectionAttemptServiceTest.java",
                   test_root / "application/filinghistory/SingleJvmSecFilingHistoryCollectionAttemptMutexTest.java",
               }
@@ -29381,12 +31662,79 @@ jobs:
               "ADR-042 focused test surface expanded",
           )
 
+          adr043_repository_path = (
+              main_root / "infrastructure/persistence/"
+              "JdbcSecFilingHistoryCollectionAttemptRepository.java"
+          )
+          adr043_persistence_test_path = (
+              test_root / "persistence/"
+              "SecFilingHistoryCollectionAttemptPersistenceTest.java"
+          )
+
+          def pre_adr043_text(path):
+              source = path.read_bytes().replace(b"\r\n", b"\n")
+              if path == adr043_repository_path:
+                  replacements = (
+                      (
+                          b"import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;\n"
+                          b"import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;\n",
+                          b"",
+                          1,
+                      ),
+                      (
+                          b"            throw new OperatorRequestConflictException();\n",
+                          b"            throw new IllegalArgumentException(\n"
+                          b"                    \"operatorRequestId is already bound to another command\");\n",
+                          1,
+                      ),
+                      (
+                          b"            return new ExactEvidenceNotAdmittedException();\n",
+                          b"            return new IllegalArgumentException(\n"
+                          b"                    \"collection attempt exact evidence was not accepted\");\n",
+                          1,
+                      ),
+                  )
+                  expected = "7d4633fca321607f0ee1f27700161891e3b85d37efeecf85e2d1042a39135566"
+              elif path == adr043_persistence_test_path:
+                  replacements = (
+                      (
+                          b"import com.wallstreetreceipts.api.application.filinghistory.ExactEvidenceNotAdmittedException;\n"
+                          b"import com.wallstreetreceipts.api.application.filinghistory.OperatorRequestConflictException;\n",
+                          b"",
+                          1,
+                      ),
+                      (
+                          b".isExactlyInstanceOf(OperatorRequestConflictException.class)",
+                          b".isInstanceOf(IllegalArgumentException.class)",
+                          1,
+                      ),
+                      (
+                          b".isExactlyInstanceOf(ExactEvidenceNotAdmittedException.class)",
+                          b".isInstanceOf(IllegalArgumentException.class)",
+                          2,
+                      ),
+                  )
+                  expected = "e7baf3de28924f1862d0cb65062e4e21917863be74192291035e0273cf6b1448"
+              else:
+                  return source.decode("utf-8")
+              for current, historical, count in replacements:
+                  require(
+                      source.count(current) == count,
+                      f"ADR-043 typed HTTP exception delta changed: {path}",
+                  )
+                  source = source.replace(current, historical)
+              require(
+                  hashlib.sha256(source).hexdigest() == expected,
+                  f"ADR-043 historical ADR-042 reverse projection changed: {path}",
+              )
+              return source.decode("utf-8")
+
           sources = {
-              path.name: path.read_text(encoding="utf-8")
+              path.name: pre_adr043_text(path)
               for path in new_java_paths
           }
           tests = {
-              path.name: path.read_text(encoding="utf-8")
+              path.name: pre_adr043_text(path)
               for path in new_test_paths
           }
           domain = sources["SecFilingHistoryCollectionAttempt.java"]
@@ -29809,6 +32157,50 @@ jobs:
               "ADR-042 modified SEC provider exception bytes changed",
           )
           postgres_bytes = postgres_test_path.read_bytes().replace(b"\r\n", b"\n")
+          root_capture = (
+              b"        var concurrentCapture = SecFilingCatalogCaptureTestFixture.capture(\n"
+              b"                firstTime.plusSeconds(120), \"6-K\");\n"
+          )
+          historical_root_capture = (
+              b"        var concurrentCapture =\n"
+              b"                SecFilingCatalogCaptureTestFixture.capture(firstTime.plusSeconds(120));\n"
+          )
+          bodies_before = (
+              b"        long bodiesBeforeConcurrentReplay = jdbc.getJdbcOperations().queryForObject(\n"
+              b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class);\n"
+          )
+          require(
+              postgres_bytes.count(root_capture) == 1
+              and postgres_bytes.count(bodies_before) == 2,
+              "PostgreSQL decoded-body concurrency setup delta changed",
+          )
+          postgres_bytes = postgres_bytes.replace(
+              root_capture, historical_root_capture
+          ).replace(bodies_before, b"")
+          for accessor in (b"catalog", b"segment"):
+              assertion = (
+                  b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  b"                \"SELECT COUNT(*) FROM sec_decoded_response_bodies\", Long.class))\n"
+                  b"                .isEqualTo(bodiesBeforeConcurrentReplay + 1);\n"
+                  b"        assertThat(jdbc.getJdbcOperations().queryForObject(\n"
+                  b"                \"\"\"\n"
+                  b"                        SELECT COUNT(*)\n"
+                  b"                        FROM sec_decoded_response_bodies\n"
+                  b"                        WHERE decoded_body_sha256 = ?\n"
+                  b"                          AND decoded_body_length = ?\n"
+                  b"                        \"\"\",\n"
+                  b"                Long.class,\n"
+                  b"                concurrentCapture." + accessor
+                  + b"().sourceReceipt().decodedBodySha256(),\n"
+                  b"                concurrentCapture." + accessor
+                  + b"().sourceReceipt().decodedBodyLength()))\n"
+                  b"                .isEqualTo(1);\n"
+              )
+              require(
+                  postgres_bytes.count(assertion) == 1,
+                  f"PostgreSQL decoded-body {accessor.decode()} assertion delta changed",
+              )
+              postgres_bytes = postgres_bytes.replace(assertion, b"")
           require(
               hashlib.sha256(postgres_bytes).hexdigest()
                   == "c9f247b743a492a69fe84ebcd99ad24f14dda77053773f9c75390b4f6beca914",
@@ -29979,6 +32371,7 @@ jobs:
               "Guard SEC EDGAR historical-segment append-only persistence",
               "Guard SEC EDGAR ordered filing-history collection manifest",
               "Guard SEC EDGAR operator-controlled bounded collection attempt",
+              "Guard default-disabled local single-operator SEC attempt API",
           ):
               workflow_without_sec_guards = without_step(
                   workflow_without_sec_guards, name
@@ -30019,6 +32412,272 @@ jobs:
               "content-derived command identity, one optional provider dispatch, "
               "closed terminal/artifact facts, atomic V9 persistence, historical "
               "reverse projections, and no API/UI/key/trigger/SEC-network/default live CI"
+          )
+          PYTHON
+
+      - name: Guard default-disabled local single-operator SEC attempt API
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import re
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def compact(source):
+              return re.sub(r"\s+", " ", source).strip()
+
+          adr_path = Path(
+              "decisions/ADR-043-default-disabled-local-single-operator-sec-attempt-api.md"
+          )
+          document_paths = {
+              adr_path,
+              Path("README.md"),
+              Path("apps/api/README.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+          }
+          require(
+              all(path.is_file() for path in document_paths),
+              "Missing ADR-043 decision, README, or implementation-log surface",
+          )
+          documents = {
+              path: path.read_text(encoding="utf-8") for path in document_paths
+          }
+          adr = documents[adr_path]
+          require(
+              adr.startswith(
+                  "# ADR-043 — Default-Disabled Local Single-Operator SEC Attempt API\n\n"
+                  "- Status: Accepted\n- Date: 2026-08-26\n"
+              )
+              and all("ADR-043" in documents[path] for path in document_paths),
+              "ADR-043 title, accepted status, date, or documentation parity changed",
+          )
+          required_adr_terms = (
+              "OPERATOR_API_ENABLED=true",
+              "OPERATOR_API_TOKEN_SHA256=<lowercase SHA-256 of one random local Bearer token>",
+              "defaults to `false`",
+              "ordinary route handling returns `404`",
+              "constant-time byte comparison",
+              "InetAddress.getLoopbackAddress()",
+              "POST /internal/v1/sec/collection-attempts/root",
+              "POST /internal/v1/sec/collection-attempts/exact-root",
+              "GET /internal/v1/sec/collection-attempts/{attemptId}",
+              "automaticRetryAllowed` is always false",
+              "SEC_PROVIDER_ENABLED=false",
+              "No SEC API key",
+              "exactly one API JVM/container/replica",
+              "prohibits enabling this opaque-token boundary in a deployed",
+          )
+          require(
+              all(term in compact(adr) for term in required_adr_terms),
+              "ADR-043 local-only, default-off, exact-route, or no-retry semantics changed",
+          )
+
+          main_root = Path("apps/api/src/main/java/com/wallstreetreceipts/api")
+          test_root = Path("apps/api/src/test/java/com/wallstreetreceipts/api")
+          new_main_paths = {
+              main_root / "application/filinghistory/ExactEvidenceNotAdmittedException.java",
+              main_root / "application/filinghistory/OperatorRequestConflictException.java",
+              main_root / "application/filinghistory/SecFilingHistoryCollectionAttemptNotFoundException.java",
+              main_root / "application/filinghistory/SecFilingHistoryCollectionAttemptQueryService.java",
+              main_root / "config/OperatorApiProperties.java",
+              main_root / "config/OperatorApiSecurityConfiguration.java",
+              main_root / "config/OperatorSecCollectionAttemptApiConfiguration.java",
+              main_root / "web/operator/OperatorSecCollectionAttemptController.java",
+              main_root / "web/operator/OperatorSecCollectionAttemptExceptionHandler.java",
+              main_root / "web/operator/OperatorSecCollectionAttemptRequests.java",
+              main_root / "web/operator/OperatorSecCollectionAttemptResponseMapper.java",
+              main_root / "web/operator/OperatorSecCollectionAttemptResponses.java",
+              main_root / "web/security/OperatorApiSecurityProblemWriter.java",
+              main_root / "web/security/ApiRequestRejectedHandler.java",
+              main_root / "web/security/OperatorBearerAuthenticationToken.java",
+              main_root / "web/security/OperatorBearerTokenAuthenticationFilter.java",
+              main_root / "web/security/OperatorBearerTokenAuthenticationProvider.java",
+          }
+          new_test_paths = {
+              test_root / "application/filinghistory/SecFilingHistoryCollectionAttemptQueryServiceTest.java",
+              test_root / "config/OperatorApiPropertiesTest.java",
+              test_root / "config/OperatorSecCollectionAttemptApiConfigurationTest.java",
+              test_root / "web/operator/OperatorSecCollectionAttemptApiTest.java",
+              test_root / "web/operator/OperatorSecCollectionAttemptIntegrationTest.java",
+              test_root / "web/security/OperatorApiDisabledSecurityTest.java",
+              test_root / "web/security/OperatorApiLoopbackBindingTest.java",
+              test_root / "web/security/OperatorApiSecurityTest.java",
+          }
+          require(
+              len(new_main_paths) == 17
+              and len(new_test_paths) == 8
+              and all(path.is_file() for path in new_main_paths | new_test_paths)
+              and set((main_root / "config").glob("Operator*.java"))
+                  == {path for path in new_main_paths if path.parent.name == "config"}
+              and set((main_root / "web/operator").glob("*.java"))
+                  == {path for path in new_main_paths if path.parent.name == "operator"}
+              and set((main_root / "web/security").glob("*.java"))
+                  == {path for path in new_main_paths if path.parent.name == "security"}
+              and set((test_root / "config").glob("Operator*.java"))
+                  == {path for path in new_test_paths if path.parent.name == "config"}
+              and set((test_root / "web/operator").glob("*.java"))
+                  == {path for path in new_test_paths if path.parent.name == "operator"}
+              and set((test_root / "web/security").glob("*.java"))
+                  == {path for path in new_test_paths if path.parent.name == "security"},
+              "ADR-043 exact 17 main and 8 test surfaces changed",
+          )
+
+          sources = {
+              path.name: path.read_text(encoding="utf-8") for path in new_main_paths
+          }
+          tests = {
+              path.name: path.read_text(encoding="utf-8") for path in new_test_paths
+          }
+          properties = sources["OperatorApiProperties.java"]
+          security = sources["OperatorApiSecurityConfiguration.java"]
+          request_rejected = sources["ApiRequestRejectedHandler.java"]
+          bearer_filter = sources["OperatorBearerTokenAuthenticationFilter.java"]
+          bearer_provider = sources["OperatorBearerTokenAuthenticationProvider.java"]
+          controller = sources["OperatorSecCollectionAttemptController.java"]
+          requests = sources["OperatorSecCollectionAttemptRequests.java"]
+          responses = sources["OperatorSecCollectionAttemptResponses.java"]
+          mapper = sources["OperatorSecCollectionAttemptResponseMapper.java"]
+          query = sources["SecFilingHistoryCollectionAttemptQueryService.java"]
+
+          require(
+              'Pattern.compile("^[0-9a-f]{64}$")' in properties
+              and '"0".repeat(64)' in properties
+              and "tokenSha256=<redacted>" in properties
+              and 'matcher("/internal/v1/sec/**")' in security
+              and "SessionCreationPolicy.STATELESS" in security
+              and ".anyRequest().hasAuthority(OPERATOR_AUTHORITY)" in security
+              and "factory.setAddress(InetAddress.getLoopbackAddress())" in security
+              and 'prefix = "app.operator-api"' in security
+              and 'havingValue = "true"' in security
+              and "MessageDigest.isEqual(expectedDigest, actualDigest)" in bearer_provider
+              and "authorizationHeaders.size() != 1" in bearer_filter
+              and "decoded.length != 32" in bearer_filter
+              and "web.requestRejectedHandler(requestRejectedHandler)" in security
+              and 'URI.create("/invalid-request")' in request_rejected
+              and '"INVALID_QUERY"' in request_rejected
+              and 'OPERATOR_API_PREFIX = "/internal/v1/sec/"' in request_rejected
+              and 'response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store")'
+                  in request_rejected,
+              "ADR-043 digest, exact Bearer, authority, stateless, or loopback boundary changed",
+          )
+          require(
+              'PATH = "/internal/v1/sec/collection-attempts"' in controller
+              and controller.count("@PostMapping(") == 2
+              and controller.count("@GetMapping(") == 1
+              and '@PostMapping("/root")' in controller
+              and '@PostMapping("/exact-root")' in controller
+              and '@GetMapping("/{attemptId}")' in controller
+              and controller.count("CacheControl.noStore()") == 2
+              and "executionService.captureRoot(" in controller
+              and "executionService.collectExactRoot(" in controller
+              and "queryService.findByAttemptId(attemptId)" in controller
+              and "requireDocumentEnd(parser)" in requests
+              and "Duplicate operator command field" in requests
+              and "automaticRetryAllowed" in responses
+              and "false," in mapper
+              and "findByAttemptId(attemptId)" in query
+              and all(marker not in controller.lower() for marker in (
+                  "retry", "resume", "cancel", "abandon", "resolve", "schedule",
+              )),
+              "ADR-043 exact routes, strict bodies, allowlist, no-store, or no-retry transport changed",
+          )
+
+          application = Path(
+              "apps/api/src/main/resources/application.yml"
+          ).read_text(encoding="utf-8")
+          env_example = Path(".env.example").read_text(encoding="utf-8")
+          require(
+              application.splitlines().count(
+                  "    enabled: ${OPERATOR_API_ENABLED:false}"
+              ) == 1
+              and application.splitlines().count(
+                  "    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}"
+              ) == 1
+              and env_example.splitlines().count("OPERATOR_API_ENABLED=false") == 1
+              and env_example.splitlines().count("OPERATOR_API_TOKEN_SHA256=") == 1
+              and "OPERATOR_API_TOKEN=" not in env_example,
+              "ADR-043 server-only default-disabled configuration changed",
+          )
+          pom_root = ET.parse("apps/api/pom.xml").getroot()
+          namespace = {"m": "http://maven.apache.org/POM/4.0.0"}
+          dependencies = [
+              dependency.findtext("m:artifactId", namespaces=namespace)
+              for dependency in pom_root.findall("m:dependencies/m:dependency", namespace)
+          ]
+          require(
+              dependencies.count("spring-boot-starter-security") == 1
+              and "spring-security-test" not in dependencies,
+              "ADR-043 must add only the runtime Spring Security starter",
+          )
+
+          focused_test_source = "\n".join(tests.values())
+          require(
+              all(method in focused_test_source for method in (
+                  "operatorApiIsDisabledWithoutCredentialsByDefault",
+                  "enabledOperatorApiFailsStartupForMissingOrInvalidDigest",
+                  "disabledOperatorApiFallsThroughToOrdinaryNotFoundWithoutAuthChallenge",
+                  "forwardedIdentityHeadersAreNeverTrustedWithoutBearerCredential",
+                  "enabledOperatorApiOverridesWildcardConfigurationWithActualLoopbackBinding",
+                  "captureRootReturnsAllowlistedNoStoreStatusAndLocation",
+                  "statusPreservesIndeterminateSafetyFlagsWithoutSuggestingRetry",
+                  "authenticatedOfflineCommandPersistsReplaysAndReconstructsWithoutAnyProvider",
+              ))
+              and all(marker not in focused_test_source for marker in (
+                  "data.sec.gov", "HttpClient.newHttpClient(", "RestClient.create(",
+                  "WebClient.create(", ".openConnection(", "new Socket(",
+              )),
+              "ADR-043 focused tests must cover the boundary and remain offline",
+          )
+          publication_paths = {
+              Path("contracts/openapi.yaml"),
+              *Path("schemas").glob("*.json"),
+              *(path for path in Path("fixtures/v1").rglob("*") if path.is_file()),
+              *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                for path in root.rglob("*") if path.is_file()),
+          }
+          require(
+              all(
+                  "/internal/v1/sec" not in path.read_text(
+                      encoding="utf-8", errors="ignore"
+                  )
+                  for path in publication_paths
+              ),
+              "ADR-043 private local operator API must not reach public contracts or web",
+          )
+
+          workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+          step_name = "Guard default-disabled local single-operator SEC attempt API"
+          step = f"\n      - name: {step_name}\n"
+          start = workflow.index(step)
+          end = workflow.index("\n      - name: ", start + len(step))
+          workflow_without_guard = workflow[:start] + workflow[end:]
+          focused_command = (
+              "./mvnw -B -ntp "
+              "-Dtest=OperatorApiPropertiesTest,OperatorApiDisabledSecurityTest,"
+              "OperatorApiSecurityTest,OperatorApiLoopbackBindingTest,"
+              "OperatorSecCollectionAttemptApiConfigurationTest,"
+              "SecFilingHistoryCollectionAttemptQueryServiceTest,"
+              "OperatorSecCollectionAttemptApiTest,OperatorSecCollectionAttemptIntegrationTest test"
+          )
+          require(
+              compact(workflow_without_guard).count(focused_command) == 1
+              and "OPERATOR_API_ENABLED: 'true'" not in workflow_without_guard
+              and re.search(
+                  r"(?:curl|wget|Invoke-WebRequest)[^\n]*data\.sec\.gov",
+                  workflow_without_guard,
+                  re.IGNORECASE,
+              ) is None,
+              "Default CI must run exactly the offline ADR-043 suite with both live gates closed",
+          )
+
+          print(
+              "Validated ADR-043 exact 17+8 surface, default-disabled loopback-only "
+              "opaque Bearer boundary, exact immutable routes and allowlist, sanitized "
+              "no-store failures, offline integration, and no public web/OpenAPI/live SEC path"
           )
           PYTHON
 
@@ -35209,6 +37868,13 @@ jobs:
         run: >-
           ./mvnw -B -ntp
           -Dtest=SecFilingHistoryCollectionAttemptTest,ExecuteSecFilingHistoryCollectionAttemptServiceTest,SingleJvmSecFilingHistoryCollectionAttemptMutexTest,SecFilingHistoryCollectionAttemptConfigurationTest,SecProviderExceptionTypedContractTest,SecFilingHistoryCollectionAttemptPersistenceTest,FilingCollectionAttemptPostgreSqlTest
+          test
+
+      - name: Run local operator attempt API focused tests
+        working-directory: apps/api
+        run: >-
+          ./mvnw -B -ntp
+          -Dtest=OperatorApiPropertiesTest,OperatorApiDisabledSecurityTest,OperatorApiSecurityTest,OperatorApiLoopbackBindingTest,OperatorSecCollectionAttemptApiConfigurationTest,SecFilingHistoryCollectionAttemptQueryServiceTest,OperatorSecCollectionAttemptApiTest,OperatorSecCollectionAttemptIntegrationTest
           test
 
       - name: Guard benchmark-assignment golden runtime cardinality
