@@ -42,6 +42,9 @@ exact-byte replay, and append-only persistence.
 ADR-041 establishes zero-network root-relative collection manifests and
 occurrence-preserving accession reconciliation.
 
+ADR-042 establishes an operator-controlled bounded collection-attempt ledger
+and exact-evidence execution boundary.
+
 SEC submissions metadata adapter는 기본 비활성화다. 로컬에서 명시적으로
 활성화하려면 루트 `.env`에 다음 서버 전용 변수가 있어야 한다.
 
@@ -261,6 +264,65 @@ account, paid plan, OAuth/EDGAR token, plugin, secret 또는 environment variabl
 필요 없다. 기존 PostgreSQL connection만 재사용한다. 활성화 설정만으로 실행되는
 scheduler, startup collector, fetch-all loop, retry, CLI, controller, OpenAPI/public
 read API, browser consumer 또는 UI는 없다.
+
+### Operator-controlled collection attempt
+
+ADR-042는 unconditional internal application service만 추가한다. controller, CLI,
+scheduler, startup hook, authenticated/public route, OpenAPI operation, browser/UI
+consumer는 없다. 따라서 bean 생성이나 설정만으로 SEC 호출 또는 attempt 실행이
+시작되지 않는다.
+
+`CAPTURE_ROOT`는 root capture를 최대 한 번 provider에 위임한다.
+`COLLECT_EXACT_ROOT`는 caller가 지정한 exact durable root에 zero-or-many
+`SELECT_EXACT`와 at-most-one `CAPTURE_NOW` descriptor action만 결합한다.
+`SELECT_EXACT`는 exact durable segment를 선택하는 zero-network action이고,
+`CAPTURE_NOW`만 captured root descriptor에서 URI를 내부 도출해 segment capture를
+시도한다. 한 attempt의 provider invocation 상한은 명령 종류와 무관하게 1이며,
+retry, latest lookup, fallback, fetch-all loop가 없다. accepted provider response
+이후 새 capture/manifest가 `INSERTED`되면 success terminal과 local atomic
+committer 경계에서 함께 적재된다. `IDENTICAL_REPLAY` terminal은 이미 durable한
+exact artifact를 참조하며 이번 attempt가 다시 insert했다고 주장하지 않는다.
+
+`operatorRequestId`는 canonical nonzero lowercase UUID다. 같은 UUID와 같은 canonical
+command의 replay는 기존 attempt를 그대로 반환하고 provider와 mutex를 포함한 외부
+interaction을 0회로 유지한다. 같은 UUID에 변경된 command는 conflict로 닫힌다.
+initial claim 시 exact root 또는 selected segment FK가 없으면 sanitized rejection이며
+ledger row를 만들지 않는다. 반대로 FK admission을 통과한 plan의 exact evidence가
+이후 재구성·검증되지 않으면 `EXACT_EVIDENCE_VALIDATION_FAILED` terminal을 적재하고
+provider는 호출하지 않는다.
+action-dependent cross-row compatibility도 repository reconstruction 때 다시
+검증하고 fail closed한다. 향후 external writer 또는 multi-service ledger를 허용하기
+전에는 immutable action summary와 exact FK binding을 별도로 추가해야 한다.
+
+durable dispatch는 provider port를 실행하도록 허가하고 handoff한 local boundary다.
+HTTP가 시작됐거나 SEC에 도달했다는 증거가 아니다. dispatch가 있고 terminal이
+없으면 `PROVIDER_DISPATCHED_INDETERMINATE`이며 자동 resume, retry, abandon하지 않는다.
+single-JVM nonblocking mutex contention은 provider 전 `PROVIDER_GATE_CLOSED`로 닫힐 수
+있다. 이 mutex는 기존 shared single-JVM SEC limiter와 결합한다: 8 req/s fixed spacing,
+decoded body 8 MiB, connect timeout 5초, read timeout 10초, HTTP `429` 무자동재시도 및
+process-local `Retry-After` cooldown. 여러 replica를 합친 global limit, scheduler,
+retry owner 또는 distributed lock은 아니다.
+
+구현과 `SELECT_EXACT`-only 실행에는 새 API key, account, token, paid plan, plugin,
+secret이 필요 없다. 향후 명시적으로 승인한 provider-bound manual/live 실행에는
+루트 `.env`의 다음 서버 전용 설정이 필요하다.
+
+```dotenv
+SEC_PROVIDER_ENABLED=true
+SEC_BASE_URL=https://data.sec.gov
+SEC_CONTACT_EMAIL=monitored-operations-contact@example.com
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=wsr
+POSTGRES_USER=wsr
+POSTGRES_PASSWORD=local-secret
+```
+
+연락처와 DB credential의 실제 값은 채팅, 로그, 문서, Git에 넣지 않는다. ADR-042
+검증에서는 SEC live traffic을 발생시키지 않았고 일반 test/verify 및 CI도 계속
+offline이다. authenticated explicit operator trigger/status 및 indeterminate-state
+inspection, 또는 multi-replica global coordination을 추가하기 전에는 별도 ADR이
+필요하다.
 
 ### Manual SEC live smoke
 

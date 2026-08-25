@@ -459,6 +459,9 @@ exact-byte replay, and append-only persistence.
 ADR-041 establishes a zero-network, root-relative filing-history collection
 manifest with occurrence-preserving accession reconciliation.
 
+ADR-042 establishes an operator-controlled, bounded SEC collection-attempt
+ledger and exact-evidence execution boundary.
+
 ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
 submissions metadata. It is disabled by default and remains server-only. When
 `SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
@@ -468,9 +471,9 @@ defaults to that official origin. Provider errors, malformed parallel arrays,
 and missing timestamps fail closed without fixture or empty-result fallback.
 
 The adapter maps filing metadata into a provider-neutral filing catalog.
-ADR-039 through ADR-041 add one-shot PostgreSQL persistence and assembly
-services, but there is still no scheduler, command-line trigger, HTTP product
-endpoint, or web publication.
+ADR-039 through ADR-042 add internal one-shot PostgreSQL persistence, assembly,
+and attempt-execution services, but there is still no scheduler, command-line
+trigger, HTTP product endpoint, or web publication.
 `BLS_REGISTRATION_KEY`, `BEA_USER_ID`, and `EIA_API_KEY` may be
 present in the local secret file but are deliberately not consumed until their
 own P5 source, revision, canonical-model, and publication decisions are
@@ -648,6 +651,50 @@ or environment variable, and its zero-network assembly does not consult
 still no scheduler, fetch-all coordinator, retry owner, controller, public read
 API, browser consumer, or UI. Operator-controlled capture coordination and
 conflict-aware, attributed Korean publication remain later gates.
+
+ADR-042 remains an internal application service only: it adds no controller,
+CLI, scheduler, startup hook, public route, or browser surface. `CAPTURE_ROOT`
+authorizes at most one root capture. `COLLECT_EXACT_ROOT` binds one exact durable
+root to zero or more `SELECT_EXACT` descriptor actions and at most one
+`CAPTURE_NOW` action. A selection-only command makes no provider call; an
+attempt can authorize at most one provider invocation in total. Any accepted
+provider response enters the required local commit boundary. A newly inserted
+capture/manifest commits atomically with its success terminal; an
+`IDENTICAL_REPLAY` terminal references an already-durable exact artifact and
+does not claim this attempt inserted it.
+
+The caller supplies a canonical nonzero lowercase UUID `operatorRequestId`.
+Reusing it with the same canonical command returns the existing attempt with
+zero provider interaction; reusing it with a changed command conflicts before
+provider use. If an exact root or selected-segment foreign-key reference is
+absent at initial admission, the command is rejected with sanitized output and
+no attempt ledger. If admitted evidence later cannot be reconstructed or
+verified exactly, the admitted attempt closes with terminal
+`EXACT_EVIDENCE_VALIDATION_FAILED` and no provider invocation.
+Action-dependent cross-row compatibility is also revalidated during repository
+reconstruction and fails closed. Any future external ledger writer or
+multi-service ledger first needs an immutable action summary with exact
+foreign-key binding.
+
+A durable provider dispatch is the local authorization/handoff boundary, not
+proof that HTTP started or reached SEC. A dispatch without a terminal outcome
+is `PROVIDER_DISPATCHED_INDETERMINATE`; ADR-042 never automatically resumes,
+retries, or abandons it. A nonblocking single-JVM mutex prevents overlapping
+attempt-owned provider work in one process. It composes with the existing
+shared one-JVM SEC controls: 8 requests/second without burst, an 8 MiB decoded
+body cap, 5-second connect and 10-second read timeouts, and process-local
+`429`/`Retry-After` cooldown. These are not a multi-replica global limit or an
+autonomous retry/controller claim.
+
+Implementation and zero-network selection need no new API key, account, token,
+or plugin. A future explicitly authorized provider-bound manual/live operation
+requires server-only root `.env` settings `SEC_PROVIDER_ENABLED=true`,
+`SEC_BASE_URL=https://data.sec.gov`, a monitored `SEC_CONTACT_EMAIL`, and the
+existing `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and
+`POSTGRES_PASSWORD` settings. No ADR-042 live SEC request was made, and CI stays
+offline. An authenticated explicit operator surface with indeterminate-state
+inspection, or distributed/global coordination for more than one replica,
+requires a separate ADR before implementation.
 
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,

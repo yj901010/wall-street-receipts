@@ -5322,3 +5322,99 @@ or claiming complete SEC history.
   coverage into a winner or complete-history claim.
 - Keep public read API, authentication decision, freshness/source attribution,
   and Korean community UI behind a later publication gate.
+
+## 2026-08-26 — ADR-042 SEC operator-controlled collection attempt
+
+Status: internal bounded collection-attempt service, immutable V9 ledger, and
+exact-evidence/provider-dispatch lifecycle implemented and verified offline.
+
+ADR-042 coordinates one explicit root capture or one exact-root collection
+attempt without adding an autonomous or public execution surface. It preserves
+the non-atomic SEC capture window and treats every attempt outcome as evidence,
+not as a complete or current filing-history claim.
+
+### Scope and decisions
+
+- Add only an unconditional internal application service. No controller, CLI,
+  scheduler, startup hook, public/authenticated route, OpenAPI operation, or web
+  consumer was added.
+- Define `CAPTURE_ROOT` as at most one root provider invocation. Define
+  `COLLECT_EXACT_ROOT` as one exact durable root plus zero or more
+  `SELECT_EXACT` descriptor actions and at most one `CAPTURE_NOW` action.
+  Selection-only and root-only manifest assembly are zero-network; every
+  attempt has `maxProviderInvocations = 1`, with no retry, latest selection,
+  fallback, or fetch-all behavior.
+- Require a canonical nonzero lowercase UUID `operatorRequestId`. The same UUID
+  and canonical command digest returns the existing attempt with zero provider
+  or mutex interaction. Reusing the UUID with a changed command conflicts before
+  provider use. Attempt identity excludes the attempted time so an identical
+  replay converges on the original ledger.
+- Treat missing exact root/selected-segment foreign-key evidence at initial
+  claim as a sanitized admission rejection that creates no ledger. If the exact
+  FK-bound plan was admitted but its evidence later cannot be reconstructed or
+  verified, close the attempt as terminal
+  `EXACT_EVIDENCE_VALIDATION_FAILED` with no provider invocation.
+- Revalidate action-dependent cross-row compatibility during repository
+  reconstruction and fail closed. V9 has no independent raw-SQL writer; any
+  future external writer or multi-service ledger first needs an immutable action
+  summary with exact foreign-key binding.
+- Persist provider dispatch immediately before provider-port execution as the
+  local authorization/handoff boundary. It is not proof that an HTTP request
+  started or reached SEC. A dispatch without a terminal is
+  `PROVIDER_DISPATCHED_INDETERMINATE` and is never automatically resumed,
+  retried, or abandoned. A pre-dispatch mutex rejection may instead close as
+  `PROVIDER_GATE_CLOSED` / `PROVIDER_INVOCATION_NOT_STARTED` without dispatch.
+- Commit a newly `INSERTED` root/segment capture or assembled manifest with its
+  succeeded terminal through the post-response local atomic committer. An
+  `IDENTICAL_REPLAY` terminal references the already-durable exact artifact and
+  does not claim reinsertion. Validate returned attempt identity, terminal
+  shape, expected capture/manifest identities, and retained dispatch before
+  trusting an adapter result. A local commit failure does not fabricate success
+  or invoke the provider again.
+- Serialize attempt-owned provider work with one nonblocking single-JVM mutex.
+  Reuse the existing shared process-local SEC policy of 8 requests/second fixed
+  spacing, 8 MiB decoded-response cap, 5-second connect timeout, 10-second read
+  timeout, no automatic `429` retry, and `Retry-After` cooldown. This is not a
+  distributed lock, multi-replica aggregate limiter, scheduler, or global retry
+  owner.
+- Keep CI and default verification disconnected from SEC. No live SEC request
+  was performed for ADR-042 and no configured secret value was read, printed,
+  or committed.
+
+### Operator requirements
+
+- Implementation and `SELECT_EXACT`-only execution need no new API key,
+  provider account, payment, OAuth/EDGAR token, plugin, or secret.
+- A future explicitly authorized provider-bound manual/live attempt requires
+  root `.env` values `SEC_PROVIDER_ENABLED=true`,
+  `SEC_BASE_URL=https://data.sec.gov`, a monitored `SEC_CONTACT_EMAIL`, and the
+  existing `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and
+  `POSTGRES_PASSWORD` settings. Values remain server-only and must not be put in
+  chat, logs, documentation, or Git. Configuration alone starts no collection.
+
+### Verification
+
+- Focused ADR-042 offline domain/service/configuration/H2 persistence suite:
+  **PASS** — 39 tests, zero failures, errors, or skips.
+- Focused actual PostgreSQL 17 migration/persistence suite: **PASS** — 4 tests,
+  zero failures, errors, or skips.
+- Final full API Maven verification with actual PostgreSQL 17:
+  **PASS** — 2,302 tests, zero failures, errors, or skips; Spring Boot JAR
+  packaging completed with `BUILD SUCCESS`.
+- Final post-review web regression: **PASS** — ESLint with zero warnings,
+  42 Vitest files / 569 tests, and the Next.js production build with all 12
+  static pages generated; no web implementation changed in ADR-042.
+- Live SEC verification: **NOT RUN BY DESIGN** — CI and the ADR-042 validation
+  path remained offline.
+
+### Next work
+
+- Require a separate ADR before adding an authenticated explicit operator
+  trigger/status surface or indeterminate-attempt inspection and recovery
+  policy. Do not reinterpret an indeterminate dispatch as safe to retry.
+- Require a separate ADR before multi-replica live collection, global SEC rate
+  coordination, distributed mutual exclusion, scheduler ownership, or retry
+  control.
+- Keep correction/removal semantics, public read API, freshness/source
+  attribution, and Korean community UI behind their independent evidence and
+  publication gates.

@@ -65,10 +65,10 @@ class FilingHistoryCollectionManifestPostgreSqlTest {
         assertThat(throughV7.info().current().getVersion().getVersion())
                 .isEqualTo("7");
 
-        Flyway latest = flyway(schema, null);
-        latest.migrate();
+        Flyway throughV8 = flyway(schema, "8");
+        throughV8.migrate();
 
-        assertThat(latest.info().current().getVersion().getVersion())
+        assertThat(throughV8.info().current().getVersion().getVersion())
                 .isEqualTo("8");
         NamedParameterJdbcTemplate jdbc = jdbc(scopedDataSource(schema));
         Long collectionTableCount = jdbc.queryForObject(
@@ -282,7 +282,7 @@ class FilingHistoryCollectionManifestPostgreSqlTest {
         Flyway latest = flyway(schema, null);
         latest.migrate();
         assertThat(latest.info().current().getVersion().getVersion())
-                .isEqualTo("8");
+                .isEqualTo("9");
         DriverManagerDataSource dataSource = scopedDataSource(schema);
         NamedParameterJdbcTemplate jdbc = jdbc(dataSource);
         JdbcFilingCatalogCaptureRepository rootRepository =
