@@ -4589,3 +4589,102 @@ ADR-034 freezes provider-neutral point-in-time raw-window coverage semantics bef
   and neutral polarity, denominator, sign, rounding, and representability are
   not inferred from the existing bullish example. Alpha and sector alpha stay
   last.
+
+## 2026-08-25 — ADR-035 SEC EDGAR public-provider foundation
+
+Status: implementation and full repository verification complete for the
+default-disabled configuration, provider-neutral filing catalog, SEC
+recent-submissions adapter, and mock-only automated provider coverage.
+
+ADR-035 establishes the default-disabled SEC EDGAR public-provider foundation.
+
+### Scope and decisions
+
+- Approve only the keyless SEC EDGAR Submissions API current-resource shape at
+  `GET https://data.sec.gov/submissions/CIK##########.json`, with official SEC
+  reuse/provenance rules and the documented aggregate 10-request/second
+  ceiling. Historical segment traversal, Company Facts/XBRL, filing text and
+  exhibits remain outside this slice.
+- Require a server-only monitored `SEC_CONTACT_EMAIL`; send
+  `User-Agent: WallStreetReceipts/0.1 (<contact>)` and never expose the contact,
+  complete header, provider body, or configured URI through application
+  errors. SEC requires no API key.
+- Keep `SEC_PROVIDER_ENABLED=false` by default. The only base URL accepted for
+  non-test use is `https://data.sec.gov`; HTTP(S) override is constrained to a
+  loopback host for deterministic mock tests. Redirects are disabled and the
+  client uses five-second connect and ten-second read timeouts.
+- Preserve the SEC wire-format ten-digit CIK JSON string as its canonical
+  identifier, rejecting Jackson scalar coercion, while
+  preserving accession number independently as provider-event identity. The
+  accession prefix is explicitly not required to equal the subject CIK because
+  SEC permits a third-party filing agent's login CIK in that position.
+- Map exact form, filing date, nullable report date, acceptance instant, and
+  official primary-document URI in provider order. Validate every recent
+  parallel array before mapping; invalid/missing/alignment/PIT evidence fails
+  closed without fixture, zero, stale, inferred, retry, or empty-result
+  fallback.
+- Preserve `acceptanceDateTime` as event time and injected UTC clock time as
+  processing/capture time, normalized to PostgreSQL microsecond precision.
+  This slice adds no scheduler, persistence, Flyway migration, controller,
+  OpenAPI contract, web consumer, or live operational/product SEC request.
+
+### Repository surface
+
+- Add `FilingCatalogProvider`, immutable `FilingCatalog`/`FilingRecord`, SEC
+  string-CIK DTO boundary, pure mapper, conditional RestClient configuration,
+  safe exceptions, decompression interceptor, and one recent-filings adapter.
+- Add the `local` Spring profile for optional root `.env` import. CI and
+  production do not activate it; deployments inject the same server variables
+  through their secret store. Actuator environment/config-property values stay
+  hidden.
+- Add blank SEC names to `.env.example`, operational instructions to both
+  READMEs, and the exact source/rights/PIT/remaining-gates decision in ADR-035.
+  `BLS_REGISTRATION_KEY`, `BEA_USER_ID`, and `EIA_API_KEY` remain unconsumed;
+  their providers need separate P5 decisions and canonical models.
+- Preserve the user-owned unstaged `apps/web/next-env.d.ts` content and keep the
+  actual `.env` ignored, untracked, and out of the commit. Credential presence
+  was checked only as `PRESENT`/`MISSING_OR_EMPTY` before implementation. One
+  rejected manual wire-check attempt echoed the configured SEC contact address
+  in transient tool error output; the address is not an API key and was not
+  persisted in repository files or product data.
+
+### Verification
+
+- Focused SEC config/HTTP, domain, and mapper suite: **PASS** — 33 tests, zero
+  failures, errors, or skips. All provider responses are mocked; no real SEC
+  request was made by the automated suite.
+- One manual, read-only SEC wire-shape check returned HTTP 200 and confirmed a
+  ten-digit JSON-string CIK plus nested `primaryDocument` paths; no response was
+  stored or mapped into product data. The finding corrected the mock fixture and
+  relative-path validator before the final regression run.
+- Full API Maven verification with Docker Desktop 29.2.1: **PASS** — 2,099
+  tests, zero failures, errors, or skips. Testcontainers 1.21.3 started Ryuk
+  0.12.0 and a real `postgres:17-alpine` container; all four PostgreSQL 17.10
+  migration tests ran rather than being skipped.
+- Web lint: **PASS** with zero warnings. Vitest: **PASS** — 42 files and 569
+  tests. Next.js production build: **PASS** — TypeScript and all 12 static-page
+  generation steps completed, with all application routes emitted as
+  server-rendered on demand.
+- `docker compose --env-file .env.example config --quiet`: **PASS**.
+- CI workflow guard verification: **PASS** — all 40 Python heredoc bodies
+  syntax-compile, and all 33 bodies runnable in the local environment pass.
+  Six schema-validation bodies require CI's installed `jsonschema`; one body
+  requires GitHub `RUNNER_TEMP` and its preceding artifact. ADR-034/ADR-035 and
+  all ten affected historical broad-baseline guards pass without changing any
+  historical count or digest.
+- `git diff --check`: **PASS**. The production build rewrote the user-owned
+  `apps/web/next-env.d.ts`, so its original content was restored; its SHA-256
+  remains `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+
+### Next work
+
+- Add a bounded response-size limit, aggregate SEC rate limiter, explicit
+  `Retry-After`/backoff ownership, and a manual opt-in live smoke procedure
+  before any live operational claim.
+- Review raw response receipts/digests, revisions, historical segment
+  completeness, append-only persistence, ingestion scheduling, API contract,
+  and attributed UI publication as separate gates in that order.
+- Begin BLS only after its release-time, vintage/revision, series calculation,
+  storage, display, and redistribution contract is approved. BEA and EIA need
+  new canonical product surfaces rather than being forced into the closed
+  six-series call-context snapshot.

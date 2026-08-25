@@ -90,13 +90,19 @@ In a second PowerShell terminal, start the API:
 
 ```powershell
 Set-Location apps/api
+$env:SPRING_PROFILES_ACTIVE = "local"
 .\mvnw.cmd spring-boot:run
 ```
 
+The `local` profile imports the ignored repository-root `.env` file. CI and
+production do not activate that profile; deployment credentials must be
+injected by the hosting platform instead.
+
 On macOS or Linux, use `cp .env.example .env`, start the web process with
 `CALL_AUDIT_PROVIDER=api API_BASE_URL=http://localhost:8080 pnpm --dir apps/web dev`,
-and use `./apps/api/mvnw spring-boot:run` instead. The default local endpoints
-are:
+then run `cd apps/api` followed by
+`SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run`. The default local
+endpoints are:
 
 - Web: <http://localhost:3000>
 - API: <http://localhost:8080>
@@ -433,6 +439,25 @@ established. Only after that selection may a reviewed adapter introduce a named,
 scoped secret through approved local/CI secret stores; secrets must never be
 supplied in chat or committed to Git. This repository does not invent a vendor
 or environment-variable name in P3.
+
+## SEC EDGAR public-data foundation
+
+ADR-035 establishes the default-disabled SEC EDGAR public-provider foundation.
+
+ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
+submissions metadata. It is disabled by default and remains server-only. When
+`SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
+the declared `WallStreetReceipts/0.1 (operations@example.com)`-shaped User-Agent to
+`https://data.sec.gov`; `SEC_BASE_URL` exists only for controlled testing and
+defaults to that official origin. Provider errors, malformed parallel arrays,
+and missing timestamps fail closed without fixture or empty-result fallback.
+
+This slice maps recent filing metadata into a provider-neutral filing catalog
+but adds no scheduler, database writer, HTTP product endpoint, or web
+publication. `BLS_REGISTRATION_KEY`, `BEA_USER_ID`, and `EIA_API_KEY` may be
+present in the local secret file but are deliberately not consumed until their
+own P5 source, revision, canonical-model, and publication decisions are
+approved.
 
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,

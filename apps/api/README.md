@@ -8,9 +8,38 @@ Java 21과 Spring Boot 3.5.16 기반의 초기 API 애플리케이션이다. 기
 ./mvnw spring-boot:run
 ```
 
+로컬 루트 `.env`를 읽어야 할 때는 `apps/api`에서 `local` 프로필을 명시한다.
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "local"
+.\mvnw.cmd spring-boot:run
+```
+
+`local` 프로필만 `../../.env`를 optional properties source로 불러온다. 테스트와
+운영에서는 이 프로필을 사용하지 않고 실행 환경의 secret store가 환경변수를
+직접 주입해야 한다.
+
 기본 연결은 `localhost:5432/wsr`의 PostgreSQL이다. `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`로 변경할 수 있다.
 
 상태 확인은 `GET /actuator/health`를 사용한다.
+
+## SEC EDGAR provider foundation
+
+ADR-035 establishes the default-disabled SEC EDGAR public-provider foundation.
+
+SEC submissions metadata adapter는 기본 비활성화다. 로컬에서 명시적으로
+활성화하려면 루트 `.env`에 다음 서버 전용 변수가 있어야 한다.
+
+```dotenv
+SEC_PROVIDER_ENABLED=true
+SEC_BASE_URL=https://data.sec.gov
+SEC_CONTACT_EMAIL=operations-contact@example.com
+```
+
+SEC는 API key 대신 선언된 연락처 User-Agent를 요구한다. 실제 연락처 값은
+`.env.example`, 로그, HTTP 응답, Git에 넣지 않는다. 현재 adapter에는 DB 적재,
+스케줄러, controller 또는 web consumer가 없으므로 활성화만으로 외부 요청이
+발생하지 않는다.
 
 ## Test
 

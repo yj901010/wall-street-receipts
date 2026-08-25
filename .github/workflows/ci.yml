@@ -3346,6 +3346,55 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+          # Later ADR-035 files are proven by their own exact guard. Replay this
+          # historical boundary against its pre-ADR-035 filesystem/config view.
+          adr035_later_paths = {
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/resources/application-local.yml"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+          }
+          require(
+              len(adr035_later_paths) == 16
+              and all(path.is_file() for path in adr035_later_paths),
+              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+          )
+          adr035_application_config_additions = (
+              b"    configprops:\n      show-values: never\n"
+              b"    env:\n      show-values: never\n",
+              b"  public-data:\n    sec:\n"
+              b"      enabled: ${SEC_PROVIDER_ENABLED:false}\n"
+              b"      base-url: ${SEC_BASE_URL:https://data.sec.gov}\n"
+              b"      contact-email: ${SEC_CONTACT_EMAIL:}\n",
+          )
+          original_rglob = Path.rglob
+          original_read_bytes = Path.read_bytes
+
+          def historical_rglob(path, pattern):
+              return (
+                  candidate for candidate in original_rglob(path, pattern)
+                  if candidate not in adr035_later_paths
+              )
+
+          def historical_read_bytes(path):
+              source = original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  for addition in adr035_application_config_additions:
+                      require(
+                          source.count(addition) == 1,
+                          "ADR-035 application.yml historical delta changed",
+                      )
+                      source = source.replace(addition, b"")
+              return source
+
+          Path.rglob = historical_rglob
+          Path.read_bytes = historical_read_bytes
+
           web_root = Path("apps/web/src")
           provider_root = web_root / "lib/providers"
           expected_provider_files = {
@@ -4067,6 +4116,56 @@ jobs:
           def require(condition, message):
               if not condition:
                   raise ValueError(message)
+
+
+          # Later ADR-035 files are proven by their own exact guard. Replay this
+          # historical boundary against its pre-ADR-035 filesystem/config view.
+          adr035_later_paths = {
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/resources/application-local.yml"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+          }
+          require(
+              len(adr035_later_paths) == 16
+              and all(path.is_file() for path in adr035_later_paths),
+              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+          )
+          adr035_application_config_additions = (
+              b"    configprops:\n      show-values: never\n"
+              b"    env:\n      show-values: never\n",
+              b"  public-data:\n    sec:\n"
+              b"      enabled: ${SEC_PROVIDER_ENABLED:false}\n"
+              b"      base-url: ${SEC_BASE_URL:https://data.sec.gov}\n"
+              b"      contact-email: ${SEC_CONTACT_EMAIL:}\n",
+          )
+          original_rglob = Path.rglob
+          original_read_bytes = Path.read_bytes
+
+          def historical_rglob(path, pattern):
+              return (
+                  candidate for candidate in original_rglob(path, pattern)
+                  if candidate not in adr035_later_paths
+              )
+
+          def historical_read_bytes(path):
+              source = original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  for addition in adr035_application_config_additions:
+                      require(
+                          source.count(addition) == 1,
+                          "ADR-035 application.yml historical delta changed",
+                      )
+                      source = source.replace(addition, b"")
+              return source
+
+          Path.rglob = historical_rglob
+          Path.read_bytes = historical_read_bytes
 
           web_root = Path("apps/web/src")
           provider_root = web_root / "lib/providers"
@@ -10296,6 +10395,56 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+
+          # Later ADR-035 files are proven by their own exact guard. Replay this
+          # historical boundary against its pre-ADR-035 filesystem/config view.
+          adr035_later_paths = {
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/resources/application-local.yml"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+          }
+          require(
+              len(adr035_later_paths) == 16
+              and all(path.is_file() for path in adr035_later_paths),
+              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+          )
+          adr035_application_config_additions = (
+              b"    configprops:\n      show-values: never\n"
+              b"    env:\n      show-values: never\n",
+              b"  public-data:\n    sec:\n"
+              b"      enabled: ${SEC_PROVIDER_ENABLED:false}\n"
+              b"      base-url: ${SEC_BASE_URL:https://data.sec.gov}\n"
+              b"      contact-email: ${SEC_CONTACT_EMAIL:}\n",
+          )
+          original_rglob = Path.rglob
+          original_read_bytes = Path.read_bytes
+
+          def historical_rglob(path, pattern):
+              return (
+                  candidate for candidate in original_rglob(path, pattern)
+                  if candidate not in adr035_later_paths
+              )
+
+          def historical_read_bytes(path):
+              source = original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  for addition in adr035_application_config_additions:
+                      require(
+                          source.count(addition) == 1,
+                          "ADR-035 application.yml historical delta changed",
+                      )
+                      source = source.replace(addition, b"")
+              return source
+
+          Path.rglob = historical_rglob
+          Path.read_bytes = historical_read_bytes
+
           def scrub_java(source, strip_literals):
               output = []
               index = 0
@@ -11964,6 +12113,56 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+
+          # Later ADR-035 files are proven by their own exact guard. Replay this
+          # historical boundary against its pre-ADR-035 filesystem/config view.
+          adr035_later_paths = {
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/resources/application-local.yml"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+          }
+          require(
+              len(adr035_later_paths) == 16
+              and all(path.is_file() for path in adr035_later_paths),
+              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+          )
+          adr035_application_config_additions = (
+              b"    configprops:\n      show-values: never\n"
+              b"    env:\n      show-values: never\n",
+              b"  public-data:\n    sec:\n"
+              b"      enabled: ${SEC_PROVIDER_ENABLED:false}\n"
+              b"      base-url: ${SEC_BASE_URL:https://data.sec.gov}\n"
+              b"      contact-email: ${SEC_CONTACT_EMAIL:}\n",
+          )
+          original_rglob = Path.rglob
+          original_read_bytes = Path.read_bytes
+
+          def historical_rglob(path, pattern):
+              return (
+                  candidate for candidate in original_rglob(path, pattern)
+                  if candidate not in adr035_later_paths
+              )
+
+          def historical_read_bytes(path):
+              source = original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  for addition in adr035_application_config_additions:
+                      require(
+                          source.count(addition) == 1,
+                          "ADR-035 application.yml historical delta changed",
+                      )
+                      source = source.replace(addition, b"")
+              return source
+
+          Path.rglob = historical_rglob
+          Path.read_bytes = historical_read_bytes
+
           def normalized_hash(path):
               return hashlib.sha256(
                   path.read_bytes().replace(b"\r\n", b"\n")
@@ -12727,6 +12926,56 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+
+          # Later ADR-035 files are proven by their own exact guard. Replay this
+          # historical boundary against its pre-ADR-035 filesystem/config view.
+          adr035_later_paths = {
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/resources/application-local.yml"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+          }
+          require(
+              len(adr035_later_paths) == 16
+              and all(path.is_file() for path in adr035_later_paths),
+              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+          )
+          adr035_application_config_additions = (
+              b"    configprops:\n      show-values: never\n"
+              b"    env:\n      show-values: never\n",
+              b"  public-data:\n    sec:\n"
+              b"      enabled: ${SEC_PROVIDER_ENABLED:false}\n"
+              b"      base-url: ${SEC_BASE_URL:https://data.sec.gov}\n"
+              b"      contact-email: ${SEC_CONTACT_EMAIL:}\n",
+          )
+          original_rglob = Path.rglob
+          original_read_bytes = Path.read_bytes
+
+          def historical_rglob(path, pattern):
+              return (
+                  candidate for candidate in original_rglob(path, pattern)
+                  if candidate not in adr035_later_paths
+              )
+
+          def historical_read_bytes(path):
+              source = original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  for addition in adr035_application_config_additions:
+                      require(
+                          source.count(addition) == 1,
+                          "ADR-035 application.yml historical delta changed",
+                      )
+                      source = source.replace(addition, b"")
+              return source
+
+          Path.rglob = historical_rglob
+          Path.read_bytes = historical_read_bytes
+
           def reject_duplicate_keys(pairs):
               result = {}
               for key, value in pairs:
@@ -13472,6 +13721,56 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+
+          # Later ADR-035 files are proven by their own exact guard. Replay this
+          # historical boundary against its pre-ADR-035 filesystem/config view.
+          adr035_later_paths = {
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/resources/application-local.yml"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+          }
+          require(
+              len(adr035_later_paths) == 16
+              and all(path.is_file() for path in adr035_later_paths),
+              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+          )
+          adr035_application_config_additions = (
+              b"    configprops:\n      show-values: never\n"
+              b"    env:\n      show-values: never\n",
+              b"  public-data:\n    sec:\n"
+              b"      enabled: ${SEC_PROVIDER_ENABLED:false}\n"
+              b"      base-url: ${SEC_BASE_URL:https://data.sec.gov}\n"
+              b"      contact-email: ${SEC_CONTACT_EMAIL:}\n",
+          )
+          original_rglob = Path.rglob
+          original_read_bytes = Path.read_bytes
+
+          def historical_rglob(path, pattern):
+              return (
+                  candidate for candidate in original_rglob(path, pattern)
+                  if candidate not in adr035_later_paths
+              )
+
+          def historical_read_bytes(path):
+              source = original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  for addition in adr035_application_config_additions:
+                      require(
+                          source.count(addition) == 1,
+                          "ADR-035 application.yml historical delta changed",
+                      )
+                      source = source.replace(addition, b"")
+              return source
+
+          Path.rglob = historical_rglob
+          Path.read_bytes = historical_read_bytes
+
           def reject_duplicate_keys(pairs):
               result = {}
               for key, value in pairs:
@@ -14155,6 +14454,56 @@ jobs:
           def require(condition, message):
               if not condition:
                   raise ValueError(message)
+
+
+          # Later ADR-035 files are proven by their own exact guard. Replay this
+          # historical boundary against its pre-ADR-035 filesystem/config view.
+          adr035_later_paths = {
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/resources/application-local.yml"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+          }
+          require(
+              len(adr035_later_paths) == 16
+              and all(path.is_file() for path in adr035_later_paths),
+              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+          )
+          adr035_application_config_additions = (
+              b"    configprops:\n      show-values: never\n"
+              b"    env:\n      show-values: never\n",
+              b"  public-data:\n    sec:\n"
+              b"      enabled: ${SEC_PROVIDER_ENABLED:false}\n"
+              b"      base-url: ${SEC_BASE_URL:https://data.sec.gov}\n"
+              b"      contact-email: ${SEC_CONTACT_EMAIL:}\n",
+          )
+          original_rglob = Path.rglob
+          original_read_bytes = Path.read_bytes
+
+          def historical_rglob(path, pattern):
+              return (
+                  candidate for candidate in original_rglob(path, pattern)
+                  if candidate not in adr035_later_paths
+              )
+
+          def historical_read_bytes(path):
+              source = original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  for addition in adr035_application_config_additions:
+                      require(
+                          source.count(addition) == 1,
+                          "ADR-035 application.yml historical delta changed",
+                      )
+                      source = source.replace(addition, b"")
+              return source
+
+          Path.rglob = historical_rglob
+          Path.read_bytes = historical_read_bytes
 
           def reject_duplicate_keys(pairs):
               result = {}
@@ -15314,6 +15663,56 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+
+          # Later ADR-035 files are proven by their own exact guard. Replay this
+          # historical boundary against its pre-ADR-035 filesystem/config view.
+          adr035_later_paths = {
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/resources/application-local.yml"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+          }
+          require(
+              len(adr035_later_paths) == 16
+              and all(path.is_file() for path in adr035_later_paths),
+              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+          )
+          adr035_application_config_additions = (
+              b"    configprops:\n      show-values: never\n"
+              b"    env:\n      show-values: never\n",
+              b"  public-data:\n    sec:\n"
+              b"      enabled: ${SEC_PROVIDER_ENABLED:false}\n"
+              b"      base-url: ${SEC_BASE_URL:https://data.sec.gov}\n"
+              b"      contact-email: ${SEC_CONTACT_EMAIL:}\n",
+          )
+          original_rglob = Path.rglob
+          original_read_bytes = Path.read_bytes
+
+          def historical_rglob(path, pattern):
+              return (
+                  candidate for candidate in original_rglob(path, pattern)
+                  if candidate not in adr035_later_paths
+              )
+
+          def historical_read_bytes(path):
+              source = original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  for addition in adr035_application_config_additions:
+                      require(
+                          source.count(addition) == 1,
+                          "ADR-035 application.yml historical delta changed",
+                      )
+                      source = source.replace(addition, b"")
+              return source
+
+          Path.rglob = historical_rglob
+          Path.read_bytes = historical_read_bytes
+
           def reject_duplicate_keys(pairs):
               result = {}
               for key, value in pairs:
@@ -16068,6 +16467,56 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
+
+          # Later ADR-035 files are proven by their own exact guard. Replay this
+          # historical boundary against its pre-ADR-035 filesystem/config view.
+          adr035_later_paths = {
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/resources/application-local.yml"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+          }
+          require(
+              len(adr035_later_paths) == 16
+              and all(path.is_file() for path in adr035_later_paths),
+              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+          )
+          adr035_application_config_additions = (
+              b"    configprops:\n      show-values: never\n"
+              b"    env:\n      show-values: never\n",
+              b"  public-data:\n    sec:\n"
+              b"      enabled: ${SEC_PROVIDER_ENABLED:false}\n"
+              b"      base-url: ${SEC_BASE_URL:https://data.sec.gov}\n"
+              b"      contact-email: ${SEC_CONTACT_EMAIL:}\n",
+          )
+          original_rglob = Path.rglob
+          original_read_bytes = Path.read_bytes
+
+          def historical_rglob(path, pattern):
+              return (
+                  candidate for candidate in original_rglob(path, pattern)
+                  if candidate not in adr035_later_paths
+              )
+
+          def historical_read_bytes(path):
+              source = original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  for addition in adr035_application_config_additions:
+                      require(
+                          source.count(addition) == 1,
+                          "ADR-035 application.yml historical delta changed",
+                      )
+                      source = source.replace(addition, b"")
+              return source
+
+          Path.rglob = historical_rglob
+          Path.read_bytes = historical_read_bytes
+
           def reject_duplicate_keys(pairs):
               result = {}
               for key, value in pairs:
@@ -16802,6 +17251,56 @@ jobs:
           def require(condition, message):
               if not condition:
                   raise ValueError(message)
+
+
+          # Later ADR-035 files are proven by their own exact guard. Replay this
+          # historical boundary against its pre-ADR-035 filesystem/config view.
+          adr035_later_paths = {
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing").glob("*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/provider/sec").glob("*.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarProperties.java"),
+              Path("apps/api/src/main/resources/application-local.yml"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"),
+          }
+          require(
+              len(adr035_later_paths) == 16
+              and all(path.is_file() for path in adr035_later_paths),
+              "ADR-035 historical replay exclusion must remain the exact 13+3 files",
+          )
+          adr035_application_config_additions = (
+              b"    configprops:\n      show-values: never\n"
+              b"    env:\n      show-values: never\n",
+              b"  public-data:\n    sec:\n"
+              b"      enabled: ${SEC_PROVIDER_ENABLED:false}\n"
+              b"      base-url: ${SEC_BASE_URL:https://data.sec.gov}\n"
+              b"      contact-email: ${SEC_CONTACT_EMAIL:}\n",
+          )
+          original_rglob = Path.rglob
+          original_read_bytes = Path.read_bytes
+
+          def historical_rglob(path, pattern):
+              return (
+                  candidate for candidate in original_rglob(path, pattern)
+                  if candidate not in adr035_later_paths
+              )
+
+          def historical_read_bytes(path):
+              source = original_read_bytes(path).replace(b"\r\n", b"\n")
+              if path.as_posix() == "apps/api/src/main/resources/application.yml":
+                  for addition in adr035_application_config_additions:
+                      require(
+                          source.count(addition) == 1,
+                          "ADR-035 application.yml historical delta changed",
+                      )
+                      source = source.replace(addition, b"")
+              return source
+
+          Path.rglob = historical_rglob
+          Path.read_bytes = historical_read_bytes
 
           def reject_duplicate_keys(pairs):
               result = {}
@@ -17801,9 +18300,9 @@ jobs:
               key=lambda path: path.as_posix(),
           )
           require(
-              len(protected_paths) == 232
+              len(protected_paths) == 245
               and digest(protected_paths)
-                  == "2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941",
+                  == "fa101da208d7c56f4625b1504d5fcaefc90ea2503328148641dcad844d5fd543",
               "ADR-034 decision-only protected production baseline changed",
           )
           test_web_paths = sorted(
@@ -17818,9 +18317,9 @@ jobs:
               key=lambda path: path.as_posix(),
           )
           require(
-              len(test_web_paths) == 205
+              len(test_web_paths) == 208
               and digest(test_web_paths)
-                  == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
+                  == "9a7e78f90097e70064de61c36cdfa342c15dbc772b1eb8984ae4b66c97bf434d",
               "ADR-034 decision-only API-test/web baseline changed",
           )
           dependency_runtime_paths = {
@@ -17845,7 +18344,7 @@ jobs:
               }
               and len(dependency_runtime_paths) == 9
               and digest(dependency_runtime_paths)
-                  == "25677e07b9f511dd8899bf69fb5c435247d4996313a60361faf354002b8555bd",
+                  == "eed3772bb0f0edde1c7b8721c05295165de2c6a7e607ad4b35f7d41ca8620d50",
               "ADR-034 must preserve exact dependency/runtime/provider configuration",
           )
 
@@ -17893,6 +18392,506 @@ jobs:
               "four-document parity, mature endpoint anchor, reserved conceptual "
               "branches, raw/provider/runtime firewalls, unchanged ADR-033 "
               "baselines, and null MFE/MAE publication"
+          )
+          PYTHON
+
+      - name: Guard SEC EDGAR public-provider foundation
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def digest(paths):
+              result = hashlib.sha256()
+              for path in sorted(paths, key=lambda value: value.as_posix()):
+                  result.update(path.as_posix().encode("utf-8"))
+                  result.update(b"\0")
+                  result.update(path.read_bytes().replace(b"\r\n", b"\n"))
+                  result.update(b"\0")
+              return result.hexdigest()
+
+          marker = (
+              "ADR-035 establishes the default-disabled SEC EDGAR "
+              "public-provider foundation."
+          )
+          adr_path = Path(
+              "decisions/ADR-035-sec-edgar-public-provider-foundation.md"
+          )
+          marker_paths = (
+              adr_path,
+              Path("README.md"),
+              Path("apps/api/README.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+          )
+          documents = {}
+          for path in marker_paths:
+              require(path.is_file(), f"Missing ADR-035 contract document: {path}")
+              source = path.read_text(encoding="utf-8")
+              documents[path] = source
+              require(
+                  source.count(marker) == 1,
+                  f"ADR-035 marker must occur exactly once: {path}",
+              )
+
+          adr = documents[adr_path]
+          require(
+              adr.startswith(
+                  "# ADR-035 — SEC EDGAR Public Provider Foundation\n\n"
+                  "- Status: Accepted\n- Date: 2026-08-25\n"
+              ),
+              "ADR-035 title, accepted status, or date changed",
+          )
+          required_adr_terms = (
+              "GET https://data.sec.gov/submissions/CIK##########.json",
+              "SEC_PROVIDER_ENABLED=false",
+              "SEC_BASE_URL=https://data.sec.gov",
+              "SEC_CONTACT_EMAIL=",
+              "User-Agent: WallStreetReceipts/0.1 (<configured contact email>)",
+              "xslF345X06/form4.xml",
+              "https://www.sec.gov/Archives/edgar/data/",
+              "10 requests per second",
+              "default-disabled",
+              "no scheduler",
+              "No test reaches SEC or any other external network service.",
+          )
+          require(
+              all(term in adr for term in required_adr_terms),
+              "ADR-035 selected product, identity, rights, or non-scope semantics changed",
+          )
+
+          main_root = Path("apps/api/src/main/java/com/wallstreetreceipts/api")
+          test_root = Path("apps/api/src/test/java/com/wallstreetreceipts/api")
+          expected_main_paths = {
+              main_root / "application/port/out/FilingCatalogProvider.java",
+              main_root / "config/SecEdgarConfiguration.java",
+              main_root / "config/SecEdgarProperties.java",
+              main_root / "domain/filing/FilingCatalog.java",
+              main_root / "domain/filing/FilingRecord.java",
+              main_root / "infrastructure/provider/sec/SecEdgarFilingCatalogProvider.java",
+              main_root / "infrastructure/provider/sec/SecProviderConfigurationException.java",
+              main_root / "infrastructure/provider/sec/SecProviderException.java",
+              main_root / "infrastructure/provider/sec/SecResponseDecompressionInterceptor.java",
+              main_root / "infrastructure/provider/sec/SecStringCikDeserializer.java",
+              main_root / "infrastructure/provider/sec/SecSubmissionsMapper.java",
+              main_root / "infrastructure/provider/sec/SecSubmissionsResponse.java",
+          }
+          actual_main_paths = {
+              *(
+                  main_root / "domain/filing"
+              ).glob("*.java"),
+              *(
+                  main_root / "infrastructure/provider/sec"
+              ).glob("*.java"),
+              *(
+                  path for path in (
+                      main_root / "application/port/out/FilingCatalogProvider.java",
+                      main_root / "config/SecEdgarConfiguration.java",
+                      main_root / "config/SecEdgarProperties.java",
+                  )
+                  if path.is_file()
+              ),
+          }
+          require(
+              actual_main_paths == expected_main_paths
+              and len(actual_main_paths) == 12
+              and digest(actual_main_paths)
+                  == "9bfcc5b74be6546435d21344cc3132f584ac4a60f0795f27e14bf460cbd218d2",
+              "ADR-035 exact 12-file SEC production surface changed",
+          )
+
+          expected_test_paths = {
+              test_root / "config/SecEdgarConfigurationTest.java",
+              test_root / "domain/filing/FilingCatalogTest.java",
+              test_root / "infrastructure/provider/sec/SecSubmissionsMapperTest.java",
+          }
+          actual_test_paths = {
+              *(
+                  test_root / "domain/filing"
+              ).glob("*.java"),
+              *(
+                  test_root / "infrastructure/provider/sec"
+              ).glob("*.java"),
+              *(
+                  path for path in (
+                      test_root / "config/SecEdgarConfigurationTest.java",
+                  )
+                  if path.is_file()
+              ),
+          }
+          require(
+              actual_test_paths == expected_test_paths
+              and len(actual_test_paths) == 3
+              and digest(actual_test_paths)
+                  == "bcca27b439d3a9b4693df6f0d64654854501ea7657f70e4ef0b5b8db552f7b9a",
+              "ADR-035 exact three-file SEC focused test surface changed",
+          )
+
+          main_resources = Path("apps/api/src/main/resources")
+          expected_sec_resource_paths = {
+              main_resources / "application.yml",
+              main_resources / "application-local.yml",
+          }
+          sec_resource_markers = (
+              "app.public-data.sec",
+              "SEC_PROVIDER_ENABLED",
+              "WSR_LOCAL_ENV_FILE",
+          )
+          actual_sec_resource_paths = {
+              path for path in main_resources.glob("application*.yml")
+              if any(
+                  value in path.read_text(encoding="utf-8")
+                  for value in sec_resource_markers
+              )
+          }
+          require(
+              actual_sec_resource_paths == expected_sec_resource_paths,
+              "ADR-035 exact two-file SEC resource surface changed",
+          )
+
+          env_path = Path(".env.example")
+          application_path = main_resources / "application.yml"
+          local_application_path = main_resources / "application-local.yml"
+          test_application_path = Path(
+              "apps/api/src/test/resources/application-test.yml"
+          )
+          config_paths = {
+              env_path,
+              application_path,
+              local_application_path,
+              test_application_path,
+          }
+          require(
+              all(path.is_file() for path in config_paths)
+              and len(config_paths) == 4
+              and digest(config_paths)
+                  == "c667d625d56663217470dd9652ae0c6da9225c48427919009717e1148bc5c328",
+              "ADR-035 exact server/test configuration digest changed",
+          )
+
+          env_example = env_path.read_text(encoding="utf-8")
+          for exact_line in (
+              "SEC_PROVIDER_ENABLED=false",
+              "SEC_BASE_URL=https://data.sec.gov",
+              "SEC_CONTACT_EMAIL=",
+          ):
+              require(
+                  env_example.splitlines().count(exact_line) == 1,
+                  f"ADR-035 exact .env.example default changed: {exact_line}",
+              )
+          require(
+              re.search(
+                  r"(?im)^NEXT_PUBLIC_[A-Z0-9_]*SEC[A-Z0-9_]*=",
+                  env_example,
+              ) is None
+              and "SEC_API_KEY=" not in env_example,
+              "SEC server configuration must not become a browser/API-key variable",
+          )
+
+          application = application_path.read_text(encoding="utf-8")
+          exact_server_mappings = (
+              "      enabled: ${SEC_PROVIDER_ENABLED:false}",
+              "      base-url: ${SEC_BASE_URL:https://data.sec.gov}",
+              "      contact-email: ${SEC_CONTACT_EMAIL:}",
+          )
+          require(
+              all(application.splitlines().count(line) == 1
+                  for line in exact_server_mappings),
+              "ADR-035 application.yml server-only mappings changed",
+          )
+          require(
+              re.search(
+                  r"(?m)^    configprops:\n      show-values: never$",
+                  application,
+              ) is not None
+              and re.search(
+                  r"(?m)^    env:\n      show-values: never$",
+                  application,
+              ) is not None
+              and re.search(
+                  r"(?m)^    health:\n(?:      .+\n)*      show-details: never$",
+                  application,
+              ) is not None,
+              "Actuator must never expose SEC or environment configuration values",
+          )
+
+          local_application = local_application_path.read_text(encoding="utf-8")
+          require(
+              local_application.splitlines().count(
+                  "    import: optional:file:${WSR_LOCAL_ENV_FILE:../../.env}[.properties]"
+              ) == 1
+              and "optional:file:" in local_application,
+              "Local profile must optionally import the root .env as properties",
+          )
+          test_application = test_application_path.read_text(encoding="utf-8")
+          require(
+              "SEC_PROVIDER_ENABLED" not in test_application
+              and "app.public-data.sec" not in test_application
+              and re.search(r"(?m)^\s+sec:\s*$", test_application) is None,
+              "Default test configuration must keep SEC EDGAR disabled",
+          )
+
+          sources = {
+              path.name: path.read_text(encoding="utf-8")
+              for path in expected_main_paths
+          }
+          tests = {
+              path.name: path.read_text(encoding="utf-8")
+              for path in expected_test_paths
+          }
+          configuration = sources["SecEdgarConfiguration.java"]
+          properties = sources["SecEdgarProperties.java"]
+          provider = sources["SecEdgarFilingCatalogProvider.java"]
+          mapper = sources["SecSubmissionsMapper.java"]
+          cik_deserializer = sources["SecStringCikDeserializer.java"]
+          provider_exception = sources["SecProviderException.java"]
+          configuration_test = tests["SecEdgarConfigurationTest.java"]
+          mapper_test = tests["SecSubmissionsMapperTest.java"]
+          catalog_test = tests["FilingCatalogTest.java"]
+
+          require(
+              '@ConditionalOnProperty(' in configuration
+              and 'prefix = "app.public-data.sec"' in configuration
+              and 'havingValue = "true"' in configuration
+              and "matchIfMissing" not in configuration
+              and "remainsDisabledByDefault" in configuration_test,
+              "SEC provider must remain absent from the default application/test context",
+          )
+          require(
+              'URI.create("https://data.sec.gov")' in configuration
+              and 'URI.create("https://data.sec.gov")' in properties
+              and '"/submissions/CIK%s.json"' in provider
+              and "baseUrl.resolve(SUBMISSIONS_PATH_TEMPLATE.formatted(paddedCik))"
+                  in provider
+              and "restClient.get()" in provider
+              and ".post()" not in provider,
+              "SEC official origin, one-request GET, or exact submissions path changed",
+          )
+          require(
+              'USER_AGENT_PRODUCT = "WallStreetReceipts/0.1"' in configuration
+              and 'USER_AGENT_PRODUCT + " (" + contactEmail + ")"'
+                  in configuration
+              and '"WallStreetReceipts/0.1 (" + CONTACT_EMAIL + ")"'
+                  in configuration_test,
+              "SEC declared User-Agent product/comment form changed",
+          )
+          require(
+              "Duration.ofSeconds(5)" in configuration
+              and "Duration.ofSeconds(10)" in configuration
+              and ".connectTimeout(CONNECT_TIMEOUT)" in configuration
+              and ".setReadTimeout(READ_TIMEOUT)" in configuration
+              and ".followRedirects(HttpClient.Redirect.NEVER)" in configuration
+              and "HttpClient.Redirect.NORMAL" not in configuration
+              and "HttpClient.Redirect.ALWAYS" not in configuration,
+              "SEC 5s/10s timeout or no-redirect boundary changed",
+          )
+          main_source = "\n".join(sources.values())
+          require(
+              re.search(r"\b(?:retry|fallback)\b", main_source, re.IGNORECASE)
+                  is None
+              and "@Scheduled" not in main_source
+              and "Scheduler" not in main_source,
+              "SEC foundation must not add retry, fallback, or scheduling",
+          )
+
+          safe_errors = (
+              "SEC submissions request failed with HTTP ",
+              "SEC submissions response could not be read",
+              "SEC submissions response was invalid",
+          )
+          require(
+              all(provider_exception.count(message) == 1
+                  for message in safe_errors)
+              and "Throwable" not in provider_exception
+              and "initCause" not in provider_exception
+              and configuration_test.count(".doesNotContain(") >= 4
+              and configuration_test.count(".hasNoCause()") >= 4,
+              "SEC provider errors must retain only the three sanitized shapes",
+          )
+
+          require(
+              "JsonToken.VALUE_STRING" in cik_deserializer
+              and "cik must be a JSON string" in cik_deserializer
+              and 'value.matches("[0-9]{10}")' in mapper
+              and "value.chars().allMatch" in mapper
+              and "rejectsNumberToStringCoercionForOfficialStringCikField"
+                  in mapper_test
+              and "cik must be a JSON string" in mapper_test,
+              "SEC response CIK must remain a strict nonzero 10-digit JSON string",
+          )
+          require(
+              "preservesAccessionWhenSubmittingEntityPrefixDiffersFromCatalogCik"
+                  in catalog_test
+              and "0001193125-26-000002" in catalog_test
+              and "0000320193" in catalog_test
+              and "accessionNumber.startsWith(cik)" not in main_source
+              and "accessionNumber.substring(0, 10)" not in main_source,
+              "Accession prefix must not be required to equal the filer CIK",
+          )
+
+          nested_path = "xslF345X06/form4.xml"
+          traversal_shapes = (
+              '"../aapl.htm"',
+              '"%2e%2e/aapl.htm"',
+              '"/aapl.htm"',
+              '"xslF345X06\\\\form4.xml"',
+              '"xslF345X06//form4.xml"',
+          )
+          require(
+              nested_path in mapper_test
+              and nested_path in catalog_test
+              and all(shape in mapper_test for shape in traversal_shapes)
+              and "segment.equals(\"..\")" in mapper
+              and "value.indexOf('%')" in mapper,
+              "Nested SEC document success or traversal rejection coverage changed",
+          )
+          require(
+              '"https://www.sec.gov/Archives/edgar/data/"' in mapper
+              and "https://www.sec.gov/Archives/edgar/data/320193/"
+                  in mapper_test
+              and "canonical SEC Archives URI" in catalog_test,
+              "Canonical official SEC Archives URI construction changed",
+          )
+
+          forbidden_layer_markers = (
+              "@RestController",
+              "@Controller",
+              "@Repository",
+              "@RequestMapping",
+              "@GetMapping",
+              "@PostMapping",
+              "@Scheduled",
+              "Flyway",
+              "OpenAPI",
+          )
+          require(
+              all(value not in main_source for value in forbidden_layer_markers),
+              "ADR-035 must not cross into controller, repository, scheduler, Flyway, or OpenAPI",
+          )
+          migration_paths = {
+              path.name for path in (
+                  main_resources / "db/migration"
+              ).glob("*.sql")
+          }
+          require(
+              migration_paths == {
+                  "V1__baseline.sql",
+                  "V2__analyst_calls.sql",
+                  "V3__analyst_call_revisions.sql",
+                  "V4__call_outcomes.sql",
+                  "V5__call_contexts.sql",
+              },
+              "ADR-035 must not add a Flyway migration",
+          )
+
+          publication_markers = (
+              "secedgar",
+              "secsubmissions",
+              "filingcatalog",
+              "sec-edgar",
+              "edgar-submissions-api",
+              "app.public-data.sec",
+              "/submissions/cik",
+              "/archives/edgar/data",
+          )
+          publication_paths = {
+              Path("contracts/openapi.yaml"),
+              *Path("schemas").glob("*.json"),
+              *(path for path in Path("fixtures/v1").rglob("*") if path.is_file()),
+              *(main_resources / "db/migration").glob("*.sql"),
+              *(path for path in main_root.rglob("*.java")
+                if path not in expected_main_paths),
+              *(path for path in test_root.rglob("*.java")
+                if path not in expected_test_paths),
+              *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                for path in root.rglob("*") if path.is_file()),
+          }
+          for path in publication_paths:
+              source = path.read_text(encoding="utf-8", errors="ignore").lower()
+              require(
+                  not any(value in source for value in publication_markers),
+                  f"ADR-035 must not add repository/API/web/publication wiring: {path}",
+              )
+          web_env_source = env_example + "\n" + "\n".join(
+              path.read_text(encoding="utf-8", errors="ignore")
+              for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+              for path in root.rglob("*") if path.is_file()
+          )
+          require(
+              re.search(
+                  r"NEXT_PUBLIC_[A-Z0-9_]*SEC[A-Z0-9_]*",
+                  web_env_source,
+                  re.IGNORECASE,
+              ) is None,
+              "SEC configuration or contact identity must not reach the browser",
+          )
+
+          test_source = "\n".join(tests.values())
+          forbidden_network_test_markers = (
+              "HttpClient.newBuilder(",
+              "HttpClient.newHttpClient(",
+              "RestClient.create(",
+              "WebClient.create(",
+              ".openConnection(",
+              "new Socket(",
+          )
+          require(
+              "MockRestServiceServer.bindTo(restClientBuilder)" in configuration_test
+              and configuration_test.count("server.expect(once()") >= 4
+              and all(value not in test_source
+                      for value in forbidden_network_test_markers),
+              "ADR-035 tests must remain deterministic mock/unit tests without real network",
+          )
+          workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+          require(
+              re.search(
+                  r"(?:curl|wget|Invoke-WebRequest)[^\n]*data\.sec\.gov",
+                  workflow,
+                  re.IGNORECASE,
+              ) is None,
+              "CI must not make a real SEC network request",
+          )
+
+          protected_paths = {
+              Path("contracts/openapi.yaml"),
+              *Path("schemas").glob("*.json"),
+              *(path for path in Path("fixtures/v1").rglob("*")
+                if path.is_file()),
+              *(path for path in Path("apps/api/src/main").rglob("*")
+                if path.is_file()),
+          }
+          require(
+              len(protected_paths) == 245
+              and digest(protected_paths)
+                  == "fa101da208d7c56f4625b1504d5fcaefc90ea2503328148641dcad844d5fd543",
+              "ADR-035 protected production/config baseline changed",
+          )
+          test_web_paths = {
+              *(path for path in Path("apps/api/src/test").rglob("*")
+                if path.is_file()),
+              *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                for path in root.rglob("*") if path.is_file()),
+              *(path for path in Path("apps/web").glob("*")
+                if path.is_file() and path.name != "next-env.d.ts"),
+          }
+          require(
+              len(test_web_paths) == 208
+              and digest(test_web_paths)
+                  == "9a7e78f90097e70064de61c36cdfa342c15dbc772b1eb8984ae4b66c97bf434d",
+              "ADR-035 API-test/web baseline changed",
+          )
+
+          print(
+              "Validated ADR-035 exact 12+3 SEC source/test surface, two-resource "
+              "and four-config boundary, disabled server-only configuration, "
+              "official one-request transport, strict CIK/document identity, "
+              "sanitized failures, publication firewall, locked current "
+              "baselines, and mock-only tests"
           )
           PYTHON
 
