@@ -450,6 +450,9 @@ ADR-037 establishes the in-memory SEC decoded-response receipt foundation.
 
 ADR-038 establishes the SEC historical-segment descriptor catalog.
 
+ADR-039 establishes append-only SEC root-capture persistence and exact-byte
+replay.
+
 ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
 submissions metadata. It is disabled by default and remains server-only. When
 `SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
@@ -458,9 +461,10 @@ the declared `WallStreetReceipts/0.1 (operations@example.com)`-shaped User-Agent
 defaults to that official origin. Provider errors, malformed parallel arrays,
 and missing timestamps fail closed without fixture or empty-result fallback.
 
-This slice maps recent filing metadata into a provider-neutral filing catalog
-but adds no scheduler, database writer, HTTP product endpoint, or web
-publication. `BLS_REGISTRATION_KEY`, `BEA_USER_ID`, and `EIA_API_KEY` may be
+The adapter maps filing metadata into a provider-neutral filing catalog.
+ADR-039 adds a one-shot PostgreSQL writer, but there is still no scheduler,
+command-line trigger, HTTP product endpoint, or web publication.
+`BLS_REGISTRATION_KEY`, `BEA_USER_ID`, and `EIA_API_KEY` may be
 present in the local secret file but are deliberately not consumed until their
 own P5 source, revision, canonical-model, and publication decisions are
 approved.
@@ -478,7 +482,8 @@ network I/O rather than sleeping a request thread.
 These are conservative internal controls, not additional SEC service
 guarantees. Process-local enforcement does not make multiple replicas or
 independent tools aggregate-safe, so schedulers, multi-replica activation,
-persistence, API/UI publication, and production collection remain prohibited.
+autonomous live capture, API/UI publication, and production collection remain
+prohibited.
 The opt-in manual smoke needs no new API key or account and makes one Apple CIK
 request to the exact official origin; see `apps/api/README.md`. Default tests,
 `verify`, and CI remain offline.
@@ -501,11 +506,11 @@ status, media type, transport encoding, optional
 response metadata allowlist is retained. Request headers, contact email, and
 complete `User-Agent` are not receipt data.
 
-`RECEIPT_ONLY_BODY_NOT_RETAINED` is literal: the bounded decoded body is
-transient parsing memory and is not durably retained. Its digest is a local
-byte-identity check, not an SEC signature or sender authentication. ADR-037
-adds no durable raw body, replay, persistence, database, scheduler, controller,
-or publication surface.
+On the catalog-only read path, `RECEIPT_ONLY_BODY_NOT_RETAINED` remains literal:
+the bounded decoded body is transient parsing memory and is not durably
+retained. Its digest is a local byte-identity check, not an SEC signature or
+sender authentication. ADR-037 by itself adds no durable raw body, replay,
+persistence, database, scheduler, controller, or publication surface.
 
 ADR-038 maps the same root bytes' required `filings.files` array into immutable
 `HistoricalFilingSegmentDescriptor` values while keeping `recentFilings` and
@@ -521,9 +526,46 @@ The root receipt binds descriptor metadata but not referenced segment bytes,
 existence, cardinality, or actual range. ADR-038 makes no segment request and
 adds no durable raw body, replay, persistence/DB, scheduler, controller, API,
 or UI. It needs no new API key or account; live root access still uses only the
-existing monitored `SEC_CONTACT_EMAIL`. Append-only root receipt/catalog/
-descriptor persistence is next, followed separately by segment retrieval and
-actual historical completeness proof.
+existing monitored `SEC_CONTACT_EMAIL`.
+
+ADR-039 introduces a separate persistence capture path. Before the transaction,
+the exact decoded bytes are defensively attached with
+`DECODED_BODY_ATTACHED_PENDING_PERSISTENCE`; a successful repository append
+promotes the receipt to `DURABLE_DECODED_BODY_RETAINED`. PostgreSQL stores those
+bytes in a content-addressed `BYTEA` table keyed by lowercase SHA-256, while an
+append-only root row and ordered child rows retain the receipt, recent filings,
+and advertised descriptors. Identical bytes observed later reuse one body row
+without collapsing the later root observation.
+
+The versioned `captureId` binds provider, product, CIK, source URI,
+`capturedAt`, body digest, and decoded length. An exact replay of the complete
+durable aggregate is an idempotent no-op; the same natural capture identity
+with different bytes or projections fails closed. Body, root, and children are
+written in one transaction, and reconstruction checks child counts/order,
+capture identity, digest/length, and a strict `SEC_SUBMISSIONS_CATALOG_V2`
+replay of the exact stored bytes. The repository exposes no update/delete
+method; this application contract is not a claim that privileged database
+administration is WORM.
+
+Point-in-time reads require an exact provider, product, CIK, and parser version
+and select only the latest `capturedAt <= evaluationAsOf`. A future capture or a
+capture mapped by another parser is invisible. Durable bodies are private
+server-side evidence and currently have no TTL, purge job, public controller,
+or web exposure. Disposal, archival tiering, backup expiry, encryption, and
+public redistribution require later decisions.
+
+ADR-039 needs no new SEC API key, provider account, paid plan, or plugin. Live
+capture still uses only the existing `SEC_CONTACT_EMAIL`; persistence uses the
+existing `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and
+`POSTGRES_PASSWORD` connection configuration. Local values belong in the root
+`.env`, and deployment values belong in the deployment secret store, never in
+chat or Git. Enabling configuration does not start ingestion because no
+scheduler, controller, or autonomous trigger exists.
+
+The next SEC gate is controlled retrieval and exact-body replay of referenced
+historical segments, followed by observed-versus-advertised range/cardinality
+and accession reconciliation without inventing completeness. Scheduler/global
+coordination, read API, and attributed Korean public UI remain later gates.
 
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,

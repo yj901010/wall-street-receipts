@@ -4990,3 +4990,106 @@ complete-history claim.
 - Keep scheduling/global coordination, read API, and attributed Korean public
   UI behind later independent gates. ADR-038 alone does not complete ADR-035's
   broader historical-segment gate.
+
+## 2026-08-25 — ADR-039 SEC EDGAR append-only root-capture persistence
+
+Status: append-only persistence and exact-byte replay implemented and verified.
+
+ADR-039 makes one accepted SEC EDGAR Submissions root capture durably
+replayable without treating advertised segment metadata as observed or
+complete filing history.
+
+### Scope and decisions
+
+- Add an immutable `FilingCatalogCapture` that owns a defensive copy of the
+  exact decoded bytes used by the strict V2 parser. Its versioned,
+  length-prefixed `captureId` binds provider, product, CIK, source URI,
+  `capturedAt`, body SHA-256, and decoded length.
+- Keep the existing catalog-only receipt state literal. The persistence path
+  enters as `DECODED_BODY_ATTACHED_PENDING_PERSISTENCE`; only a successful
+  repository write and reconstructed read use
+  `DURABLE_DECODED_BODY_RETAINED`. A caller-supplied durable claim is rejected.
+- Add Flyway V6 tables for content-addressed exact `BYTEA` bodies, immutable
+  root captures, provider-ordered recent filings, and provider-ordered
+  historical descriptors. Root/body/children use restricting foreign keys,
+  status/count/PIT checks, and no repository update/delete surface.
+- Append body, root, and all children in one transaction, then reconstruct and
+  compare the complete durable aggregate. Exact replay is idempotent; a later
+  observation of the same bytes creates a new root and reuses the body; a
+  mismatched natural identity or capture ID fails closed.
+- Resolve PIT reads only for an exact provider/product/CIK/parser contract and
+  only from captures with `capturedAt <= evaluationAsOf`. Every read checks
+  digest/length, capture identity, child counts and contiguous order, status,
+  and a full strict parser replay against the retained bytes.
+- Revalidate the official SEC submissions URI, JSON/UTF-8 media envelope,
+  decoded 8 MiB limit, and strict UTF-8 before replay. Directly constructed
+  forged-origin, non-JSON, oversized, inconsistent, or corrupted aggregates
+  cannot cross the persistence boundary.
+- Retain exact bodies as private PostgreSQL evidence without an automatic TTL.
+  Add no public raw-body endpoint and make no WORM, encryption, backup, legal
+  hold, or disposal claim. Any deletion or archival policy requires a later
+  reviewed decision.
+- Require no new SEC API key, provider account, paid plan, OAuth credential,
+  filer token, plugin, or environment variable. Explicit live capture still
+  uses only `SEC_CONTACT_EMAIL`; persistence uses the existing PostgreSQL
+  connection variables. No configured secret value was read, printed, or
+  committed.
+
+### Repository surface
+
+- Add the capture provider/repository/replay ports and one-shot
+  `PersistFilingCatalogCaptureService`; keep scheduler, retry, controller,
+  command-line trigger, and autonomous collection outside this gate.
+- Extend the SEC provider's existing one-request root path to return the exact
+  decoded bytes, receipt, and catalog together for persistence while preserving
+  the receipt-only catalog path.
+- Add `JdbcFilingCatalogCaptureRepository`, the SEC V2 replay verifier, the
+  property-gated persistence wiring, and V6 migration.
+- Add deterministic domain, service, Spring wiring, H2 persistence, Flyway
+  upgrade, PostgreSQL concurrency/constraint, and manual live shape coverage.
+  Document the retention, credentials, PIT, concurrency, security, and
+  non-scope boundary in both READMEs and ADR-039.
+
+### Verification
+
+- Focused capture/domain/service/configuration/persistence suite: **PASS** — 62
+  tests, zero failures, errors, or skips.
+- Full API Maven verification with Docker Desktop 29.2.1: **PASS** — 2,200
+  tests, zero failures, errors, or skips; Spring Boot packaging completed.
+- PostgreSQL 17.10/Testcontainers V6 and upgrade-path suite: **PASS** — five
+  tests. It verifies exact/idempotent append, later-observation body reuse,
+  concurrent identical convergence, concurrent different-body fail-closed
+  conflict with loser rollback and no orphan body, raw length checks,
+  restricting deletion, and migrations from prior schema versions.
+- Manual opt-in SEC smoke: **PASS** — one Apple root request, one test, exact
+  pending capture body/receipt/catalog shape, and no referenced-segment request.
+  No body, contact value, complete User-Agent, or provider row was logged.
+- Web regression: **PASS** — ESLint with zero warnings, 42 Vitest files / 569
+  tests, and the Next.js production build with all 12 static-generation steps.
+  The user-owned `apps/web/next-env.d.ts` was restored to SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Repository CI guard: **PASS** — the ADR-039 exact-surface and semantic guard,
+  all 44 embedded Python bodies' syntax, and all 37 environment-independent
+  bodies execute successfully. Seven CI-only bodies remain local skips because
+  they require `jsonschema` or the integration artifact environment. The
+  workflow YAML parses with duplicate keys rejected.
+- Independent correctness review: **PASS** — no release-blocking finding. The
+  review's provenance-envelope, oversized replay, concurrent different-body
+  loser rollback, and raw count/status/PIT/CIK constraint recommendations were
+  all implemented and verified.
+- Patch and credential hygiene: **PASS** — `git diff --check`, changed-file
+  credential-pattern scan, exact user-file SHA, and private-body publication
+  firewall all pass without reading or printing configured secret values.
+
+### Next work
+
+- Retrieve only captured CIK-bound historical-segment filenames under the
+  existing SEC transport controls and give every segment its own exact decoded
+  body, immutable receipt, versioned parser, durable replay, and root/descriptor
+  binding.
+- Compare observed segment rows and ranges with advertised metadata; define
+  accession duplicate, overlap, replacement/removal, and complete-history
+  semantics without inferring missing facts.
+- Keep polling, distributed/global rate coordination, public read API,
+  authentication decision, and attributed Korean UI behind later independent
+  gates.

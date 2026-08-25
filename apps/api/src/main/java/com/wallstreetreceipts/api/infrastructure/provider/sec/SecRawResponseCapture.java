@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.type.LogicalType;
 import com.wallstreetreceipts.api.domain.filing.FilingCatalog;
+import com.wallstreetreceipts.api.domain.filing.FilingCatalogCapture;
 import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt;
 import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRepresentation;
 import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRetention;
@@ -107,6 +108,32 @@ final class SecRawResponseCapture {
     FilingCatalog toCanonical(Instant processingTime) throws IOException {
         return SecSubmissionsMapper.toCanonical(
                 decode(), receipt, processingTime);
+    }
+
+    FilingCatalogCapture toCatalogCapture(Instant processingTime) throws IOException {
+        SourceResponseReceipt attachedReceipt = receipt.withBodyRetention(
+                BodyRetention.DECODED_BODY_ATTACHED_PENDING_PERSISTENCE);
+        FilingCatalog catalog = SecSubmissionsMapper.toCanonical(
+                decode(), attachedReceipt, processingTime);
+        return new FilingCatalogCapture(catalog, decodedBody);
+    }
+
+    static FilingCatalog replay(
+            byte[] decodedBody,
+            SourceResponseReceipt receipt,
+            Instant processingTime) throws IOException {
+        Objects.requireNonNull(decodedBody, "decodedBody");
+        Objects.requireNonNull(receipt, "receipt");
+        if (decodedBody.length == 0) {
+            throw SecProviderException.unreadableResponse();
+        }
+        if (decodedBody.length
+                > SecResponseSizeLimitInterceptor.MAX_DECOMPRESSED_RESPONSE_BYTES) {
+            throw SecProviderException.responseTooLarge();
+        }
+        requireValidUtf8(decodedBody);
+        return SecSubmissionsMapper.toCanonical(
+                SUBMISSIONS_READER.readValue(decodedBody), receipt, processingTime);
     }
 
     private static ObjectReader strictSubmissionsReader() {

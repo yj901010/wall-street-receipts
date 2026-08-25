@@ -17,6 +17,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 
 import com.wallstreetreceipts.api.domain.filing.FilingCatalog;
+import com.wallstreetreceipts.api.domain.filing.FilingCatalogCapture;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRetention;
 import com.wallstreetreceipts.api.infrastructure.provider.sec.SecEdgarFilingCatalogProvider;
 
 class SecEdgarLiveSmokeIT {
@@ -47,7 +49,8 @@ class SecEdgarLiveSmokeIT {
 
                     SecEdgarFilingCatalogProvider provider =
                             context.getBean(SecEdgarFilingCatalogProvider.class);
-                    FilingCatalog catalog = provider.loadRecentFilings(APPLE_CIK);
+                    FilingCatalogCapture capture = provider.loadCatalogCapture(APPLE_CIK);
+                    FilingCatalog catalog = capture.catalog();
 
                     assertTrue(
                             APPLE_CIK.equals(catalog.cik()),
@@ -83,6 +86,14 @@ class SecEdgarLiveSmokeIT {
                             "SEC_SUBMISSIONS_CATALOG_V2",
                             catalog.sourceReceipt().parserVersion(),
                             "SEC live smoke must use the V2 catalog parser");
+                    assertEquals(
+                            catalog.sourceReceipt().decodedBodyLength(),
+                            capture.decodedBody().length,
+                            "SEC live capture must retain the exact decoded body in memory");
+                    assertEquals(
+                            BodyRetention.DECODED_BODY_ATTACHED_PENDING_PERSISTENCE,
+                            catalog.sourceReceipt().bodyRetention(),
+                            "SEC live capture must not claim durability before commit");
                     assertEquals(
                             FilingCatalog.HistoricalSegmentStatus
                                     .RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED,

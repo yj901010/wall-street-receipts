@@ -33,6 +33,9 @@ ADR-037 establishes the in-memory SEC decoded-response receipt foundation.
 
 ADR-038 establishes the SEC historical-segment descriptor catalog.
 
+ADR-039 establishes append-only SEC root-capture persistence and exact-byte
+replay.
+
 SEC submissions metadata adapter는 기본 비활성화다. 로컬에서 명시적으로
 활성화하려면 루트 `.env`에 다음 서버 전용 변수가 있어야 한다.
 
@@ -43,9 +46,9 @@ SEC_CONTACT_EMAIL=operations-contact@example.com
 ```
 
 SEC는 API key 대신 선언된 연락처 User-Agent를 요구한다. 실제 연락처 값은
-`.env.example`, 로그, HTTP 응답, Git에 넣지 않는다. 현재 adapter에는 DB 적재,
-스케줄러, controller 또는 web consumer가 없으므로 활성화만으로 외부 요청이
-발생하지 않는다.
+`.env.example`, 로그, HTTP 응답, Git에 넣지 않는다. 현재 adapter에는 one-shot
+DB persistence service가 있지만 scheduler, controller, command-line trigger 또는
+web consumer가 없으므로 활성화만으로 외부 요청이나 DB 적재가 발생하지 않는다.
 
 SEC 공식 fair-access 상한은 여러 머신을 합쳐 초당 10회다. 애플리케이션 내부
 정책은 단일 JVM에서 모든 SEC 요청을 하나의 limiter로 묶어 초당 8회, 요청 사이
@@ -85,12 +88,13 @@ receipt에는 source URI, 완독 뒤 UTC microsecond precision으로 기록한
 허용된 응답 metadata로 보존한다. 그 밖의 response header는 버리며 request
 header, `SEC_CONTACT_EMAIL`, 전체 `User-Agent`는 보존하지 않는다.
 
-body retention은 `RECEIPT_ONLY_BODY_NOT_RETAINED`다. decoded body는 bounded
-response를 hash하고 parse하는 동안만 메모리에 있고 receipt에는 남지 않는다.
-digest는 동일 bytes 확인용 local identifier일 뿐 SEC 서명이나 SEC 발신 인증이
-아니다. durable raw body, replay, persistence, Flyway/DB, scheduler, controller,
-public API/UI publication은 구현하지 않았다. 이 foundation에는 새 API key,
-계정, 유료 플랜 또는 plugin이 필요 없다.
+catalog-only read path의 body retention은
+`RECEIPT_ONLY_BODY_NOT_RETAINED`다. decoded body는 bounded response를 hash하고
+parse하는 동안만 메모리에 있고 receipt에는 남지 않는다. digest는 동일 bytes
+확인용 local identifier일 뿐 SEC 서명이나 SEC 발신 인증이 아니다. ADR-037
+자체에는 durable raw body, replay, persistence, Flyway/DB, scheduler, controller,
+public API/UI publication이 없다. 이 foundation에는 새 API key, 계정, 유료 플랜
+또는 plugin이 필요 없다.
 
 ### Historical segment descriptor catalog
 
@@ -117,9 +121,59 @@ advertised dates는 event/available/capture time이 아니며 knowledge를 backd
 않는다. referenced segment body, 존재, actual row count/range, ETag, digest는 아직
 관찰하지 않았다. segment GET/parse/union, durable raw body/replay, persistence/DB,
 scheduler, controller, public API/UI는 없다. 새 API key나 계정도 필요 없고 live
-root request에는 기존 `SEC_CONTACT_EMAIL`만 사용한다. 다음은 append-only root
-receipt/catalog/descriptor persistence이며, segment retrieval과 실제 completeness
-proof는 별도 후속 gate다.
+root request에는 기존 `SEC_CONTACT_EMAIL`만 사용한다.
+
+### Append-only root capture persistence
+
+ADR-039의 persistence path는 provider가 방금 hash와 parse에 사용한 exact decoded
+bytes를 `FilingCatalogCapture`에 defensive copy로 붙인다. transaction 전 receipt
+state는 `DECODED_BODY_ATTACHED_PENDING_PERSISTENCE`이고, repository가 exact replay
+검증 후 성공적으로 적재한 row와 read-back aggregate만
+`DURABLE_DECODED_BODY_RETAINED`를 사용한다. catalog-only path의
+`RECEIPT_ONLY_BODY_NOT_RETAINED` 의미는 바뀌지 않는다.
+
+Flyway V6는 exact bytes를 SHA-256 content address의 PostgreSQL `BYTEA`로 저장하고,
+root receipt/catalog row와 provider-order ordinal을 가진 recent filing 및 historical
+descriptor child row를 분리해 저장한다. 동일 bytes를 나중에 다시 관찰하면 body
+row는 공유하지만 다른 `capturedAt`의 root observation은 새로 append한다. body
+digest 형식과 body FK identity, length와 8 MiB 상한, root status/count, accession,
+CIK-bound descriptor, child point-in-time 관계는 DB constraint로도 검증한다.
+실제 `BYTEA`의 SHA-256 재계산과 exact-byte 비교는 append/read의 deterministic
+Java 검증이 담당하며 새 PostgreSQL crypto extension을 요구하지 않는다.
+
+versioned `captureId`는 provider, product, CIK, source URI, `capturedAt`, body
+digest와 decoded length를 묶는다. 완전히 같은 durable aggregate replay는
+`IDENTICAL_REPLAY`이고, 같은 natural capture identity나 `captureId`에 다른
+bytes/projection이 오면 fail closed한다. body, root, recent children, descriptor
+children은 한 transaction으로 commit되며 child insert가 실패하면 새 body와 root도
+rollback된다. PostgreSQL concurrent identical append는 conflict row를 다시 읽어
+한 번만 insert한다. repository에는 update/delete method가 없지만, 이는 DB
+관리자까지 차단하는 WORM 보장은 아니다.
+
+repository read는 stored child count와 contiguous order, 재생성한 `captureId`, body
+digest/length를 확인한 뒤 exact retained bytes를
+`SEC_SUBMISSIONS_CATALOG_V2`로 다시 parse하고 전체 catalog equality를 요구한다.
+point-in-time lookup은 exact provider/product/CIK/parser version에 대해
+`capturedAt <= evaluationAsOf`인 최신 capture만 선택한다. future capture와 다른
+parser projection은 보이지 않는다.
+
+decoded body는 private server-side evidence이며 현재 TTL, purge job, delete API,
+controller, web 노출이 없다. content addressing은 중복 bytes만 줄이고 capture를
+삭제하지 않는다. disposal, backup expiry, encryption, object storage, public
+redistribution은 별도 결정이 필요하다.
+
+새 SEC API key, 계정, 유료 플랜, OAuth 또는 plugin은 필요 없다. live capture는
+기존 `SEC_CONTACT_EMAIL`만 사용한다. DB는 기존 `POSTGRES_HOST`, `POSTGRES_PORT`,
+`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` 설정을 사용한다. 로컬 값은 루트
+`.env`에만 두고, 배포 값은 deployment secret store에서 주입해야 하며 채팅이나
+Git에 넣지 않는다. persistence bean은 SEC provider가 명시적으로 enabled일 때만
+one-shot service로 연결되지만 scheduler/controller가 없어 자동 실행되지 않는다.
+
+다음 SEC gate는 captured CIK-bound filename만 사용하는 referenced historical
+segment retrieval이다. 각 segment도 exact decoded body, versioned receipt/parser,
+replay 검증을 가져야 하며 observed rows/count/range와 root advertised metadata를
+비교하되 completeness를 추정하지 않는다. scheduler/global coordination, read API,
+attributed Korean UI는 별도 후속 gate다.
 
 ### Manual SEC live smoke
 
@@ -156,7 +210,7 @@ provider 활성화와 exact official origin을 강제하므로 `.env`에서
 
 일반 `test`/`verify`, 기본 Maven profile, CI는 이 점검을 실행하지 않으며 외부
 SEC 네트워크를 사용하지 않는다. 성공한 수동 점검도 스케줄러, 다중 replica,
-DB 적재, API/UI 공개를 승인하지 않는다.
+운영 DB 적재 자동화, API/UI 공개를 승인하지 않는다.
 
 ## Test
 

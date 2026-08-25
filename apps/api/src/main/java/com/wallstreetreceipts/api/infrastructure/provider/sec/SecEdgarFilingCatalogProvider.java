@@ -11,9 +11,12 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import com.wallstreetreceipts.api.application.port.out.FilingCatalogProvider;
+import com.wallstreetreceipts.api.application.port.out.FilingCatalogCaptureProvider;
 import com.wallstreetreceipts.api.domain.filing.FilingCatalog;
+import com.wallstreetreceipts.api.domain.filing.FilingCatalogCapture;
 
-public final class SecEdgarFilingCatalogProvider implements FilingCatalogProvider {
+public final class SecEdgarFilingCatalogProvider
+        implements FilingCatalogProvider, FilingCatalogCaptureProvider {
 
     private static final String PROVIDER_NAME = "sec-edgar";
     private static final String SUBMISSIONS_PATH_TEMPLATE = "/submissions/CIK%s.json";
@@ -46,6 +49,22 @@ public final class SecEdgarFilingCatalogProvider implements FilingCatalogProvide
 
         try {
             return capture.toCanonical(receivedAt);
+        } catch (java.io.IOException exception) {
+            throw SecProviderException.unreadableResponse();
+        } catch (RuntimeException exception) {
+            throw SecProviderException.invalidResponse();
+        }
+    }
+
+    @Override
+    public FilingCatalogCapture loadCatalogCapture(String cik) {
+        String paddedCik = normalizeCik(cik);
+        URI endpoint = baseUrl.resolve(SUBMISSIONS_PATH_TEMPLATE.formatted(paddedCik));
+        SecRawResponseCapture capture = retrieve(endpoint);
+        Instant receivedAt = capture.receipt().capturedAt();
+
+        try {
+            return capture.toCatalogCapture(receivedAt);
         } catch (java.io.IOException exception) {
             throw SecProviderException.unreadableResponse();
         } catch (RuntimeException exception) {

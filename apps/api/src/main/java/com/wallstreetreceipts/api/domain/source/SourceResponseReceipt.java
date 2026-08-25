@@ -72,6 +72,24 @@ public record SourceResponseReceipt(
                 + ", bodyRetention=" + bodyRetention + "]";
     }
 
+    public SourceResponseReceipt withBodyRetention(BodyRetention retention) {
+        return new SourceResponseReceipt(
+                provider,
+                product,
+                sourceUri,
+                httpStatus,
+                mediaType,
+                transportContentEncoding,
+                etag,
+                lastModified,
+                parserVersion,
+                decodedBodySha256,
+                decodedBodyLength,
+                capturedAt,
+                bodyRepresentation,
+                retention);
+    }
+
     private static void requireAbsoluteHttpUri(URI value) {
         Objects.requireNonNull(value, "sourceUri must not be null");
         if (!value.isAbsolute()
@@ -121,6 +139,8 @@ public record SourceResponseReceipt(
     }
 
     public enum BodyRetention {
-        RECEIPT_ONLY_BODY_NOT_RETAINED
+        RECEIPT_ONLY_BODY_NOT_RETAINED,
+        DECODED_BODY_ATTACHED_PENDING_PERSISTENCE,
+        DURABLE_DECODED_BODY_RETAINED
     }
 }

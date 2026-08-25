@@ -3280,6 +3280,7 @@ jobs:
               "V1__baseline.sql", "V2__analyst_calls.sql",
               "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
               "V5__call_contexts.sql",
+              "V6__sec_filing_catalog_captures.sql",
           }
           require(
               {path.name for path in Path("schemas").glob("*.json")}
@@ -3346,7 +3347,7 @@ jobs:
               if not condition:
                   raise ValueError(message)
 
-          # Later ADR-035/036/037/038 files are proven by their own exact guards. Replay
+          # Later ADR-035/036/037/038/039 files are proven by their own exact guards. Replay
           # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
@@ -3399,6 +3400,27 @@ jobs:
               and all(path.is_file() for path in adr038_new_paths),
               "SEC historical replay exclusion must add only the exact ADR-038 1+1 new files",
           )
+          adr039_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/resources/db/migration/V6__sec_filing_catalog_captures.sql"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_later_paths) == 14
+              and all(path.is_file() for path in adr039_later_paths),
+              "SEC historical replay exclusion must add the exact ADR-039 persistence delta",
+          )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
               b"    env:\n      show-values: never\n",
@@ -3413,7 +3435,10 @@ jobs:
           def historical_rglob(path, pattern):
               return (
                   candidate for candidate in original_rglob(path, pattern)
-                  if candidate not in adr035_later_paths | adr037_new_paths | adr038_new_paths
+                  if candidate not in (
+                      adr035_later_paths | adr037_new_paths | adr038_new_paths
+                      | adr039_later_paths
+                  )
               )
 
           def historical_read_bytes(path):
@@ -3881,6 +3906,7 @@ jobs:
           expected_migrations = {
               "V1__baseline.sql", "V2__analyst_calls.sql", "V3__analyst_call_revisions.sql",
               "V4__call_outcomes.sql", "V5__call_contexts.sql",
+              "V6__sec_filing_catalog_captures.sql",
           }
           require(
               {path.name for path in Path("schemas").glob("*.json")} == expected_schemas,
@@ -4153,7 +4179,7 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035/036/037/038 files are proven by their own exact guards. Replay
+          # Later ADR-035/036/037/038/039 files are proven by their own exact guards. Replay
           # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
@@ -4206,6 +4232,27 @@ jobs:
               and all(path.is_file() for path in adr038_new_paths),
               "SEC historical replay exclusion must add only the exact ADR-038 1+1 new files",
           )
+          adr039_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/resources/db/migration/V6__sec_filing_catalog_captures.sql"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_later_paths) == 14
+              and all(path.is_file() for path in adr039_later_paths),
+              "SEC historical replay exclusion must add the exact ADR-039 persistence delta",
+          )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
               b"    env:\n      show-values: never\n",
@@ -4220,7 +4267,10 @@ jobs:
           def historical_rglob(path, pattern):
               return (
                   candidate for candidate in original_rglob(path, pattern)
-                  if candidate not in adr035_later_paths | adr037_new_paths | adr038_new_paths
+                  if candidate not in (
+                      adr035_later_paths | adr037_new_paths | adr038_new_paths
+                      | adr039_later_paths
+                  )
               )
 
           def historical_read_bytes(path):
@@ -4605,6 +4655,7 @@ jobs:
           expected_migrations = {
               "V1__baseline.sql", "V2__analyst_calls.sql", "V3__analyst_call_revisions.sql",
               "V4__call_outcomes.sql", "V5__call_contexts.sql",
+              "V6__sec_filing_catalog_captures.sql",
           }
           require({path.name for path in Path("schemas").glob("*.json")} == expected_schemas,
                   "Call-list consumer must not change schemas")
@@ -5667,8 +5718,9 @@ jobs:
                   "V3__analyst_call_revisions.sql",
                   "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
-              f"P3 pure calculations must preserve the exact five Flyway migrations: {sorted(migration_names)}",
+              f"P3 pure calculations must preserve the exact six Flyway migrations: {sorted(migration_names)}",
           )
           web_markers = (
               tuple(expected_production_files)
@@ -6264,6 +6316,7 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
               "Session-offset mechanics must not add a Flyway migration",
           )
@@ -6711,6 +6764,7 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
               "Event/session relation must not add a Flyway migration",
           )
@@ -7392,8 +7446,9 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
-              "Strict-close policy must preserve the exact five Flyway migrations",
+              "Strict-close policy must preserve the exact six Flyway migrations",
           )
           for resource_path in Path("apps/api/src/test/resources").rglob("*.json"):
               resource_source = resource_path.read_text(encoding="utf-8")
@@ -8032,8 +8087,9 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
-              "Polarity policy must preserve the exact five Flyway migrations",
+              "Polarity policy must preserve the exact six Flyway migrations",
           )
           for resource_path in Path("apps/api/src/test/resources").rglob("*.json"):
               resource_source = resource_path.read_text(encoding="utf-8")
@@ -8375,8 +8431,9 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
-              "Adapter must preserve the exact five Flyway migrations",
+              "Adapter must preserve the exact six Flyway migrations",
           )
           for resource_path in Path("apps/api/src/test/resources").rglob("*.json"):
               require(
@@ -9304,8 +9361,9 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
-              "Routing must preserve the exact five Flyway migrations",
+              "Routing must preserve the exact six Flyway migrations",
           )
           for resource_path in Path("apps/api/src/test/resources").rglob("*.json"):
               require(
@@ -10425,8 +10483,9 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
-              "Endpoint/target leaves must preserve five Flyway migrations",
+              "Endpoint/target leaves must preserve six Flyway migrations",
           )
           for resource_path in Path("apps/api/src/test/resources").rglob("*.json"):
               resource_source = resource_path.read_text(encoding="utf-8")
@@ -10466,7 +10525,7 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035/036/037/038 files are proven by their own exact guards. Replay
+          # Later ADR-035/036/037/038/039 files are proven by their own exact guards. Replay
           # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
@@ -10519,6 +10578,27 @@ jobs:
               and all(path.is_file() for path in adr038_new_paths),
               "SEC historical replay exclusion must add only the exact ADR-038 1+1 new files",
           )
+          adr039_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/resources/db/migration/V6__sec_filing_catalog_captures.sql"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_later_paths) == 14
+              and all(path.is_file() for path in adr039_later_paths),
+              "SEC historical replay exclusion must add the exact ADR-039 persistence delta",
+          )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
               b"    env:\n      show-values: never\n",
@@ -10533,7 +10613,10 @@ jobs:
           def historical_rglob(path, pattern):
               return (
                   candidate for candidate in original_rglob(path, pattern)
-                  if candidate not in adr035_later_paths | adr037_new_paths | adr038_new_paths
+                  if candidate not in (
+                      adr035_later_paths | adr037_new_paths | adr038_new_paths
+                      | adr039_later_paths
+                  )
               )
 
           def historical_read_bytes(path):
@@ -11654,6 +11737,7 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
               "Price-pair/asset-return slice must preserve OpenAPI and Flyway",
           )
@@ -12192,7 +12276,7 @@ jobs:
           require(
               len(comparative_foundation_decision_only_paths) == 197
               and decision_only_digest.hexdigest()
-              == "12fb3dbacd830f86ca0790284e2a2833d0314bcf56291337d7698d40720ca45d",
+              == "d1bf378553fbc2e8f19808d849456b91ab83bac66ca090af7229ac78051fc329",
               "ADR-026 decision-only foundation must preserve the exact API test "
               "and web source/config baseline",
           )
@@ -12219,7 +12303,7 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035/036/037/038 files are proven by their own exact guards. Replay
+          # Later ADR-035/036/037/038/039 files are proven by their own exact guards. Replay
           # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
@@ -12272,6 +12356,27 @@ jobs:
               and all(path.is_file() for path in adr038_new_paths),
               "SEC historical replay exclusion must add only the exact ADR-038 1+1 new files",
           )
+          adr039_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/resources/db/migration/V6__sec_filing_catalog_captures.sql"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_later_paths) == 14
+              and all(path.is_file() for path in adr039_later_paths),
+              "SEC historical replay exclusion must add the exact ADR-039 persistence delta",
+          )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
               b"    env:\n      show-values: never\n",
@@ -12286,7 +12391,10 @@ jobs:
           def historical_rglob(path, pattern):
               return (
                   candidate for candidate in original_rglob(path, pattern)
-                  if candidate not in adr035_later_paths | adr037_new_paths | adr038_new_paths
+                  if candidate not in (
+                      adr035_later_paths | adr037_new_paths | adr038_new_paths
+                      | adr039_later_paths
+                  )
               )
 
           def historical_read_bytes(path):
@@ -12900,6 +13008,7 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
               "Benchmark-assignment slice must preserve OpenAPI and Flyway",
           )
@@ -13016,7 +13125,7 @@ jobs:
           require(
               len(test_web_paths) == 205
               and test_web_digest.hexdigest()
-              == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
+              == "487c19412c79497ad03e62db92790be768f78c2bb2f7646cf3fed6fc1f970f95",
               "Benchmark-assignment API-test/web baseline changed",
           )
           golden_resolved = golden_path.resolve()
@@ -13042,7 +13151,7 @@ jobs:
           require(
               len(legacy_test_web_paths) == 197
               and legacy_test_web_digest.hexdigest()
-              == "12fb3dbacd830f86ca0790284e2a2833d0314bcf56291337d7698d40720ca45d",
+              == "d1bf378553fbc2e8f19808d849456b91ab83bac66ca090af7229ac78051fc329",
               "ADR-026 test/web baseline changed outside exact ADR-027 golden",
           )
 
@@ -13067,7 +13176,7 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035/036/037/038 files are proven by their own exact guards. Replay
+          # Later ADR-035/036/037/038/039 files are proven by their own exact guards. Replay
           # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
@@ -13120,6 +13229,27 @@ jobs:
               and all(path.is_file() for path in adr038_new_paths),
               "SEC historical replay exclusion must add only the exact ADR-038 1+1 new files",
           )
+          adr039_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/resources/db/migration/V6__sec_filing_catalog_captures.sql"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_later_paths) == 14
+              and all(path.is_file() for path in adr039_later_paths),
+              "SEC historical replay exclusion must add the exact ADR-039 persistence delta",
+          )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
               b"    env:\n      show-values: never\n",
@@ -13134,7 +13264,10 @@ jobs:
           def historical_rglob(path, pattern):
               return (
                   candidate for candidate in original_rglob(path, pattern)
-                  if candidate not in adr035_later_paths | adr037_new_paths | adr038_new_paths
+                  if candidate not in (
+                      adr035_later_paths | adr037_new_paths | adr038_new_paths
+                      | adr039_later_paths
+                  )
               )
 
           def historical_read_bytes(path):
@@ -13855,7 +13988,7 @@ jobs:
           require(
               len(legacy_test_web_paths) == 198
               and test_web_digest.hexdigest()
-              == "0f6c5358ea2564c562159d375b42985e8aafd603b1673fcc404aab83bcf74a0e",
+              == "b132bd773926ecf57d87f2d6cb055670edb9e5c3aaa17ce050e7ed185c38bbed",
               "ADR-028 baseline changed outside the exact ADR-029 golden",
           )
 
@@ -13897,7 +14030,7 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035/036/037/038 files are proven by their own exact guards. Replay
+          # Later ADR-035/036/037/038/039 files are proven by their own exact guards. Replay
           # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
@@ -13950,6 +14083,27 @@ jobs:
               and all(path.is_file() for path in adr038_new_paths),
               "SEC historical replay exclusion must add only the exact ADR-038 1+1 new files",
           )
+          adr039_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/resources/db/migration/V6__sec_filing_catalog_captures.sql"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_later_paths) == 14
+              and all(path.is_file() for path in adr039_later_paths),
+              "SEC historical replay exclusion must add the exact ADR-039 persistence delta",
+          )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
               b"    env:\n      show-values: never\n",
@@ -13964,7 +14118,10 @@ jobs:
           def historical_rglob(path, pattern):
               return (
                   candidate for candidate in original_rglob(path, pattern)
-                  if candidate not in adr035_later_paths | adr037_new_paths | adr038_new_paths
+                  if candidate not in (
+                      adr035_later_paths | adr037_new_paths | adr038_new_paths
+                      | adr039_later_paths
+                  )
               )
 
           def historical_read_bytes(path):
@@ -14600,7 +14757,7 @@ jobs:
           require(
               len(test_web_paths) == 205
               and test_web_digest.hexdigest()
-              == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
+              == "487c19412c79497ad03e62db92790be768f78c2bb2f7646cf3fed6fc1f970f95",
               "Sector-assignment API-test/web baseline changed",
           )
 
@@ -14666,7 +14823,7 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035/036/037/038 files are proven by their own exact guards. Replay
+          # Later ADR-035/036/037/038/039 files are proven by their own exact guards. Replay
           # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
@@ -14719,6 +14876,27 @@ jobs:
               and all(path.is_file() for path in adr038_new_paths),
               "SEC historical replay exclusion must add only the exact ADR-038 1+1 new files",
           )
+          adr039_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/resources/db/migration/V6__sec_filing_catalog_captures.sql"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_later_paths) == 14
+              and all(path.is_file() for path in adr039_later_paths),
+              "SEC historical replay exclusion must add the exact ADR-039 persistence delta",
+          )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
               b"    env:\n      show-values: never\n",
@@ -14733,7 +14911,10 @@ jobs:
           def historical_rglob(path, pattern):
               return (
                   candidate for candidate in original_rglob(path, pattern)
-                  if candidate not in adr035_later_paths | adr037_new_paths | adr038_new_paths
+                  if candidate not in (
+                      adr035_later_paths | adr037_new_paths | adr038_new_paths
+                      | adr039_later_paths
+                  )
               )
 
           def historical_read_bytes(path):
@@ -15787,7 +15968,7 @@ jobs:
           require(
               len(test_web_paths) == 205
               and digest(test_web_paths)
-              == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
+              == "487c19412c79497ad03e62db92790be768f78c2bb2f7646cf3fed6fc1f970f95",
               "ADR-030 current API-test/web baseline changed",
           )
           adr032_test_web_paths = [
@@ -15800,7 +15981,7 @@ jobs:
                   == readiness_golden_paths
               and len(adr032_test_web_paths) == 203
               and digest(adr032_test_web_paths)
-                  == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+                  == "c5bb494a3c26a5886fe24effb1d9a5b9e85930e736a6e3efebcdbd9e3e96fc47",
               "ADR-032 test/web baseline changed outside exact ADR-033 readiness goldens",
           )
           adr031_test_web_paths = [
@@ -15813,7 +15994,7 @@ jobs:
                   == {sector_return_golden_path}
               and len(adr031_test_web_paths) == 202
               and digest(adr031_test_web_paths)
-                  == "12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273",
+                  == "8142b6b85cd5e2e3fdc2d05ef3a83333277d7e71c4268c639241655eec68135e",
               "ADR-031 test/web baseline changed outside exact ADR-032 golden",
           )
           adr030_test_web_paths = [
@@ -15826,7 +16007,7 @@ jobs:
                   == {benchmark_return_golden_path}
               and len(adr030_test_web_paths) == 201
               and digest(adr030_test_web_paths)
-                  == "fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f",
+                  == "1b04ecf32448b91c4007f024a660d0bef370ff4f8de97c45d93061c37672348f",
               "ADR-030 test/web baseline changed outside exact ADR-031 golden",
           )
           new_test_paths = {
@@ -15842,7 +16023,7 @@ jobs:
               == new_test_paths
               and len(legacy_test_web_paths) == 199
               and digest(legacy_test_web_paths)
-              == "59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293",
+              == "5c09f8859707bd8fbe59aaa2735d066fe8eedb730068da0f3e52d33a9c5907df",
               "ADR-029 test/web baseline changed outside exact ADR-030 goldens",
           )
 
@@ -15909,7 +16090,7 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035/036/037/038 files are proven by their own exact guards. Replay
+          # Later ADR-035/036/037/038/039 files are proven by their own exact guards. Replay
           # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
@@ -15962,6 +16143,27 @@ jobs:
               and all(path.is_file() for path in adr038_new_paths),
               "SEC historical replay exclusion must add only the exact ADR-038 1+1 new files",
           )
+          adr039_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/resources/db/migration/V6__sec_filing_catalog_captures.sql"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_later_paths) == 14
+              and all(path.is_file() for path in adr039_later_paths),
+              "SEC historical replay exclusion must add the exact ADR-039 persistence delta",
+          )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
               b"    env:\n      show-values: never\n",
@@ -15976,7 +16178,10 @@ jobs:
           def historical_rglob(path, pattern):
               return (
                   candidate for candidate in original_rglob(path, pattern)
-                  if candidate not in adr035_later_paths | adr037_new_paths | adr038_new_paths
+                  if candidate not in (
+                      adr035_later_paths | adr037_new_paths | adr038_new_paths
+                      | adr039_later_paths
+                  )
               )
 
           def historical_read_bytes(path):
@@ -16628,7 +16833,7 @@ jobs:
           require(
               len(test_web_paths) == 205
               and digest(test_web_paths)
-                  == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
+                  == "487c19412c79497ad03e62db92790be768f78c2bb2f7646cf3fed6fc1f970f95",
               "ADR-031 current API-test/web baseline changed",
           )
           adr032_test_web_paths = [
@@ -16641,7 +16846,7 @@ jobs:
                   == readiness_golden_paths
               and len(adr032_test_web_paths) == 203
               and digest(adr032_test_web_paths)
-                  == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+                  == "c5bb494a3c26a5886fe24effb1d9a5b9e85930e736a6e3efebcdbd9e3e96fc47",
               "ADR-032 test/web baseline changed outside exact ADR-033 readiness goldens",
           )
           adr031_test_web_paths = [
@@ -16654,7 +16859,7 @@ jobs:
                   == {sector_return_golden_path}
               and len(adr031_test_web_paths) == 202
               and digest(adr031_test_web_paths)
-                  == "12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273",
+                  == "8142b6b85cd5e2e3fdc2d05ef3a83333277d7e71c4268c639241655eec68135e",
               "ADR-031 test/web baseline changed outside exact ADR-032 golden",
           )
           adr030_test_web_paths = [
@@ -16664,7 +16869,7 @@ jobs:
           require(
               len(adr030_test_web_paths) == 201
               and digest(adr030_test_web_paths)
-                  == "fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f",
+                  == "1b04ecf32448b91c4007f024a660d0bef370ff4f8de97c45d93061c37672348f",
               "ADR-030 test/web baseline changed outside exact ADR-031 golden",
           )
           adr030_golden_paths = {
@@ -16686,7 +16891,7 @@ jobs:
           require(
               len(adr029_test_web_paths) == 199
               and digest(adr029_test_web_paths)
-                  == "59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293",
+                  == "5c09f8859707bd8fbe59aaa2735d066fe8eedb730068da0f3e52d33a9c5907df",
               "ADR-029 test/web baseline changed outside ADR-030/031 goldens",
           )
 
@@ -16748,7 +16953,7 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035/036/037/038 files are proven by their own exact guards. Replay
+          # Later ADR-035/036/037/038/039 files are proven by their own exact guards. Replay
           # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
@@ -16801,6 +17006,27 @@ jobs:
               and all(path.is_file() for path in adr038_new_paths),
               "SEC historical replay exclusion must add only the exact ADR-038 1+1 new files",
           )
+          adr039_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/resources/db/migration/V6__sec_filing_catalog_captures.sql"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_later_paths) == 14
+              and all(path.is_file() for path in adr039_later_paths),
+              "SEC historical replay exclusion must add the exact ADR-039 persistence delta",
+          )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
               b"    env:\n      show-values: never\n",
@@ -16815,7 +17041,10 @@ jobs:
           def historical_rglob(path, pattern):
               return (
                   candidate for candidate in original_rglob(path, pattern)
-                  if candidate not in adr035_later_paths | adr037_new_paths | adr038_new_paths
+                  if candidate not in (
+                      adr035_later_paths | adr037_new_paths | adr038_new_paths
+                      | adr039_later_paths
+                  )
               )
 
           def historical_read_bytes(path):
@@ -17433,7 +17662,7 @@ jobs:
           require(
               len(test_web_paths) == 205
               and digest(test_web_paths)
-                  == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
+                  == "487c19412c79497ad03e62db92790be768f78c2bb2f7646cf3fed6fc1f970f95",
               "ADR-032 current API-test/web baseline changed",
           )
           adr032_test_web_paths = [
@@ -17446,7 +17675,7 @@ jobs:
                   == readiness_golden_paths
               and len(adr032_test_web_paths) == 203
               and digest(adr032_test_web_paths)
-                  == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+                  == "c5bb494a3c26a5886fe24effb1d9a5b9e85930e736a6e3efebcdbd9e3e96fc47",
               "ADR-032 test/web baseline changed outside exact ADR-033 readiness goldens",
           )
           adr031_test_web_paths = [
@@ -17459,7 +17688,7 @@ jobs:
                   == {golden_path.resolve()}
               and len(adr031_test_web_paths) == 202
               and digest(adr031_test_web_paths)
-                  == "12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273",
+                  == "8142b6b85cd5e2e3fdc2d05ef3a83333277d7e71c4268c639241655eec68135e",
               "ADR-031 test/web baseline changed outside exact ADR-032 golden",
           )
           benchmark_return_golden = Path(
@@ -17476,7 +17705,7 @@ jobs:
                   == {benchmark_return_golden}
               and len(adr030_test_web_paths) == 201
               and digest(adr030_test_web_paths)
-                  == "fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f",
+                  == "1b04ecf32448b91c4007f024a660d0bef370ff4f8de97c45d93061c37672348f",
               "ADR-030 test/web baseline changed outside ADR-031/032 goldens",
           )
           adr030_golden_paths = {
@@ -17501,7 +17730,7 @@ jobs:
                   == adr030_golden_paths
               and len(adr029_test_web_paths) == 199
               and digest(adr029_test_web_paths)
-                  == "59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293",
+                  == "5c09f8859707bd8fbe59aaa2735d066fe8eedb730068da0f3e52d33a9c5907df",
               "ADR-029 test/web baseline changed outside ADR-030/031/032 goldens",
           )
 
@@ -17568,7 +17797,7 @@ jobs:
                   raise ValueError(message)
 
 
-          # Later ADR-035/036/037/038 files are proven by their own exact guards. Replay
+          # Later ADR-035/036/037/038/039 files are proven by their own exact guards. Replay
           # this historical boundary against its pre-ADR-035 filesystem/config view.
           adr035_later_paths = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogProvider.java"),
@@ -17621,6 +17850,27 @@ jobs:
               and all(path.is_file() for path in adr038_new_paths),
               "SEC historical replay exclusion must add only the exact ADR-038 1+1 new files",
           )
+          adr039_later_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/resources/db/migration/V6__sec_filing_catalog_captures.sql"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_later_paths) == 14
+              and all(path.is_file() for path in adr039_later_paths),
+              "SEC historical replay exclusion must add the exact ADR-039 persistence delta",
+          )
           adr035_application_config_additions = (
               b"    configprops:\n      show-values: never\n"
               b"    env:\n      show-values: never\n",
@@ -17635,7 +17885,10 @@ jobs:
           def historical_rglob(path, pattern):
               return (
                   candidate for candidate in original_rglob(path, pattern)
-                  if candidate not in adr035_later_paths | adr037_new_paths | adr038_new_paths
+                  if candidate not in (
+                      adr035_later_paths | adr037_new_paths | adr038_new_paths
+                      | adr039_later_paths
+                  )
               )
 
           def historical_read_bytes(path):
@@ -18336,7 +18589,7 @@ jobs:
           require(
               len(test_web_paths) == 205
               and digest(test_web_paths)
-                  == "fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75",
+                  == "487c19412c79497ad03e62db92790be768f78c2bb2f7646cf3fed6fc1f970f95",
               "ADR-033 current API-test/web baseline changed",
           )
           adr032_test_web_paths = [
@@ -18349,7 +18602,7 @@ jobs:
                   == all_golden_paths
               and len(adr032_test_web_paths) == 203
               and digest(adr032_test_web_paths)
-                  == "5f95c2b844af16224815b1b4025b52b9c25b7822d4fa53b8f8d93788805f28ce",
+                  == "c5bb494a3c26a5886fe24effb1d9a5b9e85930e736a6e3efebcdbd9e3e96fc47",
               "ADR-032 baseline changed outside exact ADR-033 two goldens",
           )
           sector_return_golden = Path(
@@ -18363,7 +18616,7 @@ jobs:
           require(
               len(adr031_test_web_paths) == 202
               and digest(adr031_test_web_paths)
-                  == "12b03e7a48a0e6c3e676da9b335c4c270e8dc50bea2402aa25f6462db07bb273",
+                  == "8142b6b85cd5e2e3fdc2d05ef3a83333277d7e71c4268c639241655eec68135e",
               "ADR-031 test/web baseline changed outside ADR-032/033 goldens",
           )
           benchmark_return_golden = Path(
@@ -18377,7 +18630,7 @@ jobs:
           require(
               len(adr030_test_web_paths) == 201
               and digest(adr030_test_web_paths)
-                  == "fd0e3170ba2d64aeb4bf638010915455a27d3a5aed9fe77fb2a724502d96462f",
+                  == "1b04ecf32448b91c4007f024a660d0bef370ff4f8de97c45d93061c37672348f",
               "ADR-030 test/web baseline changed outside ADR-031/032/033 goldens",
           )
           reference_pair_goldens = {
@@ -18399,7 +18652,7 @@ jobs:
           require(
               len(adr029_test_web_paths) == 199
               and digest(adr029_test_web_paths)
-                  == "59726e88e5bf7d831f16beaa693689ca799990d355733a1115c07a285a7e5293",
+                  == "5c09f8859707bd8fbe59aaa2735d066fe8eedb730068da0f3e52d33a9c5907df",
               "ADR-029 test/web baseline changed outside ADR-030/031/032/033 goldens",
           )
 
@@ -18515,6 +18768,31 @@ jobs:
                       for path in adr038_new_main_paths | adr038_new_test_paths),
               "ADR-034 historical replay must exclude only the exact ADR-038 1+1 new files",
           )
+          adr039_new_main_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+          }
+          adr039_new_test_paths = {
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_new_main_paths) == 9
+              and len(adr039_new_test_paths) == 4
+              and all(path.is_file()
+                      for path in adr039_new_main_paths | adr039_new_test_paths),
+              "Historical replay must exclude the exact ADR-039 main/test persistence delta",
+          )
+
 
           historical_overrides = {
               Path("apps/api/pom.xml"): (
@@ -19027,7 +19305,11 @@ jobs:
                   *(path for path in Path("apps/api/src/main").rglob("*")
                     if path.is_file()
                     and path not in adr036_new_main_paths | adr037_new_main_paths
-                    | adr038_new_main_paths),
+                    | adr038_new_main_paths | adr039_new_main_paths
+                    and path != Path(
+                        "apps/api/src/main/resources/db/migration/"
+                        "V6__sec_filing_catalog_captures.sql"
+                    )),
               },
               key=lambda path: path.as_posix(),
           )
@@ -19042,7 +19324,7 @@ jobs:
                   *(path for path in Path("apps/api/src/test").rglob("*")
                     if path.is_file()
                     and path not in adr036_new_test_paths | adr037_new_test_paths
-                    | adr038_new_test_paths),
+                    | adr038_new_test_paths | adr039_new_test_paths),
                   *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
                     for path in root.rglob("*") if path.is_file()),
                   *(path for path in Path("apps/web").glob("*")
@@ -19053,7 +19335,7 @@ jobs:
           require(
               len(test_web_paths) == 208
               and digest(test_web_paths)
-                  == "9a7e78f90097e70064de61c36cdfa342c15dbc772b1eb8984ae4b66c97bf434d",
+                  == "0f1eeec4b75f66e140e7a44cc2c4095bf596a5160e88a8d84c97563f7050425a",
               "ADR-034 decision-only API-test/web baseline changed",
           )
           dependency_runtime_paths = {
@@ -19190,6 +19472,31 @@ jobs:
                       for path in adr038_new_main_paths | adr038_new_test_paths),
               "ADR-035 historical replay must exclude only the exact ADR-038 1+1 new files",
           )
+          adr039_new_main_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+          }
+          adr039_new_test_paths = {
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_new_main_paths) == 9
+              and len(adr039_new_test_paths) == 4
+              and all(path.is_file()
+                      for path in adr039_new_main_paths | adr039_new_test_paths),
+              "Historical replay must exclude the exact ADR-039 main/test persistence delta",
+          )
+
 
           historical_overrides = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecEdgarConfiguration.java"): (
@@ -19577,14 +19884,15 @@ jobs:
           actual_main_paths = {
               *(path for path in (
                   main_root / "domain/filing"
-              ).glob("*.java") if path not in adr038_new_main_paths),
+              ).glob("*.java") if path not in adr038_new_main_paths
+                | adr039_new_main_paths),
               *(
                   path
                   for path in (
                       main_root / "infrastructure/provider/sec"
                   ).glob("*.java")
                   if path not in adr036_new_main_paths | adr037_new_main_paths
-                  | adr038_new_main_paths
+                  | adr038_new_main_paths | adr039_new_main_paths
               ),
               *(
                   path for path in (
@@ -19611,14 +19919,15 @@ jobs:
           actual_test_paths = {
               *(path for path in (
                   test_root / "domain/filing"
-              ).glob("*.java") if path not in adr038_new_test_paths),
+              ).glob("*.java") if path not in adr038_new_test_paths
+                | adr039_new_test_paths),
               *(
                   path
                   for path in (
                       test_root / "infrastructure/provider/sec"
                   ).glob("*.java")
                   if path not in adr036_new_test_paths | adr037_new_test_paths
-                  | adr038_new_test_paths
+                  | adr038_new_test_paths | adr039_new_test_paths
               ),
               *(
                   path for path in (
@@ -19888,8 +20197,9 @@ jobs:
                   "V3__analyst_call_revisions.sql",
                   "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
-              "ADR-035 must not add a Flyway migration",
+              "ADR-035 replay must recognize only ADR-039 as the later Flyway migration",
           )
 
           publication_markers = (
@@ -19906,13 +20216,17 @@ jobs:
               Path("contracts/openapi.yaml"),
               *Path("schemas").glob("*.json"),
               *(path for path in Path("fixtures/v1").rglob("*") if path.is_file()),
-              *(main_resources / "db/migration").glob("*.sql"),
+              *(path for path in (main_resources / "db/migration").glob("*.sql")
+                if path.name != "V6__sec_filing_catalog_captures.sql"),
               *(path for path in main_root.rglob("*.java")
                 if path not in expected_main_paths | adr036_new_main_paths
-                | adr037_new_main_paths | adr038_new_main_paths),
+                | adr037_new_main_paths | adr038_new_main_paths
+                | adr039_new_main_paths),
               *(path for path in test_root.rglob("*.java")
                 if path not in expected_test_paths | adr036_new_test_paths
-                | adr037_new_test_paths | adr038_new_test_paths),
+                | adr037_new_test_paths | adr038_new_test_paths
+                | adr039_new_test_paths
+                | {test_root / "migration/PostgreSqlMigrationTest.java"}),
               *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
                 for path in root.rglob("*") if path.is_file()),
           }
@@ -19970,7 +20284,11 @@ jobs:
               *(path for path in Path("apps/api/src/main").rglob("*")
                 if path.is_file()
                 and path not in adr036_new_main_paths | adr037_new_main_paths
-                | adr038_new_main_paths),
+                | adr038_new_main_paths | adr039_new_main_paths
+                and path != Path(
+                    "apps/api/src/main/resources/db/migration/"
+                    "V6__sec_filing_catalog_captures.sql"
+                )),
           }
           require(
               len(protected_paths) == 245
@@ -19982,7 +20300,7 @@ jobs:
               *(path for path in Path("apps/api/src/test").rglob("*")
                 if path.is_file()
                 and path not in adr036_new_test_paths | adr037_new_test_paths
-                | adr038_new_test_paths),
+                | adr038_new_test_paths | adr039_new_test_paths),
               *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
                 for path in root.rglob("*") if path.is_file()),
               *(path for path in Path("apps/web").glob("*")
@@ -19991,7 +20309,7 @@ jobs:
           require(
               len(test_web_paths) == 208
               and digest(test_web_paths)
-                  == "9a7e78f90097e70064de61c36cdfa342c15dbc772b1eb8984ae4b66c97bf434d",
+                  == "0f1eeec4b75f66e140e7a44cc2c4095bf596a5160e88a8d84c97563f7050425a",
               "ADR-035 API-test/web baseline changed",
           )
 
@@ -20047,6 +20365,31 @@ jobs:
                       for path in adr038_new_main_paths | adr038_new_test_paths),
               "ADR-036 replay must exclude only the exact ADR-038 1+1 new files",
           )
+          adr039_new_main_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+          }
+          adr039_new_test_paths = {
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_new_main_paths) == 9
+              and len(adr039_new_test_paths) == 4
+              and all(path.is_file()
+                      for path in adr039_new_main_paths | adr039_new_test_paths),
+              "Historical replay must exclude the exact ADR-039 main/test persistence delta",
+          )
+
 
           adr037_historical_overrides = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecResponseDecompressionInterceptor.java"): (
@@ -20299,7 +20642,7 @@ jobs:
                   ),
               ),
               Path("apps/api/src/sec-live-smoke-test/java/com/wallstreetreceipts/api/config/SecEdgarLiveSmokeIT.java"): (
-                  "8f10f42f62b33b09f9a9c9159df28072a7ae2ecbc063665b49f116f733aaf313",
+                  "6686a85e2ad9944182a320ba55ad3fd85316540faf3bfa597162e7bbddc0f533",
                   "b651aea211a640a0259dd6b43225f1ee505e336bc9125586b24a133179024a88",
                   (
                       "eNq1WFtv4jgUfu+v8PIUpOLO7DztIlZDmaCJeoEFWmmfkAkn4DaxU9uhZVf973vsJJC0wNB2xlKBOOfyHZ+rm7Lwni2AhDKhjyyO"
@@ -20441,11 +20784,11 @@ jobs:
           }
           actual_main_paths = {
               *(path for path in (main_root / "domain/filing").glob("*.java")
-                if path not in adr038_new_main_paths),
+                if path not in adr038_new_main_paths | adr039_new_main_paths),
               *(path for path in (
                   main_root / "infrastructure/provider/sec"
               ).glob("*.java") if path not in adr037_new_main_paths
-                | adr038_new_main_paths),
+                | adr038_new_main_paths | adr039_new_main_paths),
               *(path for path in (
                   main_root / "application/port/out/FilingCatalogProvider.java",
                   main_root / "config/SecEdgarConfiguration.java",
@@ -20471,11 +20814,11 @@ jobs:
           }
           actual_test_paths = {
               *(path for path in (test_root / "domain/filing").glob("*.java")
-                if path not in adr038_new_test_paths),
+                if path not in adr038_new_test_paths | adr039_new_test_paths),
               *(path for path in (
                   test_root / "infrastructure/provider/sec"
               ).glob("*.java") if path not in adr037_new_test_paths
-                | adr038_new_test_paths),
+                | adr038_new_test_paths | adr039_new_test_paths),
               test_root / "config/SecEdgarConfigurationTest.java",
           }
           require(
@@ -20721,7 +21064,10 @@ jobs:
           live_source = live_path.read_text(encoding="utf-8")
           require(
               live_source.count("@Test") == 1
-              and live_source.count("provider.loadRecentFilings(APPLE_CIK)") == 1
+              and live_source.count("provider.loadCatalogCapture(APPLE_CIK)") == 1
+              and "FilingCatalogCapture capture" in live_source
+              and "DECODED_BODY_ATTACHED_PENDING_PERSISTENCE" in live_source
+              and "capture.decodedBody().length" in live_source
               and 'APPLE_CIK = "0000320193"' in live_source
               and 'URI.create("https://data.sec.gov/submissions/CIK0000320193.json")'
                   in live_source
@@ -20732,7 +21078,7 @@ jobs:
               and 'System.getProperty(PROFILE_MARKER_PROPERTY)' in live_source
               and live_source.index("requireExplicitOptIn();")
                   < live_source.index("new ApplicationContextRunner()")
-                  < live_source.index("provider.loadRecentFilings(APPLE_CIK)")
+                  < live_source.index("provider.loadCatalogCapture(APPLE_CIK)")
               and re.search(
                   r"\blog\.(?:debug|info|warn|error|trace)\s*\(",
                   live_source,
@@ -20772,8 +21118,9 @@ jobs:
                   "V3__analyst_call_revisions.sql",
                   "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
-              "ADR-036 must not add a Flyway migration",
+              "ADR-036 replay must recognize only ADR-039 as the later Flyway migration",
           )
           publication_markers = (
               "secedgar", "secsubmissions", "filingcatalog", "sec-edgar",
@@ -20786,10 +21133,11 @@ jobs:
               *(path for path in Path("fixtures/v1").rglob("*") if path.is_file()),
               *(path for path in main_root.rglob("*.java")
                 if path not in expected_main_paths | adr037_new_main_paths
-                | adr038_new_main_paths),
+                | adr038_new_main_paths | adr039_new_main_paths),
               *(path for path in test_root.rglob("*.java")
                 if path not in expected_test_paths | adr037_new_test_paths
-                | adr038_new_test_paths),
+                | adr038_new_test_paths | adr039_new_test_paths
+                | {test_root / "migration/PostgreSqlMigrationTest.java"}),
               *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
                 for path in root.rglob("*") if path.is_file()),
           }
@@ -20847,6 +21195,19 @@ jobs:
               workflow_without_this_guard[:adr038_guard_start]
               + workflow_without_this_guard[adr038_guard_end:]
           )
+          adr039_guard_step = (
+              "\n      - name: Guard SEC EDGAR append-only "
+              "capture persistence\n"
+          )
+          adr039_guard_start = workflow_without_this_guard.index(adr039_guard_step)
+          adr039_guard_end = workflow_without_this_guard.index(
+              "\n      - name: ",
+              adr039_guard_start + len(adr039_guard_step),
+          )
+          workflow_without_this_guard = (
+              workflow_without_this_guard[:adr039_guard_start]
+              + workflow_without_this_guard[adr039_guard_end:]
+          )
           require(
               workflow_without_this_guard.count(
                   "run: ./mvnw -B -ntp verify"
@@ -20882,12 +21243,16 @@ jobs:
               *(path for path in Path("fixtures/v1").rglob("*") if path.is_file()),
               *(path for path in Path("apps/api/src/main").rglob("*")
                 if path.is_file() and path not in adr037_new_main_paths
-                | adr038_new_main_paths),
+                | adr038_new_main_paths | adr039_new_main_paths
+                and path != Path(
+                    "apps/api/src/main/resources/db/migration/"
+                    "V6__sec_filing_catalog_captures.sql"
+                )),
           }
           test_web_paths = {
               *(path for path in Path("apps/api/src/test").rglob("*")
                 if path.is_file() and path not in adr037_new_test_paths
-                | adr038_new_test_paths),
+                | adr038_new_test_paths | adr039_new_test_paths),
               *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
                 for path in root.rglob("*") if path.is_file()),
               *(path for path in Path("apps/web").glob("*")
@@ -20913,7 +21278,7 @@ jobs:
           require(
               len(test_web_paths) == 212
               and digest(test_web_paths)
-                  == "2446b5971971cd737aa4221e1ecdea576e9684717b50a40a36f35e10862720fc",
+                  == "4c3735d6816a92fc5f3df28799e8e4a95c628d68bfb3c4b74cb95f69887ccc77",
               "ADR-036 API-test/web baseline changed",
           )
           require(
@@ -20960,6 +21325,31 @@ jobs:
                       for path in adr038_new_main_paths | adr038_new_test_paths),
               "ADR-037 replay must exclude only the exact ADR-038 1+1 new files",
           )
+          adr039_new_main_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+          }
+          adr039_new_test_paths = {
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_new_main_paths) == 9
+              and len(adr039_new_test_paths) == 4
+              and all(path.is_file()
+                      for path in adr039_new_main_paths | adr039_new_test_paths),
+              "Historical replay must exclude the exact ADR-039 main/test persistence delta",
+          )
+
 
           adr038_historical_overrides = {
               Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalog.java"): (
@@ -21102,7 +21492,7 @@ jobs:
                   ),
               ),
               Path("apps/api/src/test/java/com/wallstreetreceipts/api/config/SecEdgarConfigurationTest.java"): (
-                  "b96b476492f5eb523f20494f7d68ca49b6d1da6225078be75993fe63364f7f8d",
+                  "ecc13d17794442bc7751fbdcfc45f3b6e029797e0fbb90e28c938ce88fed7dc8",
                   "a558138197318707d9175ffecdb93b222212d1070cd5b024380005406f05cb36",
                   (
                       "eNrtXG1X28YS/s6v0NGXyLe2sIHQNrnprbFFcAM21xZpmqbHZy2tbQVZUrUS4Obw3+/MamXr3YYAae/BbQBLO7OzszPPzOxq5RHj"
@@ -21164,7 +21554,7 @@ jobs:
                   ),
               ),
               Path("apps/api/src/sec-live-smoke-test/java/com/wallstreetreceipts/api/config/SecEdgarLiveSmokeIT.java"): (
-                  "8f10f42f62b33b09f9a9c9159df28072a7ae2ecbc063665b49f116f733aaf313",
+                  "6686a85e2ad9944182a320ba55ad3fd85316540faf3bfa597162e7bbddc0f533",
                   "b651aea211a640a0259dd6b43225f1ee505e336bc9125586b24a133179024a88",
                   (
                       "eNq1WFtv4jgUfu+v8PIUpOLO7DztIlZDmaCJeoEFWmmfkAkn4DaxU9uhZVf973vsJJC0wNB2xlKBOOfyHZ+rm7Lwni2AhDKhjyyO"
@@ -21318,8 +21708,9 @@ jobs:
           }
           actual_main_paths = {
               *(path for path in (main_root / "domain/filing").glob("*.java")
-                if path not in adr038_new_main_paths),
-              *sec_main_root.glob("*.java"),
+                if path not in adr038_new_main_paths | adr039_new_main_paths),
+              *(path for path in sec_main_root.glob("*.java")
+                if path not in adr039_new_main_paths),
               main_root / "domain/source/SourceResponseReceipt.java",
               *(path for path in (
                   main_root / "application/port/out/FilingCatalogProvider.java",
@@ -21346,8 +21737,9 @@ jobs:
           }
           actual_test_paths = {
               *(path for path in (test_root / "domain/filing").glob("*.java")
-                if path not in adr038_new_test_paths),
-              *sec_test_root.glob("*.java"),
+                if path not in adr038_new_test_paths | adr039_new_test_paths),
+              *(path for path in sec_test_root.glob("*.java")
+                if path not in adr039_new_test_paths),
               test_root / "domain/source/SourceResponseReceiptTest.java",
               test_root / "config/SecEdgarConfigurationTest.java",
           }
@@ -21416,8 +21808,12 @@ jobs:
               and enum_values(receipt, "BodyRepresentation")
                   == ["DECODED_HTTP_ENTITY_BODY"]
               and enum_values(receipt, "BodyRetention")
-                  == ["RECEIPT_ONLY_BODY_NOT_RETAINED"],
-              "ADR-037 decoded representation, encoding, or retention vocabulary changed",
+                  == [
+                      "RECEIPT_ONLY_BODY_NOT_RETAINED",
+                      "DECODED_BODY_ATTACHED_PENDING_PERSISTENCE",
+                      "DURABLE_DECODED_BODY_RETAINED",
+                  ],
+              "ADR-037 receipt-only state plus ADR-039 retention extension changed",
           )
           receipt_markers = (
               'Pattern.compile("[0-9a-f]{64}")',
@@ -21652,8 +22048,9 @@ jobs:
                   "V3__analyst_call_revisions.sql",
                   "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
-              "ADR-037 must not add a Flyway migration",
+              "ADR-037 replay must recognize only ADR-039 as the later Flyway migration",
           )
 
           publication_markers = (
@@ -21668,9 +22065,12 @@ jobs:
               *Path("schemas").glob("*.json"),
               *(path for path in Path("fixtures/v1").rglob("*") if path.is_file()),
               *(path for path in main_root.rglob("*.java")
-                if path not in delta_main_paths | adr038_new_main_paths),
+                if path not in delta_main_paths | adr038_new_main_paths
+                | adr039_new_main_paths),
               *(path for path in test_root.rglob("*.java")
-                if path not in delta_test_paths | adr038_new_test_paths),
+                if path not in delta_test_paths | adr038_new_test_paths
+                | adr039_new_test_paths
+                | {test_root / "migration/PostgreSqlMigrationTest.java"}),
               *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
                 for path in root.rglob("*") if path.is_file()),
           }
@@ -21764,6 +22164,10 @@ jobs:
           workflow_without_sec_guards = without_step(
               workflow_without_sec_guards,
               "Guard SEC EDGAR historical-segment descriptor catalog",
+          )
+          workflow_without_sec_guards = without_step(
+              workflow_without_sec_guards,
+              "Guard SEC EDGAR append-only capture persistence",
           )
           require(
               workflow_without_sec_guards.count(
@@ -21875,6 +22279,31 @@ jobs:
           test_root = Path("apps/api/src/test/java/com/wallstreetreceipts/api")
           sec_main_root = main_root / "infrastructure/provider/sec"
           sec_test_root = test_root / "infrastructure/provider/sec"
+          adr039_new_main_paths = {
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureService.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureAppendResult.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureProvider.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureReplayVerifier.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/FilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/SecFilingCatalogPersistenceConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCapture.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/sec/SecFilingCatalogCaptureReplayVerifier.java"),
+          }
+          adr039_new_test_paths = {
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filing/PersistFilingCatalogCaptureServiceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/domain/filing/FilingCatalogCaptureTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/persistence/FilingCatalogCapturePersistenceTest.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/support/SecFilingCatalogCaptureTestFixture.java"),
+          }
+          require(
+              len(adr039_new_main_paths) == 9
+              and len(adr039_new_test_paths) == 4
+              and all(path.is_file()
+                      for path in adr039_new_main_paths | adr039_new_test_paths),
+              "ADR-038 replay must exclude the exact ADR-039 main/test persistence delta",
+          )
+
           live_path = Path(
               "apps/api/src/sec-live-smoke-test/java/com/wallstreetreceipts/"
               "api/config/SecEdgarLiveSmokeIT.java"
@@ -21903,9 +22332,9 @@ jobs:
               digest(delta_main_paths)
                   == "8e508382539fef5d1caa9bf355c442b590c2c816c9f1a3eae5d8e25f0e78d406"
               and digest(delta_test_paths)
-                  == "ccc925ea4eb10ab59737d141058ecf4bef7c36ae4e788228e322a37849aa304e"
+                  == "bd7312b0c38c6e417845fe59e1f9b367e3fb2b8a61f1c1b3841889a094579290"
               and digest({live_path})
-                  == "2117069d44358135b98ef06657d3f6f8581b38b1323ebef427a164306f65adb9",
+                  == "17e71eb3b18c2671399d03ea4319337b1420fba7d8806f41daff372542851957",
               "ADR-038 exact normalized source/test/live delta changed",
           )
 
@@ -21931,8 +22360,10 @@ jobs:
               sec_main_root / "SecSubmissionsResponse.java",
           }
           actual_main_paths = {
-              *(main_root / "domain/filing").glob("*.java"),
-              *sec_main_root.glob("*.java"),
+              *(path for path in (main_root / "domain/filing").glob("*.java")
+                if path not in adr039_new_main_paths),
+              *(path for path in sec_main_root.glob("*.java")
+                if path not in adr039_new_main_paths),
               main_root / "domain/source/SourceResponseReceipt.java",
               *(path for path in (
                   main_root / "application/port/out/FilingCatalogProvider.java",
@@ -21959,8 +22390,10 @@ jobs:
               sec_test_root / "SecSubmissionsMapperTest.java",
           }
           actual_test_paths = {
-              *(test_root / "domain/filing").glob("*.java"),
-              *sec_test_root.glob("*.java"),
+              *(path for path in (test_root / "domain/filing").glob("*.java")
+                if path not in adr039_new_test_paths),
+              *(path for path in sec_test_root.glob("*.java")
+                if path not in adr039_new_test_paths),
               test_root / "domain/source/SourceResponseReceiptTest.java",
               test_root / "config/SecEdgarConfigurationTest.java",
           }
@@ -22168,10 +22601,12 @@ jobs:
               and success_test.count('provider.loadRecentFilings("320193")') == 1
               and success_test.count("server.verify();") == 1
               and "historicalSegmentStatus()" in success_test
-              and live_source.count("provider.loadRecentFilings(APPLE_CIK)") == 1
+              and live_source.count("provider.loadCatalogCapture(APPLE_CIK)") == 1
               and 'catalog.historicalSegments().isEmpty()' in live_source
               and '"SEC_SUBMISSIONS_CATALOG_V2"' in live_source
               and "RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED" in live_source
+              and "DECODED_BODY_ATTACHED_PENDING_PERSISTENCE" in live_source
+              and "capture.decodedBody().length" in live_source
               and "submissions-001.json" not in live_source
               and "submissions-002.json" not in live_source,
               "ADR-038 must issue exactly one root request and zero historical-file requests",
@@ -22208,8 +22643,9 @@ jobs:
                   "V3__analyst_call_revisions.sql",
                   "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
-              "ADR-038 must not add a Flyway migration",
+              "ADR-038 replay must recognize only ADR-039 as the later Flyway migration",
           )
 
           publication_markers = (
@@ -22224,9 +22660,10 @@ jobs:
               *Path("schemas").glob("*.json"),
               *(path for path in Path("fixtures/v1").rglob("*") if path.is_file()),
               *(path for path in main_root.rglob("*.java")
-                if path not in delta_main_paths),
+                if path not in delta_main_paths | adr039_new_main_paths),
               *(path for path in test_root.rglob("*.java")
-                if path not in delta_test_paths),
+                if path not in delta_test_paths | adr039_new_test_paths
+                | {test_root / "migration/PostgreSqlMigrationTest.java"}),
               *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
                 for path in root.rglob("*") if path.is_file()),
           }
@@ -22289,6 +22726,7 @@ jobs:
               "Guard SEC EDGAR single-process live-operation safety gate",
               "Guard SEC EDGAR decoded-response receipt foundation",
               "Guard SEC EDGAR historical-segment descriptor catalog",
+              "Guard SEC EDGAR append-only capture persistence",
           ):
               workflow_without_sec_guards = without_step(
                   workflow_without_sec_guards, name
@@ -22313,6 +22751,455 @@ jobs:
               "V2 same-byte recent/descriptor mapping, strict CIK/count/date/order/duplicate "
               "semantics, recent-only statuses, one root request with zero segment fetches, "
               "default-offline isolation, and no persistence/API/UI/publication expansion"
+          )
+          PYTHON
+
+      - name: Guard SEC EDGAR append-only capture persistence
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          adr_path = Path(
+              "decisions/ADR-039-sec-edgar-append-only-capture-persistence.md"
+          )
+          document_paths = {
+              adr_path,
+              Path("README.md"),
+              Path("apps/api/README.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+          }
+          require(
+              all(path.is_file() for path in document_paths),
+              "Missing ADR-039 decision, README, or implementation-log surface",
+          )
+          documents = {
+              path: path.read_text(encoding="utf-8") for path in document_paths
+          }
+          adr = documents[adr_path]
+          require(
+              adr.startswith(
+                  "# ADR-039 — SEC EDGAR Append-Only Capture Persistence\n\n"
+                  "- Status: Accepted\n- Date: 2026-08-25\n"
+              )
+              and all("ADR-039" in documents[path] for path in document_paths),
+              "ADR-039 title, accepted status, date, or documentation parity changed",
+          )
+          compact_adr = re.sub(r"\s+", " ", adr)
+          required_adr_terms = (
+              "exact decoded HTTP entity body",
+              "`DECODED_BODY_ATTACHED_PENDING_PERSISTENCE`",
+              "`DURABLE_DECODED_BODY_RETAINED`",
+              "`IDENTICAL_REPLAY`",
+              "`SEC_SUBMISSIONS_CATALOG_V2`",
+              "`capturedAt <= evaluationAsOf`",
+              "one natural capture",
+              "One repository transaction",
+              "no update or delete method",
+              "no referenced-segment GET",
+              "no scheduler, controller, command-line trigger, retry loop",
+              "No new SEC API key",
+              "not logged",
+              "not a public product endpoint",
+              "not a WORM database",
+          )
+          require(
+              all(term in compact_adr for term in required_adr_terms),
+              "ADR-039 exact-byte, append, PIT, retention, or non-scope semantics changed",
+          )
+
+          main_root = Path("apps/api/src/main/java/com/wallstreetreceipts/api")
+          test_root = Path("apps/api/src/test/java/com/wallstreetreceipts/api")
+          sec_root = main_root / "infrastructure/provider/sec"
+          new_main_paths = {
+              main_root / "application/filing/PersistFilingCatalogCaptureService.java",
+              main_root / "application/port/out/FilingCatalogCaptureAppendResult.java",
+              main_root / "application/port/out/FilingCatalogCaptureProvider.java",
+              main_root / "application/port/out/FilingCatalogCaptureReplayVerifier.java",
+              main_root / "application/port/out/FilingCatalogCaptureRepository.java",
+              main_root / "config/SecFilingCatalogPersistenceConfiguration.java",
+              main_root / "domain/filing/FilingCatalogCapture.java",
+              main_root / "infrastructure/persistence/JdbcFilingCatalogCaptureRepository.java",
+              sec_root / "SecFilingCatalogCaptureReplayVerifier.java",
+          }
+          new_test_paths = {
+              test_root / "application/filing/PersistFilingCatalogCaptureServiceTest.java",
+              test_root / "domain/filing/FilingCatalogCaptureTest.java",
+              test_root / "persistence/FilingCatalogCapturePersistenceTest.java",
+              test_root / "support/SecFilingCatalogCaptureTestFixture.java",
+          }
+          modified_paths = {
+              main_root / "domain/source/SourceResponseReceipt.java",
+              sec_root / "SecEdgarFilingCatalogProvider.java",
+              sec_root / "SecRawResponseCapture.java",
+              test_root / "config/SecEdgarConfigurationTest.java",
+              test_root / "migration/PostgreSqlMigrationTest.java",
+              Path(
+                  "apps/api/src/sec-live-smoke-test/java/com/wallstreetreceipts/"
+                  "api/config/SecEdgarLiveSmokeIT.java"
+              ),
+          }
+          migration_path = Path(
+              "apps/api/src/main/resources/db/migration/"
+              "V6__sec_filing_catalog_captures.sql"
+          )
+          require(
+              len(new_main_paths) == 9
+              and len(new_test_paths) == 4
+              and len(modified_paths) == 6
+              and all(path.is_file()
+                      for path in new_main_paths | new_test_paths | modified_paths)
+              and migration_path.is_file(),
+              "ADR-039 exact 9+4 new and six modified source/test surfaces changed",
+          )
+          require(
+              {
+                  path for path in (
+                      main_root / "application/port/out"
+                  ).glob("FilingCatalogCapture*.java")
+              } == {
+                  main_root / "application/port/out/FilingCatalogCaptureAppendResult.java",
+                  main_root / "application/port/out/FilingCatalogCaptureProvider.java",
+                  main_root / "application/port/out/FilingCatalogCaptureReplayVerifier.java",
+                  main_root / "application/port/out/FilingCatalogCaptureRepository.java",
+              }
+              and {
+                  path for path in (
+                      main_root / "application/filing"
+                  ).glob("*.java")
+              } == {
+                  main_root / "application/filing/PersistFilingCatalogCaptureService.java"
+              },
+              "ADR-039 capture port or one-shot application surface expanded",
+          )
+
+          sources = {
+              path.name: path.read_text(encoding="utf-8")
+              for path in new_main_paths | modified_paths
+              if path.suffix == ".java"
+          }
+          tests = {
+              path.name: path.read_text(encoding="utf-8")
+              for path in new_test_paths
+              | {test_root / "migration/PostgreSqlMigrationTest.java"}
+          }
+          receipt = sources["SourceResponseReceipt.java"]
+          capture = sources["FilingCatalogCapture.java"]
+          raw_capture = sources["SecRawResponseCapture.java"]
+          provider = sources["SecEdgarFilingCatalogProvider.java"]
+          repository_port = sources["FilingCatalogCaptureRepository.java"]
+          append_result = sources["FilingCatalogCaptureAppendResult.java"]
+          repository = sources["JdbcFilingCatalogCaptureRepository.java"]
+          replay_verifier = sources["SecFilingCatalogCaptureReplayVerifier.java"]
+          service = sources["PersistFilingCatalogCaptureService.java"]
+          persistence_configuration = sources[
+              "SecFilingCatalogPersistenceConfiguration.java"
+          ]
+          migration = migration_path.read_text(encoding="utf-8")
+
+          retention_match = re.search(
+              r"public enum BodyRetention\s*\{(?P<body>.*?)\}",
+              receipt,
+              flags=re.DOTALL,
+          )
+          require(retention_match is not None, "Missing body-retention vocabulary")
+          require(
+              re.findall(
+                  r"\b[A-Z][A-Z0-9_]+\b", retention_match.group("body")
+              ) == [
+                  "RECEIPT_ONLY_BODY_NOT_RETAINED",
+                  "DECODED_BODY_ATTACHED_PENDING_PERSISTENCE",
+                  "DURABLE_DECODED_BODY_RETAINED",
+              ]
+              and "SourceResponseReceipt withBodyRetention" in receipt
+              and "etag=<redacted>" in receipt,
+              "Receipt-only, pending, durable, or validator-redaction semantics changed",
+          )
+
+          capture_markers = (
+              "public final class FilingCatalogCapture",
+              'SCHEMA_VERSION = "1.0.0"',
+              'IDENTITY_VERSION = "SEC_FILING_CATALOG_CAPTURE_ID_V1"',
+              "private final String captureId;",
+              "private final FilingCatalog catalog;",
+              "private final byte[] decodedBody;",
+              "this.decodedBody = decodedBody.clone();",
+              "return decodedBody.clone();",
+              "decodedBody length must match sourceReceipt",
+              "decodedBody digest must match sourceReceipt",
+              "DECODED_BODY_ATTACHED_PENDING_PERSISTENCE",
+              "DURABLE_DECODED_BODY_RETAINED",
+              "decodedBody=<redacted>",
+              "lengthPrefixed(IDENTITY_VERSION)",
+              "catalog.capturedAt().toString()",
+              "catalog.sourceReceipt().decodedBodySha256()",
+              "MessageDigest.getInstance(\"SHA-256\")",
+          )
+          require(
+              all(marker in capture for marker in capture_markers)
+              and "RECEIPT_ONLY_BODY_NOT_RETAINED" not in capture[
+                  capture.index("public FilingCatalogCapture("):
+                  capture.index("public String captureId()")
+              ],
+              "Capture identity, defensive ownership, digest, or redaction changed",
+          )
+
+          require(
+              "toCatalogCapture(Instant processingTime)" in raw_capture
+              and "receipt.withBodyRetention(" in raw_capture
+              and "BodyRetention.DECODED_BODY_ATTACHED_PENDING_PERSISTENCE"
+                  in raw_capture
+              and "static FilingCatalog replay(" in raw_capture
+              and "SUBMISSIONS_READER.readValue(decodedBody)" in raw_capture
+              and raw_capture.count(
+                  "BodyRetention.RECEIPT_ONLY_BODY_NOT_RETAINED"
+              ) == 1
+              and "implements FilingCatalogProvider, FilingCatalogCaptureProvider"
+                  in provider
+              and "FilingCatalogCapture loadCatalogCapture(String cik)" in provider
+              and "return capture.toCatalogCapture(receivedAt);" in provider
+              and provider.count("restClient.get()") == 1
+              and provider.count(".retrieve()") == 1
+              and 'SUBMISSIONS_PATH_TEMPLATE = "/submissions/CIK%s.json"'
+                  in provider
+              and "submissions-001.json" not in provider
+              and "submissions-002.json" not in provider,
+              "Legacy receipt-only path, exact-body capture, or one-root-request boundary changed",
+          )
+
+          require(
+              all(marker in replay_verifier for marker in (
+                  "implements FilingCatalogCaptureReplayVerifier",
+                  'OFFICIAL_SOURCE_ORIGIN = "https://data.sec.gov"',
+                  "SecSubmissionsMapper.PROVIDER_NAME.equals",
+                  "SecSubmissionsMapper.PRODUCT_NAME.equals",
+                  "SecSubmissionsMapper.PARSER_VERSION.equals",
+                  "requireOfficialSourceEnvelope(catalog);",
+                  '"/submissions/CIK" + catalog.cik() + ".json"',
+                  '"application".equalsIgnoreCase(mediaType.getType())',
+                  '"json".equalsIgnoreCase(mediaType.getSubtype())',
+                  "StandardCharsets.UTF_8.equals(mediaType.getCharset())",
+                  "SecResponseSizeLimitInterceptor.MAX_DECOMPRESSED_RESPONSE_BYTES",
+                  "SecRawResponseCapture.replay(",
+                  "if (!catalog.equals(replayed))",
+                  "filing catalog capture does not match exact-body replay",
+              ))
+              and "capture.decodedBody()" in replay_verifier
+              and "unsupported filing catalog capture parser contract"
+                  in replay_verifier,
+              "Exact parser-contract replay verification changed",
+          )
+
+          repository_methods = (
+              "append(FilingCatalogCapture capture)",
+              "findByCaptureId(String captureId)",
+              "findLatestAtOrBefore(",
+              "long count()",
+          )
+          require(
+              all(method in repository_port for method in repository_methods)
+              and not re.search(r"\b(?:update|delete|remove|purge)\w*\s*\(",
+                                repository_port, re.IGNORECASE)
+              and re.findall(r"\b[A-Z][A-Z0-9_]+\b", append_result)
+                  == ["INSERTED", "IDENTICAL_REPLAY"],
+              "Append-only repository port or replay result vocabulary changed",
+          )
+
+          repository_markers = (
+              "@Transactional",
+              "append requires a decoded body pending durable persistence",
+              "replayVerifier.verify(capture);",
+              "BodyRetention.DURABLE_DECODED_BODY_RETAINED",
+              "replayVerifier.verify(durable);",
+              "findByNaturalIdentity(durable)",
+              '"natural capture identity"',
+              "ON CONFLICT (decoded_body_sha256) DO NOTHING",
+              "ON CONFLICT DO NOTHING",
+              "Arrays.equals(stored.body(), capture.decodedBody())",
+              "insertRecentFilings(durable);",
+              "insertHistoricalSegments(durable);",
+              "ORDER BY ordinal ASC",
+              "c.captured_at <= :evaluationAsOf",
+              "ORDER BY c.captured_at DESC, c.capture_id DESC",
+              "child count does not match its root receipt",
+              "capture status does not match its children",
+              "filing catalog capture identity could not be reproduced",
+              "replayVerifier.verify(capture)",
+          )
+          sql_without_restrict = migration.replace("ON DELETE RESTRICT", "")
+          require(
+              all(marker in repository for marker in repository_markers)
+              and "ON CONFLICT DO UPDATE" not in repository.upper()
+              and re.search(r"\bUPDATE\s+[A-Za-z_]", repository, re.IGNORECASE)
+                  is None
+              and re.search(r"\bDELETE\s+FROM\b", repository, re.IGNORECASE)
+                  is None
+              and re.search(r"\bUPDATE\s+[A-Za-z_]", sql_without_restrict,
+                            re.IGNORECASE) is None
+              and re.search(r"\bDELETE\s+FROM\b", sql_without_restrict,
+                            re.IGNORECASE) is None,
+              "Atomic append, exact reread, PIT query, or no-mutation SQL changed",
+          )
+
+          require(
+              "repository.append(provider.loadCatalogCapture(cik))" in service
+              and all(marker not in service for marker in (
+                  "while (", "for (", "@Scheduled", "Thread.sleep", "Retry",
+              ))
+              and "@ConditionalOnProperty(" in persistence_configuration
+              and 'prefix = "app.public-data.sec"' in persistence_configuration
+              and 'havingValue = "true"' in persistence_configuration
+              and "PersistFilingCatalogCaptureService" in persistence_configuration
+              and "matchIfMissing" not in persistence_configuration,
+              "One-shot explicit-opt-in persistence wiring expanded into autonomous ingestion",
+          )
+          require(
+              "SecResponseSizeLimitInterceptor.MAX_DECOMPRESSED_RESPONSE_BYTES"
+                  in raw_capture
+              and raw_capture.count("requireValidUtf8(") >= 3,
+              "Capture/replay must preserve the shared decoded-size and strict UTF-8 boundary",
+          )
+
+          tables = re.findall(
+              r"^CREATE TABLE ([a-z0-9_]+) \(", migration, re.MULTILINE
+          )
+          require(
+              tables == [
+                  "sec_decoded_response_bodies",
+                  "sec_filing_catalog_captures",
+                  "sec_filing_catalog_recent_filings",
+                  "sec_filing_catalog_historical_segments",
+              ]
+              and migration.count("ON DELETE RESTRICT") == 3
+              and "ON DELETE CASCADE" not in migration
+              and "CURRENT_TIMESTAMP" not in migration
+              and "CREATE TRIGGER" not in migration
+              and all(marker in migration for marker in (
+                  "BYTEA NOT NULL",
+                  "OCTET_LENGTH(decoded_body) = decoded_body_length",
+                  "decoded_body_length <= 8388608",
+                  "UNIQUE (provider, product, source_uri, captured_at)",
+                  "captured_at >= processing_time",
+                  "accepted_at <= catalog_processing_time",
+                  "body_representation = 'DECODED_HTTP_ENTITY_BODY'",
+                  "body_retention = 'DURABLE_DECODED_BODY_RETAINED'",
+                  "recent_filing_count >= 0",
+                  "historical_segment_count >= 0",
+                  "RECENT_ONLY_NO_SEGMENTS_ADVERTISED",
+                  "RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED",
+                  "advertised_filing_count > 0",
+                  "advertised_filing_from <= advertised_filing_to",
+                  "immutable = TRUE",
+                  "idx_sec_filing_catalog_capture_point_in_time",
+              )),
+              "Flyway V6 exact-body, FK, PIT, count/status, or immutable constraints changed",
+          )
+          migration_names = {
+              path.name for path in Path(
+                  "apps/api/src/main/resources/db/migration"
+              ).glob("*.sql")
+          }
+          require(
+              migration_names == {
+                  "V1__baseline.sql",
+                  "V2__analyst_calls.sql",
+                  "V3__analyst_call_revisions.sql",
+                  "V4__call_outcomes.sql",
+                  "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
+              },
+              "ADR-039 must add exactly one Flyway V6 migration",
+          )
+
+          capture_test = tests["FilingCatalogCaptureTest.java"]
+          persistence_test = tests["FilingCatalogCapturePersistenceTest.java"]
+          service_test = tests["PersistFilingCatalogCaptureServiceTest.java"]
+          postgres_test = tests["PostgreSqlMigrationTest.java"]
+          require(
+              all(method in capture_test for method in (
+                  "ownsExactBytesAndRedactsThemFromItsStringRepresentation",
+                  "changesIdentityForAnotherObservationButNotForRetentionPromotion",
+                  "rejectsAReceiptOnlyDeclarationWhenTheBodyIsAttached",
+                  "rejectsBodyLengthAndDigestMismatches",
+              ))
+              and all(method in persistence_test for method in (
+                  "appendsAndReconstructsExactBodyReceiptAndProviderOrder",
+                  "exactReplayIsANoOpAndLaterObservationOfSameBodyIsAppended",
+                  "callerCannotClaimDurabilityBeforeTheRepositoryCommits",
+                  "sameNaturalCaptureWithDifferentExactBodyFailsClosed",
+                  "pointInTimeLookupNeverUsesAFutureCaptureOrAnotherParser",
+                  "rawBodyReplayRejectsAProjectionThatWasNotParsedFromThoseBytes",
+                  "replayRejectsInvalidSourceEnvelopesAndNonUtf8Bodies",
+                  "appendRejectsAnOversizedBodyBeforeAnyDatabaseWrite",
+                  "readFailsClosedWhenStoredBodyBytesAreTamperedWithoutChangingLength",
+                  "readFailsClosedWhenStoredChildCountIsTampered",
+                  "failedChildInsertRollsBackBodyAndRootAtomically",
+                  "repositoryAndCaptureExposeNoMutationSurface",
+              ))
+              and "performsExactlyOneProviderLoadAndOneAtomicRepositoryAppend"
+                  in service_test
+              and "v6AppendsAndReplaysExactSecCatalogCapturesOnPostgreSql"
+                  in postgres_test
+              and "containsExactlyInAnyOrder(" in postgres_test
+              and "ConcurrentCaptureAppendAttempt" in postgres_test
+              and "conflicting filing catalog capture for natural capture identity"
+                  in postgres_test
+              and "bodiesBeforeConflict + 1" in postgres_test
+              and "WHERE c.capture_id IS NULL" in postgres_test
+              and '"DELETE FROM sec_decoded_response_bodies"' in postgres_test
+              and "flyway.info().applied()).hasSize(6)" in postgres_test,
+              "ADR-039 domain, H2, transaction, or PostgreSQL replay coverage changed",
+          )
+
+          production_source = "\n".join(
+              path.read_text(encoding="utf-8") for path in new_main_paths
+              | {
+                  main_root / "domain/source/SourceResponseReceipt.java",
+                  sec_root / "SecEdgarFilingCatalogProvider.java",
+                  sec_root / "SecRawResponseCapture.java",
+              }
+          )
+          require(
+              all(marker not in production_source for marker in (
+                  "@RestController", "@Controller", "@RequestMapping",
+                  "@GetMapping", "@PostMapping", "@Scheduled",
+                  "SchedulingConfigurer", "CommandLineRunner", "ApplicationRunner",
+                  "System.out", "System.err", "Logger", "Slf4j",
+                  "new String(decodedBody", "new String(capture.decodedBody",
+              )),
+              "ADR-039 must not publish, schedule, trigger, or log retained body evidence",
+          )
+          publication_markers = (
+              "filingcatalogcapture",
+              "filing_catalog_capture",
+              "decoded_body_attached_pending_persistence",
+              "durable_decoded_body_retained",
+              "sec_decoded_response_bodies",
+          )
+          publication_paths = {
+              Path("contracts/openapi.yaml"),
+              *Path("schemas").glob("*.json"),
+              *(path for path in Path("fixtures/v1").rglob("*") if path.is_file()),
+              *(path for root in (Path("apps/web/src"), Path("apps/web/e2e"))
+                for path in root.rglob("*") if path.is_file()),
+          }
+          for path in publication_paths:
+              source = path.read_text(encoding="utf-8", errors="ignore").lower()
+              require(
+                  not any(marker in source for marker in publication_markers),
+                  f"ADR-039 private capture/body must not reach API, fixture, or web: {path}",
+              )
+
+          print(
+              "Validated ADR-039 exact 9+4 new and six modified source/test surfaces, "
+              "receipt-to-pending-to-durable retention, exact-body replay, append-only "
+              "idempotency/conflict/atomicity, parser-specific PIT reads, Flyway V6 "
+              "constraints, one root request with no segment GET, and no scheduler/API/UI/logging"
           )
           PYTHON
 
@@ -23042,6 +23929,7 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
               "Target eligibility must preserve exact OpenAPI and Flyway surfaces",
           )
@@ -23831,6 +24719,7 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
               "Favorable-extreme slice must preserve OpenAPI and Flyway surfaces",
           )
@@ -24481,6 +25370,7 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
               "Orchestration must preserve exact OpenAPI and Flyway surfaces",
           )
@@ -25054,6 +25944,7 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
               "Directional orchestration must preserve OpenAPI and Flyway",
           )
@@ -25595,6 +26486,7 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
               "Directional-win readiness must preserve OpenAPI and Flyway",
           )
@@ -26215,6 +27107,7 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
               "Target-error readiness must preserve OpenAPI and Flyway",
           )
@@ -26730,6 +27623,7 @@ jobs:
                   "V1__baseline.sql", "V2__analyst_calls.sql",
                   "V3__analyst_call_revisions.sql", "V4__call_outcomes.sql",
                   "V5__call_contexts.sql",
+                  "V6__sec_filing_catalog_captures.sql",
               },
               "Target-hit readiness must preserve OpenAPI and Flyway",
           )

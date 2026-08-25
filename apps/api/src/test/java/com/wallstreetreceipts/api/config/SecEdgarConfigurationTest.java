@@ -2,6 +2,7 @@ package com.wallstreetreceipts.api.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -36,6 +37,9 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import com.wallstreetreceipts.api.domain.filing.FilingCatalog;
+import com.wallstreetreceipts.api.domain.filing.FilingCatalogCapture;
+import com.wallstreetreceipts.api.application.filing.PersistFilingCatalogCaptureService;
+import com.wallstreetreceipts.api.application.port.out.FilingCatalogCaptureRepository;
 import com.wallstreetreceipts.api.domain.filing.HistoricalFilingSegmentDescriptor;
 import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRepresentation;
 import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRetention;
@@ -133,6 +137,22 @@ class SecEdgarConfigurationTest {
         assertThat(catalog.historicalSegmentStatus())
                 .isEqualTo(FilingCatalog.HistoricalSegmentStatus
                         .RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED);
+        server.verify();
+    }
+
+    @Test
+    void exposesTheSameOwnedDecodedBytesForOnePersistenceCaptureRequest() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(validSubmissionsJson(), MediaType.APPLICATION_JSON));
+
+        FilingCatalogCapture capture = provider.loadCatalogCapture("320193");
+
+        assertThat(new String(capture.decodedBody(), StandardCharsets.UTF_8))
+                .isEqualTo(validSubmissionsJson());
+        assertThat(capture.catalog().sourceReceipt().decodedBodySha256())
+                .isEqualTo(sha256(validSubmissionsJson()));
+        assertThat(capture.catalog().sourceReceipt().bodyRetention())
+                .isEqualTo(BodyRetention.DECODED_BODY_ATTACHED_PENDING_PERSISTENCE);
         server.verify();
     }
 
@@ -432,6 +452,26 @@ class SecEdgarConfigurationTest {
     }
 
     @Test
+    void wiresOneShotPersistenceOrchestrationOnlyWhenSecIsExplicitlyEnabled() {
+        new ApplicationContextRunner()
+                .withUserConfiguration(
+                        SecEdgarConfiguration.class,
+                        SecFilingCatalogPersistenceConfiguration.class,
+                        TestDependencies.class)
+                .withPropertyValues(
+                        "app.public-data.sec.enabled=true",
+                        "app.public-data.sec.base-url=https://data.sec.gov",
+                        "app.public-data.sec.contact-email=" + CONTACT_EMAIL)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(
+                            SecEdgarFilingCatalogProvider.class);
+                    assertThat(context).hasSingleBean(
+                            PersistFilingCatalogCaptureService.class);
+                });
+    }
+
+    @Test
     void usesTheFixedOfficialBaseUrlWhenNoOverrideIsConfigured() {
         SecEdgarProperties properties = new SecEdgarProperties(false, null, null);
 
@@ -598,6 +638,11 @@ class SecEdgarConfigurationTest {
         @Bean
         Clock clock() {
             return FIXED_CLOCK;
+        }
+
+        @Bean
+        FilingCatalogCaptureRepository filingCatalogCaptureRepository() {
+            return mock(FilingCatalogCaptureRepository.class);
         }
 
     }
