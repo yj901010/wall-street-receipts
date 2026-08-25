@@ -1922,3 +1922,78 @@ ADR-033 classifies benchmark and sector return readiness independently from thei
   corrected. `git diff --check` passes and the user-owned `next-env.d.ts` is
   restored to SHA-256
   `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+
+## Point-in-time raw-window coverage foundation boundary
+
+ADR-034 freezes provider-neutral point-in-time raw-window coverage semantics before any executable raw aggregation or MFE/MAE calculation.
+
+ADR-034 is decision-only. It prevents ADR-019's supplied aggregate
+completeness flag, current snapshots, sparse fixtures, or missing rows from
+being presented as verified raw coverage. No executable result is produced in
+this slice.
+
+## Raw-window coverage foundation contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P3-RWF01 | Decision-only surface | Only ADR-034, README, this acceptance gate, the implementation log, and the dedicated CI guard change. No Java production/test type, policy bytes/hash, runtime golden, schema, fixture, manifest member, OpenAPI, Flyway, database, provider, API, resource, or web surface is added. |
+| P3-RWF02 | Exact future anchor | A future executable request consumes one complete ADR-016 `AssetReturnPricePairResolution.Resolved` and inherits its exact basis price, strict horizon/endpoint, `evaluationAsOf`, asset, venue, currency, source, calendar/catalog, adjustment, and continuity identities. ADR-018/ADR-019 and product snapshots are not anchors. |
+| P3-RWF03 | Exact economic interval | The population is the ordered primary-venue regular-session session union over `(basis.eventTime, endpointSession.closesAt]`, with the lower bound exclusive and upper bound inclusive. Pre-call, off-hours, alternate-venue, and inter-session observations are excluded. |
+| P3-RWF04 | Trade-tick-only V1 | `TRADE_TICK_ONLY_V1` admits eligible trade ticks only. Quotes, indications, OHLC/session/intraday bars, bar splitting, bar-straddle inference, basis/endpoint/prior-close/nearest/interpolated values, and ADR-019 aggregate fallback are absent. |
+| P3-RWF05 | Required identities | Future events preserve observation/provider-event/revision identity, event time, exact positive `NUMERIC(38,12)` price, trade condition, source/revision, provenance, `availableAt`, and `capturedAt`. One manifest preserves bounds, ordered sessions, calendar/catalog revision, source sequence/watermark, correction/bust coverage, revision, provenance, and PIT timestamps. |
+| P3-RWF06 | PIT-first visibility and causality | Every event, manifest, completeness proof, condition mapping, correction, and bust is visible only at the inherited cutoff. Raw events require `eventTime <= availableAt <= capturedAt <= evaluationAsOf`; manifests require `upperBound <= availableAt <= capturedAt <= evaluationAsOf`. Future or impossibly early evidence cannot affect identity, reason, cardinality, population, high, or low. |
+| P3-RWF07 | Correction and replay | Only a complete visible predecessor-linked correction/bust chain determines an effective event. A visible correction replaces its predecessor and a visible bust removes it. Missing/broken/competing chains and an unproven correction watermark fail closed; later evidence creates a later replay and never mutates an earlier as-of receipt. |
+| P3-RWF08 | Duplicate identity | Repeated delivery of the same provider-event revision does not create another economic trade. Distinct provider-event identities remain distinct, and ambiguous revision identity fails closed; no current/latest-row guess is allowed. |
+| P3-RWF09 | No-trade truth | In-session silence is covered only by an approved manifest/sequence proof that no eligible event was omitted. Absence of returned rows, a count, or a last timestamp is not proof. A completely proven zero-eligible-trade window is `CompleteWithoutEligibleTrade`, never zero price/MFE/MAE or a fallback. |
+| P3-RWF10 | Halt semantics | A halt contributes no price. PIT-visible halt evidence may explain silence but cannot manufacture continuity, completeness outside the source proof, or an extreme. |
+| P3-RWF11 | Auction semantics | Auction executions count only through a separately versioned provider-code mapping that explicitly makes the condition primary-venue regular-session eligible. Unknown codes, labels, timing, and venue inference fail closed. |
+| P3-RWF12 | Gap semantics | Off-hours and inter-session gaps are outside the population. An internal source-sequence gap is evidence-unavailable unless the approved product's completeness protocol accounts for it. |
+| P3-RWF13 | Co-identified population | One covered receipt preserves the same final effective event population for both high and low, with no rounding/rescaling and provenance for ties. High-only and low-only receipts from different sources, revisions, or cutoffs cannot be paired. |
+| P3-RWF14 | Future result meanings | A later executable review must distinguish at least `Covered`, `CompleteWithoutEligibleTrade`, and `EvidenceUnavailable`. Exact Java shape, reasons, precedence, policy bytes/hash, and golden vectors are not created by ADR-034. There is no endpoint-wait or applicability inference here. |
+| P3-RWF15 | ADR-019 firewall | `EXACT_CAUSAL_WINDOW_SESSION_UNION` remains a supplied aggregate attestation for target-hit selection. It cannot be cast, wrapped, backfilled, or described as ADR-034 raw verification, and ADR-019's source/policy/golden remain unchanged. |
+| P3-RWF16 | MFE/MAE ownership and lifecycle firewall | One raw receipt is shared source evidence only. MFE and MAE remain separate metric meanings with separately reviewed formula, polarity, calculator, readiness, and ownership contracts. No lifecycle status, `dataComplete`, retry, scheduling, methodology, fingerprint, persistence, aggregation, ranking, or publication is inferred. |
+| P3-RWF17 | External rights boundary | No key, account, paid plan, license, secret, or network is needed. Before executable non-DEMO work, P5 and the user must approve the exact historical trade-tick product and written history, event/revision, correction/bust, sequence/watermark, auction/halt, calendar/corporate-action, storage/cache/derived/display/redistribution rights. Credentials follow only through untracked local/CI/deployment secret stores. |
+
+## Required ADR-034 documentation and negative checks
+
+- The exact ADR-034 marker must occur once in ADR-034, README, this acceptance
+  file, and the implementation log.
+- The dedicated guard must lock the accepted title/date, decision-only surface,
+  exact interval and trade-tick rule, PIT/correction/manifest requirements,
+  no-trade/halt/auction/bar/gap semantics, ADR-016 anchor, ADR-019 firewall,
+  separate MFE/MAE ownership, null DEMO values, and external-rights boundary.
+- Protected production must remain exactly 232 files / SHA-256
+  `2cfbb3b9f9039b9e7af92ac7cbd9c35b9705ce79fda3aa58422a73f23c0d8941`;
+  API-test/web must remain exactly 205 files / SHA-256
+  `fba2656db6ef5bbf5e15288bebd894639926645e7657ac214ec1cec657cc4d75`.
+- No ADR-034 Java/runtime cardinality gate exists. The dedicated guard passes;
+  all 39/39 embedded Python bodies syntax-compile and all 32/32 locally
+  runnable bodies pass. SnakeYAML parses four jobs and Compose validates.
+- Full API verification passes 2066/2066 with zero failures, errors, or skips,
+  including PostgreSQL 17.10 Testcontainers and Flyway. Web lint, 42/42 Vitest
+  files with 569/569 tests, and the 12-page production build pass.
+- README marker, `NotApplicable` exclusion, raw-event causal-chain, temporary
+  forbidden `rawwindowcoverage/RawWindowCoveragePolicyVersion.java`, and
+  `.env.example` provider-surface mutations each make the guard exit nonzero
+  and are fully removed. The final guard and `git diff --check` pass; the exact
+  nine-file dependency/runtime digest is
+  `25677e07b9f511dd8899bf69fb5c435247d4996313a60361faf354002b8555bd`,
+  and the user-owned `next-env.d.ts` is restored to SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Independent semantic and evidence closure reviews report no remaining
+  P0-P3 finding after the `NotApplicable`, causal-time, recursive-fixture,
+  configuration-digest, and whole-workflow guard gaps were corrected.
+
+## Deferred executable work
+
+- The next raw-window implementation requires the selected feed's documented
+  sequence, watermark/finality, correction/bust, trade-condition, auction,
+  halt, and rights evidence plus a separately reviewed executable policy and
+  golden matrix.
+- Only after a verified covered event population exists may separate MFE and
+  MAE arithmetic/polarity and readiness contracts be added. Bearish/neutral
+  rules, denominator, sign, rounding, and representability remain undecided and
+  must not be inferred from the one bullish scenario example.
+- Canonical methodology activation, fingerprint, append-only lineage,
+  aggregate lifecycle, persistence, scheduling, ranking, API/UI publication,
+  alpha, and sector alpha remain later work; alpha stays last.
