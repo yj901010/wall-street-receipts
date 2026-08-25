@@ -448,6 +448,8 @@ ADR-036 establishes the single-process SEC live-operation safety gate.
 
 ADR-037 establishes the in-memory SEC decoded-response receipt foundation.
 
+ADR-038 establishes the SEC historical-segment descriptor catalog.
+
 ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
 submissions metadata. It is disabled by default and remains server-only. When
 `SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
@@ -485,7 +487,7 @@ The receipt foundation binds each accepted HTTP `200 application/json`
 submissions catalog to the exact fully read bytes exposed after one advertised
 gzip/deflate transport decode. SHA-256 is lowercase and covers those bytes
 without charset conversion, JSON normalization, or reserialization; the same
-owned bytes are then parsed by `SEC_SUBMISSIONS_RECENT_V1`. UTF-16, UTF-32, and
+owned bytes are now parsed by `SEC_SUBMISSIONS_CATALOG_V2`. UTF-16, UTF-32, and
 malformed UTF-8 fail before receipt creation without transforming valid UTF-8
 bytes or removing their BOM. Duplicate keys, scalar coercion,
 floating-point-to-integer coercion, and trailing JSON tokens also fail closed.
@@ -503,9 +505,25 @@ complete `User-Agent` are not receipt data.
 transient parsing memory and is not durably retained. Its digest is a local
 byte-identity check, not an SEC signature or sender authentication. ADR-037
 adds no durable raw body, replay, persistence, database, scheduler, controller,
-or publication surface. Historical submissions-segment modeling is next;
-append-only persistence follows it. Neither step nor ADR-037 requires a new API
-key or account.
+or publication surface.
+
+ADR-038 maps the same root bytes' required `filings.files` array into immutable
+`HistoricalFilingSegmentDescriptor` values while keeping `recentFilings` and
+`historicalSegments` separate. Each descriptor preserves only a CIK-bound safe
+filename, positive advertised count, and inclusive advertised date range in
+SEC order. The catalog status is exactly
+`RECENT_ONLY_NO_SEGMENTS_ADVERTISED` or
+`RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED`; even an empty descriptor list is
+not a complete-history claim. Advertised range overlap is diagnostic only and
+never merges, deduplicates, sums, or completes filing history.
+
+The root receipt binds descriptor metadata but not referenced segment bytes,
+existence, cardinality, or actual range. ADR-038 makes no segment request and
+adds no durable raw body, replay, persistence/DB, scheduler, controller, API,
+or UI. It needs no new API key or account; live root access still uses only the
+existing monitored `SEC_CONTACT_EMAIL`. Append-only root receipt/catalog/
+descriptor persistence is next, followed separately by segment retrieval and
+actual historical completeness proof.
 
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,

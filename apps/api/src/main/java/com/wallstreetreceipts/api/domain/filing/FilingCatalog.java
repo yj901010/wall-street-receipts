@@ -20,7 +20,8 @@ public record FilingCatalog(
         Instant processingTime,
         Instant capturedAt,
         SourceResponseReceipt sourceReceipt,
-        List<FilingRecord> filings) {
+        List<FilingRecord> recentFilings,
+        List<HistoricalFilingSegmentDescriptor> historicalSegments) {
 
     private static final Pattern TEN_DIGIT_CIK = Pattern.compile("[0-9]{10}");
 
@@ -44,11 +45,11 @@ public record FilingCatalog(
                     "sourceReceipt must identify this exact catalog capture");
         }
 
-        Objects.requireNonNull(filings, "filings must not be null");
-        filings = List.copyOf(filings);
+        Objects.requireNonNull(recentFilings, "recentFilings must not be null");
+        recentFilings = List.copyOf(recentFilings);
         Set<String> providerEventIds = new HashSet<>();
-        for (FilingRecord filing : filings) {
-            Objects.requireNonNull(filing, "filings must not contain null");
+        for (FilingRecord filing : recentFilings) {
+            Objects.requireNonNull(filing, "recentFilings must not contain null");
             filing.requireCatalogArchiveIdentity(cik);
             if (filing.acceptedAt().isAfter(processingTime)) {
                 throw new IllegalArgumentException(
@@ -59,6 +60,47 @@ public record FilingCatalog(
                         "providerEventId must be unique within the catalog");
             }
         }
+
+        Objects.requireNonNull(historicalSegments, "historicalSegments must not be null");
+        historicalSegments = List.copyOf(historicalSegments);
+        Set<String> historicalFileNames = new HashSet<>();
+        for (HistoricalFilingSegmentDescriptor segment : historicalSegments) {
+            Objects.requireNonNull(
+                    segment, "historicalSegments must not contain null");
+            if (!historicalFileNames.add(segment.fileName())) {
+                throw new IllegalArgumentException(
+                        "historical fileName must be unique within the catalog");
+            }
+        }
+    }
+
+    public HistoricalSegmentStatus historicalSegmentStatus() {
+        return historicalSegments.isEmpty()
+                ? HistoricalSegmentStatus.RECENT_ONLY_NO_SEGMENTS_ADVERTISED
+                : HistoricalSegmentStatus.RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED;
+    }
+
+    public boolean hasAdvertisedHistoricalDateRangeOverlap() {
+        for (int left = 0; left < historicalSegments.size(); left++) {
+            for (int right = left + 1; right < historicalSegments.size(); right++) {
+                if (historicalSegments.get(left)
+                        .overlapsAdvertisedDateRange(historicalSegments.get(right))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean hasAdvertisedRecentHistoricalDateOverlap() {
+        for (FilingRecord filing : recentFilings) {
+            for (HistoricalFilingSegmentDescriptor segment : historicalSegments) {
+                if (segment.containsAdvertisedDate(filing.filingDate())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public static void requireCik(String cik) {
@@ -68,5 +110,10 @@ public record FilingCatalog(
         if (!TEN_DIGIT_CIK.matcher(cik).matches() || cik.chars().allMatch(character -> character == '0')) {
             throw new IllegalArgumentException("cik must be a non-zero 10-digit identifier");
         }
+    }
+
+    public enum HistoricalSegmentStatus {
+        RECENT_ONLY_NO_SEGMENTS_ADVERTISED,
+        RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED
     }
 }

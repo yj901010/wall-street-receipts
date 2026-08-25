@@ -4882,3 +4882,111 @@ supplied to its versioned parser without claiming durable source retention.
   raw-body retention/replay policy, idempotency, revisions, and Flyway schema.
 - Keep scheduling, multi-instance rate coordination, read API, and attributed
   Korean public UI publication behind their later independent gates.
+
+## 2026-08-25 — ADR-038 SEC EDGAR historical-segment descriptor catalog
+
+Status: descriptor-catalog implementation and verification complete.
+
+ADR-038 establishes the in-memory catalog of historical segment descriptors
+advertised by one SEC EDGAR Submissions root response. It is not a fetched or
+complete-history claim.
+
+### Scope and decisions
+
+- Advance the current strict parser identity to
+  `SEC_SUBMISSIONS_CATALOG_V2`, while preserving ADR-037's historical V1 record.
+  Parse `filings.recent` and required `filings.files` from the same exact
+  decoded root bytes and carry their shared `SourceResponseReceipt` into one
+  catalog.
+- Require `filings.files` to be present as an array. Accept an empty array, but
+  reject null members. Require each descriptor's trimmed CIK-bound filename,
+  positive coercion-free integer `filingCount`, exact valid `YYYY-MM-DD`
+  `filingFrom`/`filingTo`, and non-reversed inclusive advertised range.
+- Restrict adapter filenames to
+  `CIK##########-submissions-NNN.json`, require the embedded CIK to equal the
+  root/catalog CIK, reject suffix `000`, and reject duplicate filenames. This
+  is a local fail-closed allowlist, not an SEC filename guarantee.
+- Add provider-neutral `HistoricalFilingSegmentDescriptor` and keep immutable
+  provider-order `FilingCatalog.recentFilings` and `historicalSegments`
+  separate. Preserve advertised count and inclusive range as manifest claims,
+  not observed rows or verified completeness.
+- Expose only `RECENT_ONLY_NO_SEGMENTS_ADVERTISED` and
+  `RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED`. Empty descriptors mean no
+  additional segment was advertised by that capture, not complete history.
+- Flag advertised historical-range overlap and recent-date-to-advertised-range
+  overlap without rejecting, sorting, clipping, merging, deduplicating,
+  summing counts, or inferring duplicate accessions or completeness.
+- Fail the entire root response for missing/malformed descriptors. Do not
+  salvage recent rows, substitute an empty list, zero, current date, fixture,
+  stale catalog, bulk archive, alternate provider, or scraper result.
+
+### Receipt and point-in-time boundary
+
+- The V2 root receipt binds the exact decoded root bytes and all descriptor
+  metadata parsed from them. It does not bind a referenced segment's body,
+  existence, actual count/range, later mutation, response metadata, or digest.
+- A descriptor is known only at the root catalog `capturedAt`.
+  `advertisedFilingFrom`/`advertisedFilingTo` are not event, availability,
+  processing, capture, or publication timestamps and cannot backdate knowledge.
+- A safe filename is a captured reference, not fetched content, an SEC digital
+  signature, sender authentication, or evidence that the resource remains
+  unchanged.
+
+### Credentials, operations, and non-scope
+
+- Require no new API key, account, paid plan, OAuth credential, EDGAR filer/user
+  token, registration, plugin, environment variable, or additional HTTP call.
+  Explicit live root access continues to use only the existing monitored
+  `SEC_CONTACT_EMAIL`, which is not receipt data.
+- Add no segment GET, segment receipt/body/parser, historical `FilingRecord`,
+  actual cardinality/range verification, recent-plus-history union, accession
+  duplicate policy, overlap/revision/removal reconciliation, or complete state.
+- Add no durable raw-body retention, replay reader, append-only persistence,
+  Flyway/DB, repository, scheduler, polling, controller, OpenAPI, public API/UI,
+  nightly `submissions.zip`, filing-document, XBRL, or Company Facts behavior.
+
+### Repository surface
+
+- Extend the closed SEC vendor DTO with `SecHistoricalFilingFile` and the four
+  selected descriptor fields.
+- Extend the pure mapper with exact field/date/CIK-bound filename validation
+  and parser identity V2.
+- Add `HistoricalFilingSegmentDescriptor`; rename the catalog filing list to
+  `recentFilings`; add `historicalSegments`, the two exact status values, and
+  advertised-overlap diagnostics.
+- Extend focused configuration, mapper, domain, and live-smoke shape coverage
+  without adding a new runtime request path.
+
+### Verification
+
+- Focused descriptor/catalog/mapper suite: **PASS** — 70 tests with zero
+  failures, errors, or skips.
+- API main-source compilation: **PASS**.
+- Full API Maven verification: **PASS** — 2,180 tests with zero failures or
+  errors; Maven completed with `BUILD SUCCESS`.
+- Manual SEC live smoke: **PASS** — one Apple root request, zero referenced
+  segment requests, nonempty V2 historical descriptors with the explicit
+  advertised-but-not-fetched status, one test, and `BUILD SUCCESS`.
+- Web regression: **PASS** — lint, 42 Vitest files / 569 tests, and the Next.js
+  production build completed successfully. The user-owned
+  `apps/web/next-env.d.ts` was restored to its original SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Repository CI guard: **PASS** — all 43 embedded Python bodies compile, all
+  36 environment-independent bodies execute, and the ADR-034 through ADR-038
+  dedicated replay guards pass. Six `jsonschema`-dependent bodies and one
+  integration-artifact-dependent body remain CI-only by design.
+- Patch hygiene and credential scan: **PASS** — `git diff --check`, workflow
+  YAML parsing, placeholder scan, and changed-file secret/contact checks passed
+  without exposing configured credential values.
+
+### Next work
+
+- Design append-only persistence for the root receipt, recent catalog, and
+  advertised descriptors, including durable raw-body/replay policy,
+  idempotency, revisions, Flyway schema, and PIT reconstruction.
+- Then fetch referenced segments under the existing transport controls and add
+  segment-specific receipts, actual cardinality/range validation, deterministic
+  duplicate/overlap/revision handling, and recent-plus-history completeness.
+- Keep scheduling/global coordination, read API, and attributed Korean public
+  UI behind later independent gates. ADR-038 alone does not complete ADR-035's
+  broader historical-segment gate.

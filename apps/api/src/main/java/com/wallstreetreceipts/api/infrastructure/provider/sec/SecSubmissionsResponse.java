@@ -13,7 +13,16 @@ public record SecSubmissionsResponse(
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record SecFilings(
-            SecRecentFilings recent) {
+            SecRecentFilings recent,
+            List<SecHistoricalFilingFile> files) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record SecHistoricalFilingFile(
+            String name,
+            Long filingCount,
+            String filingFrom,
+            String filingTo) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

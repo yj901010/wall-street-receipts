@@ -73,7 +73,21 @@ class SecEdgarLiveSmokeIT {
                     assertTrue(
                             catalog.sourceUri().getFragment() == null,
                             "SEC source must not contain a fragment");
-                    assertFalse(catalog.filings().isEmpty(), "SEC Apple catalog must contain recent filings");
+                    assertFalse(
+                            catalog.recentFilings().isEmpty(),
+                            "SEC Apple catalog must contain recent filings");
+                    assertFalse(
+                            catalog.historicalSegments().isEmpty(),
+                            "SEC Apple catalog must advertise historical segments");
+                    assertEquals(
+                            "SEC_SUBMISSIONS_CATALOG_V2",
+                            catalog.sourceReceipt().parserVersion(),
+                            "SEC live smoke must use the V2 catalog parser");
+                    assertEquals(
+                            FilingCatalog.HistoricalSegmentStatus
+                                    .RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED,
+                            catalog.historicalSegmentStatus(),
+                            "SEC live smoke must not claim fetched or complete history");
                 });
     }
 

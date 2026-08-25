@@ -36,6 +36,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import com.wallstreetreceipts.api.domain.filing.FilingCatalog;
+import com.wallstreetreceipts.api.domain.filing.HistoricalFilingSegmentDescriptor;
 import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRepresentation;
 import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRetention;
 import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.TransportContentEncoding;
@@ -79,7 +80,7 @@ class SecEdgarConfigurationTest {
     }
 
     @Test
-    void requestsPaddedCikWithDeclaredUserAgentAndMapsSuccessfulResponse() {
+    void requestsRootSubmissionsExactlyOnceAndDoesNotFetchAdvertisedHistoricalFiles() {
         server.expect(once(), requestTo(EXPECTED_ENDPOINT))
                 .andExpect(header(
                         HttpHeaders.USER_AGENT,
@@ -107,7 +108,7 @@ class SecEdgarConfigurationTest {
             assertThat(receipt.etag()).isEqualTo("\"revision-1\"");
             assertThat(receipt.lastModified())
                     .isEqualTo(Instant.parse("2026-08-20T20:00:00Z"));
-            assertThat(receipt.parserVersion()).isEqualTo("SEC_SUBMISSIONS_RECENT_V1");
+            assertThat(receipt.parserVersion()).isEqualTo("SEC_SUBMISSIONS_CATALOG_V2");
             assertThat(receipt.decodedBodySha256()).isEqualTo(sha256(validSubmissionsJson()));
             assertThat(receipt.decodedBodyLength())
                     .isEqualTo(validSubmissionsJson().getBytes(StandardCharsets.UTF_8).length);
@@ -118,9 +119,20 @@ class SecEdgarConfigurationTest {
             assertThat(receipt.bodyRetention())
                     .isEqualTo(BodyRetention.RECEIPT_ONLY_BODY_NOT_RETAINED);
         });
-        assertThat(catalog.filings()).hasSize(1);
-        assertThat(catalog.filings().getFirst().accessionNumber())
+        assertThat(catalog.recentFilings()).hasSize(1);
+        assertThat(catalog.recentFilings().getFirst().accessionNumber())
                 .isEqualTo("0000320193-26-000001");
+        assertThat(catalog.historicalSegments())
+                .extracting(HistoricalFilingSegmentDescriptor::fileName)
+                .containsExactly(
+                        "CIK0000320193-submissions-002.json",
+                        "CIK0000320193-submissions-001.json");
+        assertThat(catalog.historicalSegments())
+                .extracting(HistoricalFilingSegmentDescriptor::advertisedFilingCount)
+                .containsExactly(2000L, 3000L);
+        assertThat(catalog.historicalSegmentStatus())
+                .isEqualTo(FilingCatalog.HistoricalSegmentStatus
+                        .RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED);
         server.verify();
     }
 
@@ -138,7 +150,7 @@ class SecEdgarConfigurationTest {
 
         FilingCatalog catalog = provider.loadRecentFilings("320193");
 
-        assertThat(catalog.filings()).hasSize(1);
+        assertThat(catalog.recentFilings()).hasSize(1);
         assertThat(catalog.sourceReceipt().transportContentEncoding())
                 .isEqualTo(TransportContentEncoding.GZIP);
         assertThat(catalog.sourceReceipt().decodedBodySha256())
@@ -267,6 +279,81 @@ class SecEdgarConfigurationTest {
         assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
                 .isInstanceOf(SecProviderException.class)
                 .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain(body, "0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "\"2000\"", "2000.5", "true", "2e3", "9223372036854775808"
+    })
+    void rejectsNonIntegralOrOverflowingHistoricalFilingCountsWithoutCoercion(
+            String invalidCount) {
+        String body = validSubmissionsJson().replace(
+                "\"filingCount\": 2000",
+                "\"filingCount\": " + invalidCount);
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain(body, invalidCount, "0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void rejectsNullOrMissingHistoricalFilesWithoutRecentOnlySalvage(
+            boolean explicitNull) {
+        String replacement = explicitNull
+                ? "\"files\": null, \"ignoredFiles\": ["
+                : "\"ignoredFiles\": [";
+        String body = validSubmissionsJson().replace("\"files\": [", replacement);
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response was invalid")
+                .hasNoCause()
+                .message()
+                .doesNotContain(body, "0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @Test
+    void rejectsDuplicateHistoricalKeysAtTheStrictReaderBoundary() {
+        String body = validSubmissionsJson().replace(
+                "\"filingCount\": 2000",
+                "\"filingCount\": 2000, \"filingCount\": 2000");
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain(body, "0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @Test
+    void rejectsInvalidHistoricalFilingToAtTheProviderBoundary() {
+        String body = validSubmissionsJson().replace(
+                "\"filingTo\": \"2004-12-31\"",
+                "\"filingTo\": \"2004-02-30\"");
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response was invalid")
                 .hasNoCause()
                 .message()
                 .doesNotContain(body, "0000320193", CONTACT_EMAIL);
@@ -454,7 +541,21 @@ class SecEdgarConfigurationTest {
                       "isInlineXBRL": [1],
                       "primaryDocument": ["xslF345X06/form4.xml"],
                       "primaryDocDescription": ["10-Q"]
-                    }
+                    },
+                    "files": [
+                      {
+                        "name": "CIK0000320193-submissions-002.json",
+                        "filingCount": 2000,
+                        "filingFrom": "1994-01-01",
+                        "filingTo": "2004-12-31"
+                      },
+                      {
+                        "name": "CIK0000320193-submissions-001.json",
+                        "filingCount": 3000,
+                        "filingFrom": "2005-01-01",
+                        "filingTo": "2020-12-31"
+                      }
+                    ]
                   }
                 }
                 """;

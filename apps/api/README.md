@@ -31,6 +31,8 @@ ADR-036 establishes the single-process SEC live-operation safety gate.
 
 ADR-037 establishes the in-memory SEC decoded-response receipt foundation.
 
+ADR-038 establishes the SEC historical-segment descriptor catalog.
+
 SEC submissions metadata adapter는 기본 비활성화다. 로컬에서 명시적으로
 활성화하려면 루트 `.env`에 다음 서버 전용 변수가 있어야 한다.
 
@@ -67,7 +69,7 @@ HTTP `200 application/json` 응답을 끝까지 읽고, 전송 계층이 광고�
 deflate를 정확히 한 번 해제한 뒤의 exact bytes에 SHA-256을 계산한다. digest는
 64자리 lowercase hex다. charset 변환, 공백·줄바꿈·필드 순서 등 JSON 정규화,
 파싱 후 재직렬화를 하지 않으며, digest에 사용한 동일한 owned bytes를 parser
-version `SEC_SUBMISSIONS_RECENT_V1`이 읽는다. charset이 없거나 UTF-8로 선언된
+version `SEC_SUBMISSIONS_CATALOG_V2`가 읽는다. charset이 없거나 UTF-8로 선언된
 `application/json`만 허용한다. decoded entity 자체도 strict UTF-8이어야 하며
 UTF-16/UTF-32와 malformed UTF-8은 receipt 생성 전에 거부한다. 이 검증은 valid
 UTF-8 BOM을 제거하거나 digest input을 변환하지 않는다. versioned reader는
@@ -87,9 +89,37 @@ body retention은 `RECEIPT_ONLY_BODY_NOT_RETAINED`다. decoded body는 bounded
 response를 hash하고 parse하는 동안만 메모리에 있고 receipt에는 남지 않는다.
 digest는 동일 bytes 확인용 local identifier일 뿐 SEC 서명이나 SEC 발신 인증이
 아니다. durable raw body, replay, persistence, Flyway/DB, scheduler, controller,
-public API/UI publication은 구현하지 않았다. 다음은 historical submissions
-segment이며, append-only persistence는 그 다음 gate다. 이 foundation에는 새 API
-key, 계정, 유료 플랜 또는 plugin이 필요 없다.
+public API/UI publication은 구현하지 않았다. 이 foundation에는 새 API key,
+계정, 유료 플랜 또는 plugin이 필요 없다.
+
+### Historical segment descriptor catalog
+
+같은 root receipt와 V2 parser가 required `filings.files` array를 읽는다. 각
+원소는 non-null object여야 하며 `name`, positive integer `filingCount`, exact
+`YYYY-MM-DD` `filingFrom`/`filingTo`가 필요하다. `filingTo`는 `filingFrom`보다
+앞설 수 없다. 파일명은 exact catalog CIK에 묶인
+`CIK##########-submissions-NNN.json` 형태이고 `NNN=000`, slash, percent
+encoding, URI suffix를 허용하지 않는다. duplicate filename이나 malformed
+descriptor 하나라도 있으면 recent rows만 살리지 않고 root response 전체가 fail
+closed한다.
+
+canonical `HistoricalFilingSegmentDescriptor`는 `fileName`,
+`advertisedFilingCount`, inclusive `advertisedFilingFrom`/
+`advertisedFilingTo`만 SEC order로 보존한다. `FilingCatalog.recentFilings`와
+`historicalSegments`는 분리되며 status는 정확히
+`RECENT_ONLY_NO_SEGMENTS_ADVERTISED` 또는
+`RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED`다. 빈 `files`도 complete history를
+뜻하지 않는다. advertised historical ranges끼리 또는 recent filing date와
+겹치는지는 flag만 하며 merge, dedupe, count 합산, complete 판정을 하지 않는다.
+
+root receipt는 descriptor가 알려진 root `capturedAt`과 root bytes만 묶는다.
+advertised dates는 event/available/capture time이 아니며 knowledge를 backdate하지
+않는다. referenced segment body, 존재, actual row count/range, ETag, digest는 아직
+관찰하지 않았다. segment GET/parse/union, durable raw body/replay, persistence/DB,
+scheduler, controller, public API/UI는 없다. 새 API key나 계정도 필요 없고 live
+root request에는 기존 `SEC_CONTACT_EMAIL`만 사용한다. 다음은 append-only root
+receipt/catalog/descriptor persistence이며, segment retrieval과 실제 completeness
+proof는 별도 후속 gate다.
 
 ### Manual SEC live smoke
 
