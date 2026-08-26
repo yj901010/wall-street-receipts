@@ -662,6 +662,15 @@ def validate_text_surfaces() -> None:
         require(forbidden not in preflight, f"Preflight became mutating: {forbidden}")
     require("docker compose up" not in preflight and "docker compose down" not in preflight, "Preflight starts containers")
     require("PENDING_EXTERNAL_INGRESS" in preflight, "Preflight overclaims public ingress")
+    require(
+        'git_command=(git -c "safe.directory=$repo_root" -C "$repo_root")' in preflight
+        and preflight.count('"${git_command[@]}"') == 3,
+        "Root production checks must use one exact per-command Git safe.directory boundary",
+    )
+    require(
+        "git config --global" not in preflight and "safe.directory=*" not in preflight,
+        "Preflight must not broaden persistent Git trust",
+    )
     for marker in (
         "Docker Compose 2.20.0 or newer is required",
         "WSR_IMAGE_TAG must exactly equal the checked-out 40-character Git HEAD",

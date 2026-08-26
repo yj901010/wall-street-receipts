@@ -568,6 +568,7 @@ def source_contract(
             '  wsr_fsync_path "$inventory"',
             '  wsr_fsync_path "$checksum_file"',
             '  wsr_fsync_path "$manifest"',
+            '  chmod 0500 -- "$WSR_PARTIAL_PATH"',
             '  wsr_fsync_path "$WSR_PARTIAL_PATH"',
         )
     )
@@ -584,6 +585,7 @@ def source_contract(
         (
             'wsr_fsync_path "$evidence_file"',
             '  wsr_fsync_path "$evidence_manifest"',
+            '  chmod 0500 -- "$evidence_partial"',
             '  wsr_fsync_path "$evidence_partial"',
         )
     )
@@ -597,7 +599,7 @@ def source_contract(
         evidence_parent_fsync_match.start() if evidence_parent_fsync_match else -1
     )
     fsync_before_publish = (
-        re.search(r'(?m)^\s*sync\s+-f\s+--\s+"\$1"\s*$', fsync_helper_body) is not None
+        re.search(r'(?m)^\s*sync\s+--\s+"\$1"\s*$', fsync_helper_body) is not None
         and 0 <= backup_fsync_position < backup_publish_position < backup_parent_fsync_position
         and 0 <= evidence_fsync_position < evidence_publish_position < evidence_parent_fsync_position
     )
@@ -1590,8 +1592,8 @@ def validate_source_mutations(
             "fsync helper disabled",
             replace_once(
                 common_source,
-                '  sync -f -- "$1"',
-                '  : \'sync -f -- "$1"\'',
+                '  sync -- "$1"',
+                '  : \'sync -- "$1"\'',
                 "fsync helper command",
             ),
             production_source,
@@ -1606,6 +1608,42 @@ def validate_source_mutations(
                 '  wsr_fsync_path "$WSR_PARTIAL_PATH"',
                 '  : \'wsr_fsync_path "$WSR_PARTIAL_PATH"\'',
                 "backup staging directory fsync",
+            ),
+        )
+    )
+    mutations.append(
+        (
+            "backup staging directory seal disabled",
+            common_source,
+            replace_once(
+                production_source,
+                '  chmod 0500 -- "$WSR_PARTIAL_PATH"',
+                '  : \'chmod 0500 -- "$WSR_PARTIAL_PATH"\'',
+                "backup staging directory seal",
+            ),
+        )
+    )
+    mutations.append(
+        (
+            "restore evidence staging directory fsync disabled",
+            common_source,
+            replace_once(
+                production_source,
+                '  wsr_fsync_path "$evidence_partial"',
+                '  : \'wsr_fsync_path "$evidence_partial"\'',
+                "restore evidence staging directory fsync",
+            ),
+        )
+    )
+    mutations.append(
+        (
+            "restore evidence staging directory seal disabled",
+            common_source,
+            replace_once(
+                production_source,
+                '  chmod 0500 -- "$evidence_partial"',
+                '  : \'chmod 0500 -- "$evidence_partial"\'',
+                "restore evidence staging directory seal",
             ),
         )
     )

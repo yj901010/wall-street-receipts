@@ -1,9 +1,10 @@
 # Ubuntu home-server deployment foundation
 
 This directory contains the ADR-046 deployment boundary, ADR-047 recovery
-boundary, and ADR-048 exact release-schema gate for the public **DEMO** site.
-They are independent from the root development `compose.yaml` and never load
-the ignored root `.env`.
+boundary, ADR-048 exact release-schema gate, ADR-049 read-only promotion plan,
+and ADR-050 generation-control contract foundation for the public **DEMO**
+site. They are independent from the root development `compose.yaml` and never
+load the ignored root `.env`.
 
 ## What is ready now
 
@@ -171,8 +172,14 @@ internationalized domain.
 
 Then run the fail-closed publication preflight:
 
+Provision the fixed ADR-050 operation lock as documented under
+[Generation-control contract foundation](#generation-control-contract-foundation)
+before this production-mode check. It and every production wrapper run as root
+so the permanent root-owned lock cannot be bypassed by a less-privileged
+operator.
+
 ```bash
-bash deploy/home-server/preflight.sh \
+sudo bash deploy/home-server/preflight.sh \
   --mode publish \
   --env-file deploy/home-server/.env.production
 ```
@@ -182,7 +189,9 @@ parser accepts only the template's unquoted `KEY=value` allowlist, rejects
 duplicates and interpolation, requires a clean Git checkout, and requires
 `WSR_IMAGE_TAG` to equal the full 40-character `git rev-parse HEAD`. It also
 checks that DNS A/AAAA records exactly match the configured public address
-family without printing the address value.
+family without printing the address value. Root execution supplies an exact
+per-command `safe.directory` value for this checkout only; it does not modify
+global Git configuration when the checkout belongs to the non-root operator.
 
 Passing means only that the local deployment attempt is configured. It still
 prints `PENDING_EXTERNAL_INGRESS`; only a test from a different network can
@@ -203,7 +212,7 @@ Build the two application images and the non-root Caddy image from the checked-
 out Git SHA through the environment-sanitizing local-Docker wrapper:
 
 ```bash
-bash deploy/home-server/compose-production.sh \
+sudo bash deploy/home-server/compose-production.sh \
   --env-file deploy/home-server/.env.production \
   -- build
 ```
@@ -211,7 +220,7 @@ bash deploy/home-server/compose-production.sh \
 Start the production profile:
 
 ```bash
-bash deploy/home-server/compose-production.sh \
+sudo bash deploy/home-server/compose-production.sh \
   --env-file deploy/home-server/.env.production \
   -- up
 ```
@@ -397,19 +406,91 @@ not a lock, cannot eliminate the residual race after the final read, and must
 be replaced by shared locking plus immediate revalidation in a future live
 action.
 
-The plan keeps activation blocked until manifest v2 generation binding,
-protected external-volume indirection, one shared deployment/recovery lock, a
-root-owned fsynced transition journal, production-auth candidate creation,
-offline image custody, and explicit downtime/probation/write-RPO decisions are
-implemented. Capacity for two generations plus restore headroom and exact
-API/web/Caddy environment, network, mount, and port validation are also
-mandatory activation gates; this read-only action proves release-image identity
-and health but does not infer full runtime topology. The ADR-047 rehearsal
-volume uses trust authentication and is
-always disposable; it is never an eligible candidate. Docker volumes cannot be
-atomically renamed or swapped, so a later implementation will be a reviewed
-crash-consistent downtime transition with the previous volume preserved, not a
-zero-downtime or atomic switch.
+ADR-050 now defines a fixed primary-host lock and strict generation document
+contracts, but the plan still keeps activation blocked. Protected external-
+volume indirection, production-auth candidate creation, offline image custody,
+and explicit downtime/probation/write-RPO decisions are not implemented.
+Capacity for two generations plus restore headroom and exact API/web/Caddy
+environment, network, mount, and port validation are also mandatory activation
+gates; this read-only action proves release-image identity and health but does
+not infer full runtime topology. The ADR-047 rehearsal volume uses trust
+authentication and is always disposable; it is never an eligible candidate.
+Docker volumes cannot be atomically renamed or swapped, so a later
+implementation will be a reviewed crash-consistent downtime transition with
+the previous volume preserved, not a zero-downtime or atomic switch.
+
+## Generation-control contract foundation
+
+ADR-050 reserves one primary-host coordination boundary:
+
+```text
+/var/lib/wall-street-receipts/generation-control
+/var/lib/wall-street-receipts/generation-control/operation.lock
+```
+
+The directory and permanent lock are not created by repository commands. On
+the future Ubuntu server, after confirming the control root is on the intended
+local persistent filesystem, provision them exactly once:
+
+```bash
+sudo install -d -m 0700 -o root -g root \
+  /var/lib/wall-street-receipts/generation-control
+sudo bash -c 'set -euo pipefail; umask 077; set -o noclobber; \
+  : > /var/lib/wall-street-receipts/generation-control/operation.lock'
+sudo chmod 0600 \
+  /var/lib/wall-street-receipts/generation-control/operation.lock
+```
+
+If `operation.lock` already exists, stop and inspect it. Never truncate,
+unlink, rename, or replace it. The root must be root-owned mode 0700 on local
+persistent storage suitable for Linux `flock` and file/directory `fsync`, not
+NFS, CIFS, FUSE, a temporary filesystem, or the removable backup device. The
+lock file must be root-owned, single-linked, non-symlink, and mode 0600. The
+wrappers compare the path and opened descriptor's device/inode before holding
+the descriptor across the complete operation. The Compose wrapper remains the
+parent lock owner while its Docker Compose child runs; it must not replace
+itself with `exec`, because brace-allocated lock descriptors are not reliably
+inherited across that boundary.
+
+Contract/publish preflight, `ps`, `logs`, recovery production preflight,
+recovery `preflight`, `status`, and `retention-plan` take a shared lock.
+Deployment `build`, `up`, `stop`, and `down`, plus recovery `create`,
+`rehearse-latest`, `schema-check-latest`, and `promotion-plan-latest`, take an
+exclusive lock. Host-only discovery remains available before provisioning.
+The older backup-device lock is nested only after the primary-host lock.
+
+The source-only foundation defines four strict documents: active selector v1,
+immutable generation manifest v1, backup generation binding v2, and immutable
+hash-chained journal v1 intent/completion records. Each has an exact ordered
+field set, LF-only canonical bytes with one final LF, a 32,768-byte limit,
+closed value syntax, and byte-for-byte rerender validation. The files are never
+sourced as shell. Malformed, reordered, duplicate, unknown, replayed, skipped,
+or conflicting records fail closed. The journal classifier can report only a
+stable state or a conservative manual-recovery directive; it executes no
+recovery.
+
+The generation-control contract requires staged bytes to be validated and
+synced before an atomic same-filesystem rename, the destination directory to
+be synced after rename, and the published inode and bytes to be reread. GNU
+`sync -- PATH` invokes the per-path `fsync(2)` behavior used here; `sync -f`
+would instead request filesystem-wide `syncfs(2)`. Existing backup and restore-
+evidence staging directories are changed to final mode 0500 before their final
+pre-rename directory sync, so sealed metadata is ordered before publication.
+The shell boundary assumes a trusted root operator and root-only directories. It protects against
+accidental or unprivileged path substitution, not a malicious concurrent root
+process or raw root Docker commands.
+
+Do not create `active.selector`, generation manifests, or journals during lock
+provisioning. ADR-050 does not make Compose use an external volume and exposes
+no candidate, activation, probation, finalization, rollback, selector-change,
+or volume-deletion action. Current `restart: unless-stopped` behavior and
+automatic boot recovery are not reconciled with a nonterminal journal and
+remain blockers. No API key, account, domain, router credential, or new secret
+is needed now. Before a live transition design, provide the real server
+filesystem and Docker storage facts, two-generation capacity, acceptable
+downtime, probation duration, and write-freeze/RPO policy. The complete
+decision is
+[`ADR-050`](../../decisions/ADR-050-generation-control-contract-foundation.md).
 
 `retention-plan` is read-only: it reports the union of 14 daily, 8 weekly, and
 12 monthly recovery points but deletes nothing. There is no production restore

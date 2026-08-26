@@ -305,6 +305,30 @@ indirection, a shared lock, durable journal, exact runtime-topology validation,
 artifact custody, capacity, and operator downtime/probation/write-RPO decisions
 remain prerequisites for a later live implementation.
 
+ADR-050 adds the source-only generation-control contract foundation without
+adding a live switch. Production deployment and recovery entry points now
+coordinate through shared or exclusive `flock` modes on the fixed,
+preprovisioned
+`/var/lib/wall-street-receipts/generation-control/operation.lock` inode. The
+foundation defines canonical LF-only active-selector v1, immutable generation-
+manifest v1, backup generation-binding v2, and hash-chained journal v1
+contracts, plus conservative journal recovery classification. Existing
+recovery publication uses GNU `sync FILE` for the per-path `fsync(2)` barrier;
+`sync -f FILE` is a filesystem-wide `syncfs(2)` operation. Backup and restore-
+evidence staging directories now enter final mode 0500 before their last
+pre-rename directory sync.
+
+No command provisions or changes the active selector, makes Compose consume an
+external generation volume, creates a candidate, activates or rolls back a
+generation, or automatically recovers an interrupted transition. The fixed
+control root and lock must be provisioned once on the future Ubuntu server;
+they must not be invented on this development computer. `restart:
+unless-stopped`, exact runtime topology and artifact custody, two-generation
+capacity, and operator downtime, probation, write-freeze, and RPO decisions
+remain activation blockers. ADR-050 needs no API key, account, domain, or new
+secret. The real server filesystem/Docker storage facts and those operator
+decisions are required before a live activation design.
+
 ## Fixture contract
 
 Canonical demo data lives under [`fixtures/v1`](fixtures/v1). Every fixture has

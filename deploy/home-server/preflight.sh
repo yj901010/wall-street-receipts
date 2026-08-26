@@ -49,8 +49,17 @@ warn() { printf 'WARN: %s\n' "$1"; warnings=$((warnings + 1)); }
 fail() { printf 'FAIL: %s\n' "$1" >&2; failures=$((failures + 1)); }
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck source=deploy/home-server/generation-state.sh
+source "$script_dir/generation-state.sh"
 repo_root="$(cd -- "$script_dir/../.." && pwd -P)"
 compose_file="$script_dir/compose.yaml"
+git_command=(git -c "safe.directory=$repo_root" -C "$repo_root")
+
+# Host discovery deliberately works before generation-control provisioning.
+if [[ "$mode" == "contract" || "$mode" == "publish" ]]; then
+  wsr_generation_acquire_operation_lock shared
+  wsr_generation_require_operation_lock shared
+fi
 
 declare -A env_values=()
 
@@ -234,16 +243,16 @@ if [[ "$mode" == "contract" || "$mode" == "publish" ]]; then
       fail "WSR_ACME_EMAIL must be a monitored non-placeholder address."
     fi
 
-    if ! command -v git >/dev/null 2>&1 || ! git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    if ! command -v git >/dev/null 2>&1 || ! "${git_command[@]}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
       fail "A Git checkout is required to bind the release image to reviewed source."
     else
-      head_sha="$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || true)"
+      head_sha="$("${git_command[@]}" rev-parse HEAD 2>/dev/null || true)"
       if [[ "$image_tag" =~ ^[0-9a-f]{40}$ && "$image_tag" == "$head_sha" ]]; then
         pass "WSR_IMAGE_TAG exactly matches the checked-out 40-character Git HEAD."
       else
         fail "WSR_IMAGE_TAG must exactly equal the checked-out 40-character Git HEAD."
       fi
-      if [[ -z "$(git -C "$repo_root" status --porcelain --untracked-files=normal)" ]]; then
+      if [[ -z "$("${git_command[@]}" status --porcelain --untracked-files=normal)" ]]; then
         pass "The deployment checkout is clean."
       else
         fail "The deployment checkout has tracked or untracked changes; commit or remove them before building."

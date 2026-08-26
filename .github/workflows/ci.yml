@@ -41,6 +41,9 @@ jobs:
       - name: Validate home-server recovery contract
         run: python scripts/verify-home-server-recovery.py
 
+      - name: Validate ADR-050 generation-control contract
+        run: python scripts/verify-home-server-generation-state.py
+
       - name: Parse Ubuntu home-server shell tools
         shell: bash
         run: |
@@ -52,9 +55,11 @@ jobs:
             deploy/home-server/recovery-production.sh \
             deploy/home-server/schema-compatibility.sh \
             deploy/home-server/generation-promotion.sh \
+            deploy/home-server/generation-state.sh \
             scripts/verify-home-server-database-evidence.sh \
             scripts/verify-home-server-schema-compatibility.sh \
             scripts/verify-home-server-generation-promotion.sh \
+            scripts/verify-home-server-generation-state.sh \
             scripts/verify-home-server-retention.sh
           do
             bash -n "$path"
@@ -75,6 +80,10 @@ jobs:
       - name: Verify generation promotion state and plan contract
         shell: bash
         run: bash scripts/verify-home-server-generation-promotion.sh
+
+      - name: Verify generation-control documents, journal, and host lock
+        shell: bash
+        run: bash scripts/verify-home-server-generation-state.sh
 
       - name: Parse local home-server rehearsal
         shell: pwsh

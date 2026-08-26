@@ -5,6 +5,8 @@ umask 077
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 # shellcheck source=deploy/home-server/recovery-common.sh
 source "$script_dir/recovery-common.sh"
+# shellcheck source=deploy/home-server/generation-state.sh
+source "$script_dir/generation-state.sh"
 
 WSR_RECOVERY_LOCK_FD=""
 WSR_PARTIAL_PATH=""
@@ -405,6 +407,7 @@ wsr_action_create() {
   wsr_fsync_path "$inventory"
   wsr_fsync_path "$checksum_file"
   wsr_fsync_path "$manifest"
+  chmod 0500 -- "$WSR_PARTIAL_PATH"
   wsr_fsync_path "$WSR_PARTIAL_PATH"
 
   # Recheck the device identity immediately before the same-filesystem atomic
@@ -415,7 +418,6 @@ wsr_action_create() {
     wsr_error "The partial artifact left the verified same-filesystem staging boundary."
     return 1
   fi
-  chmod 0500 -- "$WSR_PARTIAL_PATH"
   wsr_publish_directory_no_clobber "$WSR_PARTIAL_PATH" "$final_path"
   WSR_PARTIAL_PATH=""
   wsr_fsync_path "$WSR_BACKUPS_ROOT"
@@ -1191,6 +1193,7 @@ wsr_action_rehearse_latest() {
   chmod 0400 -- "$evidence_file" "$evidence_manifest"
   wsr_fsync_path "$evidence_file"
   wsr_fsync_path "$evidence_manifest"
+  chmod 0500 -- "$evidence_partial"
   wsr_fsync_path "$evidence_partial"
 
   if ! wsr_cleanup_restore_resources; then
@@ -1204,7 +1207,6 @@ wsr_action_rehearse_latest() {
     return 1
   fi
   wsr_validate_storage_directory "$evidence_parent"
-  chmod 0500 -- "$evidence_partial"
   wsr_publish_directory_no_clobber "$evidence_partial" "$evidence_final"
   WSR_PARTIAL_PATH=""
   wsr_fsync_path "$evidence_parent"
@@ -1364,13 +1366,41 @@ main() {
   fi
   action="$2"
   case "$action" in
-    preflight) wsr_action_preflight ;;
-    create) wsr_action_create ;;
-    status) wsr_action_status ;;
-    rehearse-latest) wsr_action_rehearse_latest ;;
-    retention-plan) wsr_action_retention_plan ;;
-    schema-check-latest) wsr_action_schema_check_latest ;;
-    promotion-plan-latest) wsr_action_promotion_plan_latest ;;
+    preflight)
+      wsr_generation_acquire_operation_lock shared
+      wsr_generation_require_operation_lock shared
+      wsr_action_preflight
+      ;;
+    create)
+      wsr_generation_acquire_operation_lock exclusive
+      wsr_generation_require_operation_lock exclusive
+      wsr_action_create
+      ;;
+    status)
+      wsr_generation_acquire_operation_lock shared
+      wsr_generation_require_operation_lock shared
+      wsr_action_status
+      ;;
+    rehearse-latest)
+      wsr_generation_acquire_operation_lock exclusive
+      wsr_generation_require_operation_lock exclusive
+      wsr_action_rehearse_latest
+      ;;
+    retention-plan)
+      wsr_generation_acquire_operation_lock shared
+      wsr_generation_require_operation_lock shared
+      wsr_action_retention_plan
+      ;;
+    schema-check-latest)
+      wsr_generation_acquire_operation_lock exclusive
+      wsr_generation_require_operation_lock exclusive
+      wsr_action_schema_check_latest
+      ;;
+    promotion-plan-latest)
+      wsr_generation_acquire_operation_lock exclusive
+      wsr_generation_require_operation_lock exclusive
+      wsr_action_promotion_plan_latest
+      ;;
     *)
       wsr_error "Action is not allowlisted."
       usage >&2

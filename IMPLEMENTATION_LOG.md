@@ -6258,3 +6258,133 @@ changed.
   hash-bound confirmation for activation and later finalization/retirement.
   Keep `PENDING_OFFSITE_COPY` until an independent offline or off-site copy has
   been designed and successfully rehearsed.
+
+## 2026-08-27 — ADR-050 generation-control contract foundation
+
+ADR-050 adds the coordination and evidence format required before a future
+database-generation switch, but deliberately performs no switch. Production
+deployment and recovery entry points now participate in one fixed primary-host
+lock; canonical selector, generation, backup-binding, and journal contracts
+can be verified without inventing state on this development computer.
+
+### Scope and decisions
+
+- Reserve the preprovisioned root-only control root
+  `/var/lib/wall-street-receipts/generation-control` and permanent
+  `operation.lock`. The source validates owner, mode, link count, non-symlink
+  paths, and path/FD device-inode identity before and after non-blocking
+  `flock`. It never creates, truncates, unlinks, renames, or replaces the lock.
+- Use shared locking for deployment contract/publish preflight, `ps`, `logs`,
+  recovery production preflight, `preflight`, `status`, and `retention-plan`.
+  Use exclusive locking for deployment `build`, `up`, `stop`, `down`, and
+  recovery `create`, `rehearse-latest`, `schema-check-latest`, and
+  `promotion-plan-latest`. The primary-host lock is acquired before the older
+  backup-device lock. Host-only discovery remains usable before provisioning.
+- Keep the Compose wrapper alive as the lock-owning parent while its Docker
+  Compose child completes. A Linux test disproved reliance on dynamic FD
+  inheritance through `exec`, so the wrapper no longer replaces itself at that
+  boundary.
+- Because production wrappers now run as root for the permanent lock, bind Git
+  checks to this exact checkout with per-command `-c safe.directory=...`.
+  This supports a non-root-owned deployment checkout without mutating global
+  Git configuration or trusting every repository.
+- Define exact, ordered, BOM-free LF contracts for active selector v1,
+  immutable generation manifest v1, backup generation binding v2, and
+  immutable hash-chained journal v1. Every parser rejects unknown, missing,
+  duplicate, reordered, oversized, noncanonical, or invalid values and hashes
+  exact canonical bytes.
+- Validate caller-supplied associative-map and indexed-array names and types
+  before creating any Bash nameref, and close the generic parser over exactly
+  four schema/validator/renderer tuples.
+- Preserve missing historic legacy evidence as literal `unavailable` and mark
+  only a verified legacy import as `observed-active-at-import`; never claim the
+  active legacy database was sealed offline. Restored candidates require every
+  exact backup, restore-evidence, and plan identity plus `sealed-offline`.
+- Require distinct journal source/target generations, exact intent/completion
+  pairs, contiguous sequence/hash evidence, nonreused operation UUIDs,
+  nonregressing observation time, continuous selector evidence, and exact
+  one-revision selector changes only for `start-target` and
+  `restore-source-selector`. Pending intent produces a conservative manual
+  directive and never an automatic generation choice.
+- Add low-level durable publication primitives only. They require an exclusive
+  held lock, a destination below that lock's control root, same-directory and
+  same-filesystem staging, mode-0400 single-link metadata, a staged byte hash,
+  `sync FILE`, atomic rename, destination inode proof, parent-directory sync,
+  and a final metadata/hash reread. No production entry point calls a writer.
+- Correct the existing recovery durability helper from filesystem-wide
+  `sync -f FILE` (`syncfs`) to per-path `sync FILE` (`fsync`). No Compose
+  external volume, selector, manifest, journal, candidate, activation,
+  rollback, automatic recovery, or volume deletion action was added. Backup
+  and restore-evidence staging directories now enter final mode 0500 before
+  their final pre-rename directory sync, preventing a crash from publishing a
+  directory whose sealed permission metadata was not durably ordered.
+
+### Routes and module structure
+
+- No product route, Spring endpoint, OpenAPI operation, database migration,
+  fixture, provider, UI surface, image, Compose topology, or named-volume
+  declaration changed. No API key, account, domain, ACME email, router fact,
+  server fact, HDD fact, or new secret was required.
+- `deploy/home-server/generation-state.sh` is source-only and owns the strict
+  documents, relationship validators, exact ADR-049 state graph, conservative
+  journal classifier, permanent-lock validation, and durable writer
+  primitives. Direct execution exits 64 and the module contains no Docker call
+  or operator action.
+- `scripts/verify-home-server-generation-state.sh` executes canonical and
+  malformed document cases, selector/manifest/binding relationships, the full
+  16-state by 17-event matrix, journal replay/drift/interruption cases, and on
+  Linux the real lock and durable-publication boundary.
+- `scripts/verify-home-server-generation-state.py` guards the static call and
+  ordering contract and runs a 61-case mutation self-test. CI parses both new
+  Bash files and runs both the Python and Linux Bash verifiers. ADR-050 plus the
+  root and home-server READMEs record provisioning, threat, and activation
+  boundaries.
+
+### Verification
+
+- ADR-046 deployment source guard: **PASS**.
+- ADR-047/048/049 recovery source guard: **PASS** — **145 negative cases**,
+  including 43 recovery shell-source mutations.
+- ADR-050 static source/mutation guard: **PASS** — **61 mutations**.
+- ADR-050 Windows Git Bash contract: **PASS** — **18 grouped pure checks**;
+  util-linux `flock` and `/proc` runtime checks were explicitly skipped because
+  they are Linux-only.
+- ADR-050 installed Ubuntu WSL contract: **PASS** — **19 grouped checks**,
+  including real shared/exclusive `flock`, path/FD inode validation, secure
+  metadata, same-filesystem publication, rename, and file/directory sync.
+- Existing retention, database-evidence, schema-compatibility, and ADR-049
+  generation-promotion Bash fixtures: **PASS**. All connected Bash files
+  passed `bash -n`; Python bytecode parsing, PowerShell parsing, CI/static
+  checks, and `git diff --check` passed.
+- Full isolated Docker recovery rehearsal: **PASS**. A random owned Compose
+  project built the API/web/Caddy images, started healthy PostgreSQL/API/web/
+  loopback Caddy services, captured and deliberately corrupted recovery
+  artifacts to prove rejection, restored into a fresh owned volume, validated
+  Flyway/database evidence, and exercised 12 public routes. Its exact owned
+  containers, networks, volume, image tags/IDs, and temporary directory were
+  removed after success. The browser suite was not requested; Linux-specific
+  host-lock behavior was exercised separately in installed Ubuntu WSL.
+- The caller-owned `apps/web/next-env.d.ts` remained uncommitted and retained
+  SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Live Ubuntu/HDD validation: **NOT RUN BY DESIGN**. No home server, production
+  volume, backup disk, router, DNS, TLS, port 80/443, or external copy was
+  changed.
+
+### Next work and required operator inputs
+
+- The next safe slice is a read-only ADR-051 Ubuntu server-fact collector and
+  live-bootstrap gate. Before any selector provisioning, external-volume
+  indirection, candidate creation, or transition rehearsal, collect the actual
+  Ubuntu release, Docker `DockerRootDir`, control-root and Docker-volume
+  filesystem/mount options, exact legacy volume identity, database and free
+  capacity, and intended separate-backup-disk identity from the real server.
+- The operator must also choose acceptable maintenance downtime, probation
+  duration, and write-freeze/RPO policy. These facts change the transition
+  design and must not be inferred. No secret value or API key should be sent in
+  chat; the collector must redact secrets and emit only bounded infrastructure
+  facts.
+- Keep `restart: unless-stopped`, automatic boot recovery, exact runtime
+  topology, durable Git/OCI artifact custody, two-generation capacity, and
+  off-site/offline backup as explicit blockers until each is designed and
+  rehearsed on the actual Ubuntu host.

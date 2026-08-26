@@ -28,12 +28,30 @@ if (($# != 1)); then
 fi
 
 case "$1" in
-  build) compose_arguments=(build --pull api web caddy-production) ;;
-  up) compose_arguments=(up --detach --wait) ;;
-  ps) compose_arguments=(ps) ;;
-  logs) compose_arguments=(logs --tail 200) ;;
-  stop) compose_arguments=(stop --timeout 30) ;;
-  down) compose_arguments=(down --timeout 30) ;;
+  build)
+    compose_arguments=(build --pull api web caddy-production)
+    operation_lock_mode="exclusive"
+    ;;
+  up)
+    compose_arguments=(up --detach --wait)
+    operation_lock_mode="exclusive"
+    ;;
+  ps)
+    compose_arguments=(ps)
+    operation_lock_mode="shared"
+    ;;
+  logs)
+    compose_arguments=(logs --tail 200)
+    operation_lock_mode="shared"
+    ;;
+  stop)
+    compose_arguments=(stop --timeout 30)
+    operation_lock_mode="exclusive"
+    ;;
+  down)
+    compose_arguments=(down --timeout 30)
+    operation_lock_mode="exclusive"
+    ;;
   *)
     printf 'ERROR: action must be one of: build, up, ps, logs, stop, down.\n' >&2
     exit 64
@@ -41,6 +59,8 @@ case "$1" in
 esac
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck source=deploy/home-server/generation-state.sh
+source "$script_dir/generation-state.sh"
 compose_file="$script_dir/compose.yaml"
 expected_env_file="$script_dir/.env.production"
 if [[ -z "$env_file" || ! -f "$env_file" || -L "$env_file" ]]; then
@@ -101,8 +121,16 @@ fi
   --mode contract \
   --env-file "$resolved_env_file"
 
-exec "${clean_environment[@]}" docker compose \
-    --env-file "$resolved_env_file" \
-    --file "$compose_file" \
-    --profile production \
-    "${compose_arguments[@]}"
+# The preflight owns its shared lock independently. Acquire the action lock only
+# after it exits so an exclusive caller never deadlocks its own child preflight.
+wsr_generation_acquire_operation_lock "$operation_lock_mode"
+wsr_generation_require_operation_lock "$operation_lock_mode"
+
+# Keep this shell alive as the lock owner until Compose exits. Brace-allocated
+# descriptor inheritance is not a safe exec contract here; replacing this
+# process can release the coordination boundary before Compose completes.
+"${clean_environment[@]}" docker compose \
+  --env-file "$resolved_env_file" \
+  --file "$compose_file" \
+  --profile production \
+  "${compose_arguments[@]}"

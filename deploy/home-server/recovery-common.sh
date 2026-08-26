@@ -1113,7 +1113,7 @@ wsr_validate_completed_backup() {
 }
 
 wsr_fsync_path() {
-  sync -f -- "$1"
+  sync -- "$1"
 }
 
 wsr_publish_directory_no_clobber() {
