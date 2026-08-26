@@ -1502,6 +1502,7 @@ function Invoke-RecoveryDatabaseRehearsal {
             "The exact source API container identity was not captured."
         $apiInventory = Invoke-DockerCommand -Arguments @(
             "exec", $apiContainerId,
+            "env", "-u", "JAVA_TOOL_OPTIONS", "-u", "JDK_JAVA_OPTIONS", "-u", "_JAVA_OPTIONS",
             "java", "-jar", "/opt/wsr/application.jar",
             "--wsr-release-schema-inventory"
         ) -Capture

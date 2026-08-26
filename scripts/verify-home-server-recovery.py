@@ -1931,6 +1931,10 @@ def validate_local_rehearsal_contract(source: str) -> None:
         and "flyway_version|11.7.2" in rehearsal_body
         and "evidence_version|2" in rehearsal_body
         and rehearsal_body.count('"psql", "-X", "-q", "-A", "-t",') == 1
+        and rehearsal_body.count(
+            '"env", "-u", "JAVA_TOOL_OPTIONS", "-u", "JDK_JAVA_OPTIONS", "-u", "_JAVA_OPTIONS",'
+        )
+        == 1
         and "database_evidence_version = 2" in rehearsal_body
         and "PENDING_BACKUP_DEVICE" in rehearsal_body
         and "PENDING_OFFSITE_COPY" in rehearsal_body,
@@ -1996,6 +2000,15 @@ def validate_local_rehearsal_mutations(source: str) -> int:
                 '"psql", "-X", "-q", "-A", "-t",',
                 '"psql",',
                 "local canonical database evidence psql mode",
+            ),
+        ),
+        (
+            "API inventory JVM environment isolation removed",
+            replace_once(
+                source,
+                '"env", "-u", "JAVA_TOOL_OPTIONS", "-u", "JDK_JAVA_OPTIONS", "-u", "_JAVA_OPTIONS",',
+                '"env",',
+                "local API inventory JVM environment isolation",
             ),
         ),
     )
