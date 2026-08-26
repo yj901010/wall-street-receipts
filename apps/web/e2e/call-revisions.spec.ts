@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  activateEnglishLocale,
   collectRuntimeErrors,
   expectNoPageOverflow,
   expectNoRuntimeErrors,
@@ -8,9 +9,12 @@ import {
 
 function collectExternalRequests(page: import("@playwright/test").Page) {
   const browserApiRequests: string[] = [];
+  const configuredApiOrigin = process.env.API_BASE_URL
+    ? new URL(process.env.API_BASE_URL).origin
+    : "http://localhost:8080";
   page.on("request", (request) => {
     const url = new URL(request.url());
-    if (url.hostname === "localhost" && url.port === "8080") browserApiRequests.push(request.url());
+    if (url.origin === configuredApiOrigin) browserApiRequests.push(request.url());
   });
   return browserApiRequests;
 }
@@ -45,7 +49,7 @@ test("renders populated and known-empty revision responses bilingually through t
   const englishButton = page.getByRole("button", { name: "English" });
   await englishButton.focus();
   await expectVisibleKeyboardFocus(englishButton);
-  await englishButton.press("Enter");
+  await activateEnglishLocale(context, page, englishButton);
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("heading", { name: "Call revision history" })).toBeVisible();
   await expect(page.getByText(/not a current or effective stance/)).toBeVisible();

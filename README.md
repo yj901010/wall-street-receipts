@@ -186,14 +186,48 @@ Run the disposable offline operator acceptance gate from the repository root:
 pwsh -NoProfile -File ./scripts/verify-local-operator-api.ps1
 ```
 
-This ADR-044 command packages the API, starts a unique PostgreSQL 17 Compose
-project and loopback-only API, verifies authentication/replay/conflict/status
-over real HTTP, inspects the disposable ledger, and then removes only the
-process, project, volume, and temporary files it created. It never reads or
-changes the root `.env`, never touches the default `postgres-data` volume, and
-forces SEC traffic off. It needs PowerShell 7, Java 21, and a running Docker
-daemon; macOS/Linux also uses the standard POSIX `sh` to launch the Maven
-wrapper. It needs no domain, API key, SEC contact email, or user-supplied token.
+This ADR-044 command packages the API into a harness-owned temporary output,
+starts a unique PostgreSQL 17 Compose project and loopback-only API, verifies
+authentication/replay/conflict/status over real HTTP, inspects the disposable
+ledger, and then removes only the process, project, volume, and temporary files
+it created. It never reads or changes the root `.env`, never touches the default
+`postgres-data` volume, fixes Spring config lookup to packaged classpath
+resources, strips inherited Spring/server/provider/logging overrides before
+pinning the acceptance configuration, and forces SEC traffic off. The selected
+local Docker endpoint is captured and pinned for every daemon and Compose call.
+It needs PowerShell 7, Java
+21, and a running Docker daemon; macOS/Linux also uses the standard POSIX `sh`
+to launch the Maven wrapper. It needs no domain, API key, SEC contact email, or
+user-supplied token.
+
+Run the broader disposable production full-stack gate from the repository root:
+
+```powershell
+pwsh -NoProfile -File ./scripts/verify-local-full-stack.ps1
+```
+
+This ADR-045 command packages Spring into a temporary output and builds Next.js
+from a secret-free, harness-owned source mirror in explicit call-audit API mode,
+while forcing every other web data selector to offline fixtures. It starts unique loopback
+PostgreSQL/API/web processes, smoke-checks all 12 primary routes, runs the
+focused Chromium integration checks, proves the exact Spring reads and `3|2|4`
+call-ledger counts, and removes only its owned processes, Compose project/volume,
+source mirror, and temporary reports. It preserves the existing root
+`.env`, default database volume, `apps/web/next-env.d.ts`, and
+`apps/web/tsconfig.json`; SEC and the operator API remain disabled. ADR-044 and
+ADR-045 share one fail-fast root `/.wsr-local-acceptance.lock`, so run them
+sequentially. A stale lock after a hard termination must be removed only after
+inspecting leftover harness processes and Docker resources. It needs PowerShell
+7, Java 21, Node.js 24, a local Docker daemon, installed workspace
+dependencies, and Playwright Chromium. It needs no domain, API key, account,
+contact email, OAuth client, or operator token. If the browser is not installed, run
+`pnpm --dir apps/web exec playwright install chromium` once and retry.
+Spring reads application config from the packaged classpath only; caller-owned
+`apps/api/application*`, `apps/api/config/`, and external logging destinations
+are not selected. Inherited Spring, server, management, datasource/Hikari,
+JNDI, direct-provider, and logging namespaces are removed before the exact
+acceptance allowlist is applied. The validated local Docker endpoint is pinned
+for every daemon and Compose call.
 
 ## Fixture contract
 
@@ -738,7 +772,8 @@ abandon, resolve, list, latest, UI, or public-read route; an indeterminate
 dispatch remains inspect-only.
 
 ADR-044 adds the preferred one-command pre-deployment acceptance gate for that
-local boundary. `scripts/verify-local-operator-api.ps1` uses a packaged JAR,
+local boundary. `scripts/verify-local-operator-api.ps1` uses a JAR packaged into
+its validated temporary directory,
 real loopback TCP, and a uniquely named disposable PostgreSQL 17 Compose
 project. Its 32-byte Bearer token, digest, database password, ports, logs, and
 volume are generated or scoped per run; the raw token is never printed or
@@ -747,6 +782,25 @@ exact GET, `409`, and `422` contracts plus the exact one-attempt/zero-dispatch/
 one-outcome database state, then validates and removes only its own resources.
 It does not read or edit `.env`, contact SEC, add a route, or approve remote
 deployment.
+
+ADR-045 adds the separate public production full-stack gate.
+`scripts/verify-local-full-stack.ps1` builds Next from an ignored, secret-free
+source mirror with explicit server-only call-audit API mode and all other web
+selectors fixed to offline fixtures, then starts a temporary-output Spring JAR and production Next server on distinct
+loopback ports against a uniquely named disposable PostgreSQL 17 project,
+smoke-checks every primary product route, and reuses the focused call list,
+revision, and outcome Chromium scenarios. API-only `NOT_EXPOSED` rendering,
+zero browser calls to the private API origin, 13 exact Tomcat access-log reads,
+and PostgreSQL counts `3|2|4` jointly prove that the web used Spring rather than
+its own call fixture provider. SEC and the operator API remain disabled. The
+command never builds in the caller's web directory, preserves the root `.env`,
+the default database/volume, `apps/web/next-env.d.ts`, `apps/web/tsconfig.json`,
+and standard `.next`, then validates and removes only its owned local processes
+and disposable resources. ADR-044 and ADR-045 share a fail-fast atomic root lock
+across their complete runs. The harnesses reject remote Docker endpoints before daemon contact and pin the validated local endpoint for their remaining Docker
+operations. Build, runtime, and browser children clear inherited proxy variables
+including mixed/lowercase variants; the browser uses exact `127.0.0.1`.
+This remains DEMO composition evidence, not permission for live data or deployment.
 
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,

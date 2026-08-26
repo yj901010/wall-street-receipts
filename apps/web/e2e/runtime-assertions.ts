@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type BrowserContext, type Locator, type Page } from "@playwright/test";
 
 export function collectRuntimeErrors(page: Page) {
   const errors: string[] = [];
@@ -39,4 +39,30 @@ export async function expectVisibleKeyboardFocus(locator: Locator) {
 
   expect(focusStyle.outlineStyle).not.toBe("none");
   expect(Number.parseFloat(focusStyle.outlineWidth)).toBeGreaterThanOrEqual(2);
+}
+
+export async function activateEnglishLocale(
+  context: BrowserContext,
+  page: Page,
+  englishButton: Locator,
+) {
+  const localProductionHttp = process.env.PLAYWRIGHT_LOCAL_PRODUCTION_HTTP;
+  if (localProductionHttp === undefined) {
+    await englishButton.press("Enter");
+    return;
+  }
+  if (localProductionHttp !== "true") {
+    throw new Error("PLAYWRIGHT_LOCAL_PRODUCTION_HTTP must be exactly true when configured.");
+  }
+
+  // Production cookies are Secure. The disposable HTTP harness injects only
+  // this non-secret preference; the normal browser suite owns server-action coverage.
+  await context.addCookies([{
+    name: "wsr_locale",
+    value: "en",
+    url: new URL(page.url()).origin,
+    httpOnly: true,
+    sameSite: "Lax",
+  }]);
+  await page.reload();
 }

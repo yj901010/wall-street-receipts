@@ -5540,11 +5540,18 @@ receive traffic.
 - Add `scripts/verify-local-operator-api.ps1` as the only executable surface.
   Add no application source, test-only runtime bean/profile, migration, route,
   provider, public OpenAPI operation, fixture, or web behavior.
-- Require PowerShell 7, Java 21, Docker, and Compose v2, plus standard POSIX
+- Require PowerShell 7, Java 21, a local Docker endpoint, and Compose v2, plus standard POSIX
   `sh` for the non-executable Maven wrapper checkout on macOS/Linux. Package
-  through the checked-in wrapper, start the repackaged Spring Boot JAR as one
-  directly owned child process, and use distinct dynamically selected loopback
-  ports.
+  through the checked-in wrapper after proving it uses the checked Java 21
+  runtime, direct its output to the validated harness temp directory, start the
+  repackaged Spring Boot JAR as one directly owned child process, and use
+  distinct dynamically selected loopback ports. Reject a remote Docker endpoint
+  before daemon contact, then pin the validated endpoint for every Docker and
+  Compose operation so a later context change cannot redirect the run.
+- Share one atomically created root `/.wsr-local-acceptance.lock` with ADR-045
+  across package/read/run/cleanup, including path aliases and login sessions. A
+  second participating command or stale lock from a hard termination fails
+  before package or Compose work rather than racing build artifacts.
 - Create a unique validated Compose project and therefore a unique PostgreSQL
   volume for every run. Never read or edit the ignored root `.env`, select the
   default Compose project, reuse `postgres-data`, or fall back to an existing
@@ -5554,11 +5561,15 @@ receive traffic.
   print or write the raw token/digest, pass them on a command line, or retain a
   token file. Redact failure logs and clear mutable credential arrays during
   cleanup.
-- Override inherited Spring JSON, profile, datasource, Flyway, and Java-option
-  configuration for the child process with matching high-precedence disposable
-  database settings. Force the operator boundary on, the SEC provider and live-
+- Remove inherited Spring, server, management, datasource/Hikari, JNDI,
+  direct-provider, Flyway, Java-option, and logging namespace settings before
+  applying the exact high-precedence disposable database and process allowlist.
+  Force the operator boundary on, the SEC provider and live-
   smoke gate off, and the provider origin to an unavailable loopback address.
-  The whole API listener remains loopback-only through ADR-043.
+  The whole API listener remains loopback-only through ADR-043. Keep Tomcat's
+  base under the validated temp directory and explicitly disable access logs.
+  Fix `SPRING_CONFIG_LOCATION=classpath:/` so caller-owned application/config
+  files cannot enter the child.
 - Verify real health and HTTP `401`, provider-disabled `200`, exact replay,
   exact GET, `409`, and `422` responses. Require the durable failure to remain
   `PROVIDER_GATE_CLOSED` / `PROVIDER_INVOCATION_NOT_STARTED`, with null dispatch
@@ -5595,6 +5606,13 @@ receive traffic.
   loopback TCP, PostgreSQL 17 health/migrations, authentication, immutable
   replay/status, conflict/admission rejection, exact `1|0|1` ledger counts, and
   owned-resource cleanup all completed successfully.
+- Post-ADR-045 isolation rerun: **PASS** — the Maven wrapper reported Java 21,
+  all compile/repackage output stayed under the validated operator temp root,
+  the full `1|0|1` contract passed, and cleanup removed that build with its
+  other resources.
+- Held-lock collision check: **PASS** — both ADR-044 and ADR-045 exited nonzero
+  in under one second, before package/build/Compose work, while the common
+  root lock file was held by a separate process.
 - Immediate `-SkipPackage` replay: **PASS** with the same contract; a Docker
   inventory check found zero harness-named containers or volumes afterward.
 - Startup-failure cleanup was also exercised during environment-isolation
@@ -5617,3 +5635,146 @@ receive traffic.
   The next deployment decision still must choose hosting topology, TLS, managed
   identity, private origin enforcement, durable actor audit, and secret
   lifecycle; the existing domain alone is not sufficient.
+
+## 2026-08-26 — ADR-045 disposable offline local full-stack acceptance harness
+
+ADR-045 adds the public production-build counterpart to ADR-044. It turns the
+existing CI call-audit integration evidence into one collision-resistant local
+command without changing a product route, API contract, migration, canonical
+fixture, or provider.
+
+### Scope and decisions
+
+- Add `scripts/verify-local-full-stack.ps1`, invoked from the repository root as
+  `pwsh -NoProfile -File ./scripts/verify-local-full-stack.ps1`. Require
+  PowerShell 7, Java 21, Node.js 24, Docker Compose v2, installed workspace
+  dependencies, and Playwright Chromium.
+- Package the API beneath the validated OS temp root and copy only the required
+  web source/config/package manifest plus canonical DEMO fixtures into an
+  ignored, secret-free `apps/web/.wsr-local-full-stack-<run-id>/apps/web`
+  mirror. Build and run Next there in explicit `CALL_AUDIT_PROVIDER=api` /
+  `NEXT_PUBLIC_DATA_MODE=DEMO` mode, leaving the caller's `next-env.d.ts`,
+  `tsconfig.json`, standard `.next`, and local env files untouched. Verify that
+  the Maven wrapper uses the checked Java 21 runtime. `-SkipPackage` and
+  `-SkipWebBuild` are explicit reuse controls, not alternate source modes.
+- Share the atomically created root `/.wsr-local-acceptance.lock` with ADR-044
+  for the complete package/build/run/cleanup window. Force all nine other current
+  web provider selectors to `fixture` in build, production runtime, and browser
+  child environments, leaving call audit as the sole API-mode selector.
+- Reject remote Docker endpoints before daemon contact, pin the validated local
+  endpoint for every Docker/Compose operation, allocate distinct loopback ports,
+  and create one validated random Compose
+  project with its own PostgreSQL 17 volume. Force Spring datasource and Flyway
+  to that database; never activate `local`, read the root `.env`, select the
+  default project/volume, or reuse a developer service.
+- Start the packaged JAR and production Next server as directly owned child
+  processes. Force SEC, SEC live smoke, and the operator API off; keep the
+  disabled SEC origin at closed loopback. No provider network operation is
+  authorized. Remove inherited Spring, server, management, datasource/Hikari,
+  JNDI, direct-provider, Flyway, Java-option, and logging namespace settings
+  before applying the exact process allowlist. Clear Node/browser proxy and
+  module-injection variables, including mixed/lowercase HTTP(S)/all/no-proxy
+  aliases on case-sensitive hosts, and restrict Spring config lookup to
+  `classpath:/`.
+- Smoke-check `/`, `/market`, `/calls`, both DEMO call-detail goldens,
+  `/institutions`, `/analysts`, both map universes, `/markets/sp500`,
+  `/screener`, and `/methodology` for `200 text/html` plus the shared product
+  shell.
+- Reuse the existing call-list, revision, and outcome specs once at
+  `chromium-1280` against the externally managed production server. The three
+  specs now compare browser traffic with the configured dynamic API origin
+  instead of a fixed `localhost:8080` assumption.
+- Add an exact Playwright external-server selector. The local production HTTP
+  harness injects only the non-secret locale preference into its isolated
+  context because the production app correctly marks that cookie `Secure`;
+  normal browser runs retain real locale server-action coverage. Use exact
+  `127.0.0.1` and Chromium `--no-proxy-server` for this harness.
+- Require API-only `NOT_EXPOSED` presentation, zero browser calls to the private
+  API origin, set membership for the existing 13 exact Spring access-log
+  lines, and PostgreSQL counts `3 calls | 2 revisions | 4 outcomes`.
+- On success or failure, stop the exact web PID and API PID, remove only the
+  regex-validated Compose project/volume, redact the disposable database
+  password from bounded log tails, remove only the regex-validated source mirror
+  directly below `apps/web`, and recursively remove only the
+  validated harness directory under the operating-system temporary root.
+  Set ownership flags only after successful atomic directory creation and never
+  clean a pre-existing exact-name path.
+
+### Routes and module structure
+
+- No product or Spring route was added or renamed. The harness composes the 12
+  existing primary web routes, health, call list, and coherent
+  detail/context/revisions/outcomes reads.
+- `apps/web/playwright.config.ts` owns the exact externally managed server
+  switch. `apps/web/e2e/runtime-assertions.ts` owns the HTTP-only locale test
+  helper, while the three existing call-audit specs own private-origin
+  observation and browser expectations.
+- `apps/web/tsconfig.json` excludes the ephemeral mirror from concurrent editor
+  type-checks. `apps/api/pom.xml` keeps normal `target` output by default while
+  allowing the two local harnesses to select their validated temp build root.
+- ADR-045, the root README, this log, and a dedicated parse-only workflow guard
+  own the operator contract and reproducibility evidence. The existing CI
+  `call-audit-integration` job remains the behavioral CI owner.
+
+### Operator requirements
+
+- No domain, DNS change, API key, SEC account, paid plan, OAuth client,
+  `SEC_CONTACT_EMAIL`, operator token, root `.env` edit, or other user secret is
+  needed. Docker must be running.
+- If workspace dependencies or Chromium are absent, run
+  `pnpm install --frozen-lockfile` and
+  `pnpm --dir apps/web exec playwright install chromium`, then retry.
+
+### Verification
+
+- Default composed command: **PASS** — Maven package, API-mode Next production
+  build, PostgreSQL 17/Flyway v1-to-v9, loopback Spring and production Next,
+  12/12 primary route smokes, 3/3 focused Chromium scenarios, all 13 required
+  Spring reads, exact `3|2|4` database counts, and owned cleanup.
+- Source-mirror default rerun: **PASS** — Maven compiled/repackaged only under
+  the validated OS temp root, Next built/started only from its secret-free
+  harness-owned source mirror, all 12 routes and 3/3 Chromium scenarios passed,
+  exact 13 reads and `3|2|4` counts passed, and both build outputs were removed.
+- Shared-lock collision check: **PASS** — ADR-044 and ADR-045 each failed in
+  under one second before package/build/Compose while a separate process held
+  the root lock file.
+- Reuse-mode composed command: **PASS** with `-SkipPackage -SkipWebBuild` and the
+  same route/browser/access/database contract.
+- Poisoned-parent reuse checks: **PASS** — caller-controlled `OS`, invalid
+  Java/Maven/Node, lowercase `spring_application_json`, dotted/hyphen Spring,
+  server, management, datasource/Hikari/JNDI, direct-provider, logging,
+  mixed/lowercase proxy, all nine non-call web selectors, and public API-origin
+  values were ignored, removed, or overridden. Runs with a local Docker context
+  plus a conflicting remote `DOCKER_HOST` also passed through the captured local
+  endpoint. Both ADR-044 and ADR-045 retained their exact acceptance contracts.
+- Failure cleanup was exercised while hardening health negotiation, process
+  variable naming, and local production HTTP cookie handling. Every failed and
+  successful run removed its exact web/API processes, Compose project, volume,
+  and temporary browser reports.
+- The default source-mirror harness never wrote caller-owned
+  `apps/web/next-env.d.ts`, `apps/web/tsconfig.json`, or standard `.next`.
+  A separate ordinary production-build regression confirmed that Next can
+  rewrite `next-env.d.ts`; that one generated line was restored immediately and
+  its exact SHA-256 returned to
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  The retry-free full Playwright run retained that hash. Final inventories found
+  zero harness source mirrors, `wsr-fullstack-*` containers, or volumes.
+- Final web regression: **PASS** — installed ESLint, 42 Vitest files / 569
+  tests, production build, targeted 18/18 standard-localhost browser checks,
+  and retry-free 72/72 Playwright checks at 1440, 1280, and 390 px.
+- Final API `verify`: **PASS** — 2,347 tests, zero failures/errors/skips,
+  PostgreSQL 17 Testcontainers/Flyway paths, and `BUILD SUCCESS`.
+- CI/static verification: **PASS** — both ADR-043/044 and ADR-045 guards,
+  PowerShell AST parsing, all 49 embedded workflow Python bodies, four-job YAML
+  parsing, Compose interpolation, and `git diff --check`.
+- Live SEC verification: **NOT RUN BY DESIGN** — provider and live-smoke gates
+  were false and the provider origin was closed loopback.
+
+### Next work
+
+- Keep ADR-044 for the specialized local operator boundary and ADR-045 for the
+  public production full stack. Run both before deployment changes.
+- The next deployment decision still requires hosting topology, TLS, managed
+  identity, private API origin enforcement, actor audit, secret lifecycle, and
+  licensed-provider publication policy. The existing domain alone supplies
+  none of these controls.

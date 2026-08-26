@@ -20,6 +20,7 @@
     <properties>
         <java.version>21</java.version>
         <testcontainers.version>1.21.3</testcontainers.version>
+        <wsr.build.directory>${project.basedir}/target</wsr.build.directory>
     </properties>
 
     <dependencyManagement>
@@ -88,6 +89,7 @@
     </dependencies>
 
     <build>
+        <directory>${wsr.build.directory}</directory>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>

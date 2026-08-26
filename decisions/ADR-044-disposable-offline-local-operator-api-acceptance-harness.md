@@ -43,8 +43,13 @@ database migration, provider, public contract, or web surface.
 
 Every invocation:
 
-1. validates Java, Docker, Compose, Maven-wrapper, and repository prerequisites;
-2. packages the Spring Boot JAR unless `-SkipPackage` is explicitly supplied;
+1. atomically creates and exclusively holds the root
+   `/.wsr-local-acceptance.lock` shared with ADR-045, then validates Java, a
+   local-only Docker endpoint, Compose, Maven-wrapper, and repository
+   prerequisites;
+2. verifies that the Maven wrapper uses the checked Java 21 runtime and packages
+   the Spring Boot JAR into the harness-owned temporary directory unless
+   `-SkipPackage` is explicitly supplied;
 3. reserves distinct loopback host ports for PostgreSQL and the API;
 4. creates a unique, tightly validated Compose project name;
 5. starts only that project's PostgreSQL 17 service and named volume;
@@ -52,14 +57,29 @@ Every invocation:
 7. waits for the real loopback health endpoint to report `UP`;
 8. exercises the HTTP and persistence acceptance contract; and
 9. stops only its exact child PID, removes only its exact Compose project and
-   volume, clears mutable credential bytes, and removes only its validated
-   operating-system temporary directory.
+   volume, clears mutable credential bytes, removes only its validated
+   operating-system temporary directory, and then removes the shared lock.
 
 The root `.env`, the default Compose project, its `postgres-data` volume, any
 already-running developer services, and all user data remain untouched. The
 script passes `.env.example` only as safe Compose interpolation input. The
-Spring application does not activate `local` and does not import the root
-`.env`.
+Spring application does not activate `local`; `SPRING_CONFIG_LOCATION` is fixed
+to `classpath:/`, so it does not search caller-owned `apps/api/application*`,
+`apps/api/config/`, or the root `.env`. External logging config/file/path
+variables are cleared, Tomcat's base directory is harness-owned, and access
+logging is explicitly disabled. Inherited Spring, server, management,
+datasource/Hikari, JNDI, direct-provider, and logging namespace variables are
+removed before the exact acceptance allowlist is applied.
+
+The checked-in POM keeps `apps/api/target` as the normal default, while a
+default harness run selects an isolated Maven build directory beneath its
+validated operating-system temporary root. Participating ADR-044 and ADR-045
+runs therefore serialize before any reuse/build work, including across path
+aliases and operating-system login sessions, and ordinary developer artifacts
+remain untouched. Arbitrary manual Maven commands do not participate in the
+lock; the isolated default output avoids depending on them. A hard-terminated
+owner deliberately leaves the ignored lock file behind so a later run fails
+closed until the operator has inspected orphaned processes and Docker resources.
 
 ### Offline and credential boundary
 
@@ -99,6 +119,14 @@ contact email, or user-supplied operator token is needed. The first invocation
 may download ordinary Maven dependencies or the PostgreSQL image if they are
 not already cached, but it is not authorized to contact SEC.
 
+The selected Docker context or `DOCKER_HOST` must resolve to a local unix
+socket, Windows named pipe, file-descriptor transport, or numeric loopback TCP
+endpoint. A remote endpoint is rejected before `docker info`, Compose startup,
+package work, or any cleanup command can contact that daemon. Once validated,
+that exact endpoint is captured in `DOCKER_HOST` and used for `docker info` plus
+every Compose version/start/inspection/cleanup call; later context changes
+cannot redirect the run.
+
 ### Acceptance contract
 
 The harness checks all of the following through real TCP HTTP calls:
@@ -125,21 +153,26 @@ not transport success alone, carry the provider outcome.
 
 ### Failure and cleanup behavior
 
-The script exits nonzero on a missing prerequisite, startup timeout, unexpected
-HTTP contract, unexpected database cardinality, or cleanup failure. It never
-falls back to the developer's existing database or `.env`.
+The script exits nonzero when another participating harness owns the repository,
+when a prior hard-terminated run left a stale root lock, or on a missing
+prerequisite, startup timeout, unexpected HTTP contract, unexpected database
+cardinality, or cleanup failure. It never falls back to the developer's existing
+database or `.env`.
 
 Cleanup targets are resolved and validated before any recursive removal. The
 Compose project name must match the harness-owned random format before
 `down --volumes` is allowed. A cleanup failure is reported with the exact
 non-secret project identifier so the operator can inspect it; unrelated
-containers and volumes are never selected.
+containers and volumes are never selected. The temporary directory is removed
+only after this run has successfully created it; a pre-existing exact-name path
+is never adopted or deleted.
 
 ## CI boundary
 
-CI parses the PowerShell source and statically guards the isolation, offline,
-credential, expected-status, ledger-cardinality, and cleanup markers. It does
-not execute this additional composed harness because the existing API suite
+CI parses the PowerShell source and statically guards the shared atomic lock,
+harness-owned build output, checked Java runtime, isolation, offline, credential,
+expected-status, ledger-cardinality, and cleanup markers. It does not execute
+this additional composed harness because the existing API suite
 already owns deterministic behavioral and PostgreSQL Testcontainers coverage.
 The composed acceptance command is a pre-deployment local gate and its result is
 recorded in `IMPLEMENTATION_LOG.md`.
@@ -150,6 +183,9 @@ recorded in `IMPLEMENTATION_LOG.md`.
   Compose-PostgreSQL evidence.
 - Each run is slower than a focused unit test because it packages and starts
   actual processes.
+- ADR-044 and ADR-045 cannot run concurrently in one checkout; a second command
+  fails before package/build/Compose work and can be retried after the first
+  removes the shared lock.
 - Port reservation and later binding cannot be perfectly atomic. A collision
   fails closed and cleanup removes only harness-owned resources; rerunning
   selects new ports.

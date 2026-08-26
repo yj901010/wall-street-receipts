@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
+  activateEnglishLocale,
   collectRuntimeErrors,
   expectNoPageOverflow,
   expectNoRuntimeErrors,
@@ -8,9 +9,12 @@ import {
 
 function collectExternalRequests(page: Page) {
   const browserApiRequests: string[] = [];
+  const configuredApiOrigin = process.env.API_BASE_URL
+    ? new URL(process.env.API_BASE_URL).origin
+    : "http://localhost:8080";
   page.on("request", (request) => {
     const url = new URL(request.url());
-    if (url.hostname === "localhost" && url.port === "8080") {
+    if (url.origin === configuredApiOrigin) {
       browserApiRequests.push(request.url());
     }
   });
@@ -87,7 +91,7 @@ test("keeps filtered call-list API evidence response-bounded, bilingual, keyboar
   await koreanButton.focus();
   await page.keyboard.press("Tab");
   await expectVisibleKeyboardFocus(englishButton);
-  await englishButton.press("Enter");
+  await activateEnglishLocale(context, page, englishButton);
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   expect(new URL(page.url()).search).toBe(new URL(`http://example.test${filteredUrl}`).search);
   await expect(page.getByLabel("Ticker (case-insensitive)")).toHaveValue("nvda");

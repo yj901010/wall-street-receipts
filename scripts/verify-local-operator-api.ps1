@@ -47,13 +47,15 @@ function Invoke-CheckedNative {
 function Invoke-WithProcessEnvironment {
     param(
         [Parameter(Mandatory)]
-        [hashtable] $Variables,
+        [Collections.IDictionary] $Variables,
 
         [Parameter(Mandatory)]
         [scriptblock] $Action
     )
 
-    $previous = @{}
+    $previous = [Collections.Generic.Dictionary[string, object]]::new(
+        (Get-ProcessEnvironmentNameComparer)
+    )
     try {
         foreach ($name in $Variables.Keys) {
             $previous[$name] = [Environment]::GetEnvironmentVariable($name, "Process")
@@ -87,6 +89,150 @@ function Invoke-WithProcessEnvironment {
     }
 }
 
+function Get-ProcessEnvironmentNameComparer {
+    if ($IsWindows) {
+        return [StringComparer]::OrdinalIgnoreCase
+    }
+    return [StringComparer]::Ordinal
+}
+
+function ConvertTo-ProcessEnvironmentMap {
+    param(
+        [Parameter(Mandatory)]
+        [Collections.IDictionary] $Variables
+    )
+
+    $result = [Collections.Generic.Dictionary[string, object]]::new(
+        (Get-ProcessEnvironmentNameComparer)
+    )
+    foreach ($entry in $Variables.GetEnumerator()) {
+        $result[[string] $entry.Key] = $entry.Value
+    }
+    return ,$result
+}
+
+function Add-InheritedEnvironmentRemovals {
+    param(
+        [Parameter(Mandatory)]
+        [Collections.Generic.Dictionary[string, object]] $Variables,
+
+        [Parameter(Mandatory)]
+        [string] $NamePattern
+    )
+
+    foreach (
+        $inheritedEnvironmentName in
+        [Environment]::GetEnvironmentVariables("Process").Keys
+    ) {
+        $environmentName = [string] $inheritedEnvironmentName
+        if (
+            $environmentName -match $NamePattern -and
+            -not $Variables.ContainsKey($environmentName)
+        ) {
+            $Variables[$environmentName] = $null
+        }
+    }
+}
+
+function Enter-RepositoryAcceptanceLock {
+    param(
+        [Parameter(Mandatory)]
+        [string] $RepositoryPath,
+
+        [Parameter(Mandatory)]
+        [string] $RunId,
+
+        [Parameter(Mandatory)]
+        [string] $HarnessId
+    )
+
+    $resolvedRepository = [IO.Path]::GetFullPath(
+        (Resolve-Path -LiteralPath $RepositoryPath).Path
+    )
+    $lockPath = Join-Path $resolvedRepository ".wsr-local-acceptance.lock"
+    $lockStream = $null
+    try {
+        $lockStream = [IO.File]::Open(
+            $lockPath,
+            [IO.FileMode]::CreateNew,
+            [IO.FileAccess]::Write,
+            [IO.FileShare]::None
+        )
+    }
+    catch [IO.IOException] {
+        throw (
+            "Another ADR-044/ADR-045 local acceptance harness owns this " +
+            "repository, or a prior hard-terminated run left " +
+            ".wsr-local-acceptance.lock. Wait for the owner; if none exists, " +
+            "inspect leftover harness processes and Docker resources before " +
+            "removing only that lock file."
+        )
+    }
+
+    try {
+        $metadata = [ordered]@{
+            schemaVersion = 1
+            harness       = $HarnessId
+            runId         = $RunId
+            processId     = $PID
+            acquiredAt    = [DateTimeOffset]::UtcNow.ToString("O")
+        } | ConvertTo-Json -Compress
+        $metadataBytes = [Text.Encoding]::UTF8.GetBytes($metadata)
+        try {
+            $lockStream.Write($metadataBytes, 0, $metadataBytes.Length)
+            $lockStream.Flush($true)
+        }
+        finally {
+            [Array]::Clear($metadataBytes, 0, $metadataBytes.Length)
+        }
+
+        return [pscustomobject]@{
+            Path   = $lockPath
+            Stream = $lockStream
+        }
+    }
+    catch {
+        if ($null -ne $lockStream) {
+            $lockStream.Dispose()
+        }
+        if (Test-Path -LiteralPath $lockPath -PathType Leaf) {
+            Remove-Item -LiteralPath $lockPath -Force
+        }
+        throw
+    }
+}
+
+function Exit-RepositoryAcceptanceLock {
+    param(
+        [Parameter(Mandatory)]
+        [pscustomobject] $Lock,
+
+        [Parameter(Mandatory)]
+        [string] $RepositoryPath
+    )
+
+    $resolvedRepository = [IO.Path]::GetFullPath(
+        (Resolve-Path -LiteralPath $RepositoryPath).Path
+    )
+    $expectedPath = [IO.Path]::GetFullPath(
+        (Join-Path $resolvedRepository ".wsr-local-acceptance.lock")
+    )
+    $actualPath = [IO.Path]::GetFullPath([string] $Lock.Path)
+    $comparison = if ($IsWindows) {
+        [StringComparison]::OrdinalIgnoreCase
+    }
+    else {
+        [StringComparison]::Ordinal
+    }
+    Assert-Condition ($actualPath.Equals($expectedPath, $comparison)) `
+        "Refusing to release an unexpected repository acceptance lock."
+
+    $Lock.Stream.Dispose()
+    Remove-Item -LiteralPath $expectedPath -Force
+    Assert-Condition (-not (Test-Path -LiteralPath $expectedPath)) `
+        "The repository acceptance lock file remained after release."
+}
+
 function Get-FreeLoopbackPort {
     $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
     try {
@@ -96,6 +242,58 @@ function Get-FreeLoopbackPort {
     finally {
         $listener.Stop()
     }
+}
+
+function Get-SelectedDockerEndpoint {
+    param(
+        [Parameter(Mandatory)]
+        [string] $DockerCommand
+    )
+
+    $contextOverride = [Environment]::GetEnvironmentVariable(
+        "DOCKER_CONTEXT",
+        "Process"
+    )
+    $hostOverride = [Environment]::GetEnvironmentVariable(
+        "DOCKER_HOST",
+        "Process"
+    )
+    if (-not [string]::IsNullOrWhiteSpace($contextOverride)) {
+        $arguments = @(
+            "context", "inspect", $contextOverride.Trim(),
+            "--format", "{{.Endpoints.docker.Host}}"
+        )
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($hostOverride)) {
+        return $hostOverride.Trim()
+    }
+    else {
+        $arguments = @(
+            "context", "inspect",
+            "--format", "{{.Endpoints.docker.Host}}"
+        )
+    }
+
+    $endpointOutput = & $DockerCommand @arguments 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not inspect the selected Docker context without contacting its daemon."
+    }
+    return (($endpointOutput -join "").Trim())
+}
+
+function Assert-LocalDockerEndpoint {
+    param(
+        [Parameter(Mandatory)]
+        [string] $Endpoint
+    )
+
+    $localEndpoint =
+        $Endpoint -match '^unix:///.+' -or
+        $Endpoint -match '^npipe:////\./pipe/.+' -or
+        $Endpoint -match '^fd://.+' -or
+        $Endpoint -match '^tcp://(?:127(?:\.[0-9]{1,3}){3}|\[::1\]):[0-9]+$'
+    Assert-Condition $localEndpoint `
+        "The selected Docker endpoint is not local. Select a local Docker Desktop, unix-socket, named-pipe, or loopback context and retry."
 }
 
 function Invoke-JsonRequest {
@@ -231,7 +429,7 @@ function Remove-VerifiedTemporaryDirectory {
         ) + [IO.Path]::DirectorySeparatorChar
     $resolvedPath = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Path).Path)
     $leaf = Split-Path -Leaf $resolvedPath
-    $comparison = if ($env:OS -eq "Windows_NT") {
+    $comparison = if ($IsWindows) {
         [StringComparison]::OrdinalIgnoreCase
     }
     else {
@@ -252,18 +450,27 @@ $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $apiDirectory = Join-Path $repositoryRoot "apps/api"
 $composePath = Join-Path $repositoryRoot "compose.yaml"
 $safeEnvironmentPath = Join-Path $repositoryRoot ".env.example"
-$mavenWrapper = if ($env:OS -eq "Windows_NT") {
+$mavenWrapper = if ($IsWindows) {
     Join-Path $apiDirectory "mvnw.cmd"
 }
 else {
     Join-Path $apiDirectory "mvnw"
 }
-$jarPath = Join-Path $apiDirectory "target/wall-street-receipts-api-0.0.1-SNAPSHOT.jar"
+$runId = [Guid]::NewGuid().ToString("N").Substring(0, 12)
 $temporaryDirectory = Join-Path (
     [IO.Path]::GetTempPath()
-) ("wsr-local-operator-" + [Guid]::NewGuid().ToString("N").Substring(0, 12))
+) ("wsr-local-operator-" + $runId)
+$apiBuildDirectory = Join-Path $temporaryDirectory "api-target"
+$sharedJarPath = Join-Path `
+    $apiDirectory `
+    "target/wall-street-receipts-api-0.0.1-SNAPSHOT.jar"
+$isolatedJarPath = Join-Path `
+    $apiBuildDirectory `
+    "wall-street-receipts-api-0.0.1-SNAPSHOT.jar"
+$jarPath = if ($SkipPackage) { $sharedJarPath } else { $isolatedJarPath }
 $apiStandardOutputPath = Join-Path $temporaryDirectory "api.stdout.log"
 $apiStandardErrorPath = Join-Path $temporaryDirectory "api.stderr.log"
+$tomcatBaseDirectory = Join-Path $temporaryDirectory "tomcat"
 $composeProject =
     "wsr-operator-" + $PID + "-" + [Guid]::NewGuid().ToString("N").Substring(0, 8)
 
@@ -274,6 +481,7 @@ $mavenArgumentPrefix = @()
 $apiProcess = $null
 $httpClient = $null
 $composeMayExist = $false
+$temporaryDirectoryOwned = $false
 $operatorBytes = $null
 $operatorTokenBytes = $null
 $operatorDigestBytes = $null
@@ -281,13 +489,22 @@ $operatorToken = $null
 $operatorDigest = $null
 $databasePassword = $null
 $httpHandler = $null
+$dockerEnvironment = $null
 $composeEnvironment = $null
 $apiEnvironment = $null
 $springApplicationJson = $null
+$javaProbeEnvironment = $null
+$mavenBuildEnvironment = $null
+$repositoryLock = $null
 $failure = $null
 $cleanupFailures = [Collections.Generic.List[string]]::new()
 
 try {
+    $repositoryLock = Enter-RepositoryAcceptanceLock `
+        $repositoryRoot `
+        $runId `
+        "ADR-044"
+
     Write-Host "[1/5] Checking Java 21, Docker, and repository prerequisites..."
     Assert-Condition (Test-Path -LiteralPath $composePath -PathType Leaf) `
         "compose.yaml was not found at the repository root."
@@ -304,7 +521,7 @@ try {
         Get-Command java -CommandType Application -ErrorAction Stop |
             Select-Object -First 1
     ).Source
-    if ($env:OS -eq "Windows_NT") {
+    if ($IsWindows) {
         $mavenCommand = $mavenWrapper
     }
     else {
@@ -314,32 +531,90 @@ try {
         ).Source
         $mavenArgumentPrefix = @($mavenWrapper)
     }
-    $javaVersionOutput = (& $javaCommand -version 2>&1) -join " "
+    $javaProbeEnvironment = @{
+        JAVA_TOOL_OPTIONS = $null
+        JDK_JAVA_OPTIONS  = $null
+        _JAVA_OPTIONS     = $null
+        CLASSPATH         = $null
+    }
+    $javaSettingsOutput = Invoke-WithProcessEnvironment $javaProbeEnvironment {
+        & $javaCommand -XshowSettings:properties -version 2>&1
+    }
+    $javaVersionOutput = $javaSettingsOutput -join " "
     Assert-Condition ($javaVersionOutput -match 'version "21(?:\.|\")') `
         "Java 21 is required for the local operator acceptance check."
+    $javaHomeMatch = $javaSettingsOutput |
+        Select-String -Pattern '^\s*java\.home\s*=\s*(.+)\s*$' |
+        Select-Object -First 1
+    Assert-Condition ($null -ne $javaHomeMatch) `
+        "The checked Java runtime did not report java.home."
+    $checkedJavaHome = $javaHomeMatch.Matches[0].Groups[1].Value.Trim()
+    Assert-Condition (Test-Path -LiteralPath $checkedJavaHome -PathType Container) `
+        "The checked Java 21 runtime home does not exist."
+    $mavenBuildEnvironment = @{
+        JAVA_HOME         = $checkedJavaHome
+        MAVEN_ARGS        = $null
+        MAVEN_OPTS        = $null
+        MAVEN_SKIP_RC     = "true"
+        JAVA_TOOL_OPTIONS = $null
+        JDK_JAVA_OPTIONS  = $null
+        _JAVA_OPTIONS     = $null
+        CLASSPATH         = $null
+    }
+    $mavenVersionOutput = Invoke-WithProcessEnvironment $mavenBuildEnvironment {
+        $output = & $mavenCommand @($mavenArgumentPrefix + @("-version")) 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "The checked Maven wrapper could not report its runtime."
+        }
+        return $output
+    }
+    Assert-Condition `
+        (($mavenVersionOutput -join " ") -match 'Java version:\s*21(?:\.|,)') `
+        "The Maven wrapper must run with the checked Java 21 runtime."
 
-    $dockerInfo = & $dockerCommand info --format '{{.ServerVersion}}' 2>&1
-    Assert-Condition ($LASTEXITCODE -eq 0) `
-        "Docker is installed but its daemon is unavailable. Start Docker Desktop and retry."
+    $dockerEndpoint = Get-SelectedDockerEndpoint $dockerCommand
+    Assert-LocalDockerEndpoint $dockerEndpoint
+    $dockerEnvironment = @{
+        DOCKER_CONTEXT    = $null
+        DOCKER_HOST       = $dockerEndpoint
+        DOCKER_TLS_VERIFY = $null
+        DOCKER_CERT_PATH  = $null
+    }
+    $dockerInfo = Invoke-WithProcessEnvironment $dockerEnvironment {
+        $output = & $dockerCommand info --format '{{.ServerVersion}}' 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "Docker is installed but its pinned local daemon is unavailable. Start Docker Desktop and retry."
+        }
+        return $output
+    }
     Assert-Condition (-not [string]::IsNullOrWhiteSpace(($dockerInfo -join ""))) `
         "Docker did not report a server version."
-    & $dockerCommand compose version *> $null
-    Assert-Condition ($LASTEXITCODE -eq 0) `
-        "Docker Compose v2 is required."
+    Invoke-WithProcessEnvironment $dockerEnvironment {
+        & $dockerCommand compose version *> $null
+        if ($LASTEXITCODE -ne 0) {
+            throw "Docker Compose v2 is required."
+        }
+    }
+
+    New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
+    $temporaryDirectoryOwned = $true
 
     if (-not $SkipPackage) {
-        Write-Host "[2/5] Packaging the API without rerunning the unit suite..."
+        Write-Host "[2/5] Packaging the API into a harness-owned output directory..."
         $packageArguments = $mavenArgumentPrefix + @(
             "-B",
             "-ntp",
             "-f", (Join-Path $apiDirectory "pom.xml"),
             "-DskipTests",
+            ("-Dwsr.build.directory=" + $apiBuildDirectory),
             "package"
         )
-        Invoke-CheckedNative `
-            $mavenCommand `
-            $packageArguments `
-            "API packaging failed"
+        Invoke-WithProcessEnvironment $mavenBuildEnvironment {
+            Invoke-CheckedNative `
+                $mavenCommand `
+                $packageArguments `
+                "API packaging failed"
+        }
     }
     else {
         Write-Host "[2/5] Reusing the existing packaged API..."
@@ -380,6 +655,10 @@ try {
 
     $databasePassword = [Guid]::NewGuid().ToString("N")
     $composeEnvironment = @{
+        DOCKER_CONTEXT    = $null
+        DOCKER_HOST       = $dockerEndpoint
+        DOCKER_TLS_VERIFY = $null
+        DOCKER_CERT_PATH  = $null
         POSTGRES_PORT     = [string] $postgresPort
         POSTGRES_DB       = "wsr_operator_acceptance"
         POSTGRES_USER     = "wsr_operator_acceptance"
@@ -401,7 +680,6 @@ try {
             "The isolated PostgreSQL service did not become healthy"
     }
 
-    New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
     $jdbcUrl =
         "jdbc:postgresql://127.0.0.1:$postgresPort/wsr_operator_acceptance"
     $springApplicationJson = @{
@@ -430,6 +708,10 @@ try {
             ssl = @{ enabled = $false }
         }
         app = @{
+            providers = @{
+                market = "fixture"
+                analyst = "fixture"
+            }
             "operator-api" = @{
                 enabled = $true
                 "token-sha256" = $operatorDigest
@@ -460,8 +742,13 @@ try {
         SPRING_PROFILES_ACTIVE      = "acceptance"
         SPRING_MAIN_BANNER_MODE     = "off"
         LOGGING_LEVEL_ROOT          = "INFO"
+        LOGGING_CONFIG              = $null
+        LOGGING_FILE_NAME           = $null
+        LOGGING_FILE_PATH           = $null
+        LOG_FILE                    = $null
+        LOG_PATH                    = $null
         SPRING_APPLICATION_JSON     = $springApplicationJson
-        SPRING_CONFIG_LOCATION      = $null
+        SPRING_CONFIG_LOCATION      = "classpath:/"
         SPRING_CONFIG_ADDITIONAL_LOCATION = $null
         SPRING_CONFIG_IMPORT        = $null
         SPRING_CONFIG_NAME          = "application"
@@ -472,9 +759,12 @@ try {
         JAVA_TOOL_OPTIONS           = $null
         JDK_JAVA_OPTIONS            = $null
         _JAVA_OPTIONS               = $null
+        CLASSPATH                   = $null
         SERVER_ADDRESS              = "127.0.0.1"
         SERVER_PORT                 = [string] $apiPort
         SERVER_SSL_ENABLED          = "false"
+        SERVER_TOMCAT_BASEDIR       = $tomcatBaseDirectory
+        SERVER_TOMCAT_ACCESSLOG_ENABLED = "false"
         POSTGRES_HOST               = "127.0.0.1"
         POSTGRES_PORT               = [string] $postgresPort
         POSTGRES_DB                 = "wsr_operator_acceptance"
@@ -491,6 +781,8 @@ try {
         SPRING_FLYWAY_LOCATIONS     = "classpath:db/migration"
         MARKET_PROVIDER             = "fixture"
         ANALYST_PROVIDER            = "fixture"
+        APP_PROVIDERS_MARKET        = "fixture"
+        APP_PROVIDERS_ANALYST       = "fixture"
         SEC_PROVIDER_ENABLED        = "false"
         SEC_BASE_URL                = "http://127.0.0.1:1"
         SEC_CONTACT_EMAIL           = ""
@@ -509,6 +801,15 @@ try {
         MANAGEMENT_SERVER_ADDRESS   = $null
         MANAGEMENT_SERVER_SSL_ENABLED = $null
     }
+    $apiEnvironment = ConvertTo-ProcessEnvironmentMap $apiEnvironment
+    Add-InheritedEnvironmentRemovals `
+        $apiEnvironment `
+        '^(?:(?:SPRING|SERVER|MANAGEMENT|APP|POSTGRES|FLYWAY|MARKET|ANALYST|MACRO|MEDIA|SEC|OPERATOR|DATA|LOGGING|LOGBACK|LOG4J|JUL)(?:[_.-]|$)|DEBUG$|TRACE$)'
+    $apiEnvironment["LOGGING_LEVEL_ROOT"] = "INFO"
+    $apiEnvironment["DEBUG"] = "false"
+    $apiEnvironment["TRACE"] = "false"
+    $apiEnvironment["SPRING_MVC_LOG_REQUEST_DETAILS"] = "false"
+    $apiEnvironment["SPRING_CODEC_LOG_REQUEST_DETAILS"] = "false"
 
     Write-Host "[4/5] Starting the loopback-only API and waiting for health..."
     $startProcessParameters = @{
@@ -519,7 +820,7 @@ try {
         RedirectStandardOutput = $apiStandardOutputPath
         RedirectStandardError  = $apiStandardErrorPath
     }
-    if ($env:OS -eq "Windows_NT") {
+    if ($IsWindows) {
         $startProcessParameters.WindowStyle = "Hidden"
     }
     $apiProcess = Invoke-WithProcessEnvironment $apiEnvironment {
@@ -699,18 +1000,24 @@ SELECT
     (SELECT count(*) FROM sec_filing_collection_attempt_provider_dispatches) || '|' ||
     (SELECT count(*) FROM sec_filing_collection_attempt_outcomes);
 "@
-    $databaseCounts = & $dockerCommand compose `
-        --project-name $composeProject `
-        --file $composePath `
-        --env-file $safeEnvironmentPath `
-        exec --no-TTY postgres `
-        psql --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 `
-        --username wsr_operator_acceptance `
-        --dbname wsr_operator_acceptance `
-        --command $countQuery 2>&1
-    Assert-Condition ($LASTEXITCODE -eq 0) `
+    $databaseCountResult = Invoke-WithProcessEnvironment $composeEnvironment {
+        $output = & $dockerCommand compose `
+            --project-name $composeProject `
+            --file $composePath `
+            --env-file $safeEnvironmentPath `
+            exec --no-TTY postgres `
+            psql --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 `
+            --username wsr_operator_acceptance `
+            --dbname wsr_operator_acceptance `
+            --command $countQuery 2>&1
+        return [pscustomobject]@{
+            ExitCode = $LASTEXITCODE
+            Output   = @($output)
+        }
+    }
+    Assert-Condition ($databaseCountResult.ExitCode -eq 0) `
         "Could not inspect the disposable PostgreSQL ledger."
-    Assert-Condition ((($databaseCounts -join "").Trim()) -eq "1|0|1") `
+    Assert-Condition ((($databaseCountResult.Output -join "").Trim()) -eq "1|0|1") `
         "The disposable PostgreSQL ledger did not contain exactly one attempt, zero dispatches, and one outcome."
 
     Write-Host "PASS: isolated PostgreSQL 17, loopback API, authentication, durable status,"
@@ -763,24 +1070,37 @@ finally {
             $cleanupFailures.Add("Refused cleanup for an unexpected Compose project name.")
         }
         else {
-            & $dockerCommand compose `
-                --project-name $composeProject `
-                --file $composePath `
-                --env-file $safeEnvironmentPath `
-                down --volumes --remove-orphans *> $null
-            if ($LASTEXITCODE -ne 0) {
+            try {
+                $composeCleanupExitCode = Invoke-WithProcessEnvironment $composeEnvironment {
+                    & $dockerCommand compose `
+                        --project-name $composeProject `
+                        --file $composePath `
+                        --env-file $safeEnvironmentPath `
+                        down --volumes --remove-orphans *> $null
+                    return $LASTEXITCODE
+                }
+                if ($composeCleanupExitCode -ne 0) {
+                    $cleanupFailures.Add(
+                        "Could not remove isolated Compose project $composeProject."
+                    )
+                }
+            }
+            catch {
                 $cleanupFailures.Add(
-                    "Could not remove isolated Compose project $composeProject."
+                    "Could not run cleanup for isolated Compose project ${composeProject}: $($_.Exception.Message)"
                 )
             }
         }
     }
 
-    try {
-        Remove-VerifiedTemporaryDirectory $temporaryDirectory
-    }
-    catch {
-        $cleanupFailures.Add($_.Exception.Message)
+    if ($temporaryDirectoryOwned) {
+        try {
+            Remove-VerifiedTemporaryDirectory $temporaryDirectory
+            $temporaryDirectoryOwned = $false
+        }
+        catch {
+            $cleanupFailures.Add($_.Exception.Message)
+        }
     }
 
     if ($null -ne $operatorBytes) {
@@ -803,6 +1123,30 @@ finally {
     if ($null -ne $composeEnvironment) {
         $composeEnvironment.Clear()
         $composeEnvironment = $null
+    }
+    if ($null -ne $dockerEnvironment) {
+        $dockerEnvironment.Clear()
+        $dockerEnvironment = $null
+    }
+    if ($null -ne $mavenBuildEnvironment) {
+        $mavenBuildEnvironment.Clear()
+        $mavenBuildEnvironment = $null
+    }
+    if ($null -ne $javaProbeEnvironment) {
+        $javaProbeEnvironment.Clear()
+        $javaProbeEnvironment = $null
+    }
+
+    if ($null -ne $repositoryLock) {
+        try {
+            Exit-RepositoryAcceptanceLock $repositoryLock $repositoryRoot
+        }
+        catch {
+            $cleanupFailures.Add(
+                "Could not release the repository acceptance lock: $($_.Exception.Message)"
+            )
+        }
+        $repositoryLock = $null
     }
 }
 

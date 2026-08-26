@@ -344,20 +344,31 @@ ADR-044의 권장 배포 전 점검은 저장소 루트에서 실행하는 한 �
 pwsh -NoProfile -File ./scripts/verify-local-operator-api.ps1
 ```
 
-이 명령은 PowerShell 7, Java 21, 실행 중인 Docker daemon/Compose v2가 필요하며
+이 명령은 PowerShell 7, Java 21, 로컬 Docker daemon/Compose v2가 필요하며
 macOS/Linux에서는 Maven wrapper를 실행할 표준 POSIX `sh`도 사용한다.
-API를 package하고 고유 Compose project의 PostgreSQL 17과 임의 loopback port의 실제
-JAR을 띄운 뒤, health, `401`, provider-disabled `200`, exact replay, GET, `409`,
-`422`, 그리고 database의 attempt 1개 / dispatch 0개 / outcome 1개를 검증한다.
+검증한 Java 21로 API를 전용 temp build directory에 package하고 고유 Compose
+project의 PostgreSQL 17과 임의 loopback port의 실제 JAR을 띄운 뒤, health, `401`,
+provider-disabled `200`, exact replay, GET, `409`, `422`, 그리고 database의
+attempt 1개 / dispatch 0개 / outcome 1개를 검증한다.
 매 실행마다 32-byte random token과 digest, database password를 memory에서 만들며
 raw token을 출력하거나 파일에 쓰지 않는다. root `.env`, 기본 Compose project,
 기존 `postgres-data` volume은 읽거나 변경하지 않고 성공·실패 모두 자신이 만든
 process/project/volume/temp directory만 검증 후 정리한다. SEC provider는 false이고
 datasource와 Flyway는 같은 disposable database로 강제하며 base URL도 닫힌
-loopback origin으로 덮어쓴다. 도메인, API key, OAuth client,
+loopback origin으로 덮어쓴다. Spring config lookup은 packaged `classpath:/`로만
+고정하고 caller의 `apps/api/application*`, `apps/api/config/`, 외부 logging
+destination은 선택하지 않는다. inherited Spring/server/management,
+datasource/Hikari, JNDI, direct-provider, logging namespace를 제거한 뒤 exact
+acceptance allowlist만 주입한다. 도메인, API key, OAuth client,
 `SEC_CONTACT_EMAIL`, 사용자가 제공할 token은 필요 없다. 최초 실행에서 cache가
 없으면 Maven dependency 또는 PostgreSQL image의 일반 download가 발생할 수 있지만
-SEC 요청은 허용되지 않는다.
+SEC 요청은 허용되지 않는다. 원격 Docker context나 `DOCKER_HOST`는 daemon 접촉 전에
+거부되고, 검증한 local endpoint는 이후 모든 Docker/Compose 호출에 고정된다.
+ADR-044와 ADR-045는 원자적으로 만든 root
+`/.wsr-local-acceptance.lock`을 전체 실행 동안 공유하므로 동시에 실행하면 두 번째
+명령은 package나 Compose 전에 종료된다. 비정상 강제 종료 뒤 lock이 남으면 관련
+process와 Docker resource를 먼저 확인한 다음 그 lock 파일만 제거해야 한다. 두
+명령은 순서대로 실행하면 된다.
 
 이미 package가 끝난 동일 source를 재점검할 때만 `-SkipPackage`를 사용할 수 있다.
 

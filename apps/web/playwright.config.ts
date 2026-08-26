@@ -1,6 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+const externallyManagedWebServer = process.env.PLAYWRIGHT_EXTERNAL_SERVER === "true";
+const localProductionHttp = process.env.PLAYWRIGHT_LOCAL_PRODUCTION_HTTP;
+
+if (localProductionHttp !== undefined && localProductionHttp !== "true") {
+  throw new Error("PLAYWRIGHT_LOCAL_PRODUCTION_HTTP must be exactly true when configured.");
+}
 
 export default defineConfig({
   testDir: "./e2e",
@@ -16,13 +22,18 @@ export default defineConfig({
     screenshot: "only-on-failure",
     trace: "on-first-retry",
     video: "retain-on-failure",
+    ...(localProductionHttp === "true"
+      ? { launchOptions: { args: ["--no-proxy-server"] } }
+      : {}),
   },
-  webServer: {
-    command: "pnpm dev",
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: externallyManagedWebServer
+    ? undefined
+    : {
+        command: "pnpm dev",
+        url: baseURL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
   projects: [
     {
       name: "chromium-1440",

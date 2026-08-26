@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
+  activateEnglishLocale,
   collectRuntimeErrors,
   expectNoPageOverflow,
   expectNoRuntimeErrors,
@@ -8,9 +9,12 @@ import {
 
 function collectExternalRequests(page: Page) {
   const browserApiRequests: string[] = [];
+  const configuredApiOrigin = process.env.API_BASE_URL
+    ? new URL(process.env.API_BASE_URL).origin
+    : "http://localhost:8080";
   page.on("request", (request) => {
     const url = new URL(request.url());
-    if (url.hostname === "localhost" && url.port === "8080") browserApiRequests.push(request.url());
+    if (url.origin === configuredApiOrigin) browserApiRequests.push(request.url());
   });
   return browserApiRequests;
 }
@@ -100,7 +104,7 @@ test("renders populated and known-empty outcome audit responses bilingually thro
   await koreanButton.focus();
   await page.keyboard.press("Tab");
   await expectVisibleKeyboardFocus(englishButton);
-  await englishButton.press("Enter");
+  await activateEnglishLocale(context, page, englishButton);
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
 
   const englishOutcome = page.locator('section[aria-labelledby="outcome-title"]');
