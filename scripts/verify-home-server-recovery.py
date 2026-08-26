@@ -1930,6 +1930,7 @@ def validate_local_rehearsal_contract(source: str) -> None:
         and "inventory_version|1" in rehearsal_body
         and "flyway_version|11.7.2" in rehearsal_body
         and "evidence_version|2" in rehearsal_body
+        and rehearsal_body.count('"psql", "-X", "-q", "-A", "-t",') == 1
         and "database_evidence_version = 2" in rehearsal_body
         and "PENDING_BACKUP_DEVICE" in rehearsal_body
         and "PENDING_OFFSITE_COPY" in rehearsal_body,
@@ -1986,6 +1987,15 @@ def validate_local_rehearsal_mutations(source: str) -> int:
                 '$member.LinkType -cne "HardLink"',
                 '$member.LinkType -ceq "HardLink"',
                 "local hardlink member rejection",
+            ),
+        ),
+        (
+            "canonical database evidence psql mode removed",
+            replace_once(
+                source,
+                '"psql", "-X", "-q", "-A", "-t",',
+                '"psql",',
+                "local canonical database evidence psql mode",
             ),
         ),
     )

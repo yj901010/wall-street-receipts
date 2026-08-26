@@ -1471,7 +1471,8 @@ function Invoke-RecoveryDatabaseRehearsal {
 
         $databaseEvidence = Invoke-DockerInputFileProcess -InputPath $databaseEvidenceSql -Arguments @(
             "exec", "--interactive", $targetContainerId,
-            "psql", "--username=wsr", "--dbname=wsr", "--no-password", "--no-psqlrc",
+            "psql", "-X", "-q", "-A", "-t",
+            "--username=wsr", "--dbname=wsr", "--no-password", "--no-psqlrc",
             "--set", "ON_ERROR_STOP=1", "--file", "-"
         )
         Assert-Condition ($databaseEvidence.ExitCode -eq 0) `
