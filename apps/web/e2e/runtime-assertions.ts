@@ -49,6 +49,10 @@ export async function activateEnglishLocale(
   const localProductionHttp = process.env.PLAYWRIGHT_LOCAL_PRODUCTION_HTTP;
   if (localProductionHttp === undefined) {
     await englishButton.press("Enter");
+    // Production Server Actions can traverse a TLS reverse proxy before the
+    // refreshed RSC payload commits. Keep this helper attached to the actual
+    // action result instead of making each evidence test race that commit.
+    await expect(page.locator("html")).toHaveAttribute("lang", "en", { timeout: 15_000 });
     return;
   }
   if (localProductionHttp !== "true") {

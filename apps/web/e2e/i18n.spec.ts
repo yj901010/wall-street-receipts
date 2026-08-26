@@ -111,7 +111,7 @@ test.describe("Korean-default bilingual SSR", () => {
     await expectVisibleKeyboardFocus(englishButton);
     await englishButton.press("Enter");
 
-    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page.locator("html")).toHaveAttribute("lang", "en", { timeout: 15_000 });
     await expect(page).toHaveURL(new RegExp(
       "/calls\\?assetId=asset-spx&order=desc#calls-page-title$",
     ));
@@ -127,6 +127,9 @@ test.describe("Korean-default bilingual SSR", () => {
       sameSite: "Lax",
       value: "en",
     });
+    if (new URL(page.url()).protocol === "https:") {
+      expect(preference?.secure).toBe(true);
+    }
     expect(preference?.expires ?? 0).toBeGreaterThan(Date.now() / 1000 + 300 * 24 * 60 * 60);
 
     const rawEnglish = await page.request.get("/methodology");
@@ -149,6 +152,7 @@ test.describe("Korean-default bilingual SSR", () => {
     const storageState = await context.storageState();
     const revisitedContext = await browser.newContext({
       baseURL: testInfo.project.use.baseURL as string,
+      ignoreHTTPSErrors: testInfo.project.use.ignoreHTTPSErrors,
       storageState,
       viewport: testInfo.project.use.viewport,
     });
@@ -237,8 +241,9 @@ test.describe("Korean-default bilingual SSR", () => {
       .toHaveAttribute("href", "/");
     await expectNoPageOverflow(page);
     const expectedNotFoundConsoleError =
-      "console error: Failed to load resource: the server responded with a status of 404 (Not Found)";
+      /^console error: Failed to load resource: the server responded with a status of 404(?: \(Not Found\)| \(\))?$/;
     expect(runtimeErrors).toHaveLength(2);
-    expect(runtimeErrors.every((error) => error === expectedNotFoundConsoleError)).toBe(true);
+    expect(runtimeErrors.every((error) => expectedNotFoundConsoleError.test(error)), runtimeErrors.join("\n"))
+      .toBe(true);
   });
 });

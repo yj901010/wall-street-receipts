@@ -252,7 +252,7 @@ test.describe("recorded S&P 500 call-event history", () => {
     await expect.poll(() => page.locator("#source").evaluate((element) => {
       const bounds = element.getBoundingClientRect();
       return bounds.bottom > 0 && bounds.top < window.innerHeight;
-    })).toBe(true);
+    }), { timeout: 15_000 }).toBe(true);
 
     await page.goto("/markets/sp500");
     const filterLink = page.getByRole("link", { name: "필터링된 콜 원장 열기" });

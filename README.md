@@ -229,6 +229,40 @@ JNDI, direct-provider, and logging namespaces are removed before the exact
 acceptance allowlist is applied. The validated local Docker endpoint is pinned
 for every daemon and Compose call.
 
+## Ubuntu home-server deployment rehearsal
+
+ADR-046 adds an independent production Compose boundary under
+`deploy/home-server` for the future Ubuntu server. It does not alter or deploy
+to this development computer. The production profile exposes only Caddy on TCP
+80/443; Next, Spring, and PostgreSQL have no host ports, and their application
+networks remain internal. The local rehearsal uses only an available
+`https://127.0.0.1:<chosen 18080-18179 port>` endpoint through the shared
+Caddyfile and removes its owned resources afterward. Its ephemeral local CA is
+trusted only by the scoped test clients; it is never installed on the host,
+never contacts public ACME, and never binds 80/443.
+
+Run the complete container rehearsal from the repository root:
+
+```powershell
+pwsh -NoProfile -File ./scripts/verify-home-server-deployment.ps1
+```
+
+No domain, account, stock-data API key, SEC contact email, router credential,
+or user-supplied secret is needed now. At real cutover, the operator must enter
+the domain, monitored ACME email, Git SHA, ingress/public-address facts, and the
+absolute path of a locally generated database secret into the ignored
+`deploy/home-server/.env.production`. Never send the secret value in chat or
+commit it. Publication also requires a clean checkout whose full Git HEAD
+matches the image tag, Compose 2.20.0+, and DNS records that exactly match the
+server's operator-attested public address. The production wrapper reruns that
+strict contract immediately before Compose, accepts only six fixed lifecycle
+actions with no caller-supplied Compose options, and uses fixed CPU/memory
+limits. The exact server preflight, secret
+path, sanitized local-Docker wrapper, Gabia/DNS and CGNAT decision, production
+commands, and external verification checklist are in
+[`deploy/home-server/README.md`](deploy/home-server/README.md). Backup, restore,
+off-device retention, and rollback remain the next ADR-047 slice.
+
 ## Fixture contract
 
 Canonical demo data lives under [`fixtures/v1`](fixtures/v1). Every fixture has
@@ -1278,6 +1312,7 @@ schemas/         Canonical JSON Schemas
 quality/         Phase acceptance checks
 decisions/       Versioned architecture decisions
 scripts/         Disposable local acceptance tooling
+deploy/          Ubuntu home-server deployment boundary
 .github/         Continuous integration workflows
 compose.yaml     PostgreSQL service
 ```

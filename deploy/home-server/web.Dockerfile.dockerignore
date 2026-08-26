@@ -1,0 +1,15 @@
+**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!apps/web/
+!apps/web/**
+apps/web/.env
+apps/web/.env.*
+apps/web/next-env.d.ts
+apps/web/node_modules/
+apps/web/.next/
+apps/web/playwright-report/
+apps/web/test-results/
+!fixtures/v1/
+!fixtures/v1/**

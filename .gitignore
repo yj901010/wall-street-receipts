@@ -31,5 +31,7 @@ Thumbs.db
 # Logs and temporary files
 *.log
 *.tmp
+__pycache__/
+*.py[cod]
 /.wsr-local-acceptance.lock
 .cache/

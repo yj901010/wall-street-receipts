@@ -5778,3 +5778,121 @@ fixture, or provider.
   identity, private API origin enforcement, actor audit, secret lifecycle, and
   licensed-provider publication policy. The existing domain alone supplies
   none of these controls.
+
+## 2026-08-26 — ADR-046 Ubuntu home-server deployment foundation
+
+ADR-046 selects a direct, cloud-free Ubuntu home-server topology for the
+public DEMO site and adds an independent production Compose boundary. It does
+not install software, change ports, firewall, DNS, or router state on the
+current development computer.
+
+### Scope and decisions
+
+- Add multi-stage Java 21 and Node.js 24 application images, a derived Caddy
+  2.11.4 image, and PostgreSQL 17 in an independent
+  `deploy/home-server/compose.yaml`. Release images carry the selected Git SHA;
+  runtime processes are non-root, read-only where applicable, capability-
+  dropped, resource-bounded, health-checked, and log-rotated.
+- Publish only production Caddy on TCP 80/443. PostgreSQL, Spring, and Next
+  publish no host ports. Keep `edge-internal`, `app-internal`, and
+  `db-internal` isolated. The two operator-selected ingress services join the
+  standard `public-egress` bridge; the production wrapper and rehearsal harness
+  select only their intended profile. Caddy has no membership in the API or
+  database networks, and Next is the sole bridge between edge and API.
+- Force the public stack to explicit DEMO mode, fixture market/analyst
+  providers, API-backed call audit, disabled SEC, and disabled operator API.
+  Spring reads the PostgreSQL password from a Compose secret/config tree;
+  neither Compose environment nor web/Caddy receives its value.
+- Add automatic HTTPS and HTTP-to-HTTPS handling through Caddy while retaining
+  only HTTP/1.1 and HTTP/2 for the first release. Bound request bodies and
+  headers, reject methods other than GET/HEAD/POST, strip server disclosure,
+  and add the initial response-security headers. Caddy uses the validated
+  public domain as the production default SNI. HSTS stays deferred until
+  external HTTPS is proven stable.
+- Add a private-TLS rehearsal profile using the shared production Caddyfile at
+  `https://127.0.0.1:8443`. The host publishes one preflighted loopback port in
+  `18080-18179`; Caddy uses an ephemeral local CA and a rehearsal-only default
+  SNI of `127.0.0.1`, so production `Secure` cookie behavior is exercised
+  without public ACME, host trust installation, or a bind on 80/443. Its script
+  rejects remote Docker endpoints and hostile inherited Docker/Compose/WSR
+  overrides, creates a random secret and uniquely tagged project, and removes
+  only its owned resources on success or failure.
+- Add a read-only Ubuntu preflight with `host`, reusable `contract`, and fail-
+  closed `publish` modes.
+  Publication requires supported Ubuntu/architecture, at least two logical
+  CPUs, 4 GiB RAM, 50 GiB free storage, a local Docker daemon, Compose 2.20.0+,
+  exact domain/email/full Git SHA, a clean checkout, an absolute non-symlink
+  mode-600/400 secret, exact A/AAAA-to-attested-address matching, a static
+  direct-ingress policy, and free 80/443. It still reports
+  `PENDING_EXTERNAL_INGRESS` because router/ISP reachability needs an external
+  test. `compose-production.sh` pins the exact env file and sanitized local
+  Docker boundary, exposes only six fixed no-extra-argument lifecycle actions,
+  and reruns the complete env/source/secret/DNS contract immediately before
+  each production Compose command. CPU and memory envelopes are fixed in
+  Compose rather than accepted as unbounded operator inputs.
+- Recommend Ubuntu Server 24.04 LTS, 4 logical cores and 8 GiB RAM for the
+  initial approximately 100 readers; allow 26.04 LTS and amd64/arm64. Treat the
+  planned 1 TB disk as capacity, not as an off-device backup.
+- Record exact operator inputs only for cutover:
+  `deploy/home-server/.env.production`, a monitored ACME email, domain, Git
+  SHA, confirmed public ingress/address policy, and the locally generated
+  `/etc/wall-street-receipts/secrets/postgres_password`. No API key, account,
+  domain password, router password, public IP value, or database secret is
+  requested in chat.
+
+### Routes and module structure
+
+- No product route, Spring endpoint, migration, schema, or canonical fixture
+  changed. The rehearsal composes the existing 12 primary web routes through
+  Caddy and the existing Spring/PostgreSQL fixture boundary.
+- `deploy/home-server/` owns three Dockerfiles and their deny-all build
+  contexts, one shared Caddyfile, the Compose model, non-secret env template,
+  read-only host preflight, sanitized production wrapper, and operator runbook.
+  ADR-046 owns the topology decision.
+- `scripts/verify-home-server-deployment.py` owns the rendered-model semantic
+  guard and 14-case negative mutation matrix. The PowerShell script owns local
+  build/runtime/browser evidence. Playwright configuration and evidence tests
+  support private production HTTPS, require zero retries for this rehearsal,
+  assert `Secure` locale persistence, and retain exact 404 and anchor evidence
+  across HTTP/2 and responsive layout timing. CI runs the semantic guard, Bash
+  syntax check, and PowerShell AST parse without starting the deployment.
+
+### Verification
+
+- Semantic Compose/negative-matrix guard: **PASS** — exact five-service/four-
+  network model, profiles, only production TCP 80/443, numeric-loopback private
+  TLS rehearsal, non-root hardening, exact mounts/environments/health gates,
+  secret flow, provider gates, and all 14 rejected mutations.
+- Disposable Docker plus browser rehearsal: **PASS** — PostgreSQL 17 with
+  Flyway v1-to-v9, Spring, production Next, and non-root Caddy reached healthy
+  through `https://127.0.0.1:<random 18080-18179 port>`. All 12 public routes
+  returned `200 text/html`; DEMO/source/timestamp surfaces, response headers,
+  POST allowance, PUT 405, no backend host bindings, writable non-root Caddy
+  state, and exact `3|2|4` database evidence passed. Playwright passed **72/72
+  with zero retries** at 1440, 1280, and 390 px through the same endpoint,
+  including real production `Secure` locale cookies. The private CA was trusted
+  only by scoped clients and was never installed. Cleanup removed the exact
+  containers, networks, volume, images, temporary secret, and browser output.
+- Regression suites: **PASS** — web ESLint, 42 Vitest files / 569 tests, and
+  API Maven `verify` with 2,347 tests and zero failures/errors/skips. The
+  production web image build generated all 12 expected application routes.
+- Static/tooling checks: **PASS** — shared Caddyfile format/runtime validation,
+  PowerShell AST parse, Bash `-n`, four-job workflow YAML plus 49 embedded
+  Python bodies, exact fixed CPU/RAM envelopes, execution-boundary contract
+  revalidation, and rejection of `-p`, `-pNAME`, `run --publish`,
+  `down --volumes`, and caller-supplied `--build-arg`,
+  `git diff --check`, exact zero cleanup inventory, and the caller-owned
+  `apps/web/next-env.d.ts` SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Live/public deployment: **NOT RUN BY DESIGN**. Domain DNS, public/static or
+  IPv6 ingress, CGNAT status, router forwarding, and external TLS remain facts
+  the future server operator must supply or prove at cutover.
+
+### Next work
+
+- ADR-047 must add logical PostgreSQL backup, off-device retention, empty-target
+  restore rehearsal, and release rollback evidence before non-DEMO or
+  irreplaceable data is admitted.
+- Actual publication remains blocked until the future Ubuntu server exists and
+  the operator confirms domain/subdomain, monitored ACME email, Git SHA,
+  CGNAT/public-address/static policy, router forwarding, and external HTTPS.

@@ -35,6 +35,31 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Validate Ubuntu home-server deployment contract
+        run: python scripts/verify-home-server-deployment.py
+
+      - name: Parse Ubuntu home-server shell tools
+        shell: bash
+        run: >-
+          bash -n
+          deploy/home-server/preflight.sh
+          deploy/home-server/compose-production.sh
+
+      - name: Parse local home-server rehearsal
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path "scripts/verify-home-server-deployment.ps1"),
+            [ref] $tokens,
+            [ref] $errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
       - name: Install JSON Schema validator
         run: python -m pip install --disable-pip-version-check "jsonschema[format-nongpl]==4.23.0"
 
