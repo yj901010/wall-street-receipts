@@ -853,6 +853,7 @@ function Invoke-RecoveryDatabaseRehearsal {
     }
     $runtimeFacts = [ordered]@{}
     $sourcePostgresId = $null
+    $apiContainerId = $null
     foreach ($logicalName in $serviceMap.Keys) {
         $composeService = $serviceMap[$logicalName]
         $matching = Invoke-DockerCommand -Arguments @(
@@ -919,6 +920,9 @@ function Invoke-RecoveryDatabaseRehearsal {
                 $secretMounts[0].Type -eq "bind" -and
                 $secretMounts[0].RW -eq $false
             ) "The source database must have only its writable data volume and read-only password bind."
+        }
+        elseif ($logicalName -eq "api") {
+            $apiContainerId = $container.Id
         }
     }
     Assert-Condition ($null -ne $sourcePostgresId) "The source PostgreSQL container was not observed."
@@ -1475,6 +1479,59 @@ function Invoke-RecoveryDatabaseRehearsal {
         Assert-Condition (-not [string]::IsNullOrWhiteSpace($databaseEvidence.Stdout)) `
             "Restored database evidence query returned no evidence."
 
+        $databaseEvidenceLines = @(
+            $databaseEvidence.Stdout -split "`r?`n" |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        )
+        Assert-Condition (
+            $databaseEvidenceLines.Count -gt 0 -and
+            $databaseEvidenceLines[0] -ceq "evidence_version|2"
+        ) "Restored database evidence must use the exact ADR-048 v2 contract."
+        $flywayEvidenceLines = @(
+            $databaseEvidenceLines | Where-Object { $_ -clike "flyway|*" }
+        )
+        Assert-Condition ($flywayEvidenceLines.Count -eq 9) `
+            "The v2 database evidence must contain exactly nine Flyway rows."
+        foreach ($line in $flywayEvidenceLines) {
+            Assert-Condition (($line -csplit '\|').Count -eq 8) `
+                "Every v2 Flyway evidence row must bind rank/version/description/type/script/checksum/success."
+        }
+
+        Assert-Condition ($null -ne $apiContainerId) `
+            "The exact source API container identity was not captured."
+        $apiInventory = Invoke-DockerCommand -Arguments @(
+            "exec", $apiContainerId,
+            "java", "-jar", "/opt/wsr/application.jar",
+            "--wsr-release-schema-inventory"
+        ) -Capture
+        $apiInventoryLines = @(
+            ((@($apiInventory) -join "`n").Trim()) -split "`r?`n" |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        )
+        Assert-Condition (
+            $apiInventoryLines.Count -eq 11 -and
+            $apiInventoryLines[0] -ceq "inventory_version|1" -and
+            $apiInventoryLines[1] -ceq "flyway_version|11.7.2"
+        ) "The exact API image did not emit the canonical V1-V9 Flyway inventory."
+        $apiMigrationLines = @($apiInventoryLines | Select-Object -Skip 2)
+        for ($index = 0; $index -lt 9; $index++) {
+            $imageFields = @($apiMigrationLines[$index] -csplit '\|')
+            $databaseFields = @($flywayEvidenceLines[$index] -csplit '\|')
+            Assert-Condition (
+                $imageFields.Count -eq 10 -and
+                $imageFields[0] -ceq "migration" -and
+                $databaseFields.Count -eq 8 -and
+                $databaseFields[0] -ceq "flyway" -and
+                $imageFields[1] -ceq $databaseFields[1] -and
+                $imageFields[2] -ceq $databaseFields[2] -and
+                $imageFields[3] -ceq $databaseFields[3] -and
+                $imageFields[4] -ceq $databaseFields[4] -and
+                $imageFields[5] -ceq $databaseFields[5] -and
+                $imageFields[6] -ceq $databaseFields[6] -and
+                $databaseFields[7] -ceq "true"
+            ) "The exact API image inventory differs from restored Flyway evidence at row $($index + 1)."
+        }
+
         $restoredCounts = Invoke-DockerCommand -Arguments @(
             "exec", $targetContainerId,
             "psql", "--username=wsr", "--dbname=wsr", "--no-password", "--tuples-only", "--no-align",
@@ -1539,10 +1596,11 @@ function Invoke-RecoveryDatabaseRehearsal {
             }
             database_evidence_file = "$backupId.database.txt"
             database_evidence_sha256 = $databaseEvidenceSha256
+            database_evidence_version = 2
             restored_fixture_counts = "3|2|4"
             restored_flyway = "9|9|true"
             image_evidence_ready = $true
-            schema_compatibility = "required-not-evaluated"
+            schema_compatibility = "compatible-exact-api-image-flyway-local-only"
             completed_at_utc = [DateTime]::UtcNow.ToString("o")
             pending = @("PENDING_BACKUP_DEVICE", "PENDING_OFFSITE_COPY")
         }

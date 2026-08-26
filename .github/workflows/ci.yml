@@ -50,7 +50,9 @@ jobs:
             deploy/home-server/recovery-common.sh \
             deploy/home-server/recovery-preflight.sh \
             deploy/home-server/recovery-production.sh \
+            deploy/home-server/schema-compatibility.sh \
             scripts/verify-home-server-database-evidence.sh \
+            scripts/verify-home-server-schema-compatibility.sh \
             scripts/verify-home-server-retention.sh
           do
             bash -n "$path"
@@ -63,6 +65,10 @@ jobs:
       - name: Verify dynamic restored-database evidence parser
         shell: bash
         run: bash scripts/verify-home-server-database-evidence.sh
+
+      - name: Verify exact release-schema compatibility comparator
+        shell: bash
+        run: bash scripts/verify-home-server-schema-compatibility.sh
 
       - name: Parse local home-server rehearsal
         shell: pwsh

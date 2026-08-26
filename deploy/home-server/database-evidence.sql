@@ -1,9 +1,9 @@
--- WSR_DATABASE_EVIDENCE_VERSION=1
+-- WSR_DATABASE_EVIDENCE_VERSION=2
 \set ON_ERROR_STOP on
 
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
 
-SELECT 'evidence_version|1';
+SELECT 'evidence_version|2';
 SELECT 'database_name|' || current_database();
 SELECT 'database_encoding|' || pg_encoding_to_char(encoding)
 FROM pg_database
@@ -27,8 +27,11 @@ FROM public.flyway_schema_history
 WHERE success;
 
 SELECT 'flyway|' || installed_rank::text || '|' ||
-       COALESCE(version, 'repeatable') || '|' ||
-       COALESCE(checksum::text, 'none') || '|' ||
+       COALESCE(version, 'null') || '|' ||
+       encode(convert_to(description, 'UTF8'), 'hex') || '|' ||
+       type || '|' ||
+       encode(convert_to(script, 'UTF8'), 'hex') || '|' ||
+       COALESCE(checksum::text, 'null') || '|' ||
        success::text
 FROM public.flyway_schema_history
 ORDER BY installed_rank;

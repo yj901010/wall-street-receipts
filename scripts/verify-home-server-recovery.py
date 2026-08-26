@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static, mutation-sensitive guard for the ADR-047 recovery boundary.
+"""Static, mutation-sensitive guard for the ADR-047/ADR-048 recovery boundary.
 
 The guard deliberately does not execute the Ubuntu recovery scripts.  It is
 safe to run on Windows and in CI: it reads only committed recovery sources,
@@ -34,6 +34,7 @@ ACTIONS = frozenset(
         "status",
         "rehearse-latest",
         "retention-plan",
+        "schema-check-latest",
     }
 )
 FILESYSTEMS = frozenset({"ext4", "xfs"})
@@ -46,6 +47,7 @@ EVIDENCE_SQL = DEPLOY / "database-evidence.sql"
 COMMON = DEPLOY / "recovery-common.sh"
 PREFLIGHT = DEPLOY / "recovery-preflight.sh"
 PRODUCTION = DEPLOY / "recovery-production.sh"
+SCHEMA_COMPATIBILITY = DEPLOY / "schema-compatibility.sh"
 LOCAL_REHEARSAL = ROOT / "scripts" / "verify-home-server-deployment.ps1"
 
 
@@ -308,13 +310,15 @@ def source_contract(
     common_source: str,
     preflight_source: str,
     production_source: str,
+    schema_source: str,
 ) -> RecoveryContract:
     config_keys, placeholders = parse_config_example(config_source)
     actions = parse_declared_actions(production_source)
     common_code = strip_full_line_comments(common_source)
     preflight_code = strip_full_line_comments(preflight_source)
     production_code = strip_full_line_comments(production_source)
-    scripts_code = "\n".join((common_code, preflight_code, production_code))
+    schema_code = strip_full_line_comments(schema_source)
+    scripts_code = "\n".join((common_code, preflight_code, production_code, schema_code))
     evidence_upper = evidence_source.upper()
     preflight_policy = "\n".join((common_code, preflight_code))
 
@@ -759,7 +763,18 @@ def source_contract(
         is None
     )
     evidence_flyway = has_all(
-        evidence_source, ("flyway_schema_history", "installed_rank", "checksum", "success")
+        evidence_source,
+        (
+            "WSR_DATABASE_EVIDENCE_VERSION=2",
+            "flyway_schema_history",
+            "installed_rank",
+            "description",
+            "type",
+            "script",
+            "checksum",
+            "success",
+            "convert_to",
+        ),
     )
     evidence_table_inventory = (
         (
@@ -1301,6 +1316,7 @@ def validate_source_mutations(
     common_source: str,
     preflight_source: str,
     production_source: str,
+    schema_source: str,
 ) -> int:
     """Mutate the real sources and prove token-preserving safety bypasses fail."""
 
@@ -1782,6 +1798,7 @@ def validate_source_mutations(
                 mutated_common,
                 preflight_source,
                 mutated_production,
+                schema_source,
             )
             validate_contract(candidate)
         except ContractError:
@@ -1800,6 +1817,7 @@ def validate_source_mutations(
             common_source,
             preflight_source,
             production_source,
+            schema_source,
         )
         validate_contract(candidate)
     except ContractError:
@@ -1907,7 +1925,12 @@ def validate_local_rehearsal_contract(source: str) -> None:
     require(
         "rollback_ready" not in code
         and code.count("image_evidence_ready") == 1
-        and code.count("required-not-evaluated") == 1
+        and code.count("compatible-exact-api-image-flyway-local-only") == 1
+        and code.count("--wsr-release-schema-inventory") == 1
+        and "inventory_version|1" in rehearsal_body
+        and "flyway_version|11.7.2" in rehearsal_body
+        and "evidence_version|2" in rehearsal_body
+        and "database_evidence_version = 2" in rehearsal_body
         and "PENDING_BACKUP_DEVICE" in rehearsal_body
         and "PENDING_OFFSITE_COPY" in rehearsal_body,
         "Local rehearsal may emit image evidence only after restore and must retain pending gates",
@@ -1977,8 +2000,62 @@ def validate_local_rehearsal_mutations(source: str) -> int:
 
 
 def read_required(path: Path) -> str:
-    require(path.is_file(), f"Required ADR-047 recovery source is missing: {path.relative_to(ROOT)}")
+    require(path.is_file(), f"Required recovery source is missing: {path.relative_to(ROOT)}")
     return path.read_text(encoding="utf-8")
+
+
+def validate_schema_compatibility_source(source: str, production_source: str) -> None:
+    code = strip_full_line_comments(source)
+    require(
+        'source "$script_dir/schema-compatibility.sh"' in production_source,
+        "Production recovery does not source the fixed schema-compatibility policy",
+    )
+    require(
+        has_all(
+            code,
+            (
+                "wsr_action_schema_check_latest",
+                "compatible-exact-recorded-release",
+                "restore-evidence-v2-unavailable",
+                "image-git-resource-mismatch",
+                "flyway-row-order-checksum-mismatch",
+                "GIT_NO_LAZY_FETCH=1",
+                "GIT_NO_REPLACE_OBJECTS=1",
+                "--no-replace-objects",
+                "cat-file",
+                "ls-tree",
+                "--network none",
+                "--read-only",
+                "--cap-drop ALL",
+                "--pull never",
+                "--memory 384m",
+                "--memory-swap 384m",
+                "--pids-limit",
+                "--cpus 1.0",
+                "--log-driver none",
+                "timeout --signal=TERM --kill-after=5s",
+                "head --bytes=",
+                "no-new-privileges",
+                "--wsr-release-schema-inventory",
+                "PENDING_OFFSITE_COPY",
+                "blocked-promotion-and-artifact-gates-not-implemented",
+            ),
+            ignore_case=False,
+        ),
+        "Exact Git/API-image/Flyway schema gate invariants are incomplete",
+    )
+    require(
+        re.search(
+            r"(?im)^\s*(?:git|wsr_schema_git)\s+(?:fetch|pull|checkout|switch|reset|worktree)\b",
+            code,
+        )
+        is None,
+        "Schema compatibility may not fetch or mutate a Git worktree",
+    )
+    require(
+        re.search(r"(?i)\brollback[-_ ]?ready\b", code) is None,
+        "Schema compatibility must not claim rollback readiness",
+    )
 
 
 def main() -> int:
@@ -1988,7 +2065,9 @@ def main() -> int:
         common_source = read_required(COMMON)
         preflight_source = read_required(PREFLIGHT)
         production_source = read_required(PRODUCTION)
+        schema_source = read_required(SCHEMA_COMPATIBILITY)
         local_rehearsal_source = read_required(LOCAL_REHEARSAL)
+        validate_schema_compatibility_source(schema_source, production_source)
         local_mutation_count = validate_local_rehearsal_mutations(local_rehearsal_source)
         contract = source_contract(
             config_source,
@@ -1996,6 +2075,7 @@ def main() -> int:
             common_source,
             preflight_source,
             production_source,
+            schema_source,
         )
         validate_contract(contract)
         synthetic_mutation_count = validate_mutation_matrix()
@@ -2005,13 +2085,14 @@ def main() -> int:
             common_source,
             preflight_source,
             production_source,
+            schema_source,
         )
     except (ContractError, OSError, UnicodeError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
     print(
-        "PASS: ADR-047 backup, restore, retention, release-image evidence, "
-        "rollback blocking, and "
+        "PASS: ADR-047/ADR-048 backup, restore, retention, release-image evidence, "
+        "exact Git/API-image/Flyway schema blocking, and "
         f"{synthetic_mutation_count + source_mutation_count + local_mutation_count}-case negative matrix are exact "
         f"({source_mutation_count} shell-source and {local_mutation_count} local-rehearsal mutations)."
     )

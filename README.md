@@ -280,6 +280,13 @@ restore. Until a real additional HDD is mounted and verified on the Ubuntu
 server, `PENDING_BACKUP_DEVICE` remains; until an offline or off-site copy
 exists, `PENDING_OFFSITE_COPY` remains.
 
+ADR-048 adds a separate `schema-check-latest` gate. After a new v2 restore
+rehearsal, it compares the backup-recorded Git commit's exact migration blobs,
+the exact recorded API image's Flyway 11.7.2 inventory, and restored database
+history. It never fetches Git objects or pulls an image, accepts no caller SHA
+or path, and still cannot claim rollback readiness because data-volume
+promotion and artifact-preservation gates are not implemented.
+
 ## Fixture contract
 
 Canonical demo data lives under [`fixtures/v1`](fixtures/v1). Every fixture has

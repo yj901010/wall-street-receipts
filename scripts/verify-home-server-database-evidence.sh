@@ -24,13 +24,13 @@ trap cleanup EXIT
 
 valid="$test_root/valid.txt"
 printf '%s\n' \
-  'evidence_version|1' \
+  'evidence_version|2' \
   'database_name|wsr' \
   'database_encoding|UTF8' \
   'flyway_successful_count|2' \
   'flyway_max_installed_rank|2' \
-  'flyway|1|1|101|true' \
-  'flyway|2|2|202|true' \
+  'flyway|1|1|6669727374|SQL|56315f5f66697273742e73716c|101|true' \
+  'flyway|2|2|7365636f6e64|SQL|56325f5f7365636f6e642e73716c|-202|true' \
   'platform_metadata|schema_baseline|P0' \
   'analyst_calls|17' \
   'analyst_call_revisions|11' \
@@ -43,7 +43,8 @@ printf '%s\n' \
   > "$valid"
 
 wsr_parse_database_evidence "$valid"
-[[ "$WSR_RESTORED_FLYWAY_SUCCESSFUL_COUNT" == "2" &&
+[[ "$WSR_RESTORED_DATABASE_EVIDENCE_VERSION" == "2" &&
+   "$WSR_RESTORED_FLYWAY_SUCCESSFUL_COUNT" == "2" &&
    "$WSR_RESTORED_FLYWAY_MAX_INSTALLED_RANK" == "2" &&
    "$WSR_RESTORED_ANALYST_CALLS" == "17" &&
    "$WSR_RESTORED_ANALYST_CALL_REVISIONS" == "11" &&
@@ -72,7 +73,7 @@ assert_rejected "duplicate singleton summary" "$duplicate_summary"
 
 duplicate_flyway="$test_root/duplicate-flyway.txt"
 install -m 0600 -- "$valid" "$duplicate_flyway"
-printf 'flyway|2|2|202|true\n' >> "$duplicate_flyway"
+printf 'flyway|2|2|7365636f6e64|SQL|56325f5f7365636f6e642e73716c|-202|true\n' >> "$duplicate_flyway"
 assert_rejected "duplicate Flyway installed rank" "$duplicate_flyway"
 
 missing_metadata="$test_root/missing-metadata.txt"
@@ -84,4 +85,24 @@ install -m 0600 -- "$valid" "$unknown_row"
 printf 'invented_metric|0\n' >> "$unknown_row"
 assert_rejected "unknown evidence row" "$unknown_row"
 
-printf 'PASS: dynamic restored-database evidence accepts observed counts and rejects five malformed variants.\n'
+repeatable="$test_root/repeatable.txt"
+sed 's/flyway|2|2|/flyway|2|null|/' "$valid" > "$repeatable"
+assert_rejected "repeatable migration in v2 compatibility evidence" "$repeatable"
+
+non_contiguous="$test_root/non-contiguous.txt"
+sed 's/flyway|2|2|/flyway|3|3|/' "$valid" > "$non_contiguous"
+assert_rejected "non-contiguous Flyway rank and version" "$non_contiguous"
+
+legacy="$test_root/legacy-v1.txt"
+sed \
+  -e 's/evidence_version|2/evidence_version|1/' \
+  -e 's/flyway|1|1|6669727374|SQL|56315f5f66697273742e73716c|101|true/flyway|1|1|101|true/' \
+  -e 's/flyway|2|2|7365636f6e64|SQL|56325f5f7365636f6e642e73716c|-202|true/flyway|2|2|-202|true/' \
+  "$valid" > "$legacy"
+wsr_parse_database_evidence "$legacy"
+[[ "$WSR_RESTORED_DATABASE_EVIDENCE_VERSION" == "1" ]] || {
+  printf 'Legacy restore evidence did not remain distinguishable from v2.\n' >&2
+  exit 1
+}
+
+printf 'PASS: v2 database evidence is strict, legacy v1 remains identifiable, and seven malformed variants are rejected.\n'

@@ -16,6 +16,9 @@ WSR_RESTORE_STARTED_UTC=""
 WSR_RESTORE_COMPLETED_UTC=""
 WSR_RESTORE_PRE_PUBLIC_TABLE_COUNT=""
 WSR_RESTORE_EVIDENCE_DISCOVERY="missing"
+WSR_VALIDATED_RESTORE_EVIDENCE_ID=""
+WSR_VALIDATED_RESTORE_EVIDENCE_PATH=""
+WSR_VALIDATED_RESTORE_EVIDENCE_FILE=""
 WSR_BACKUP_AVAILABLE_BYTES=""
 WSR_BACKUP_REQUIRED_BYTES=""
 WSR_DOCKER_AVAILABLE_BYTES=""
@@ -27,13 +30,17 @@ WSR_RESTORED_FLYWAY_MAX_INSTALLED_RANK=""
 WSR_RESTORED_ANALYST_CALLS=""
 WSR_RESTORED_ANALYST_CALL_REVISIONS=""
 WSR_RESTORED_CALL_OUTCOMES=""
+WSR_RESTORED_DATABASE_EVIDENCE_VERSION=""
 declare -Ag WSR_RESTORE_EVIDENCE_MANIFEST=()
+
+# shellcheck source=deploy/home-server/schema-compatibility.sh
+source "$script_dir/schema-compatibility.sh"
 
 usage() {
   cat <<'USAGE'
 Usage: recovery-production.sh -- ACTION
 
-Allowed actions: preflight, create, status, rehearse-latest, retention-plan.
+Allowed actions: preflight, create, status, rehearse-latest, retention-plan, schema-check-latest.
 
 The command accepts no config path, backup path, Compose option, or Docker
 argument. Production config is always /etc/wall-street-receipts/backup.conf.
@@ -249,6 +256,9 @@ wsr_cleanup_restore_resources() {
 
 wsr_exit_cleanup() {
   local original_status=$?
+  if [[ -n "$WSR_SCHEMA_INSPECTOR_CONTAINER_ID" || -n "$WSR_SCHEMA_INSPECTOR_CONTAINER_NAME" ]]; then
+    wsr_cleanup_schema_inspector || true
+  fi
   if [[ -n "$WSR_RESTORE_CONTAINER_NAME" || -n "$WSR_RESTORE_VOLUME_NAME" ]]; then
     wsr_cleanup_restore_resources || true
   fi
@@ -601,6 +611,9 @@ wsr_find_restore_evidence() {
   local candidate latest="" entry entry_type
   local -a raw_entries=()
   WSR_RESTORE_EVIDENCE_DISCOVERY="missing"
+  WSR_VALIDATED_RESTORE_EVIDENCE_ID=""
+  WSR_VALIDATED_RESTORE_EVIDENCE_PATH=""
+  WSR_VALIDATED_RESTORE_EVIDENCE_FILE=""
   [[ -d "$evidence_parent" && ! -L "$evidence_parent" ]] || return 1
   wsr_validate_storage_directory "$evidence_parent" || {
     WSR_RESTORE_EVIDENCE_DISCOVERY="unverified"
@@ -621,6 +634,9 @@ wsr_find_restore_evidence() {
   done
   if wsr_validate_restore_evidence "$backup_id" "$latest"; then
     WSR_RESTORE_EVIDENCE_DISCOVERY="verified"
+    WSR_VALIDATED_RESTORE_EVIDENCE_ID="$latest"
+    WSR_VALIDATED_RESTORE_EVIDENCE_PATH="$evidence_parent/$latest"
+    WSR_VALIDATED_RESTORE_EVIDENCE_FILE="$evidence_parent/$latest/database-evidence.txt"
     return 0
   fi
   WSR_RESTORE_EVIDENCE_DISCOVERY="unverified"
@@ -676,6 +692,7 @@ wsr_action_status() {
   printf 'INCOMPLETE_PARTIALS|%d\n' "$partial_count"
   if ((verified_count == 0)); then
     printf 'LATEST_BACKUP|none\n'
+    printf 'SCHEMA_COMPATIBILITY|blocked-no-restored-backup\n'
     printf 'ROLLBACK_READINESS|blocked-no-restored-backup\n'
     printf 'IMAGE_EVIDENCE_READINESS|blocked-no-restored-backup\n'
     printf 'CAPACITY_STATUS|%s\n' "$capacity_status"
@@ -710,7 +727,8 @@ wsr_action_status() {
   fi
   printf 'LATEST_BACKUP|%s\n' "$backup_id"
   printf 'LATEST_RESTORE_EVIDENCE|%s\n' "$evidence_status"
-  printf 'ROLLBACK_READINESS|blocked-schema-and-promotion-gates-not-implemented\n'
+  printf 'SCHEMA_COMPATIBILITY|not-evaluated-run-schema-check-latest\n'
+  printf 'ROLLBACK_READINESS|blocked-schema-not-evaluated-and-promotion-gates-not-implemented\n'
   printf 'IMAGE_EVIDENCE_READINESS|%s\n' "$image_evidence_status"
   printf 'CAPACITY_STATUS|%s\n' "$capacity_status"
   wsr_print_capacity_evidence
@@ -844,7 +862,8 @@ wsr_parse_database_evidence() {
 
   if ! awk -F '|' '
     $1 == "evidence_version" {
-      if (seen_singleton[$1]++ || NF != 2 || $2 != "1") exit 1
+      if (NR != 1 || seen_singleton[$1]++ || NF != 2 || ($2 != "1" && $2 != "2")) exit 1
+      evidence_version = $2
       next
     }
     $1 == "database_name" {
@@ -862,7 +881,19 @@ wsr_parse_database_evidence() {
       next
     }
     $1 == "flyway" {
-      if (NF != 5 || $2 !~ /^[1-9][0-9]*$/ || seen_flyway[$2]++ || $5 != "true") exit 1
+      if ($2 !~ /^[1-9][0-9]*$/ || seen_flyway[$2]++) exit 1
+      flyway_count++
+      if (evidence_version == "1") {
+        if (NF != 5 || $5 != "true") exit 1
+      } else if (evidence_version == "2") {
+        if (NF != 8 || $2 != flyway_count || $3 != flyway_count ||
+            $4 !~ /^([0-9a-f][0-9a-f])+$/ || $5 != "SQL" ||
+            $6 !~ /^([0-9a-f][0-9a-f])+$/ ||
+            $7 !~ /^-?(0|[1-9][0-9]*)$/ || $7 < -2147483648 || $7 > 2147483647 ||
+            $8 != "true" || seen_version[$3]++) exit 1
+      } else {
+        exit 1
+      }
       next
     }
     $1 == "platform_metadata" {
@@ -895,6 +926,9 @@ wsr_parse_database_evidence() {
 
   WSR_RESTORED_FLYWAY_SUCCESSFUL_COUNT="$(
     wsr_database_evidence_single_value "$path" flyway_successful_count
+  )" || return 1
+  WSR_RESTORED_DATABASE_EVIDENCE_VERSION="$(
+    wsr_database_evidence_single_value "$path" evidence_version
   )" || return 1
   WSR_RESTORED_FLYWAY_MAX_INSTALLED_RANK="$(
     wsr_database_evidence_single_value "$path" flyway_max_installed_rank
@@ -1174,6 +1208,7 @@ wsr_action_rehearse_latest() {
   wsr_fsync_path "$evidence_parent"
   wsr_validate_restore_evidence "$backup_id" "$evidence_name"
   printf 'RESTORE_REHEARSAL_PASSED|%s|%s\n' "$backup_id" "$evidence_name"
+  printf 'SCHEMA_COMPATIBILITY|not-evaluated-run-schema-check-latest\n'
   printf 'PRODUCTION_RESTORE|forbidden-by-this-command-surface\n'
 }
 
@@ -1332,6 +1367,7 @@ main() {
     status) wsr_action_status ;;
     rehearse-latest) wsr_action_rehearse_latest ;;
     retention-plan) wsr_action_retention_plan ;;
+    schema-check-latest) wsr_action_schema_check_latest ;;
     *)
       wsr_error "Action is not allowlisted."
       usage >&2

@@ -1,8 +1,9 @@
 # Ubuntu home-server deployment foundation
 
-This directory contains the ADR-046 deployment boundary and ADR-047 recovery
-boundary for the public **DEMO** site. They are independent from the root
-development `compose.yaml` and never load the ignored root `.env`.
+This directory contains the ADR-046 deployment boundary, ADR-047 recovery
+boundary, and ADR-048 exact release-schema gate for the public **DEMO** site.
+They are independent from the root development `compose.yaml` and never load
+the ignored root `.env`.
 
 ## What is ready now
 
@@ -337,6 +338,7 @@ sudo bash deploy/home-server/recovery-production.sh -- create
 sudo bash deploy/home-server/recovery-production.sh -- status
 sudo bash deploy/home-server/recovery-production.sh -- rehearse-latest
 sudo bash deploy/home-server/recovery-production.sh -- retention-plan
+sudo bash deploy/home-server/recovery-production.sh -- schema-check-latest
 ```
 
 `create` streams `pg_dump` from exactly one healthy Compose-labeled PostgreSQL
@@ -355,14 +357,34 @@ hashed restore-evidence manifest, and removes only its exact owned resources.
 Production success never depends on the current DEMO fixture row counts. The backup HDD is never
 mounted into PostgreSQL, API, web, or Caddy.
 
+New rehearsals write database-evidence v2, including each Flyway migration's
+ordered rank/version, UTF-8-hex description and script, exact SQL type, signed
+checksum, and success state. Existing v1 evidence remains a valid historical
+restore observation but is intentionally insufficient for ADR-048; run a new
+`rehearse-latest` before `schema-check-latest`.
+
+`schema-check-latest` is a fixed production-data-read-only gate. It accepts no
+SHA, ref, image, path, backup ID, or Docker option. It resolves only the exact
+commit recorded in the latest backup without reading HEAD, the working tree,
+or the network; partial/promisor, alternate, replacement, short, missing, and
+non-commit Git objects fail closed. It runs the exact recorded API image's
+offline inventory command in one 30-second, 1 MiB-output, 384 MiB, 1-CPU,
+128-PID, `network=none`, read-only, no-mount/no-port inspector with
+`--pull never`, then removes that exact label-owned container. Git migration
+blob SHA-256/bytes, packaged API migration/Flyway tuples, and restored v2
+Flyway tuples must all match exactly. The current checkout may be dirty without
+changing this object-based result.
+
 `retention-plan` is read-only: it reports the union of 14 daily, 8 weekly, and
 12 monthly recovery points but deletes nothing. There is no production restore
 or arbitrary backup/path/Docker argument. Actual fresh-volume promotion,
 automatic pruning, scheduling, and off-site/offline copying remain blocked.
 Every same-server result therefore continues to report
 `PENDING_OFFSITE_COPY`. Successful database and release-image evidence never
-emits `rollback-ready`; schema compatibility and production-volume promotion
-remain future gates.
+emits `rollback-ready`. Exact schema compatibility can only move the remaining
+status to blocked promotion/artifact gates; fresh-volume promotion,
+previous-volume preservation, durable release-image custody, and off-site
+copying remain future work.
 
 ## Router and CGNAT decision
 
