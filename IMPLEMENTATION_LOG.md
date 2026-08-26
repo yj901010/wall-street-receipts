@@ -6030,3 +6030,119 @@ in-place production restore or automatic deletion action.
 - Add exact release Git-object/Flyway schema compatibility and fresh-volume
   promotion/rollback rehearsal before any command can claim rollback readiness
   or switch production data generations.
+
+## 2026-08-26 — ADR-048 exact release-schema compatibility gate
+
+ADR-048 closes the schema-compatibility portion of ADR-047 without adding a
+production-volume switch or a rollback-ready claim. The gate compares the exact
+Git commit, packaged API migration resources, and restored Flyway history that
+were recorded for one verified backup. It never substitutes the current
+working tree, fetches a missing object, pulls a missing image, or connects the
+application inspector to PostgreSQL.
+
+### Scope and decisions
+
+- Upgrade new restored-database observations to evidence v2. Each successful
+  Flyway row now binds contiguous installed rank and version, UTF-8-hex
+  description and script, exact `SQL` type, signed checksum, and success state.
+  Legacy v1 evidence remains identifiable restore proof but cannot satisfy the
+  exact compatibility gate; the operator must run a new restore rehearsal.
+- Pin Flyway `11.7.2` and add the reserved offline API command
+  `--wsr-release-schema-inventory`. It runs before Spring Boot, scans the
+  migrations actually packaged on the runtime classpath, rejects empty,
+  malformed UTF-8, BOM, nested, repeatable, noncanonical, duplicate, gapped,
+  oversized, or unsupported resources, and calculates checksums with the exact
+  packaged Flyway implementation rather than a reimplementation.
+- Add fixed action `schema-check-latest`. It accepts no caller-selected SHA,
+  ref, path, image, backup ID, or Docker option. It revalidates the latest
+  completed backup and immutable restore evidence before doing any comparison.
+- Resolve only the full lowercase SHA-1 commit recorded in the backup. Inherited
+  `GIT_*` overrides, replacement objects, optional lazy fetching, partial or
+  promisor repositories, included repository configuration, and alternate
+  object stores are rejected or disabled. Missing commits and blobs remain
+  missing; the action does not read `HEAD` or invoke a Git worktree mutation.
+- Inspect the exact locally present API image ID with `--pull never` in one
+  random label-owned container. The inspector has `network=none`, a read-only
+  root, no mounts or ports, all capabilities dropped, no-new-privileges, 384
+  MiB memory with no swap, one CPU, 128 PIDs, no Docker log driver, a 30-second
+  timeout, and a 1 MiB output ceiling. Exact cleanup is required for success.
+- Require exact equality across all three views: Git blob SHA-256 and byte
+  count, image filename/resource/checksum tuple, and restored Flyway
+  rank/version/description/type/script/checksum tuple. Count, order, rename,
+  byte, checksum, type, or history drift fails closed with a stable reason.
+- Preserve the recovery boundary. Exact schema compatibility can emit only
+  `compatible-exact-recorded-release`; rollback readiness remains blocked on
+  fresh-volume promotion, previous-volume preservation, durable artifact
+  custody, and the still-pending off-site/offline copy.
+
+### Routes and module structure
+
+- No product route, Spring HTTP endpoint, OpenAPI operation, database migration,
+  fixture, provider integration, or UI surface changed. No API key, provider
+  account, domain, ACME email, router credential, HDD fact, or new secret was
+  needed for this implementation or local rehearsal.
+- `ReleaseSchemaInventoryCommand` owns the bounded runtime inventory producer;
+  its focused JUnit suite owns exact V1-through-V9 output and malformed-resource
+  cases. `WallStreetReceiptsApiApplication` dispatches the one reserved command
+  before Spring startup.
+- `database-evidence.sql` and `recovery-production.sh` own evidence v2, strict
+  legacy/v2 parsing, validated restore-evidence discovery, and the new fixed
+  action. `schema-compatibility.sh` owns Git isolation, image inspection, the
+  three-way comparator, blocked reasons, and exact cleanup.
+- `verify-home-server-database-evidence.sh` and
+  `verify-home-server-schema-compatibility.sh` exercise parser and comparator
+  drift. The PowerShell Docker rehearsal now compares the restored v2 tuples
+  with the packaged image inventory. CI runs the new Bash syntax and comparator
+  fixtures. ADR-048 and both deployment READMEs record the operator contract.
+
+### Verification
+
+- API Maven `verify`: **PASS** — 2,357 tests with zero failures, errors, or
+  skips. The focused inventory suite passed 10/10. The packaged executable JAR
+  emitted only the canonical Flyway 11.7.2 V1-through-V9 inventory before
+  Spring startup; executable-JAR injections of a nested migration and a
+  repeatable migration both failed closed with exit 70.
+- Bash execution fixtures: **PASS** — syntax checks, strict v2 evidence,
+  continued identification of legacy v1, seven malformed-evidence rejections,
+  exact real Git commit/blob comparison, missing and short object rejection,
+  a real promisor clone rejection, linked-worktree common-directory alternate
+  rejection, image-resource drift, inventory-shape drift, and Flyway history
+  drift all passed.
+- Semantic/source guard: **PASS** — ADR-046 remained exact and ADR-047/048
+  reached a **111-case negative matrix**, including 40 real shell-source and 8
+  local-rehearsal mutations. PowerShell AST parsing, CI YAML parsing, and
+  `git diff --check` passed.
+- Disposable Docker recovery rehearsal at commit
+  `96314051e48ee84b34fab5d02fb480caf4137eb0`: **PASS** — isolated API, web,
+  Caddy, and PostgreSQL images built; all services became healthy; a real
+  custom archive survived corruption rejection and restored into a fresh
+  `network=none` volume; evidence v2, nine Flyway tuples, the exact API-image
+  inventory, DEMO `3|2|4` counts, 12 public routes, and exact owned-resource
+  cleanup passed.
+- The first full run exposed that the local PowerShell harness did not use the
+  production `psql -X -q -A -t` evidence mode; commit `c576496` fixed it and
+  added a negative mutation. The next run exposed Compose-only
+  `JAVA_TOOL_OPTIONS` noise in the harness's extra inventory JVM; commit
+  `9631405` removed all three standard JVM option variables for that local
+  command and added another negative mutation. The final full run passed.
+- The caller-owned `apps/web/next-env.d.ts` remained uncommitted and retained
+  SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Live Ubuntu/HDD validation: **NOT RUN BY DESIGN**. This development computer
+  is not the future home server, and no production database, backup disk,
+  router, DNS, TLS, port 80/443, or external/offline copy was changed.
+
+### Next work
+
+- Design ADR-049 as a fresh-volume promotion rehearsal with an atomic,
+  explicitly reversible generation switch and verified preservation of the
+  previous production volume. It must consume only an ADR-048-compatible
+  recovery point and must fail closed before changing live ownership.
+- Define durable custody and authenticity for the exact release Git objects and
+  OCI images. A local image ID proves identity only while that object remains
+  present; it is not an archive, signature, or independent copy.
+- Select and validate the actual Ubuntu backup HDD before enabling production
+  backup actions. Record its device path, UUID, filesystem, capacity, direct
+  transport/serial identity, encryption choice, reboot behavior, and schedule
+  on that server. Keep `PENDING_OFFSITE_COPY` until an offline or off-site copy
+  is independently rehearsed.
