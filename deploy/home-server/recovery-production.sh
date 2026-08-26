@@ -35,16 +35,18 @@ declare -Ag WSR_RESTORE_EVIDENCE_MANIFEST=()
 
 # shellcheck source=deploy/home-server/schema-compatibility.sh
 source "$script_dir/schema-compatibility.sh"
+# shellcheck source=deploy/home-server/generation-promotion.sh
+source "$script_dir/generation-promotion.sh"
 
 usage() {
   cat <<'USAGE'
 Usage: recovery-production.sh -- ACTION
 
-Allowed actions: preflight, create, status, rehearse-latest, retention-plan, schema-check-latest.
+Allowed actions: preflight, create, status, rehearse-latest, retention-plan, schema-check-latest, promotion-plan-latest.
 
 The command accepts no config path, backup path, Compose option, or Docker
 argument. Production config is always /etc/wall-street-receipts/backup.conf.
-No action restores or deletes production data, and retention-plan never deletes.
+No action restores, promotes, or deletes production data, and retention-plan never deletes.
 USAGE
 }
 
@@ -1368,6 +1370,7 @@ main() {
     rehearse-latest) wsr_action_rehearse_latest ;;
     retention-plan) wsr_action_retention_plan ;;
     schema-check-latest) wsr_action_schema_check_latest ;;
+    promotion-plan-latest) wsr_action_promotion_plan_latest ;;
     *)
       wsr_error "Action is not allowlisted."
       usage >&2

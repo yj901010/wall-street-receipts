@@ -6146,3 +6146,115 @@ application inspector to PostgreSQL.
   transport/serial identity, encryption choice, reboot behavior, and schedule
   on that server. Keep `PENDING_OFFSITE_COPY` until an offline or off-site copy
   is independently rehearsed.
+
+## 2026-08-26 — ADR-049 hash-bound read-only generation promotion plan
+
+ADR-049 deliberately stops before a live database-volume transition. It adds a
+fixed plan which proves that one ADR-048-compatible recovery point belongs to
+the exact release currently running, records the future crash contract, and
+keeps every activation and rollback-readiness claim blocked. No candidate,
+selector, journal, service, network, or production volume is created or
+changed.
+
+### Scope and decisions
+
+- Add fixed action `promotion-plan-latest`. It accepts no caller backup ID,
+  generation, volume, SHA, image, path, Compose option, Docker option, or
+  approval token. It always reruns the latest ADR-048 comparison first.
+- Require exactly one healthy Compose-labeled PostgreSQL, API, web, and
+  production Caddy container. Match the PostgreSQL release label and each
+  running reference, full image ID, and OCI revision against the immutable
+  backup manifest; missing, duplicate, stopped, unhealthy, truncated, stale,
+  or changed identities fail closed.
+- Emit 41 canonical LF records and their SHA-256. The plan binds complete backup
+  and restore-evidence IDs, backup/archive/restore-manifest/database-evidence
+  digests, Git/Flyway facts, observation interval, current full container/image
+  identities, legacy source volume, deterministic planned candidate name, and
+  every unimplemented activation prerequisite. The candidate state remains
+  `not-created-by-this-command`.
+- Define a pure 16-state controlled-downtime contract. Target health must be
+  verified before probation; reviewed pre-downtime aborts return to the source,
+  and every post-source-stop state has an explicit rollback path which never
+  needs to enter probation. Every skipped, replayed, wrong-branch, terminal,
+  unknown, or empty transition is rejected. Ambiguous post-stop states require
+  an operator and never auto-select or delete a generation.
+- Bind a first and final observation. Before success, reselect and strictly
+  revalidate the latest backup/evidence, rehash its content, and reinspect all
+  exact container IDs. Drift visible between observations blocks the plan; the
+  interval is evidence, cannot close the residual post-read race, and is not a
+  substitute for the future shared lock.
+- Explicitly prohibit promotion of the ADR-047 restore target because it is a
+  disposable, `network=none`, trust-auth rehearsal resource. A future candidate
+  must be freshly initialized with the production password-file/SCRAM contract.
+- Defer manifest v2 only because the legacy volume remains authoritative in
+  this read-only slice. Generation binding, strict legacy-v1/generation-v2
+  validators, protected external-volume indirection, a primary-host shared
+  lock, fsynced journal, artifact custody, and operator decisions are mandatory
+  before the first real switch.
+- Keep full API/web/Caddy runtime topology and two-generation capacity as
+  explicit hash-bound activation prerequisites. This slice proves exact release
+  images, labels, and health but does not infer env/network/mount/port equality.
+
+### Routes and module structure
+
+- No product route, Spring endpoint, OpenAPI operation, database migration,
+  fixture, provider, Compose topology, or UI surface changed. No API key,
+  provider account, domain, ACME email, router credential, HDD fact, or new
+  secret was required.
+- `deploy/home-server/generation-promotion.sh` owns the live identity comparator,
+  canonical plan renderer/hash, pure transition table, conservative crash
+  directives, and blocked operator output. `recovery-production.sh` exposes the
+  sole fixed action.
+- `scripts/verify-home-server-generation-promotion.sh` exhaustively executes the
+  state-event Cartesian product, all interruption directives, canonical plan
+  ordering/LF/hash determinism and identity sensitivity, required blockers,
+  blocked output, and missing-evidence rejection without Docker, network, or
+  host writes.
+- `scripts/verify-home-server-recovery.py` adds a closed helper call graph,
+  exact transition-arm parser, separate source contract, and 31 generation-plan
+  mutations. CI parses both new Bash files and runs the pure
+  verifier. ADR-049 plus the root and deployment READMEs record the boundary.
+
+### Verification
+
+- ADR-046 deployment source guard: **PASS**.
+- ADR-047/048/049 recovery source guard: **PASS** — **142 negative cases**, with
+  40 recovery shell-source, 31 generation-plan, and 8 local-rehearsal
+  mutations.
+- ADR-049 pure Bash contract: **PASS** — complete normal/abort/rollback state
+  tables, pre-probation recovery graph, conservative interruption handling,
+  exact 41-row canonical plan and SHA-256, content/identity hash sensitivity,
+  live identity mismatch doubles, action gate ordering, explicit blockers, and
+  no readiness claim.
+- Existing Bash recovery fixtures: **PASS** — exact retention, strict v2 and
+  identifiable v1 database evidence, and Git/image/Flyway schema drift
+  rejection. New and connected Bash files passed `bash -n`.
+- Python bytecode parsing and `git diff --check`: **PASS**. CI YAML received the
+  new syntax and execution steps.
+- Full Docker recovery rehearsal was **NOT RERUN BY DESIGN**. ADR-048's last
+  disposable full rehearsal remains green; this slice changes no image,
+  Compose resource, database, route, or Docker mutation path. The new runtime
+  action requires the future rootful Ubuntu host, verified backup HDD, and
+  production Caddy profile, while its pure policy is locally covered.
+- The caller-owned `apps/web/next-env.d.ts` remained uncommitted and retained
+  SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Live Ubuntu/HDD validation: **NOT RUN BY DESIGN**. This development computer
+  is not the future home server; no production volume, server, router, DNS,
+  TLS, port 80/443, backup disk, or external/offline copy was changed.
+
+### Next work and required operator inputs
+
+- Implement generation-aware backup manifest v2, strict v1/v2 production
+  validators, protected external-volume selection, a host-persistent shared
+  lock and fsynced transition journal, and exact artifact custody before any
+  candidate can be prepared or activated.
+- Before that live implementation or Ubuntu integration rehearsal, ask the
+  operator for the actual server/DockerRootDir/backup-HDD paths and storage
+  facts, capacity for two full generations plus restore headroom, acceptable
+  maintenance downtime, probation duration, and write-freeze/RPO policy. Do
+  not infer them and do not request secret values in chat.
+- Preserve both source and candidate through probation and require separate,
+  hash-bound confirmation for activation and later finalization/retirement.
+  Keep `PENDING_OFFSITE_COPY` until an independent offline or off-site copy has
+  been designed and successfully rehearsed.

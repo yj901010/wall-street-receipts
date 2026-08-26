@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static, mutation-sensitive guard for the ADR-047/ADR-048 recovery boundary.
+"""Static, mutation-sensitive guard for the ADR-047/ADR-048/ADR-049 boundary.
 
 The guard deliberately does not execute the Ubuntu recovery scripts.  It is
 safe to run on Windows and in CI: it reads only committed recovery sources,
@@ -35,6 +35,7 @@ ACTIONS = frozenset(
         "rehearse-latest",
         "retention-plan",
         "schema-check-latest",
+        "promotion-plan-latest",
     }
 )
 FILESYSTEMS = frozenset({"ext4", "xfs"})
@@ -48,6 +49,7 @@ COMMON = DEPLOY / "recovery-common.sh"
 PREFLIGHT = DEPLOY / "recovery-preflight.sh"
 PRODUCTION = DEPLOY / "recovery-production.sh"
 SCHEMA_COMPATIBILITY = DEPLOY / "schema-compatibility.sh"
+GENERATION_PROMOTION = DEPLOY / "generation-promotion.sh"
 LOCAL_REHEARSAL = ROOT / "scripts" / "verify-home-server-deployment.ps1"
 
 
@@ -2081,6 +2083,687 @@ def validate_schema_compatibility_source(source: str, production_source: str) ->
     )
 
 
+def validate_generation_promotion_source(source: str, production_source: str) -> None:
+    """Prove ADR-049 can only emit a hash-bound, blocked, read-only plan."""
+
+    code = strip_full_line_comments(source)
+    allowed_helpers = frozenset(
+        {
+            "wsr_action_promotion_plan_latest",
+            "wsr_backup_id_valid",
+            "wsr_docker",
+            "wsr_error",
+            "wsr_evaluate_latest_schema_compatibility",
+            "wsr_find_restore_evidence",
+            "wsr_latest_backup_id",
+            "wsr_promotion_bind_validated_evidence_digests",
+            "wsr_promotion_build_plan",
+            "wsr_promotion_capture_observation_snapshot",
+            "wsr_promotion_complete_observation",
+            "wsr_promotion_emit_blocked",
+            "wsr_promotion_emit_plan",
+            "wsr_promotion_fail",
+            "wsr_promotion_next_state",
+            "wsr_promotion_recovery_directive",
+            "wsr_promotion_reset",
+            "wsr_promotion_revalidate_observation_snapshot",
+            "wsr_promotion_validate_live_release",
+            "wsr_promotion_validate_release_service",
+            "wsr_schema_reset",
+            "wsr_validate_completed_backup",
+            "wsr_validate_production_postgres",
+        }
+    )
+    observed_helpers = frozenset(re.findall(r"\bwsr_[a-z0-9_]+\b", code))
+    expected_transitions = frozenset(
+        {
+            ("steady", "begin-candidate-preparation", "candidate-preparing"),
+            ("candidate-preparing", "seal-candidate-offline", "candidate-sealed-offline"),
+            ("candidate-preparing", "abandon-candidate-after-review", "steady"),
+            ("candidate-sealed-offline", "record-explicit-approval", "approval-recorded"),
+            ("candidate-sealed-offline", "abort-before-downtime", "steady"),
+            ("approval-recorded", "persist-quiesce-intent", "quiesce-intent"),
+            ("approval-recorded", "abort-before-downtime", "steady"),
+            ("quiesce-intent", "stop-source", "source-stopped"),
+            ("quiesce-intent", "abort-before-downtime", "steady"),
+            ("source-stopped", "persist-selector-switch-intent", "selector-switch-intent"),
+            ("selector-switch-intent", "start-target", "target-starting"),
+            ("target-starting", "verify-target-health", "target-health-verified"),
+            ("target-health-verified", "begin-probation", "probation"),
+            ("probation", "finalize", "finalized"),
+            ("source-stopped", "persist-rollback-intent", "rollback-intent"),
+            ("selector-switch-intent", "persist-rollback-intent", "rollback-intent"),
+            ("target-starting", "persist-rollback-intent", "rollback-intent"),
+            ("target-health-verified", "persist-rollback-intent", "rollback-intent"),
+            ("probation", "persist-rollback-intent", "rollback-intent"),
+            ("rollback-intent", "stop-target", "target-stopped-for-rollback"),
+            (
+                "target-stopped-for-rollback",
+                "restore-source-selector",
+                "source-selector-restored",
+            ),
+            ("source-selector-restored", "start-source", "source-restarting"),
+            ("source-restarting", "complete-rollback", "rolled-back"),
+        }
+    )
+    live_service_body = shell_function_body(
+        code,
+        "wsr_promotion_validate_release_service",
+    )
+    live_release_body = shell_function_body(
+        code,
+        "wsr_promotion_validate_live_release",
+    )
+    digest_body = shell_function_body(
+        code,
+        "wsr_promotion_bind_validated_evidence_digests",
+    )
+    revalidation_body = shell_function_body(
+        code,
+        "wsr_promotion_revalidate_observation_snapshot",
+    )
+    plan_body = shell_function_body(code, "wsr_promotion_build_plan")
+    action_body = shell_function_body(code, "wsr_action_promotion_plan_latest")
+    emit_body = shell_function_body(code, "wsr_promotion_emit_plan")
+    transition_body = shell_function_body(code, "wsr_promotion_next_state")
+    recovery_body = shell_function_body(code, "wsr_promotion_recovery_directive")
+    observed_transitions = frozenset(
+        re.findall(
+            r"(?m)^\s*([a-z][a-z0-9-]*)\\\|([a-z][a-z0-9-]*)\)\s+"
+            r"printf '([a-z][a-z0-9-]*)\\n'\s*;;\s*$",
+            transition_body,
+        )
+    )
+
+    require(
+        observed_helpers == allowed_helpers,
+        "Generation promotion helper call graph changed outside the closed allowlist",
+    )
+    require(
+        observed_transitions == expected_transitions
+        and transition_body.count("*) return 1 ;;") == 1,
+        "Generation promotion transition table differs from the exact reviewed graph",
+    )
+
+    require(
+        'source "$script_dir/generation-promotion.sh"' in production_source,
+        "Production recovery does not source the fixed generation-promotion policy",
+    )
+    require(
+        has_all(
+            action_body,
+            (
+                "wsr_schema_reset",
+                "if ! wsr_evaluate_latest_schema_compatibility",
+                "if ! wsr_promotion_bind_validated_evidence_digests",
+                "if ! wsr_promotion_validate_live_release",
+                "wsr_promotion_capture_observation_snapshot",
+                "if ! wsr_promotion_revalidate_observation_snapshot ||",
+                "! wsr_promotion_complete_observation",
+                "if ! wsr_promotion_build_plan",
+                "wsr_promotion_emit_plan",
+                "wsr_promotion_emit_blocked",
+            ),
+            ignore_case=False,
+        )
+        and action_body.count("wsr_promotion_emit_plan") == 1
+        and action_body.rstrip().endswith("wsr_promotion_emit_plan"),
+        "Promotion planning must re-run schema, live-release, and canonical-plan gates",
+    )
+    require(
+        has_all(
+            live_service_body,
+            (
+                "container ls --all --quiet",
+                "--no-trunc",
+                "${#container_ids[@]} != 1",
+                ".State.Running",
+                ".State.Health.Status",
+                "com.docker.compose.project",
+                "com.docker.compose.service",
+                ".Config.Image",
+                ".Image",
+                "org.opencontainers.image.revision",
+                '"$image_reference" != "$expected_reference"',
+                '"$image_id" != "$expected_image_id"',
+                '"$revision" != "$expected_revision"',
+            ),
+            ignore_case=False,
+        ),
+        "Promotion planning lost exact live service identity or health checks",
+    )
+    require(
+        'if [[ "$running" != "true" || "$health" != "healthy" ||' in live_service_body,
+        "Stopped or unhealthy release services must fail independently",
+    )
+    require(
+        has_all(
+            live_release_body,
+            (
+                "wsr_validate_production_postgres",
+                "postgres_full_id",
+                "{{.Id}}",
+                "com.wallstreetreceipts.release-sha",
+                '"$postgres_release_label" != "$git_sha"',
+                "WSR_BACKUP_MANIFEST[postgres_image_id]",
+                "WSR_BACKUP_MANIFEST[postgres_image_reference]",
+                '"$WSR_POSTGRES_IMAGE_REVISION" != "${WSR_BACKUP_MANIFEST[postgres_image_revision]:-}"',
+                "WSR_BACKUP_MANIFEST[postgres_volume_name]",
+                "WSR_RECOVERY_POSTGRES_VOLUME",
+                "api WSR_PROMOTION_API",
+                "web WSR_PROMOTION_WEB",
+                "caddy-production WSR_PROMOTION_CADDY",
+            ),
+            ignore_case=False,
+        ),
+        "Promotion planning lost current PostgreSQL or exact release matching",
+    )
+    require(
+        'if [[ ! "$git_sha" =~ ^[0-9a-f]{40}$ || "$postgres_release_label" != "$git_sha" ||'
+        in live_release_body,
+        "PostgreSQL Git and release-label mismatches must each fail closed",
+    )
+    require(
+        has_all(
+            plan_body,
+            (
+                "plan_version=",
+                "state_contract_version=",
+                "mode=production-data-read-only",
+                "transition_model=$WSR_PROMOTION_TRANSITION_MODEL",
+                "observation_started_utc=",
+                "observation_completed_utc=",
+                "backup_manifest_sha256=",
+                "archive_sha256=",
+                "restore_evidence_manifest_sha256=",
+                "database_evidence_sha256=",
+                "source_postgres_container_id=",
+                "source_postgres_volume=",
+                "source_api_container_id=",
+                "source_web_container_id=",
+                "source_caddy_container_id=",
+                "candidate_state=not-created-by-this-command",
+                "schema_flyway_version=",
+                "schema_migration_count=",
+                "source_preservation=required-through-probation",
+                "rehearsal_volume_eligibility=forbidden-trust-auth-disposable-only",
+                "activation_prerequisite_manifest=v2-generation-binding",
+                "activation_prerequisite_selector=protected-external-volume-indirection",
+                "activation_prerequisite_lock=shared-deployment-recovery-lock",
+                "activation_prerequisite_journal=root-owned-fsync-intent-completion",
+                "activation_prerequisite_artifacts=offline-image-custody-and-verification",
+                "activation_prerequisite_capacity=two-generations-plus-restore-headroom",
+                "activation_prerequisite_runtime=exact-env-network-mount-port-contract",
+                "operator_decision_downtime=required",
+                "operator_decision_probation=required",
+                "operator_decision_write_rpo=required",
+                "activation=blocked-by-this-contract",
+                "printf '%s\\n' \"$WSR_PROMOTION_PLAN_TEXT\" | sha256sum",
+            ),
+            ignore_case=False,
+        ),
+        "Canonical promotion plan lost an identity, prerequisite, decision, or hash binding",
+    )
+    require(
+        'readonly WSR_PROMOTION_TRANSITION_MODEL="crash-consistent-controlled-downtime"' in code,
+        "Promotion plan must describe a controlled crash-consistent downtime model",
+    )
+    require(
+        has_all(
+            digest_body,
+            (
+                "WSR_VALIDATED_BACKUP_PATH",
+                "WSR_VALIDATED_RESTORE_EVIDENCE_PATH",
+                "WSR_VALIDATED_RESTORE_EVIDENCE_FILE",
+                "sha256sum --",
+                "WSR_RESTORE_EVIDENCE_MANIFEST[backup_manifest_sha256]",
+                "WSR_RESTORE_EVIDENCE_MANIFEST[archive_sha256]",
+                "WSR_RESTORE_EVIDENCE_MANIFEST[evidence_sha256]",
+                "WSR_PROMOTION_BACKUP_MANIFEST_SHA256",
+                "WSR_PROMOTION_ARCHIVE_SHA256",
+                "WSR_PROMOTION_RESTORE_MANIFEST_SHA256",
+                "WSR_PROMOTION_DATABASE_EVIDENCE_SHA256",
+            ),
+            ignore_case=False,
+        )
+        and has_all(
+            revalidation_body,
+            (
+                "wsr_latest_backup_id",
+                "wsr_validate_completed_backup",
+                "wsr_find_restore_evidence",
+                "wsr_promotion_bind_validated_evidence_digests",
+                "wsr_promotion_validate_live_release",
+                "WSR_PROMOTION_SNAPSHOT_POSTGRES_CONTAINER_ID",
+                "WSR_PROMOTION_SNAPSHOT_API_CONTAINER_ID",
+                "WSR_PROMOTION_SNAPSHOT_WEB_CONTAINER_ID",
+                "WSR_PROMOTION_SNAPSHOT_CADDY_CONTAINER_ID",
+                "observation-changed",
+            ),
+            ignore_case=False,
+        ),
+        "Promotion plan lost content-digest binding or end-of-observation revalidation",
+    )
+    require(
+        'if [[ ! "$backup_manifest_sha" =~ ^[0-9a-f]{64}$ ||' in digest_body
+        and 'if [[ "$WSR_POSTGRES_CONTAINER_ID" != "$WSR_PROMOTION_SNAPSHOT_POSTGRES_CONTAINER_ID" ||'
+        in revalidation_body,
+        "Digest and final snapshot mismatches must each fail independently",
+    )
+    require(
+        has_all(
+            transition_body,
+            (
+                "steady\\|begin-candidate-preparation",
+                "candidate-preparing\\|seal-candidate-offline",
+                "candidate-preparing\\|abandon-candidate-after-review",
+                "candidate-sealed-offline\\|record-explicit-approval",
+                "candidate-sealed-offline\\|abort-before-downtime",
+                "approval-recorded\\|persist-quiesce-intent",
+                "approval-recorded\\|abort-before-downtime",
+                "quiesce-intent\\|stop-source",
+                "quiesce-intent\\|abort-before-downtime",
+                "source-stopped\\|persist-selector-switch-intent",
+                "selector-switch-intent\\|start-target",
+                "target-starting\\|verify-target-health",
+                "target-health-verified\\|begin-probation",
+                "source-stopped\\|persist-rollback-intent",
+                "selector-switch-intent\\|persist-rollback-intent",
+                "target-starting\\|persist-rollback-intent",
+                "target-health-verified\\|persist-rollback-intent",
+                "probation\\|finalize",
+                "probation\\|persist-rollback-intent",
+                "source-restarting\\|complete-rollback",
+                "*) return 1",
+            ),
+            ignore_case=False,
+        )
+        and has_all(
+            recovery_body,
+            (
+                "operator-recovery-required-no-auto-selection",
+                "operator-choice-exact-target-or-explicit-rollback",
+                "operator-recovery-required-continue-exact-rollback",
+                "*) return 1",
+            ),
+            ignore_case=False,
+        ),
+        "Promotion crash state machine became incomplete or fail-open",
+    )
+    mutating_command = re.compile(
+        r"(?im)^\s*(?:(?:command|env|sudo)\s+)*(?:cp|mv|install|mkdir|rmdir|touch|"
+        r"truncate|unlink|rm|ln|chmod|chown|chgrp|mount|umount|sync)\b|"
+        r"\b(?:wsr_docker|docker)\s+(?:compose\s+)?(?:create|run|start|stop|restart|kill|rm|"
+        r"rename|update|exec|attach|cp|commit|import|load|pull|push|save|tag|wait|pause|unpause|"
+        r"system\s+prune|image\s+(?:prune|rm|pull)|volume\s+(?:create|rm|prune)|"
+        r"container\s+(?:create|start|stop|restart|kill|rm|prune|exec))\b"
+    )
+    docker_calls = re.findall(r"(?m)^\s*wsr_docker\s+([^\n]+)$", code)
+    code_without_stderr_suppression = code.replace("2>/dev/null", "").replace(
+        ">/dev/null",
+        "",
+    )
+    output_redirection = re.compile(r"(?m)(?:^|[ \t])(?:[0-9]*>{1,2})\s*\S")
+    indirect_mutator = re.compile(
+        r"(?m)^\s*(?:wsr_prepare_storage_layout|wsr_ensure_storage_directory|"
+        r"wsr_cleanup_restore_resources|wsr_cleanup_schema_inspector|"
+        r"wsr_publish_directory_no_clobber|wsr_allocate_unique_utc_staging_directory|"
+        r"wsr_write_backup_manifest|wsr_write_restore_evidence_manifest|wsr_fsync_path)\b"
+    )
+    require(
+        mutating_command.search(code) is None
+        and output_redirection.search(code_without_stderr_suppression) is None
+        and indirect_mutator.search(code) is None
+        and re.search(r"\bwsr_docker\s+(?!(?:inspect|container\s+ls)\b)", code) is None
+        and re.search(r"(?<![A-Za-z0-9_])docker\s+", code) is None
+        and all(
+            call.startswith("container ls --all --quiet --no-trunc ")
+            or call.startswith("inspect --format ")
+            for call in docker_calls
+        )
+        and not re.search(
+            r"(?m)^\s*wsr_action_(?:create|rehearse_latest|retention_plan|schema_check_latest)\b",
+            code,
+        ),
+        "Generation promotion plan may not mutate files, containers, services, or volumes",
+    )
+    require(
+        re.search(r"(?i)\b(?:promotion|rollback)[-_ ]?ready\b", code) is None
+        and "PROMOTION_ACTIVATION|forbidden-by-this-command-surface" in code
+        and "ROLLBACK_READINESS|blocked-live-transition-and-artifact-custody-not-implemented" in code,
+        "ADR-049 must block live activation and rollback readiness",
+    )
+    require(
+        has_all(
+            emit_body,
+            (
+                "PROMOTION_PLAN|complete-read-only-contract",
+                "PROMOTION_PLAN_SHA256|%s",
+                "while IFS= read -r line",
+                "PROMOTION_PLAN_RECORD|%s",
+                'done <<< "$WSR_PROMOTION_PLAN_TEXT"',
+            ),
+            ignore_case=False,
+        )
+        and not re.search(
+            r"(?m)(?:^\s*(?:if|case|break|grep|sed|awk|head|tail)\b|\bcontinue\b)",
+            emit_body,
+        ),
+        "Promotion emitter must publish every canonical plan record without filtering",
+    )
+
+
+def validate_generation_promotion_mutations(source: str, production_source: str) -> int:
+    mutations = (
+        (
+            "generation source disconnected",
+            source,
+            replace_once(
+                production_source,
+                'source "$script_dir/generation-promotion.sh"',
+                ': "$script_dir/generation-promotion.sh"',
+                "generation promotion source",
+            ),
+        ),
+        (
+            "all-container ambiguity check weakened",
+            replace_once(
+                source,
+                "container ls --all --quiet",
+                "container ls --quiet",
+                "all-container lookup",
+            ),
+            production_source,
+        ),
+        (
+            "live image ID comparison removed",
+            replace_once(
+                source,
+                '"$image_id" != "$expected_image_id"',
+                '"$image_id" == "$expected_image_id"',
+                "live image ID comparison",
+            ),
+            production_source,
+        ),
+        (
+            "postgres release comparison removed",
+            replace_once(
+                source,
+                '"$postgres_release_label" != "$git_sha"',
+                '"$postgres_release_label" == "$git_sha"',
+                "postgres release comparison",
+            ),
+            production_source,
+        ),
+        (
+            "postgres image revision comparison removed",
+            replace_once(
+                source,
+                '"$WSR_POSTGRES_IMAGE_REVISION" != "${WSR_BACKUP_MANIFEST[postgres_image_revision]:-}"',
+                '"$WSR_POSTGRES_IMAGE_REVISION" == "${WSR_BACKUP_MANIFEST[postgres_image_revision]:-}"',
+                "postgres image revision comparison",
+            ),
+            production_source,
+        ),
+        (
+            "candidate falsely marked created",
+            replace_once(
+                source,
+                "candidate_state=not-created-by-this-command",
+                "candidate_state=created",
+                "candidate state",
+            ),
+            production_source,
+        ),
+        (
+            "generation manifest prerequisite removed",
+            replace_once(
+                source,
+                "activation_prerequisite_manifest=v2-generation-binding",
+                "activation_prerequisite_manifest=none",
+                "generation manifest prerequisite",
+            ),
+            production_source,
+        ),
+        (
+            "trust-auth rehearsal prohibition removed",
+            replace_once(
+                source,
+                "rehearsal_volume_eligibility=forbidden-trust-auth-disposable-only",
+                "rehearsal_volume_eligibility=eligible",
+                "trust-auth rehearsal prohibition",
+            ),
+            production_source,
+        ),
+        (
+            "canonical plan final newline removed",
+            replace_once(
+                source,
+                "printf '%s\\n' \"$WSR_PROMOTION_PLAN_TEXT\" | sha256sum",
+                "printf '%s' \"$WSR_PROMOTION_PLAN_TEXT\" | sha256sum",
+                "canonical plan hash",
+            ),
+            production_source,
+        ),
+        (
+            "stop-source transition skipped",
+            replace_once(
+                source,
+                "quiesce-intent\\|stop-source",
+                "quiesce-intent\\|start-target",
+                "stop-source transition",
+            ),
+            production_source,
+        ),
+        (
+            "ambiguous crash auto-selects target",
+            replace_once(
+                source,
+                "operator-recovery-required-no-auto-selection",
+                "auto-select-target",
+                "ambiguous crash directive",
+            ),
+            production_source,
+        ),
+        (
+            "live activation command introduced",
+            source.replace(
+                "wsr_action_promotion_plan_latest() {",
+                "wsr_action_promotion_plan_latest() {\n  wsr_docker container stop source-postgres",
+                1,
+            ),
+            production_source,
+        ),
+        (
+            "database evidence digest unbound",
+            replace_once(
+                source,
+                '"database_evidence_sha256=$WSR_PROMOTION_DATABASE_EVIDENCE_SHA256"',
+                '"database_evidence_id=unbound"',
+                "database evidence plan digest",
+            ),
+            production_source,
+        ),
+        (
+            "SQL mutation through docker exec introduced",
+            source.replace(
+                "wsr_action_promotion_plan_latest() {",
+                "wsr_action_promotion_plan_latest() {\n  wsr_docker exec postgres psql --command='DELETE FROM analyst_calls'",
+                1,
+            ),
+            production_source,
+        ),
+        (
+            "Docker volume prune introduced",
+            source.replace(
+                "wsr_action_promotion_plan_latest() {",
+                "wsr_action_promotion_plan_latest() {\n  docker volume prune --force",
+                1,
+            ),
+            production_source,
+        ),
+        (
+            "indirect backup creation introduced",
+            source.replace(
+                "wsr_action_promotion_plan_latest() {",
+                "wsr_action_promotion_plan_latest() {\n  wsr_action_create",
+                1,
+            ),
+            production_source,
+        ),
+        (
+            "host directory write introduced",
+            source.replace(
+                "wsr_action_promotion_plan_latest() {",
+                "wsr_action_promotion_plan_latest() {\n  mkdir -- /var/lib/wall-street-receipts/promotion",
+                1,
+            ),
+            production_source,
+        ),
+        (
+            "unconditional early plan emission introduced",
+            source.replace(
+                "wsr_action_promotion_plan_latest() {",
+                "wsr_action_promotion_plan_latest() {\n  wsr_promotion_emit_plan\n  return 0",
+                1,
+            ),
+            production_source,
+        ),
+        (
+            "live release gate bypassed",
+            replace_once(
+                source,
+                "if ! wsr_promotion_validate_live_release; then",
+                "if false && ! wsr_promotion_validate_live_release; then",
+                "live release action gate",
+            ),
+            production_source,
+        ),
+        (
+            "unhealthy service condition weakened",
+            replace_once(
+                source,
+                'if [[ "$running" != "true" || "$health" != "healthy" ||',
+                'if [[ "$running" != "true" && "$health" != "healthy" ||',
+                "service running and health join",
+            ),
+            production_source,
+        ),
+        (
+            "postgres release-label condition weakened",
+            replace_once(
+                source,
+                'if [[ ! "$git_sha" =~ ^[0-9a-f]{40}$ || "$postgres_release_label" != "$git_sha" ||',
+                'if [[ ! "$git_sha" =~ ^[0-9a-f]{40}$ && "$postgres_release_label" != "$git_sha" ||',
+                "postgres release-label join",
+            ),
+            production_source,
+        ),
+        (
+            "canonical source identity rows filtered",
+            replace_once(
+                source,
+                "while IFS= read -r line; do\n    printf 'PROMOTION_PLAN_RECORD|%s\\n' \"$line\"",
+                "while IFS= read -r line; do\n    [[ \"$line\" == source_* ]] && continue\n    printf 'PROMOTION_PLAN_RECORD|%s\\n' \"$line\"",
+                "canonical plan emission loop",
+            ),
+            production_source,
+        ),
+        (
+            "digest validation join weakened",
+            replace_once(
+                source,
+                'if [[ ! "$backup_manifest_sha" =~ ^[0-9a-f]{64}$ ||',
+                'if [[ ! "$backup_manifest_sha" =~ ^[0-9a-f]{64}$ &&',
+                "digest validation join",
+            ),
+            production_source,
+        ),
+        (
+            "final container snapshot join weakened",
+            replace_once(
+                source,
+                'if [[ "$WSR_POSTGRES_CONTAINER_ID" != "$WSR_PROMOTION_SNAPSHOT_POSTGRES_CONTAINER_ID" ||',
+                'if [[ "$WSR_POSTGRES_CONTAINER_ID" != "$WSR_PROMOTION_SNAPSHOT_POSTGRES_CONTAINER_ID" &&',
+                "final container snapshot join",
+            ),
+            production_source,
+        ),
+        (
+            "arbitrary host output redirection introduced",
+            source.replace(
+                "wsr_action_promotion_plan_latest() {",
+                "wsr_action_promotion_plan_latest() {\n  printf pwned > /tmp/wsr-pwned",
+                1,
+            ),
+            production_source,
+        ),
+        (
+            "indirect restore cleanup introduced",
+            source.replace(
+                "wsr_action_promotion_plan_latest() {",
+                "wsr_action_promotion_plan_latest() {\n  wsr_cleanup_restore_resources",
+                1,
+            ),
+            production_source,
+        ),
+        (
+            "indirect recovery lock mutation introduced",
+            source.replace(
+                "wsr_action_promotion_plan_latest() {",
+                "wsr_action_promotion_plan_latest() {\n  wsr_acquire_recovery_lock",
+                1,
+            ),
+            production_source,
+        ),
+        (
+            "indirect exit cleanup introduced",
+            source.replace(
+                "wsr_action_promotion_plan_latest() {",
+                "wsr_action_promotion_plan_latest() {\n  wsr_exit_cleanup",
+                1,
+            ),
+            production_source,
+        ),
+        (
+            "indirect schema inspector mutation introduced",
+            source.replace(
+                "wsr_action_promotion_plan_latest() {",
+                "wsr_action_promotion_plan_latest() {\n  wsr_run_schema_image_inventory",
+                1,
+            ),
+            production_source,
+        ),
+        (
+            "unauthorized transition introduced",
+            replace_once(
+                source,
+                "    *) return 1 ;;",
+                "    steady\\|force-start-target) printf 'target-starting\\n' ;;\n    *) return 1 ;;",
+                "transition fail-closed default",
+            ),
+            production_source,
+        ),
+        (
+            "promotion readiness falsely claimed",
+            source.replace(
+                "PROMOTION_PLAN|complete-read-only-contract",
+                "PROMOTION_READY|true",
+                1,
+            ),
+            production_source,
+        ),
+    )
+    validate_generation_promotion_source(source, production_source)
+    for label, mutated_source, mutated_production in mutations:
+        try:
+            validate_generation_promotion_source(mutated_source, mutated_production)
+        except ContractError:
+            continue
+        raise ContractError(f"Generation-promotion source mutation was accepted: {label}")
+    return len(mutations)
+
+
 def main() -> int:
     try:
         config_source = read_required(CONFIG)
@@ -2089,8 +2772,13 @@ def main() -> int:
         preflight_source = read_required(PREFLIGHT)
         production_source = read_required(PRODUCTION)
         schema_source = read_required(SCHEMA_COMPATIBILITY)
+        generation_source = read_required(GENERATION_PROMOTION)
         local_rehearsal_source = read_required(LOCAL_REHEARSAL)
         validate_schema_compatibility_source(schema_source, production_source)
+        generation_mutation_count = validate_generation_promotion_mutations(
+            generation_source,
+            production_source,
+        )
         local_mutation_count = validate_local_rehearsal_mutations(local_rehearsal_source)
         contract = source_contract(
             config_source,
@@ -2114,10 +2802,13 @@ def main() -> int:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
     print(
-        "PASS: ADR-047/ADR-048 backup, restore, retention, release-image evidence, "
+        "PASS: ADR-047/ADR-048/ADR-049 backup, restore, retention, release-image evidence, "
         "exact Git/API-image/Flyway schema blocking, and "
-        f"{synthetic_mutation_count + source_mutation_count + local_mutation_count}-case negative matrix are exact "
-        f"({source_mutation_count} shell-source and {local_mutation_count} local-rehearsal mutations)."
+        "hash-bound read-only generation planning are exact; "
+        f"{synthetic_mutation_count + source_mutation_count + local_mutation_count + generation_mutation_count}-case "
+        "negative matrix passed "
+        f"({source_mutation_count} recovery shell-source, {generation_mutation_count} generation-plan, "
+        f"and {local_mutation_count} local-rehearsal mutations)."
     )
     return 0
 

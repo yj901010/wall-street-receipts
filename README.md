@@ -287,6 +287,24 @@ history. It never fetches Git objects or pulls an image, accepts no caller SHA
 or path, and still cannot claim rollback readiness because data-volume
 promotion and artifact-preservation gates are not implemented.
 
+ADR-049 adds `promotion-plan-latest`, a production-data-read-only plan rather
+than a switch. It reruns ADR-048 and then requires the currently healthy
+PostgreSQL, API, web, and production Caddy containers to match the backup's
+exact Git SHA, image references, full image IDs, and OCI revisions. A passing
+result emits a canonical hash-bound future generation plan while explicitly
+recording that no candidate was created and activation remains blocked. The
+plan includes the backup/archive/restore-evidence content digests and an
+observation interval; immediately before success it reselects and revalidates
+the latest evidence and reinspects the exact container IDs to reject drift
+visible between the two observations. The pure crash table rejects skipped or
+replayed transitions, requires
+verified target health before probation, provides an explicit source rollback
+from every post-stop state, and never automatically chooses a database after
+an ambiguous interruption. Actual generation manifests, protected volume
+indirection, a shared lock, durable journal, exact runtime-topology validation,
+artifact custody, capacity, and operator downtime/probation/write-RPO decisions
+remain prerequisites for a later live implementation.
+
 ## Fixture contract
 
 Canonical demo data lives under [`fixtures/v1`](fixtures/v1). Every fixture has

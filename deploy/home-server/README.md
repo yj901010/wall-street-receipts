@@ -339,6 +339,7 @@ sudo bash deploy/home-server/recovery-production.sh -- status
 sudo bash deploy/home-server/recovery-production.sh -- rehearse-latest
 sudo bash deploy/home-server/recovery-production.sh -- retention-plan
 sudo bash deploy/home-server/recovery-production.sh -- schema-check-latest
+sudo bash deploy/home-server/recovery-production.sh -- promotion-plan-latest
 ```
 
 `create` streams `pg_dump` from exactly one healthy Compose-labeled PostgreSQL
@@ -374,6 +375,41 @@ offline inventory command in one 30-second, 1 MiB-output, 384 MiB, 1-CPU,
 blob SHA-256/bytes, packaged API migration/Flyway tuples, and restored v2
 Flyway tuples must all match exactly. The current checkout may be dirty without
 changing this object-based result.
+
+`promotion-plan-latest` is also production-data-read-only and accepts no
+caller-selected backup, generation, volume, SHA, image, path, or Docker option.
+It reruns `schema-check-latest`, then requires exactly one healthy current
+PostgreSQL, API, web, and production Caddy container. The PostgreSQL release
+label and all running image references, full image IDs, and OCI revisions must
+equal the latest backup manifest. Success emits the complete ordered plan as
+`PROMOTION_PLAN_RECORD` rows plus a SHA-256 which changes with any bound source
+identity. It does not create a candidate, stop or restart a service, change a
+volume or network, write a selector or journal, or authorize activation.
+
+The canonical rows include the complete backup and restore-evidence IDs, actual
+backup-manifest/archive/restore-manifest/database-evidence SHA-256 values,
+Git/Flyway facts, current full container and image IDs, and an observation UTC
+interval. Before success the action reselects and strictly revalidates the
+latest recovery point, rehashes its evidence, and reinspects every current
+container ID. A backup/evidence or service change visible between those two
+snapshots blocks instead of producing a mixed plan. This double observation is
+not a lock, cannot eliminate the residual race after the final read, and must
+be replaced by shared locking plus immediate revalidation in a future live
+action.
+
+The plan keeps activation blocked until manifest v2 generation binding,
+protected external-volume indirection, one shared deployment/recovery lock, a
+root-owned fsynced transition journal, production-auth candidate creation,
+offline image custody, and explicit downtime/probation/write-RPO decisions are
+implemented. Capacity for two generations plus restore headroom and exact
+API/web/Caddy environment, network, mount, and port validation are also
+mandatory activation gates; this read-only action proves release-image identity
+and health but does not infer full runtime topology. The ADR-047 rehearsal
+volume uses trust authentication and is
+always disposable; it is never an eligible candidate. Docker volumes cannot be
+atomically renamed or swapped, so a later implementation will be a reviewed
+crash-consistent downtime transition with the previous volume preserved, not a
+zero-downtime or atomic switch.
 
 `retention-plan` is read-only: it reports the union of 14 daily, 8 weekly, and
 12 monthly recovery points but deletes nothing. There is no production restore

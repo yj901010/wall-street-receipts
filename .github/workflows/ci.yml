@@ -51,8 +51,10 @@ jobs:
             deploy/home-server/recovery-preflight.sh \
             deploy/home-server/recovery-production.sh \
             deploy/home-server/schema-compatibility.sh \
+            deploy/home-server/generation-promotion.sh \
             scripts/verify-home-server-database-evidence.sh \
             scripts/verify-home-server-schema-compatibility.sh \
+            scripts/verify-home-server-generation-promotion.sh \
             scripts/verify-home-server-retention.sh
           do
             bash -n "$path"
@@ -69,6 +71,10 @@ jobs:
       - name: Verify exact release-schema compatibility comparator
         shell: bash
         run: bash scripts/verify-home-server-schema-compatibility.sh
+
+      - name: Verify generation promotion state and plan contract
+        shell: bash
+        run: bash scripts/verify-home-server-generation-promotion.sh
 
       - name: Parse local home-server rehearsal
         shell: pwsh
