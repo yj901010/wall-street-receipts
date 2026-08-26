@@ -1,8 +1,8 @@
 # Ubuntu home-server deployment foundation
 
-This directory is the ADR-046 deployment boundary for the public **DEMO**
-site. It is independent from the root development `compose.yaml` and never
-loads the ignored root `.env`.
+This directory contains the ADR-046 deployment boundary and ADR-047 recovery
+boundary for the public **DEMO** site. They are independent from the root
+development `compose.yaml` and never load the ignored root `.env`.
 
 ## What is ready now
 
@@ -26,7 +26,9 @@ loads the ignored root `.env`.
   never contacts public ACME, starts production ingress, or binds 80/443.
 
 This is not evidence of public reachability, successful ACME issuance, high
-availability, DDoS protection, or disaster recovery.
+availability, DDoS protection, or full disaster recovery. A same-server
+additional HDD is a separate-device local copy, not an offline or off-site
+copy.
 
 ## What you need right now
 
@@ -57,6 +59,23 @@ temporary directory:
 pwsh -NoProfile -File ./scripts/verify-home-server-deployment.ps1 -RunBrowserSuite
 ```
 
+Run the ADR-047 database recovery rehearsal separately when Docker is running:
+
+```powershell
+pwsh -NoProfile -File ./scripts/verify-home-server-recovery.ps1
+```
+
+It reuses the isolated loopback deployment only as a disposable source. The
+test streams a PostgreSQL custom archive to a harness-owned temporary staging
+directory, verifies `pg_restore --list`, keeps interrupted `.partial` staging
+ineligible, checks digest and full-restore corruption failures, then restores
+into a new label-owned PostgreSQL volume with `network=none` and no published
+port. Flyway history, table inventory, and row counts come from that restored
+database, not from a nearby query against the source. The command never reads
+the root `.env`, mounts a backup HDD into a container, binds 80/443, or claims
+the development computer has a separate backup device. The two honest local
+results remain `PENDING_BACKUP_DEVICE` and `PENDING_OFFSITE_COPY`.
+
 ## Future server baseline
 
 Recommended for the first approximately 100 readers:
@@ -68,6 +87,9 @@ Recommended for the first approximately 100 readers:
   less headroom at that size
 - at least 50 GiB free for the initial stack, images, and rollback headroom
 - Docker Engine from Docker's official Ubuntu repository and Compose 2.20.0+
+- rootful Docker without daemon-level user-namespace remapping; the fixed
+  numeric ownership of the file-backed application secret depends on that
+  reviewed boundary
 
 The planned 1 TB disk is ample for the initial DEMO instance. Capacity alone
 does not make a same-disk copy a backup.
@@ -97,11 +119,21 @@ chat. Set the following directly on the future server:
 Create the database secret on the server; the command does not print it:
 
 ```bash
-sudo install -d -m 0700 -o "$USER" -g "$USER" /etc/wall-street-receipts/secrets
-umask 077
-openssl rand -hex 32 > /etc/wall-street-receipts/secrets/postgres_password
-chmod 600 /etc/wall-street-receipts/secrets/postgres_password
+sudo install -d -m 0711 -o root -g root /etc/wall-street-receipts
+sudo install -d -m 0711 -o root -g root /etc/wall-street-receipts/secrets
+sudo install -m 0400 -o 10001 -g 10001 /dev/null \
+  /etc/wall-street-receipts/secrets/postgres_password
+openssl rand -hex 32 | sudo tee \
+  /etc/wall-street-receipts/secrets/postgres_password >/dev/null
 ```
+
+Compose implements file-backed secrets as bind mounts, so host ownership is
+preserved rather than remapped. The API runtime uses numeric UID/GID
+`10001:10001`; the PostgreSQL entrypoint starts as root. Keep the containing
+directory root-owned with traversal-only mode `0711`, and the shared secret
+file owned by `10001:10001` with mode `0400`. An unprivileged operator can
+validate the exact known path but cannot list the directory or read the secret.
+Never print or commit its contents.
 
 Copy the non-secret template to the ignored deployment env file and edit only
 that copy:
@@ -196,7 +228,8 @@ itself: `build`, `up`, `ps`, `logs`, `stop`, or `down`. `down` never adds
 Compose arguments, `run`/`exec`, published backend ports, environment/mount/
 entrypoint overrides, custom build arguments, privilege, and volume deletion
 are outside this wrapper. A broader update/rollback command surface belongs to
-ADR-047 after backup and restore evidence exists.
+a future ADR after ADR-047 backup/restore evidence, schema compatibility, and
+fresh-volume promotion have all been reviewed.
 
 Caddy persists certificates and account state in named volumes. Do not delete
 `caddy-data`, `caddy-config`, or `postgres-data` during routine updates.
@@ -213,6 +246,123 @@ verify:
 Enable HSTS only in a later change after external HTTPS has been stable. A bad
 AAAA record can break access for IPv6 users, so do not publish one before IPv6
 firewall and reachability checks.
+
+## Separate-device backup and recovery
+
+ADR-047 needs no API key, provider account, cloud account, domain credential,
+or new secret. It intentionally does not format, partition, encrypt, unlock,
+mount, or edit `/etc/fstab` for a disk. Because the additional HDD is not yet
+selected, stop after the local rehearsal for now.
+
+Before live backup is enabled, provide these facts from the future Ubuntu
+server:
+
+1. the already mounted HDD's exact mount path;
+2. its filesystem UUID, filesystem type (`ext4` or `xfs`), capacity, and
+   whether it is internal SATA or USB;
+3. `WSR_BACKUP_ENCRYPTION=luks2` (recommended before irreplaceable/non-DEMO
+   data) or the explicit reduced-assurance `none-demo-only` choice;
+4. the local LUKS2 boot/unlock and recovery-key procedure, if selected; and
+5. the desired manual/scheduled recovery-point interval after one reboot has
+   proven the mount and unlock behavior.
+
+Do not send an encryption passphrase, LUKS recovery key, PostgreSQL password,
+or any other secret in chat. Those values are created and retained locally.
+The exact non-secret live configuration path is
+`/etc/wall-street-receipts/backup.conf`; it accepts only:
+
+```dotenv
+WSR_BACKUP_MOUNT=/mnt/<exact-mounted-device-directory>
+WSR_BACKUP_FILESYSTEM_UUID=<exact-filesystem-uuid>
+WSR_BACKUP_ENCRYPTION=luks2
+```
+
+The example is [`backup.conf.example`](backup.conf.example). On the real
+server, first run the non-mutating host check:
+
+```bash
+bash deploy/home-server/recovery-preflight.sh --mode host
+```
+
+Only after the disk choices above are reviewed, install and edit the config
+locally:
+
+```bash
+sudo install -d -m 0711 -o root -g root /etc/wall-street-receipts
+sudo install -m 0600 -o root -g root \
+  deploy/home-server/backup.conf.example \
+  /etc/wall-street-receipts/backup.conf
+sudoedit /etc/wall-street-receipts/backup.conf
+```
+
+The exact mount must already be a distinct active `ext4`/`xfs` filesystem with
+`rw,nodev,nosuid,noexec`. This first implementation accepts only one physical
+disk, at most one partition, and, for `luks2`, exactly one dm-crypt layer. It
+fails closed on OS-visible LVM, MD/software RAID, multi-disk, loop, and other
+mapper/virtual ancestry for both the backup mount and Docker's data root. A
+default Ubuntu LVM layout therefore needs a later reviewed topology or Docker
+data on a simple partition before production recovery can pass. Create a
+root-owned mode-0700
+`<mount>/wall-street-receipts` directory and a root-owned, single-link,
+mode-0400 `<mount>/wall-street-receipts/.store-identity` file containing exactly
+these three lines, substituting the same UUID used in `backup.conf`:
+
+```text
+schema_version=1
+namespace=wall-street-receipts
+filesystem_uuid=<exact-filesystem-uuid>
+```
+
+The scripts never create or change that identity marker. They verify that the
+configured path is the exact mount, the UUID matches, the mount options are
+hardened, and its physical block-device leaves are disjoint from Docker's data
+root. The preflight hashes allowlisted direct SATA/USB/NVMe transport and
+serial evidence instead of trusting `/dev` names alone. This still cannot see
+through a hidden hardware RAID controller or VM backing store, so at cutover
+the operator must also confirm the server is physical and both leaves are
+direct devices. Missing or ambiguous evidence fails as
+`PENDING_BACKUP_DEVICE` rather than falling back to the primary disk.
+
+Then run the read-only production check:
+
+```bash
+sudo bash deploy/home-server/recovery-preflight.sh --mode production
+```
+
+The fixed operator actions are:
+
+```bash
+sudo bash deploy/home-server/recovery-production.sh -- preflight
+sudo bash deploy/home-server/recovery-production.sh -- create
+sudo bash deploy/home-server/recovery-production.sh -- status
+sudo bash deploy/home-server/recovery-production.sh -- rehearse-latest
+sudo bash deploy/home-server/recovery-production.sh -- retention-plan
+```
+
+`create` streams `pg_dump` from exactly one healthy Compose-labeled PostgreSQL
+container into same-filesystem `.partial` staging on the host, validates its
+checksum and parsed archive inventory, and publishes without overwrite only
+after flushing. A completed point contains exactly `database.dump`,
+`database.dump.sha256`, `database.inventory`, and the strict K/V `manifest`;
+the manifest records the fixed dump options. Its `database_bytes` is only an
+adjacent observation for capacity planning, not evidence from the dump's
+logical snapshot. `rehearse-latest` verifies the complete bundle, checks
+DockerRootDir scratch capacity, restores it with the recorded PostgreSQL image
+into a fresh label-owned volume with
+`network=none` and no port, derives Flyway/table evidence from that restored
+target, binds the dynamically observed Flyway and key table counts to the
+hashed restore-evidence manifest, and removes only its exact owned resources.
+Production success never depends on the current DEMO fixture row counts. The backup HDD is never
+mounted into PostgreSQL, API, web, or Caddy.
+
+`retention-plan` is read-only: it reports the union of 14 daily, 8 weekly, and
+12 monthly recovery points but deletes nothing. There is no production restore
+or arbitrary backup/path/Docker argument. Actual fresh-volume promotion,
+automatic pruning, scheduling, and off-site/offline copying remain blocked.
+Every same-server result therefore continues to report
+`PENDING_OFFSITE_COPY`. Successful database and release-image evidence never
+emits `rollback-ready`; schema compatibility and production-volume promotion
+remain future gates.
 
 ## Router and CGNAT decision
 
@@ -242,6 +392,7 @@ credential storage can be reviewed.
 - Do not use `latest`, automated container updaters, or an unreviewed PostgreSQL
   major-tag change. Rehearse every image update first.
 
-Logical backup, off-device retention, empty-target restore testing, and a
-release rollback package are intentionally the next ADR-047 slice. Do not put
-non-DEMO or irreplaceable data into this deployment before that slice passes.
+Do not put non-DEMO or irreplaceable data into this deployment until the real
+backup device passes production preflight, at-rest encryption is approved, a
+successful backup has immutable fresh-target restore evidence, and an offline
+or off-site copy policy is implemented.

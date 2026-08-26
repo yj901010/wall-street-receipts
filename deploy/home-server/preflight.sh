@@ -171,6 +171,12 @@ else
     else
       pass "Docker Engine is reachable through a pinned local endpoint."
       docker_local_ready=true
+      docker_security_options="$(docker info --format '{{range .SecurityOptions}}{{println .}}{{end}}' 2>/dev/null || true)"
+      if grep -Eq '^name=(rootless|userns)$' <<< "$docker_security_options"; then
+        fail "Rootless or daemon-level user-namespace remapping is outside the reviewed numeric secret-ownership contract."
+      else
+        pass "Docker uses the reviewed rootful, non-userns-remapped ownership boundary."
+      fi
     fi
   fi
 fi
@@ -244,15 +250,43 @@ if [[ "$mode" == "contract" || "$mode" == "publish" ]]; then
       fi
     fi
 
-    if [[ "$secret_path" == /* && -f "$secret_path" && ! -L "$secret_path" && -r "$secret_path" ]]; then
+    if [[ "$secret_path" == "/etc/wall-street-receipts/secrets/postgres_password" &&
+          -f "$secret_path" && ! -L "$secret_path" ]]; then
+      resolved_secret_path="$(realpath -e -- "$secret_path")"
       secret_mode="$(stat -c '%a' "$secret_path")"
-      if [[ "$secret_mode" == "600" || "$secret_mode" == "400" ]]; then
-        pass "The PostgreSQL secret is an absolute, readable, non-symlink file with mode $secret_mode."
+      secret_uid="$(stat -c '%u' "$secret_path")"
+      secret_gid="$(stat -c '%g' "$secret_path")"
+      secret_links="$(stat -c '%h' "$secret_path")"
+      secret_size="$(stat -c '%s' "$secret_path")"
+      secret_directory="$(dirname "$secret_path")"
+      secret_directory_mode="$(stat -c '%a' "$secret_directory")"
+      secret_directory_uid="$(stat -c '%u' "$secret_directory")"
+      secret_directory_gid="$(stat -c '%g' "$secret_directory")"
+      secret_root_directory="$(dirname "$secret_directory")"
+      secret_root_directory_mode="$(stat -c '%a' "$secret_root_directory")"
+      secret_root_directory_uid="$(stat -c '%u' "$secret_root_directory")"
+      secret_root_directory_gid="$(stat -c '%g' "$secret_root_directory")"
+      if [[ "$resolved_secret_path" == "$secret_path" && "$secret_mode" == "400" &&
+            "$secret_uid" == "10001" && "$secret_gid" == "10001" &&
+            "$secret_links" == "1" && "$secret_size" -ge 32 && "$secret_size" -le 4096 ]]; then
+        pass "The PostgreSQL secret has no symlinked parent, one link, bounded non-empty size, mode 400 and owner 10001:10001."
       else
-        fail "The PostgreSQL secret must have mode 600 or 400; found $secret_mode."
+        fail "The PostgreSQL secret must resolve exactly, have one link, contain 32-4096 bytes, use mode 400, and be owned by 10001:10001."
+      fi
+      if [[ "$secret_directory_mode" == "711" && "$secret_directory_uid" == "0" && "$secret_directory_gid" == "0" ]]; then
+        pass "The PostgreSQL secret directory has traversal-only mode 711 and owner root:root."
+      else
+        fail "The PostgreSQL secret directory must have traversal-only mode 711 and owner root:root; found mode $secret_directory_mode and owner $secret_directory_uid:$secret_directory_gid."
+      fi
+      if [[ "$secret_root_directory" == "/etc/wall-street-receipts" &&
+            "$secret_root_directory_mode" == "711" &&
+            "$secret_root_directory_uid" == "0" && "$secret_root_directory_gid" == "0" ]]; then
+        pass "The fixed secret root has traversal-only mode 711 and owner root:root."
+      else
+        fail "The fixed /etc/wall-street-receipts parent must have traversal-only mode 711 and owner root:root."
       fi
     else
-      fail "WSR_POSTGRES_PASSWORD_FILE must be an absolute readable regular file, not a symlink."
+      fail "WSR_POSTGRES_PASSWORD_FILE must be the fixed regular non-symlink path /etc/wall-street-receipts/secrets/postgres_password."
     fi
 
     ingress_mode_valid=false

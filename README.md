@@ -247,6 +247,17 @@ Run the complete container rehearsal from the repository root:
 pwsh -NoProfile -File ./scripts/verify-home-server-deployment.ps1
 ```
 
+ADR-047 adds a separate recovery rehearsal. It captures a real PostgreSQL
+custom archive from the isolated stack, rejects both a byte-flipped artifact
+and a truncated artifact whose checksum was recomputed, restores the complete
+archive into a fresh random volume with `network=none` and no host port, derives
+Flyway/table evidence only from that restored target, and removes only its
+label-owned resources:
+
+```powershell
+pwsh -NoProfile -File ./scripts/verify-home-server-recovery.ps1
+```
+
 No domain, account, stock-data API key, SEC contact email, router credential,
 or user-supplied secret is needed now. At real cutover, the operator must enter
 the domain, monitored ACME email, Git SHA, ingress/public-address facts, and the
@@ -260,8 +271,14 @@ actions with no caller-supplied Compose options, and uses fixed CPU/memory
 limits. The exact server preflight, secret
 path, sanitized local-Docker wrapper, Gabia/DNS and CGNAT decision, production
 commands, and external verification checklist are in
-[`deploy/home-server/README.md`](deploy/home-server/README.md). Backup, restore,
-off-device retention, and rollback remain the next ADR-047 slice.
+[`deploy/home-server/README.md`](deploy/home-server/README.md). ADR-047 now adds
+manual separate-device logical backup, fresh-target restore rehearsal, a
+read-only `14 daily + 8 weekly + 12 monthly` retention plan, and rollback
+blocking with release-image evidence. It never emits `rollback-ready` and
+intentionally provides neither automatic deletion nor an in-place production
+restore. Until a real additional HDD is mounted and verified on the Ubuntu
+server, `PENDING_BACKUP_DEVICE` remains; until an offline or off-site copy
+exists, `PENDING_OFFSITE_COPY` remains.
 
 ## Fixture contract
 

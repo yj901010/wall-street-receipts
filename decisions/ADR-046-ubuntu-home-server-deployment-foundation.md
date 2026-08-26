@@ -180,11 +180,15 @@ with the rehearsal tmpfs/container.
 
 `deploy/home-server/preflight.sh` is read-only and has three modes. `host` checks
 Ubuntu 24.04/26.04, amd64/arm64, CPU, at least 4 GiB RAM, at least 50 GiB free
-storage, a pinned local Docker daemon, and Compose 2.20.0+. `contract` additionally
+storage, a pinned local rootful Docker daemon without daemon-level user-
+namespace remapping, and Compose 2.20.0+. `contract` additionally
 accepts only the exact untracked `.env.production` syntax and key allowlist,
 rejects inherited WSR and Compose overrides, checks a non-placeholder lowercase
 domain and monitored ACME email, requires the full image SHA to equal a clean
-checked-out Git HEAD, verifies the absolute non-symlink mode-600/400 secret file,
+checked-out Git HEAD, verifies the absolute single-link mode-400 secret file
+resolves without a symlinked parent, has bounded non-empty size, and is owned by
+numeric UID/GID `10001:10001` inside a root-owned traversal-only mode-711
+directory,
 and matches DNS A/AAAA exactly to operator-attested global addresses. `publish`
 adds first-deployment ownership checks for TCP 80/443.
 
@@ -250,9 +254,12 @@ the explicit local pre-deployment gate.
 - A database password and TLS state are persistent, but same-disk persistence
   is not disaster recovery.
 
-ADR-047 must add logical backup, checksum, off-device retention, fresh-target
-restore rehearsal, and release rollback before any non-DEMO or irreplaceable
-data is published. Real cutover also remains blocked on the exact Ubuntu/CPU/
-RAM facts, domain, monitored ACME email, public IPv4/global IPv6 and CGNAT
-result, static-vs-dynamic address policy, router forwarding, and external
-reachability test. None of those values should be supplied as secrets in chat.
+ADR-047 adds the manual logical backup, checksum, separate-device retention
+plan, and fresh-target restore-rehearsal foundation. Its real-HDD gate remains
+pending, and it deliberately stops at release-image evidence rather than
+declaring rollback readiness. Non-DEMO or irreplaceable publication still
+requires the hardware/off-site and later schema-compatibility/promotion gates.
+Real cutover also remains blocked on the exact Ubuntu/CPU/RAM facts, domain,
+monitored ACME email, public IPv4/global IPv6 and CGNAT result,
+static-vs-dynamic address policy, router forwarding, and external reachability
+test. None of those values should be supplied as secrets in chat.

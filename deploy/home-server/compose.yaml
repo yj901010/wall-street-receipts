@@ -19,6 +19,9 @@ x-app-hardening: &app-hardening
 services:
   postgres:
     image: postgres:17-alpine
+    labels:
+      com.wallstreetreceipts.role: production-primary-database
+      com.wallstreetreceipts.release-sha: ${WSR_IMAGE_TAG:-local}
     environment:
       POSTGRES_DB: wsr
       POSTGRES_USER: wsr

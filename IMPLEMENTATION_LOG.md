@@ -5822,7 +5822,10 @@ current development computer.
   Publication requires supported Ubuntu/architecture, at least two logical
   CPUs, 4 GiB RAM, 50 GiB free storage, a local Docker daemon, Compose 2.20.0+,
   exact domain/email/full Git SHA, a clean checkout, an absolute non-symlink
-  mode-600/400 secret, exact A/AAAA-to-attested-address matching, a static
+  single-link mode-400 secret with no symlinked parent, bounded non-empty size,
+  and numeric UID/GID `10001:10001` ownership inside a root-owned traversal-
+  only mode-711 directory, a rootful non-userns-remapped Docker daemon, exact A/AAAA-to-
+  attested-address matching, a static
   direct-ingress policy, and free 80/443. It still reports
   `PENDING_EXTERNAL_INGRESS` because router/ISP reachability needs an external
   test. `compose-production.sh` pins the exact env file and sanitized local
@@ -5850,7 +5853,7 @@ current development computer.
   read-only host preflight, sanitized production wrapper, and operator runbook.
   ADR-046 owns the topology decision.
 - `scripts/verify-home-server-deployment.py` owns the rendered-model semantic
-  guard and 14-case negative mutation matrix. The PowerShell script owns local
+  guard and 15-case negative mutation matrix. The PowerShell script owns local
   build/runtime/browser evidence. Playwright configuration and evidence tests
   support private production HTTPS, require zero retries for this rehearsal,
   assert `Secure` locale persistence, and retain exact 404 and anchor evidence
@@ -5862,7 +5865,7 @@ current development computer.
 - Semantic Compose/negative-matrix guard: **PASS** — exact five-service/four-
   network model, profiles, only production TCP 80/443, numeric-loopback private
   TLS rehearsal, non-root hardening, exact mounts/environments/health gates,
-  secret flow, provider gates, and all 14 rejected mutations.
+  secret flow, provider gates, and all 15 rejected mutations.
 - Disposable Docker plus browser rehearsal: **PASS** — PostgreSQL 17 with
   Flyway v1-to-v9, Spring, production Next, and non-root Caddy reached healthy
   through `https://127.0.0.1:<random 18080-18179 port>`. All 12 public routes
@@ -5890,9 +5893,140 @@ current development computer.
 
 ### Next work
 
-- ADR-047 must add logical PostgreSQL backup, off-device retention, empty-target
-  restore rehearsal, and release rollback evidence before non-DEMO or
-  irreplaceable data is admitted.
+- ADR-047 now adds the logical PostgreSQL backup, separate-device contract,
+  empty-target restore rehearsal, read-only retention plan, and release-image
+  evidence foundation. Activation still requires the actual HDD facts and does
+  not admit non-DEMO or irreplaceable data while `PENDING_BACKUP_DEVICE` or the
+  reduced-assurance `none-demo-only` encryption choice remains.
 - Actual publication remains blocked until the future Ubuntu server exists and
   the operator confirms domain/subdomain, monitored ACME email, Git SHA,
   CGNAT/public-address/static policy, router forwarding, and external HTTPS.
+
+## 2026-08-26 — ADR-047 separate-device backup and recovery rehearsal
+
+ADR-047 adds a manual, fail-closed PostgreSQL recovery boundary for the future
+Ubuntu home server. It does not format, partition, encrypt, unlock, mount, or
+schedule a device on this development computer, and it does not expose an
+in-place production restore or automatic deletion action.
+
+### Scope and decisions
+
+- Add a fixed, non-secret `/etc/wall-street-receipts/backup.conf` contract for
+  one exact mount path, filesystem UUID, and explicit `luks2` or reduced-
+  assurance `none-demo-only` choice. The preflight requires an ext4/xfs mount
+  with `rw,nodev,nosuid,noexec`, a versioned store identity, bounded ownership,
+  a simple allowlisted block graph, and Docker storage on a distinct directly
+  observed SATA/USB/NVMe transport-plus-serial identity. Ambiguous LVM, RAID,
+  mapper, virtual, network, multi-disk, and nested-mount layouts fail closed.
+- Keep hardware facts honest: transport/serial hashing cannot see through a
+  hidden hardware RAID controller or VM backing store, so actual cutover also
+  requires operator attestation from the physical server. The repository never
+  treats the development machine or an ordinary temporary directory as proof
+  of `PENDING_BACKUP_DEVICE` completion.
+- Add five fixed actions only: `preflight`, `create`, `status`,
+  `rehearse-latest`, and read-only `retention-plan`. The wrapper pins the local
+  Docker endpoint and production Compose project, accepts no caller-selected
+  path, recovery-point ID, Docker option, destructive retention flag, or
+  production-volume target.
+- Capture exactly one healthy, label-bound PostgreSQL container with no host
+  port and exactly its writable named data volume plus read-only password bind.
+  Stream `pg_dump --format=custom --compress=6 --no-owner --no-privileges
+  --no-password` to host-only same-filesystem staging; the backup HDD is never
+  mounted into a container.
+- Publish exactly four single-link members — `database.dump`,
+  `database.dump.sha256`, `database.inventory`, and canonical K/V `manifest` —
+  only after archive-list, byte length, SHA-256, file mode/owner, directory, and
+  fsync checks. A unique UTC-second allocator and atomic no-clobber rename keep
+  partial or same-second work out of newest-point and retention selection.
+- Record database and release-image evidence separately. The manifest binds the
+  observed PostgreSQL/API/web/Caddy references, exact image IDs, OCI revisions,
+  one derived Git SHA when available, and the canonical dump options without
+  copying env files, the PostgreSQL password, or Caddy private state. Missing
+  stateless-image facts do not invalidate a sound database dump and never
+  become an invented rollback claim.
+- Verify a complete bundle before allocating a fresh label-owned volume and
+  container. The restore target uses the recorded PostgreSQL image, no port,
+  `network=none`, one writable non-production volume, an empty pre-restore
+  public schema, and fail-fast single-transaction/no-owner/no-ACL restore. Its
+  ID, labels, image, live network set, port set, and exact mount set are checked
+  before start, after health, and immediately before evidence capture.
+- Generate read-only evidence from the restored database. The production
+  parser requires canonical singleton fields, unique successful Flyway ranks,
+  platform metadata, a complete public-table inventory, and matching observed
+  counts for the key call tables. Those dynamic values are hash-bound to the
+  restore manifest; production success is not hard-coded to the DEMO fixture's
+  current Flyway or row counts.
+- Plan, but never apply, the union of the newest 14 UTC daily, 8 ISO-weekly,
+  and 12 UTC monthly points plus the newest image-evidence-ready point. Unknown,
+  partial, malformed, and unverified entries are excluded and reported. A full
+  disk blocks new publication instead of deleting the only known-good point.
+- Keep `PENDING_OFFSITE_COPY` explicit. An additional HDD in the same server
+  improves device-failure recovery but is not off-site, offline, air-gapped, or
+  protected from whole-host incidents and privileged deletion.
+- Never emit `rollback-ready`. Matching database and release-image evidence can
+  report only `image-evidence-ready` with schema compatibility still required;
+  exact Git-object resolution, Flyway compatibility, fresh-volume promotion,
+  and previous-volume preservation remain later gates.
+
+### Routes and module structure
+
+- No product route, Spring endpoint, OpenAPI contract, migration, schema,
+  canonical fixture, or provider integration changed. No API key, provider
+  account, domain credential, cloud account, SEC contact email, or new user
+  secret is required for this local implementation and rehearsal.
+- `deploy/home-server/backup.conf.example`, `recovery-common.sh`,
+  `recovery-preflight.sh`, `recovery-production.sh`, and
+  `database-evidence.sql` own the production configuration, storage/runtime
+  invariants, fixed command surface, and restored-database evidence query.
+  `compose.yaml` adds the exact source-database identity and data-volume labels.
+- `scripts/verify-home-server-recovery.py` owns the source-level contract and
+  mutation matrix. `verify-home-server-database-evidence.sh` executes dynamic
+  evidence parser fixtures, `verify-home-server-retention.sh` executes the
+  fixed UTC policy, and `verify-home-server-recovery.ps1` composes the full
+  disposable Docker rehearsal through the hardened ADR-046 harness.
+- ADR-047 records the recovery decision; the root and home-server READMEs carry
+  operator commands, limitations, and the exact future hardware inputs.
+
+### Verification
+
+- ADR-047 semantic/source guard: **PASS** — exact configuration, mount/store
+  identity, source database, four-member bundle, custom dump options, fsync and
+  publication order, fresh restore, dynamic evidence, read-only retention,
+  image evidence, rollback blocking, and **109 negative cases**, including 40
+  real shell-source and 6 local-rehearsal mutations.
+- ADR-046 deployment guard and both PowerShell AST parses: **PASS** after the
+  recovery harness gained exact source/target mount sets, live network checks,
+  evidence-time revalidation, anonymous-volume cleanup, and image tag-to-ID
+  ownership checks.
+- Bash execution fixtures: **PASS** — a non-DEMO `17|11|23` restored-count
+  sample was accepted while five mismatch/duplicate/missing/unknown variants
+  were rejected; the fixed UTC planner retained exact 14 daily, 8 weekly, 12
+  monthly, and image-evidence selections. Bash syntax and ShellCheck passed for
+  the recovery scripts and fixtures.
+- Disposable Docker recovery rehearsal: **PASS** — real PostgreSQL 17 custom
+  dump and exact four-member bundle, byte-flip rejection, truncated-and-
+  rehashed full-restore rejection, fresh `network=none`/no-port/one-volume
+  restore, Flyway v1-to-v9 plus DEMO `3|2|4` evidence, all 12 public route
+  smokes through private Caddy, and exact owned container, volume, network,
+  image-tag, temporary-secret, and temporary-directory cleanup.
+- Live Ubuntu/HDD validation: **NOT RUN BY DESIGN**. The future physical server,
+  backup disk, mount, UUID, filesystem, capacity, direct connection, encryption
+  choice, reboot/unlock behavior, schedule, and external/offline copy do not yet
+  exist as verified facts.
+
+### Next work
+
+- When the HDD is selected, collect on the Ubuntu server — not in chat from
+  this development PC — its exact `/dev/...` path, filesystem UUID, ext4/xfs
+  type, capacity, SATA/USB/NVMe transport, and simple block ancestry. Decide
+  `luks2` versus `none-demo-only`; keep any passphrase and recovery key local.
+- Review the actual Ubuntu storage layout before installation. Default LVM,
+  RAID, virtualization, or shared-controller topology needs a later explicitly
+  tested decision rather than weakening this fail-closed contract.
+- Choose a backup schedule/time zone and recovery-point objective only after
+  the mount and any LUKS unlock behavior survive a real server reboot.
+- Design one off-site or offline copy and its credential/rotation boundary;
+  until then `PENDING_OFFSITE_COPY` remains.
+- Add exact release Git-object/Flyway schema compatibility and fresh-volume
+  promotion/rollback rehearsal before any command can claim rollback readiness
+  or switch production data generations.

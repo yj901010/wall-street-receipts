@@ -8,9 +8,10 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
+import shutil
 import subprocess
 import sys
-import tempfile
 from typing import Any
 
 
@@ -31,8 +32,9 @@ def require(condition: bool, message: str) -> None:
 def render_compose() -> dict[str, Any]:
     cache_root = ROOT / ".cache"
     cache_root.mkdir(exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="wsr-home-config-", dir=cache_root) as temporary:
-        temporary_path = Path(temporary)
+    temporary_path = cache_root / f"wsr-home-config-{secrets.token_hex(8)}"
+    temporary_path.mkdir(mode=0o777 if os.name == "nt" else 0o700)
+    try:
         secret_path = temporary_path / "postgres_password"
         secret_path.write_text("configuration-only-secret\n", encoding="utf-8")
         env_path = temporary_path / "compose.env"
@@ -90,6 +92,8 @@ def render_compose() -> dict[str, Any]:
                 + process.stderr.strip()
             )
         return json.loads(process.stdout)
+    finally:
+        shutil.rmtree(temporary_path)
 
 
 def service_networks(service: dict[str, Any]) -> set[str]:
@@ -404,6 +408,14 @@ def validate_compose(document: dict[str, Any]) -> None:
 
     require(services["postgres"].get("image") == "postgres:17-alpine", "PostgreSQL major pin changed")
     require(
+        services["postgres"].get("labels")
+        == {
+            "com.wallstreetreceipts.release-sha": "0123456789abcdef",
+            "com.wallstreetreceipts.role": "production-primary-database",
+        },
+        "PostgreSQL production identity labels changed",
+    )
+    require(
         services["api"].get("image") == "wall-street-receipts-api:0123456789abcdef",
         "API release tag interpolation changed",
     )
@@ -528,6 +540,13 @@ def validate_negative_matrix(document: dict[str, Any]) -> None:
     )
     expect_rejected(
         document,
+        lambda value: value["services"]["postgres"]["labels"].__setitem__(
+            "com.wallstreetreceipts.role", "rehearsal-database"
+        ),
+        "ambiguous production database identity",
+    )
+    expect_rejected(
+        document,
         lambda value: value["services"]["web"]["depends_on"]["api"].__setitem__(
             "condition", "service_started"
         ),
@@ -648,6 +667,10 @@ def validate_text_surfaces() -> None:
         "WSR_IMAGE_TAG must exactly equal the checked-out 40-character Git HEAD",
         "The deployment checkout has tracked or untracked changes",
         "Inherited WSR_* and COMPOSE_* variables are forbidden",
+        "Rootless or daemon-level user-namespace remapping is outside",
+        "mode 400 and owner 10001:10001",
+        "secret directory must have traversal-only mode 711 and owner root:root",
+        "fixed /etc/wall-street-receipts parent must have traversal-only mode 711",
         "DNS must exactly match the configured public address",
         "refusing to run production Compose against a remote Docker endpoint",
     ):

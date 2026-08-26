@@ -38,25 +38,51 @@ jobs:
       - name: Validate Ubuntu home-server deployment contract
         run: python scripts/verify-home-server-deployment.py
 
+      - name: Validate home-server recovery contract
+        run: python scripts/verify-home-server-recovery.py
+
       - name: Parse Ubuntu home-server shell tools
         shell: bash
-        run: >-
-          bash -n
-          deploy/home-server/preflight.sh
-          deploy/home-server/compose-production.sh
+        run: |
+          for path in \
+            deploy/home-server/preflight.sh \
+            deploy/home-server/compose-production.sh \
+            deploy/home-server/recovery-common.sh \
+            deploy/home-server/recovery-preflight.sh \
+            deploy/home-server/recovery-production.sh \
+            scripts/verify-home-server-database-evidence.sh \
+            scripts/verify-home-server-retention.sh
+          do
+            bash -n "$path"
+          done
+
+      - name: Verify fixed UTC home-server retention policy
+        shell: bash
+        run: bash scripts/verify-home-server-retention.sh
+
+      - name: Verify dynamic restored-database evidence parser
+        shell: bash
+        run: bash scripts/verify-home-server-database-evidence.sh
 
       - name: Parse local home-server rehearsal
         shell: pwsh
         run: |
-          $tokens = $null
-          $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path "scripts/verify-home-server-deployment.ps1"),
-            [ref] $tokens,
-            [ref] $errors
-          ) | Out-Null
-          if ($errors.Count -gt 0) {
-            $errors | ForEach-Object { Write-Error $_.Message }
+          $allErrors = @()
+          foreach ($path in @(
+            "scripts/verify-home-server-deployment.ps1",
+            "scripts/verify-home-server-recovery.ps1"
+          )) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $path),
+              [ref] $tokens,
+              [ref] $errors
+            ) | Out-Null
+            $allErrors += $errors
+          }
+          if ($allErrors.Count -gt 0) {
+            $allErrors | ForEach-Object { Write-Error $_.Message }
             exit 1
           }
 
