@@ -6388,3 +6388,113 @@ can be verified without inventing state on this development computer.
   topology, durable Git/OCI artifact custody, two-generation capacity, and
   off-site/offline backup as explicit blockers until each is designed and
   rehearsed on the actual Ubuntu host.
+
+## 2026-08-27 — ADR-051 read-only Ubuntu server-fact handoff
+
+The future home-server laptop is not this development computer and its only
+current operator-supplied fact is an expected Ubuntu 24.04 LTS installation.
+ADR-051 adds one bounded, read-only collector so the later design can use
+observed server/Docker/storage facts without asking for broad or secret-bearing
+shell output. It does not provision, deploy, or mutate the target server.
+
+### Scope and decisions
+
+- Add the closed command surface
+  `server-facts.sh [--backup-mount ABS_PATH] [--output stdout]`. No argument is
+  valid, duplicate or unknown options and relative paths return 64, and stdout
+  is the only report destination. A missing backup choice is recorded as
+  `not-provided`.
+- Pin production command lookup to trusted Ubuntu system paths. Every observed
+  child runs through an empty environment with fixed locale/time zone, isolated
+  Docker CLI configuration, and only the local
+  `unix:///var/run/docker.sock` endpoint. Imported command-name functions are
+  removed. No inherited Docker/Compose/WSR/proxy value is inspected or printed.
+- Allow only bounded read operations for Ubuntu release, kernel/CPU/RAM,
+  Docker/Compose/RootDir/cgroup/ownership boundary, relevant filesystem and
+  capacity facts, the fixed legacy Compose PostgreSQL volume, TCP 80/443
+  listener classes, systemd state, and the four fixed production container
+  restart policies. There is no public-IP lookup, arbitrary Docker enumeration,
+  package operation, host write, service change, or Docker mutation.
+- Support the standard Ubuntu `/etc/os-release` symlink only through the exact
+  regular `/usr/lib/os-release` fallback. Other symlinks are not followed as
+  observed facts.
+- Require an optional backup path to be the exact active mount before reading
+  its filesystem or capacity. A normal directory whose parent is the root or
+  Docker filesystem cannot be reported as backup storage.
+- Emit exactly 125 fixed-order `key=value` records. Each value is nonempty
+  printable ASCII without `=`, at most 256 bytes; every child has a four-second
+  timeout and 128 KiB capture ceiling; the final LF-terminated report is at most
+  32 KiB. Missing, denied, timed-out, malformed, or sanitized facts remain
+  explicit and make `collection_status=partial` rather than becoming zero.
+- Reduce listener addresses to `wildcard`, `loopback`, or redacted scope and
+  process owners to a small class allowlist. Do not query host/current-user
+  identity or print addresses, MACs, PIDs, raw filesystem UUIDs or disk
+  serials, environment values, or secret contents. Exact infrastructure paths
+  remain visible planning facts and must be reviewed before sharing.
+- Keep `restart_policy_gate` and `bootstrap_gate` fixed at `REVIEW_REQUIRED`.
+  A complete report is planning evidence, not deployment, promotion, or
+  rollback approval.
+
+### Routes and module structure
+
+- No product route, Spring endpoint, OpenAPI operation, database migration,
+  fixture, provider, UI surface, image, Compose resource, port publication,
+  volume, selector, generation manifest, or journal changed. No API key,
+  account, domain, ACME email, router credential, public IP, server login,
+  password, or new secret was required.
+- `deploy/home-server/server-facts.sh` owns the collector and never sources an
+  env/config/secret file. `scripts/verify-home-server-server-facts.py` owns the
+  cross-platform static allowlist, exact schema, raw-byte SHA-256 review lock,
+  and mutation guard.
+  `scripts/verify-home-server-server-facts.sh` owns the pure hostile-command
+  fixtures and never selects a live Docker daemon.
+- CI parses both Bash files, runs the 45-mutation static guard, and executes the
+  18-scenario pure Bash fixture. ADR-051 plus the root and deployment READMEs
+  record the handoff and remaining operator decisions.
+
+### Verification
+
+- ADR-046 deployment source guard: **PASS**.
+- ADR-047/048/049 recovery source guard: **PASS** — **145 negative cases**.
+- ADR-050 generation-control source guard: **PASS** — **61 mutations**.
+- ADR-051 static source/mutation guard: **PASS** — exact 125-field schema and
+  exact collector-byte review lock with **45 rejected mutations** covering
+  network, privilege/package/host/Docker/
+  systemd mutations, remote Docker, output-bound weakening, false readiness,
+  unsafe direct, wrapped, quoted, or expanded command heads, trusted-path
+  weakening, backup parent fallback, and an unreviewed byte change.
+- ADR-051 Windows Git Bash pure fixtures: **PASS** — **18 executions** covering
+  normal, deterministic replay, all commands unavailable, oversized/hostile
+  output, standard Ubuntu OS symlink, partial memory, unavailable listener-owner
+  metadata, closed Docker values, exact and nested backup paths, and
+  invalid/duplicate CLI cases.
+- ADR-051 Ubuntu WSL pure fixtures: **PASS** — the same **18 executions** with
+  no live host, Docker daemon, network, secret, or mutable command. ADR-050's
+  real Linux `flock`/publication verifier also remained **PASS** at 19 grouped
+  checks.
+- Bash parsing, CI YAML parsing, Python bytecode execution, and
+  `git diff --check`: **PASS**. Full Docker recovery, browser, API, and web
+  suites were not rerun because this slice changes no application image,
+  Compose topology, database, route, or UI behavior.
+- The caller-owned `apps/web/next-env.d.ts` remained uncommitted and retained
+  SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Live Ubuntu/home-server collection: **NOT RUN BY DESIGN**. This workstation
+  and its WSL environment are not the target server, and no production disk,
+  volume, router, DNS, TLS, port, or external copy was observed or changed.
+
+### Next work and required operator inputs
+
+- Continue local product/release work without inventing server facts. When the
+  actual Ubuntu laptop is available, run the exact release checkout's
+  `server-facts.sh --output stdout`; add `--backup-mount` only after the separate
+  filesystem is genuinely mounted. Share the bounded report, not secrets or raw
+  IP/device credentials.
+- Before live generation/boot design, ask the operator for acceptable maximum
+  downtime, probation duration, writer-freeze behavior and RPO, power-return/
+  Docker auto-start policy, UPS fact, source-volume preservation, selected
+  backup topology, and offline/off-site copy policy. Do not infer these choices.
+- Ubuntu's guided-install LVM may remain incompatible with ADR-047's current
+  direct block-device allowlist. Decide the actual storage layout first or add
+  a separate reviewed LVM support decision; never weaken the existing recovery
+  preflight merely to make an unknown server pass.

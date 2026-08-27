@@ -2,9 +2,9 @@
 
 This directory contains the ADR-046 deployment boundary, ADR-047 recovery
 boundary, ADR-048 exact release-schema gate, ADR-049 read-only promotion plan,
-and ADR-050 generation-control contract foundation for the public **DEMO**
-site. They are independent from the root development `compose.yaml` and never
-load the ignored root `.env`.
+ADR-050 generation-control contract foundation, and ADR-051 read-only server-
+fact collector for the public **DEMO** site. They are independent from the
+root development `compose.yaml` and never load the ignored root `.env`.
 
 ## What is ready now
 
@@ -96,7 +96,36 @@ Recommended for the first approximately 100 readers:
 The planned 1 TB disk is ample for the initial DEMO instance. Capacity alone
 does not make a same-disk copy a backup.
 
-Run the read-only host check after Docker is installed on the future server:
+Before changing the future server, capture the bounded ADR-051 facts from the
+exact release checkout. This command clears the calling environment, pins the
+collector to trusted Ubuntu command paths and the local Docker socket, prints
+only to stdout, and does not install or change anything:
+
+```bash
+sudo env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin \
+  bash deploy/home-server/server-facts.sh --output stdout
+```
+
+If and only if a separate backup filesystem is already mounted at a reviewed
+path, collect that exact mount too:
+
+```bash
+sudo env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin \
+  bash deploy/home-server/server-facts.sh \
+  --backup-mount /mnt/<exact-mounted-device-directory> \
+  --output stdout
+```
+
+The fixed-order report does not query the host name or current account and
+omits IP and MAC addresses, process IDs, raw UUIDs and disk serials,
+environment values, and secret contents. It does include the exact local
+Docker, volume, and operator-supplied backup paths needed for planning; review
+those non-secret paths before sharing the report.
+`collection_status=complete` means only that the allowlisted facts were
+observed. `bootstrap_gate` and `restart_policy_gate` remain
+`REVIEW_REQUIRED`; the collector never claims that a live deployment is safe.
+
+Then run the older read-only baseline evaluator after Docker is installed:
 
 ```bash
 bash deploy/home-server/preflight.sh --mode host
@@ -502,6 +531,40 @@ emits `rollback-ready`. Exact schema compatibility can only move the remaining
 status to blocked promotion/artifact gates; fresh-volume promotion,
 previous-volume preservation, durable release-image custody, and off-site
 copying remain future work.
+
+## Read-only server-fact handoff
+
+ADR-051 adds `server-facts.sh` because this development computer is not the
+future home server and the target hardware is not known yet. Its command
+surface is closed to optional `--backup-mount ABSOLUTE_PATH` and
+`--output stdout`; duplicate, unknown, relative-path, and file-output arguments
+are rejected. Without a backup path it honestly records `not-provided`.
+
+Every child command has a four-second timeout and a 128 KiB capture ceiling.
+The final 125-field report has a fixed order, printable ASCII values of at most
+256 bytes, exactly one LF per record, and a 32 KiB total ceiling. Missing tools,
+Docker access, volumes, containers, and optional facts remain explicit and
+make `collection_status=partial`; they are never changed to zero or silently
+replaced with development-computer facts.
+
+The collector uses fixed Ubuntu command paths and an empty child environment,
+pins Docker to `unix:///var/run/docker.sock`, isolates Docker CLI configuration,
+and queries only the fixed Compose project and legacy PostgreSQL volume. It
+does not enumerate arbitrary Docker resources. A supplied backup path must be
+an exact active mount before filesystem or capacity facts are collected, so an
+ordinary unmounted directory cannot be reported as an exact backup mount. That
+check does not prove separate physical media: a bind mount or another
+partition on the same disk can still be an exact mount. Listener addresses are
+reduced to scope classes and process owners to a small allowlist; addresses and
+PIDs are never printed.
+
+This report is point-in-time planning evidence only. It does not prove physical
+disk ancestry, CGNAT, router/DNS/TLS behavior, `flock`/`fsync` suitability,
+off-site custody, or two-generation capacity. The existing production
+preflights must revalidate exact local values later. Acceptable downtime,
+probation duration, write-freeze/RPO, boot recovery, backup-device topology,
+and offline/off-site copy remain operator decisions. The complete decision is
+[`ADR-051`](../../decisions/ADR-051-read-only-ubuntu-server-fact-collection.md).
 
 ## Router and CGNAT decision
 

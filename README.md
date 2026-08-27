@@ -329,6 +329,23 @@ remain activation blockers. ADR-050 needs no API key, account, domain, or new
 secret. The real server filesystem/Docker storage facts and those operator
 decisions are required before a live activation design.
 
+ADR-051 adds a bounded read-only handoff for those facts without pretending
+that this development computer is the server. From the exact release checkout,
+`deploy/home-server/server-facts.sh` records a fixed-order, secret-free view of
+Ubuntu/CPU/RAM, the pinned local Docker daemon and DockerRootDir, relevant
+filesystems and capacity, the fixed legacy Compose volume, TCP 80/443 listener
+classes, and service/container restart observations. A backup path is optional
+and is inspected only after it is proven to be that exact active mount.
+
+The collector uses trusted Ubuntu command paths, an empty child environment,
+bounded time/output, and no network, package, host-write, Docker-mutation, or
+arbitrary enumeration action. It omits addresses, host names, PIDs, raw device
+identifiers, environment values, and secret contents. Missing observations
+produce `collection_status=partial`, while both bootstrap and restart-policy
+gates always remain `REVIEW_REQUIRED`. Live provisioning still waits for the
+actual server report plus operator downtime, probation, write-freeze/RPO,
+boot-recovery, backup-device, and offline/off-site-copy decisions.
+
 ## Fixture contract
 
 Canonical demo data lives under [`fixtures/v1`](fixtures/v1). Every fixture has
