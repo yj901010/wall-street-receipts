@@ -346,7 +346,9 @@ def validate_compose(document: dict[str, Any]) -> None:
         "NEXT_TELEMETRY_DISABLED": "1",
         "NEXT_PUBLIC_DATA_MODE": "DEMO",
         "CALL_AUDIT_PROVIDER": "api",
+        "SEC_MANIFEST_AUDIT_PROVIDER": "api",
         "API_BASE_URL": "http://api:8080",
+        "SITE_ORIGIN": "https://wsr.invalid",
         "MARKET_PROVIDER": "fixture",
         "ANALYST_PROVIDER": "fixture",
         "SP500_HISTORY_PROVIDER": "fixture",
@@ -508,6 +510,20 @@ def validate_negative_matrix(document: dict[str, Any]) -> None:
             "NEXT_PUBLIC_API_BASE_URL", "http://api:8080"
         ),
         "public API origin",
+    )
+    expect_rejected(
+        document,
+        lambda value: value["services"]["web"]["environment"].__setitem__(
+            "SEC_MANIFEST_AUDIT_PROVIDER", "fixture"
+        ),
+        "production SEC manifest fixture fallback",
+    )
+    expect_rejected(
+        document,
+        lambda value: value["services"]["web"]["environment"].__setitem__(
+            "SITE_ORIGIN", "http://localhost:3000"
+        ),
+        "non-public social metadata origin",
     )
     expect_rejected(
         document,

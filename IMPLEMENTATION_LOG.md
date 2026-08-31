@@ -6630,3 +6630,139 @@ changing the future home-server deployment topology.
   startup, domain/DNS, router exposure, ports 80/443, TLS/ACME contact, and
   same-origin reverse proxy. This development computer is not the deployment
   host, so no live-server readiness or reachability is claimed here.
+
+## 2026-08-31 — ADR-053 exact SEC manifest audit web consumer
+
+Status: implemented and locally validated. Hosted CI, public deployment, and
+target-Ubuntu readiness are not claimed by these local results.
+
+ADR-053 consumes the four ADR-052 exact-ID resources through one Korean-default
+same-origin Next route. It does not add a backend selector, contact SEC, expose
+Spring to the browser, or convert the immutable audit response into a latest,
+current, complete, corrected, or legally authoritative company-filings view.
+
+### Scope and decisions
+
+- Add `/research/sec/filing-history`. A parameter-free request is only an exact
+  locator and performs no provider read. A complete request carries exact
+  `manifestId` and `evaluationAsOf` in the same-origin query and selects one
+  `summary|descriptors|accessions|occurrences` view; omission selects summary.
+- Keep a closed five-key URL grammar: `manifestId`, `evaluationAsOf`, `view`,
+  `page`, and `size`. The ID is lowercase 64-hex; the cutoff is a real-calendar
+  UTC `Z` instant with at most six fractional digits and is never defaulted to
+  the current clock. Summary forbids paging. Child views use canonical
+  unsigned page `0..2147483647`, size `1..100`, and defaults `0`/`25`. Unknown,
+  duplicate, blank, padded, signed, leading-zero, and malformed input reaches a
+  local invalid state without provider interaction.
+- Read only the active resource on each navigation. Canonical links preserve
+  exact identity and cutoff, reset a newly selected view to page zero, and do
+  not offer sorting. Fixed descriptor, accession, and occurrence ordinal order
+  stays visible as response evidence rather than being relabeled SEC
+  chronology.
+- Keep `SEC_MANIFEST_AUDIT_PROVIDER` server-only and exact. `fixture` and `api`
+  are explicit whole-resource modes; a missing selector defaults to fixture
+  for isolated local development, while unknown values fail. API mode requires
+  private `API_BASE_URL`, performs a no-store redirect-rejecting JSON GET, and
+  never falls back to fixture data, another manifest, or an empty page.
+- Use one closed adapter for both modes. It preserves exact request identity,
+  raw microsecond times, explicit nulls, descriptor selection, all
+  selection-coverage states, accession agreement/conflict, every source
+  occurrence, count/time invariants, fixed page identity, and disclosure.
+  Additive/missing fields, unsafe integers, malformed SEC identities, ordering
+  drift, and cross-field inconsistency fail closed.
+- Render a bilingual evidence-first page with Korean as the default. Canonical
+  tokens are not translated. The page distinguishes the request cutoff,
+  captured/evidence-available/assembled times, provider-advertised descriptor
+  ranges, conflicts without a winner, nullable `NA`, and manifest source order.
+  It makes no data-mode, issuer/ticker, currentness, correction/removal,
+  amendment, legal-authority, or completeness inference.
+- Keep loading, invalid, not-found, error, known-empty, out-of-range,
+  pagination, keyboard-focus, long-identifier, desktop, and mobile states
+  explicit. Not found does not distinguish absent from future-invisible
+  evidence; other failures publish no partial resource.
+
+### Fixture provenance and parity design
+
+- Commit one synthetic DEMO artifact with an explicit fixture envelope. Every
+  fixture presentation labels it synthetic and not observed SEC data. API mode
+  does not use `DEMO`, `LIVE`, `REALTIME`, or another invented data mode because
+  ADR-052 exposes none.
+- Add a Java parity test that assembles the exact root and historical segments
+  through the real domain and serializes summary/descriptors/accessions/
+  occurrences through `SecFilingHistoryManifestAuditResponses`. The generated
+  JSON tree must equal the committed web fixture exactly.
+- The fixture provider uses that same artifact and adapter, returns not found
+  for another ID or a pre-assembly cutoff, preserves the caller's allowed
+  cutoff, and applies truthful bounded child pagination. It is not a source of
+  production evidence.
+
+### Runtime and deployment boundary
+
+- Add non-secret `SEC_MANIFEST_AUDIT_PROVIDER`, server-only `API_BASE_URL`, and
+  `SITE_ORIGIN`. The first chooses exact fixture/API mode. `API_BASE_URL` is
+  required only for API mode and accepts an absolute HTTP(S) base without
+  credentials, query, or fragment. `SITE_ORIGIN` accepts one exact absolute
+  HTTP(S) origin without credentials, path, query, or fragment and owns
+  canonical/social metadata, not data provenance.
+- Keep the browser on the Next origin. The home-server web container pins
+  `SEC_MANIFEST_AUDIT_PROVIDER=api`, uses `http://api:8080` only on the internal
+  application network, derives the public `SITE_ORIGIN` from the reviewed
+  domain, and keeps `SEC_PROVIDER_ENABLED=false`. Production never uses the
+  fixture as fallback.
+- This phase needs no API key, SEC account, paid plan, domain, server login,
+  operator token, or `SEC_CONTACT_EMAIL`. A successful API-backed read does
+  require an exact manifest already persisted in PostgreSQL and a cutoff at or
+  after assembly. The production domain is required only at actual
+  publication. A monitored SEC contact email is required only when a later
+  separately approved operation starts live collection and must be stored in
+  an untracked server secret environment, not chat or Git.
+
+### Verification status
+
+- Web lint: **PASS**.
+- Full Vitest suite: **PASS — 48 files / 621 tests**. Coverage includes the
+  closed query grammar, exact hrefs, fixture/API selectors, no-fallback
+  transport, response adapters and page invariants, localized route states,
+  metadata origin validation, and the valid
+  `NO_ADVERTISED_DESCRIPTORS` response state.
+- Playwright: **PASS — 78/78** across 1440, 1280, and 390 pixel projects. The
+  suite covers Korean/English presentation, locator and all four views,
+  keyboard focus, long-value containment, pagination, explicit state
+  boundaries, and absence of browser requests to the private API origin. These
+  browser successes use the synthetic fixture; an API-mode success run is not
+  claimed without a genuinely stored manifest and its allowed exact cutoff.
+- Focused API-mode browser failure boundary: **PASS — 1/1** with the private
+  base URL deliberately pointed at an unavailable loopback port. The Next
+  server attempted the private request, rendered the localized fail-closed
+  boundary, emitted no browser-to-API request, and showed no DEMO fallback.
+  This is transport/error-boundary evidence, not an API-backed success claim.
+- Production Next build: **PASS**. The build reports
+  `/research/sec/filing-history` as a dynamic route.
+- Full API Maven verify: **PASS — 2,404 tests, 0 failures, 0 errors, 15
+  skipped; BUILD SUCCESS**. The Java domain/ADR-052 response-mapper fixture
+  parity test passed within this run. The 15 skipped tests are the existing
+  Docker-gated set; this is not a claim that those Testcontainers checks ran.
+- Home-server deployment verifier: **PASS** with the production web provider
+  pinned to private API mode and the reviewed `SITE_ORIGIN`/internal API
+  boundary.
+- These results do not infer that a target Ubuntu server, stored production
+  manifest, public DNS/TLS/router path, separate backup device, or off-site
+  copy was observed or ready.
+
+### Next work and required operator inputs
+
+- Keep the validated query, adapter, parity, accessibility, responsive,
+  no-fallback, build, and deployment-source checks in the release gate; do not
+  weaken them to admit a convenient selector or production fixture fallback.
+- For an API-backed success demonstration, provide or create through a
+  separately authorized workflow a genuinely persisted manifest, then use its
+  exact ID and an allowed cutoff. Do not invent one or enable live collection
+  merely to make the page nonempty.
+- Before Internet publication, obtain the real production domain and existing
+  Ubuntu server/DNS/TLS/router/capacity/backup facts. Before live SEC
+  collection, separately approve its retention and request policy and place a
+  monitored contact email in the server secret environment.
+- A later useful company-filings product still needs its own point-in-time
+  ticker/CIK identity and selection decision, freshness/source-attribution
+  policy, amendment/correction/removal treatment, cache/concurrency/rate
+  controls, and public operating review.

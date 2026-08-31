@@ -15,7 +15,9 @@ FROM dependencies AS build
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NEXT_PUBLIC_DATA_MODE=DEMO \
     CALL_AUDIT_PROVIDER=api \
+    SEC_MANIFEST_AUDIT_PROVIDER=api \
     API_BASE_URL=http://api:8080 \
+    SITE_ORIGIN=http://localhost:3000 \
     MARKET_PROVIDER=fixture \
     ANALYST_PROVIDER=fixture \
     SP500_HISTORY_PROVIDER=fixture \

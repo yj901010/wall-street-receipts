@@ -51,7 +51,9 @@ Delivered P2 work includes
 the completed coherent analyst-call list/detail consumers, evidence directories,
 maps, market publication state, recorded S&P call history, and the honest
 known-deferred Screener shell; broader P2 remains open and actual screening
-remains P8 work. P1 provides a
+remains P8 work. ADR-053 adds a Korean-default, same-origin exact SEC manifest
+audit consumer without adding a manifest list, latest selector, or live-data
+claim. P1 provides a
 canonical analyst-call ledger,
 source evidence, immutable point-in-time market and macro/event context,
 list/detail APIs, and responsive web routes. The analyst-call ledger and each
@@ -82,7 +84,9 @@ docker compose up -d postgres
 corepack enable
 pnpm install --frozen-lockfile
 $env:CALL_AUDIT_PROVIDER = "api"
+$env:SEC_MANIFEST_AUDIT_PROVIDER = "fixture"
 $env:API_BASE_URL = "http://localhost:8080"
+$env:SITE_ORIGIN = "http://localhost:3000"
 pnpm --dir apps/web dev
 ```
 
@@ -98,9 +102,17 @@ The `local` profile imports the ignored repository-root `.env` file. CI and
 production do not activate that profile; deployment credentials must be
 injected by the hosting platform instead.
 
-On macOS or Linux, use `cp .env.example .env`, start the web process with
-`CALL_AUDIT_PROVIDER=api API_BASE_URL=http://localhost:8080 pnpm --dir apps/web dev`,
-then run `cd apps/api` followed by
+On macOS or Linux, use `cp .env.example .env`, then start the web process with:
+
+```bash
+CALL_AUDIT_PROVIDER=api \
+SEC_MANIFEST_AUDIT_PROVIDER=fixture \
+API_BASE_URL=http://localhost:8080 \
+SITE_ORIGIN=http://localhost:3000 \
+pnpm --dir apps/web dev
+```
+
+Then run `cd apps/api` followed by
 `SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run`. The default local
 endpoints are:
 
@@ -115,6 +127,8 @@ endpoints are:
 - S&P map: <http://localhost:3000/maps/sp500>
 - Nasdaq map: <http://localhost:3000/maps/nasdaq100>
 - Screener availability shell: <http://localhost:3000/screener>
+- Exact SEC manifest audit locator:
+  <http://localhost:3000/research/sec/filing-history>
 - Analyst-call API: <http://localhost:8080/v1/calls>
 - Revision audit API: <http://localhost:8080/v1/calls/demo-call-002/revisions>
 - Outcome audit API: <http://localhost:8080/v1/calls/demo-call-001/outcomes>
@@ -141,6 +155,35 @@ This is the first real web-to-application-API connection, but it is not yet a
 commercial market-data connection: Spring still imports the repository's
 synthetic DEMO fixtures into PostgreSQL. Licensed provider ingestion remains a
 separately reviewed P5 boundary.
+
+The exact SEC manifest audit page uses an independent server-only selector.
+`SEC_MANIFEST_AUDIT_PROVIDER=fixture` exposes one prominently labeled synthetic
+DEMO artifact for deterministic local UI work. `SEC_MANIFEST_AUDIT_PROVIDER=api`
+requires the same private `API_BASE_URL` and reads exactly one matching ADR-052
+summary, descriptor, accession, or occurrence resource per navigation. Neither
+mode contacts Spring from the browser, and API errors or 404 responses never
+fall back to the fixture, another manifest, or an invented empty page.
+
+The same-origin route is `/research/sec/filing-history`. With no parameters it
+is only an exact-evidence locator. A read requires a 64-character lowercase
+SHA-256 `manifestId` and an explicit real-calendar UTC `Z` `evaluationAsOf` with
+at most microsecond precision. Optional
+`view=summary|descriptors|accessions|occurrences` defaults to `summary` when
+omitted. Summary forbids pagination. Child views accept only canonical `page`
+and `size` (defaults `0`/`25`, maximum size `100`) and retain fixed manifest
+ordinal order.
+Unknown, duplicate, blank, normalized, or malformed parameters are rejected
+before a provider call. No current time, CIK/ticker/company, or latest manifest
+is selected automatically.
+
+`SITE_ORIGIN` supplies the exact absolute HTTP(S) origin used for canonical
+social metadata. Local development uses `http://localhost:3000`; public
+deployment must use the operator's actual HTTPS domain without credentials,
+path, query, or fragment. It is not an API endpoint or financial-data source.
+No API key, SEC account, paid plan, domain, or `SEC_CONTACT_EMAIL` is needed for
+the fixture-backed local slice. API-backed success additionally requires an
+already-persisted exact manifest and an allowed cutoff; live collection later
+requires a monitored SEC contact email in an untracked server environment.
 
 The completed `feature/p2-call-outcome-audit-api` slice extends the same
 whole-page call audit with the existing read-only
@@ -634,6 +677,10 @@ boundary for offline execution and immutable attempt inspection.
 ADR-052 establishes an anonymous, read-only audit API for one exact immutable
 manifest at an explicit point-in-time cutoff.
 
+ADR-053 establishes a Korean-default, same-origin web consumer and exact
+locator for those resources without adding a latest/company selector or
+fixture fallback.
+
 ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
 submissions metadata. It is disabled by default and remains server-only. When
 `SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
@@ -646,9 +693,9 @@ The adapter maps filing metadata into a provider-neutral filing catalog.
 ADR-039 through ADR-042 add internal one-shot PostgreSQL persistence, assembly,
 and attempt-execution services. ADR-043 adds a separately disabled local
 operator transport. ADR-052 adds only exact-ID, point-in-time public audit reads
-over already-persisted manifests; there is still no scheduler, startup
-collector, command-line trigger, current/latest company-filings selector, or
-web publication.
+over already-persisted manifests. ADR-053 consumes one selected resource
+server-side through Next; there is still no scheduler, startup collector,
+command-line trigger, or current/latest company-filings selector.
 `BLS_REGISTRATION_KEY`, `BEA_USER_ID`, and `EIA_API_KEY` may be
 present in the local secret file but are deliberately not consumed until their
 own P5 source, revision, canonical-model, and publication decisions are
@@ -855,11 +902,31 @@ one sanitized 404. Integrity failures are sanitized 500 responses, never empty
 or partial fallback results. GET/HEAD success and handled 400/404/405/500
 responses are `Cache-Control: no-store` and carry `X-Request-Id`.
 
-This audit read makes no network request and needs no API key, SEC account,
-domain, server access, operator token, or `SEC_CONTACT_EMAIL`. Tests keep the
-SEC provider disabled. Production Caddy still routes public traffic only to
-Next, so ADR-052 is a backend contract for a later same-origin Korean UI rather
-than a claim that the Spring origin is already Internet-reachable.
+This audit read makes no provider network request and needs no API key, SEC
+account, domain, server access, operator token, or `SEC_CONTACT_EMAIL`. Tests
+keep the SEC provider disabled. ADR-053 now supplies the same-origin Korean UI
+at `/research/sec/filing-history`: the browser reaches only Next, and Next uses
+the private server-only `API_BASE_URL` in exact `api` mode. `fixture` mode is a
+separate, visibly synthetic DEMO source generated through Java domain assembly
+and the ADR-052 response mapper; API failures never fall back to it.
+
+The UI accepts only `manifestId`, `evaluationAsOf`, `view`, `page`, and `size`.
+An empty query renders the locator without a provider read. A complete query
+requires the exact manifest and cutoff; `view` defaults to `summary`, summary
+forbids pagination, and child views retain the API's canonical page bounds and
+fixed ordinal order. The same closed adapter validates API and fixture payloads
+and preserves nulls, all selection-coverage states, agreement, conflict, source
+occurrences, raw UTC microseconds, and explicit disclosure. It does not infer
+data mode, issuer/ticker, chronology, currentness, amendment/correction status,
+legal authority, or completeness.
+
+The web runtime uses `SEC_MANIFEST_AUDIT_PROVIDER`, `API_BASE_URL`, and
+`SITE_ORIGIN`. `API_BASE_URL` remains private and is required only in `api`
+mode. `SITE_ORIGIN` owns absolute page/social metadata and must be the exact
+public HTTPS origin at cutover. No API key is required in this phase. A useful
+API result requires a manifest already persisted in PostgreSQL plus an exact
+cutoff at or after assembly; `SEC_CONTACT_EMAIL` is required only when a later
+approved operation starts live SEC collection.
 
 The ADR-042 service itself remains an internal application boundary with no
 CLI, scheduler, startup hook, public route, or browser surface. `CAPTURE_ROOT`

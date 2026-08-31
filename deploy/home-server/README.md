@@ -3,8 +3,10 @@
 This directory contains the ADR-046 deployment boundary, ADR-047 recovery
 boundary, ADR-048 exact release-schema gate, ADR-049 read-only promotion plan,
 ADR-050 generation-control contract foundation, and ADR-051 read-only server-
-fact collector for the public **DEMO** site. They are independent from the
-root development `compose.yaml` and never load the ignored root `.env`.
+fact collector for the public **DEMO** site. It also carries ADR-053's
+same-origin exact SEC manifest audit consumer without exposing Spring directly.
+These files are independent from the root development `compose.yaml` and never
+load the ignored root `.env`.
 
 ## What is ready now
 
@@ -18,7 +20,14 @@ root development `compose.yaml` and never load the ignored root `.env`.
   Caddy is not a member of the API or database network. All application and
   data networks are `internal: true`.
 - Web and API have no internet egress. SEC, the operator API, and all live
-  providers remain off. Public pages are explicitly DEMO/fixture-backed.
+  providers remain off. Existing market/call surfaces remain explicitly
+  DEMO/fixture-backed. The SEC manifest locator pins its web provider to the
+  private API without claiming that a stored manifest, live data mode, or
+  provider collection is available.
+- `/research/sec/filing-history` reaches Next through Caddy. In production
+  `SEC_MANIFEST_AUDIT_PROVIDER=api` makes Next read one exact ADR-052 resource
+  over `http://api:8080`; the browser never receives that private origin, and
+  an API error never falls back to the synthetic fixture.
 - PostgreSQL receives its password as a Compose file secret. Spring reads the
   same file through a configuration tree; the value is not placed in Compose
   environment variables or source control.
@@ -47,15 +56,15 @@ pwsh -NoProfile -File ./scripts/verify-home-server-deployment.ps1
 Docker must be running. The command builds inside Docker, binds only an
 available `127.0.0.1` port in `18080-18179`, accepts the ephemeral local
 certificate only inside the harness HTTP client and optional Playwright
-context, checks all 12 public routes and database evidence, and then removes
-its own containers, volumes, images, and temporary secret. The CA is never
-installed into host trust.
+context, checks the allowlisted public routes and database evidence, and then
+removes its own containers, volumes, images, and temporary secret. The CA is
+never installed into host trust.
 
 For the final local pre-deployment pass, add `-RunBrowserSuite`. This requires
-the already installed workspace pnpm/Playwright dependencies and runs all 72
-checks at 1440, 1280, and 390 pixels through the same loopback Caddy endpoint;
-retries are forced to zero, and its output stays inside the harness-owned
-temporary directory:
+the already installed workspace pnpm/Playwright dependencies and runs the full
+configured suite at 1440, 1280, and 390 pixels through the same loopback Caddy
+endpoint; retries are forced to zero, and its output stays inside the harness-
+owned temporary directory:
 
 ```powershell
 pwsh -NoProfile -File ./scripts/verify-home-server-deployment.ps1 -RunBrowserSuite
@@ -77,6 +86,44 @@ database, not from a nearby query against the source. The command never reads
 the root `.env`, mounts a backup HDD into a container, binds 80/443, or claims
 the development computer has a separate backup device. The two honest local
 results remain `PENDING_BACKUP_DEVICE` and `PENDING_OFFSITE_COPY`.
+
+## Exact SEC audit web runtime
+
+ADR-053 adds one same-origin public route without changing the ingress or
+network topology:
+
+```text
+/research/sec/filing-history
+```
+
+The production/rehearsal web container has these non-secret settings:
+
+```dotenv
+SEC_MANIFEST_AUDIT_PROVIDER=api
+API_BASE_URL=http://api:8080
+SITE_ORIGIN=https://<exact-public-domain>
+```
+
+`API_BASE_URL` is reachable only from the web container on `app-internal` and
+is never sent to the browser. The production Compose contract rejects a switch
+to `fixture`; API failure, malformed evidence, or 404 never displays the
+synthetic DEMO artifact. `SITE_ORIGIN` is used for absolute canonical/social
+metadata and is derived from the exact `WSR_DOMAIN` at publication. It is not a
+provider URL, API credential, or evidence timestamp.
+
+The locator needs no stored manifest. A successful API-backed evidence view
+does require an immutable manifest already present in PostgreSQL, its exact
+lowercase SHA-256 `manifestId`, and an `evaluationAsOf` cutoff at or after
+assembly. This stack keeps `SEC_PROVIDER_ENABLED=false`, so it neither creates
+that evidence nor contacts SEC. Do not enable collection merely to make the
+page nonempty and do not seed a synthetic manifest into production as if it
+were observed evidence.
+
+No API key, SEC account, paid plan, or `SEC_CONTACT_EMAIL` is required for this
+read-only web slice. At actual publication the operator must provide the real
+domain so `WSR_DOMAIN`/`SITE_ORIGIN` are truthful. Only a separately approved
+future live-collection operation requires a monitored SEC contact email in an
+untracked server secret environment.
 
 ## Future server baseline
 
@@ -198,6 +245,10 @@ WSR_PUBLIC_IPV6=unknown
 Use `direct-ipv6` or `direct-dual-stack` only after the router and host IPv6
 firewalls have been checked. Use the lowercase ASCII/punycode form for an
 internationalized domain.
+
+The Compose web service derives `SITE_ORIGIN=https://${WSR_DOMAIN}` from that
+same reviewed value. Do not point social metadata at a placeholder, loopback,
+different host, path, query, or fragment during public cutover.
 
 Then run the fail-closed publication preflight:
 
@@ -591,6 +642,9 @@ credential storage can be reviewed.
 - Do not enable SEC or live market providers here. SEC would first require a
   monitored contact email; commercial feeds additionally require approved
   product rights and server-side credentials.
+- Keep `SEC_MANIFEST_AUDIT_PROVIDER=api` in the production web container. The
+  committed fixture is only a visibly synthetic local test source and is never
+  a production fallback for absent, future, corrupt, or unavailable evidence.
 - Do not use `latest`, automated container updaters, or an unreviewed PostgreSQL
   major-tag change. Rehearse every image update first.
 

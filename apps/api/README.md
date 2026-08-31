@@ -310,7 +310,57 @@ canonical conflict를 그대로 보존하고 winner/current/latest/complete hist
 operator token, `SEC_CONTACT_EMAIL` 또는 live provider가 필요 없다. 기존
 PostgreSQL evidence만 사용하고 테스트에서는 `SEC_PROVIDER_ENABLED=false`를
 유지한다. 현재 production Caddy는 Spring을 public origin으로 직접 proxy하지
-않으므로 이 route는 후속 same-origin web consumer를 위한 backend contract다.
+않는다. ADR-053의 same-origin web consumer가 Next server에서 이 private API를
+읽으며 browser는 Spring origin을 직접 호출하지 않는다.
+
+### Exact manifest audit web consumer
+
+ADR-053은 Spring route를 늘리지 않고 다음 Korean-default Next route 하나를
+추가한다.
+
+```text
+/research/sec/filing-history
+```
+
+parameter가 없으면 exact evidence locator만 렌더하고 API를 호출하지 않는다. 완전한
+query는 `manifestId`와 `evaluationAsOf`를 요구하고 `view`로 resource를 선택한다.
+`manifestId`는 lowercase 64-hex, cutoff은 실제 calendar의 최대 microsecond UTC `Z`
+instant이고 `view`는 `summary`, `descriptors`, `accessions`, `occurrences` 중 하나다.
+`view` 생략은 `summary`로만 해석한다. summary에는 `page`/`size`가 금지되고 child view에는
+canonical unsigned `page`와 1~100 `size`만 허용한다(기본 `0`/`25`). unknown,
+duplicate, blank, whitespace-normalized, signed, leading-zero 값은 provider 호출 전에
+닫힌 invalid state가 된다.
+
+`SEC_MANIFEST_AUDIT_PROVIDER=api`는 server-only `API_BASE_URL`에 현재 선택된
+ADR-052 resource 하나만 no-store GET한다. browser는 Next origin만 사용한다. network,
+status, media type, JSON, exact field set, identity, timestamp, count, ordinal 또는 page
+검증 실패는 전체 route error이며 fixture, empty page, 다른 manifest로 fallback하지
+않는다. API 404는 absent와 future-invisible을 구분하지 않는 동일한 web not-found다.
+
+`SEC_MANIFEST_AUDIT_PROVIDER=fixture`는 별도의 synthetic DEMO mode다. committed JSON은
+Java domain assembly와 `SecFilingHistoryManifestAuditResponses`를 거쳐 생성한 tree와
+exact equality를 유지하도록 parity test가 잠근다. fixture와 API는 동일한 closed
+TypeScript adapter를 사용한다. fixture surface는 모두 synthetic DEMO라고 표시하고,
+API mode는 ADR-052가 제공하지 않는 `dataMode`, LIVE/REALTIME, issuer/ticker를 만들지
+않는다. descriptor advertised range, selection, exact agreement/conflict, every source
+occurrence, null, raw instant와 disclosure를 보존하고 winner/current/latest/complete
+history를 만들지 않는다.
+
+web runtime의 비밀이 아닌 설정은 다음과 같다.
+
+```dotenv
+SEC_MANIFEST_AUDIT_PROVIDER=fixture
+API_BASE_URL=http://localhost:8080
+SITE_ORIGIN=http://localhost:3000
+```
+
+`API_BASE_URL`은 `api` mode에서만 필요하고 browser에 노출되지 않는다.
+`SITE_ORIGIN`은 absolute canonical/social metadata origin이며 credential, path, query,
+fragment를 허용하지 않는다. production에서는 실제 HTTPS domain이어야 한다.
+이 phase는 API key, SEC account, domain 또는 `SEC_CONTACT_EMAIL`을 요구하지 않는다.
+API-backed success에는 이미 PostgreSQL에 저장된 exact manifest와 assembly 이후 cutoff가
+필요하다. monitored `SEC_CONTACT_EMAIL`은 나중에 별도 승인된 live collection을
+시작할 때만 untracked server secret environment에 둔다.
 
 ### Operator-controlled collection attempt
 
