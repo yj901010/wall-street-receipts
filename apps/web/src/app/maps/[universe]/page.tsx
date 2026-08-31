@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MarketMap, MARKET_MAP_LABELS } from "@/components/market-map";
-import { formatMarketMapUtc, getMarketMapMessages } from "@/components/market-map-messages";
+import { KstTimestamp } from "@/components/kst-timestamp";
+import { getMarketMapMessages } from "@/components/market-map-messages";
 import { MarketTreemap } from "@/components/market-treemap";
 import { SiteHeader } from "@/components/site-header";
 import { getLocale } from "@/lib/i18n/server";
@@ -119,15 +120,15 @@ export default async function MarketMapPage({
           >
             <div>
               <dt>{messages.route.asOf}</dt>
-              <dd>{formatMarketMapUtc(snapshot.asOf)}</dd>
+              <dd><KstTimestamp value={snapshot.asOf} /></dd>
             </div>
             <div>
               <dt>{messages.route.captured}</dt>
-              <dd>{formatMarketMapUtc(capturedAt)}</dd>
+              <dd><KstTimestamp value={capturedAt} /></dd>
             </div>
             <div>
               <dt>{messages.route.generated}</dt>
-              <dd>{formatMarketMapUtc(snapshot.generatedAt)}</dd>
+              <dd><KstTimestamp value={snapshot.generatedAt} /></dd>
             </div>
             <div>
               <dt>{messages.route.source}</dt>

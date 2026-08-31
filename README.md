@@ -53,7 +53,9 @@ maps, market publication state, recorded S&P call history, and the honest
 known-deferred Screener shell; broader P2 remains open and actual screening
 remains P8 work. ADR-053 adds a Korean-default, same-origin exact SEC manifest
 audit consumer without adding a manifest list, latest selector, or live-data
-claim. P1 provides a
+claim. ADR-054 makes every human-readable web instant an explicit
+`Asia/Seoul`/KST value while preserving canonical UTC storage, transport, and
+point-in-time identity. P1 provides a
 canonical analyst-call ledger,
 source evidence, immutable point-in-time market and macro/event context,
 list/detail APIs, and responsive web routes. The analyst-call ledger and each
@@ -67,6 +69,14 @@ later-phase extension points rather than runtime dependencies.
 
 > All bundled records use `DATA_MODE=DEMO`. They are synthetic examples, not
 > investment advice or representations of real analyst statements.
+
+All user-visible instants use `YYYY-MM-DD HH:mm:ss[.fraction] KST` in the
+explicit `Asia/Seoul` zone. Source UTC remains unchanged in storage, API
+payloads, exact query identities, ordering, and semantic `<time datetime>`
+attributes. Date-only source facts are not timezone-shifted. `/calls` browser
+date filters mean Korean calendar days and are converted to UTC API bounds on
+the server. The SEC exact cutoff form is explicitly labelled as an original
+UTC API lookup key; its result page still displays the instant in KST.
 
 ## Prerequisites
 
@@ -916,7 +926,9 @@ requires the exact manifest and cutoff; `view` defaults to `summary`, summary
 forbids pagination, and child views retain the API's canonical page bounds and
 fixed ordinal order. The same closed adapter validates API and fixture payloads
 and preserves nulls, all selection-coverage states, agreement, conflict, source
-occurrences, raw UTC microseconds, and explicit disclosure. It does not infer
+occurrences, canonical UTC microseconds, and explicit disclosure. Human-readable
+instants are converted to KST while their exact source values remain in
+machine-readable `datetime` attributes and same-origin query identity. It does not infer
 data mode, issuer/ticker, chronology, currentness, amendment/correction status,
 legal authority, or completeness.
 

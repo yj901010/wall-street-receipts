@@ -31,7 +31,7 @@ describe("MethodologyPage", () => {
     const provenance = screen.getByLabelText("방법론 데이터셋 출처");
     expect(within(provenance).getByText("fixture-call-outcomes-v1")).toBeInTheDocument();
     expect(within(provenance).getByText("DEMO")).toBeInTheDocument();
-    expect(within(provenance).getByText("Aug 18, 2026, 12:10 AM UTC")).toBeInTheDocument();
+    expect(within(provenance).getByText("2026-08-18 09:10:00 KST")).toBeInTheDocument();
 
     const registryRegion = screen.getByRole("region", { name: "방법론 레지스트리 표" });
     expect(registryRegion).toHaveAttribute("tabindex", "0");

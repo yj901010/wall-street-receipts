@@ -33,7 +33,7 @@ describe("AnalystsPage", () => {
     expect(within(provenance).getByText("v1")).toBeInTheDocument();
     expect(within(provenance).getByText("fixture-master-data-v1")).toBeInTheDocument();
     expect(within(provenance).getByText("DEMO")).toBeInTheDocument();
-    expect(within(provenance).getAllByText("Aug 18, 2026, 12:00 AM UTC")).toHaveLength(2);
+    expect(within(provenance).getAllByText("2026-08-18 09:00:00 KST")).toHaveLength(2);
 
     const sourceEvidence = screen.getByLabelText("애널리스트 소스 증거");
     for (const value of [
@@ -72,8 +72,8 @@ describe("AnalystsPage", () => {
       const row = rows[index];
       expect(within(row).getByText("true")).toBeInTheDocument();
       expect(within(row).getByText("DEMO")).toBeInTheDocument();
-      expect(within(row).getByText("Aug 10, 2026, 12:00 AM UTC")).toBeInTheDocument();
-      expect(within(row).getByText("Aug 18, 2026, 12:00 AM UTC")).toBeInTheDocument();
+      expect(within(row).getByText("2026-08-10 09:00:00 KST")).toBeInTheDocument();
+      expect(within(row).getByText("2026-08-18 09:00:00 KST")).toBeInTheDocument();
       expect(within(row).getByText("fixture-master-data-v1")).toBeInTheDocument();
       expect(within(row).getByRole("link", {
         name: `다음 애널리스트로 콜 원장 필터링: Demo Analyst ${index === 0 ? "A" : "B"}`,
@@ -103,7 +103,7 @@ describe("AnalystsPage", () => {
       name: "Canonical analyst identities and their captured evidence",
     });
     expect(within(table).getByText("Demo Analyst A")).toBeInTheDocument();
-    expect(within(table).getAllByText("Aug 10, 2026, 12:00 AM UTC")).toHaveLength(2);
+    expect(within(table).getAllByText("2026-08-10 09:00:00 KST")).toHaveLength(2);
     expect(within(table).getAllByText("fixture-master-data-v1")).toHaveLength(2);
   });
 

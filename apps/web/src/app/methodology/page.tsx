@@ -1,7 +1,8 @@
 import { SiteHeader } from "@/components/site-header";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import { getLocale } from "@/lib/i18n/server";
 import { methodologyProvider } from "@/lib/providers";
-import { formatMethodologyUtc, getMethodologyMessages } from "./messages";
+import { getMethodologyMessages } from "./messages";
 import { MethodologyRegistry } from "./methodology-registry";
 
 export default async function MethodologyPage() {
@@ -23,7 +24,7 @@ export default async function MethodologyPage() {
           <dl className="provenance-strip" aria-label={messages.page.provenanceLabel}>
             <div>
               <dt>{messages.page.asOf}</dt>
-              <dd>{formatMethodologyUtc(catalog.asOf)}</dd>
+              <dd><KstTimestamp value={catalog.asOf} /></dd>
             </div>
             <div>
               <dt>{messages.page.source}</dt>

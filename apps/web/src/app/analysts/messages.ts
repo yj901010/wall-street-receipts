@@ -141,12 +141,3 @@ const MESSAGES = { ko, en } as const satisfies Record<Locale, AnalystMessages>;
 export function getAnalystMessages(locale: Locale): AnalystMessages {
   return MESSAGES[locale];
 }
-
-export function formatAnalystUtc(value: string): string {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  });
-  return `${formatter.format(new Date(value))} UTC`;
-}

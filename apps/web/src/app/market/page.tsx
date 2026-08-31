@@ -1,8 +1,9 @@
 import { SiteHeader } from "@/components/site-header";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import { getLocale } from "@/lib/i18n/server";
 import { marketBoardProvider } from "@/lib/providers";
 import { MarketBoard } from "./market-board";
-import { formatMarketUtc, getMarketMessages } from "./messages";
+import { getMarketMessages } from "./messages";
 
 export default async function MarketPage() {
   const locale = await getLocale();
@@ -31,11 +32,11 @@ export default async function MarketPage() {
             </div>
             <div>
               <dt>{messages.page.policyGenerated}</dt>
-              <dd>{formatMarketUtc(snapshot.generatedAt)}</dd>
+              <dd><KstTimestamp value={snapshot.generatedAt} /></dd>
             </div>
             <div>
               <dt>{messages.page.policyCaptured}</dt>
-              <dd>{formatMarketUtc(snapshot.provenance.capturedAt)}</dd>
+              <dd><KstTimestamp value={snapshot.provenance.capturedAt} /></dd>
             </div>
             <div>
               <dt>{messages.page.source}</dt>

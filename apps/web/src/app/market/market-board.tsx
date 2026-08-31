@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import type { Locale } from "@/lib/i18n/config";
 import type { MarketBoardSnapshot } from "@/lib/providers";
 import { getMarketMessages } from "./messages";
@@ -54,7 +55,11 @@ export function MarketBoard({ snapshot, locale }: { snapshot: MarketBoardSnapsho
             </div>
             <div>
               <dt>{messages.board.marketAsOf}</dt>
-              <dd className="mono na-value">{snapshot.marketAsOf ?? snapshot.missingDisplay}</dd>
+              <dd className={`mono${snapshot.marketAsOf === null ? " na-value" : ""}`}>
+                {snapshot.marketAsOf === null
+                  ? snapshot.missingDisplay
+                  : <KstTimestamp value={snapshot.marketAsOf} />}
+              </dd>
             </div>
             <div>
               <dt>{messages.board.quotePublication}</dt>

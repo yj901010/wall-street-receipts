@@ -30,7 +30,7 @@ test.describe("known-unavailable market board", () => {
     await expect(provenance.getByText("1.0.0", { exact: true })).toBeVisible();
     await expect(provenance.getByText("v1", { exact: true })).toBeVisible();
     await expect(provenance.getByText("fixture-market-board-v1", { exact: true })).toBeVisible();
-    await expect(provenance.getByText("Aug 19, 2026, 2:00 AM UTC", { exact: true }))
+    await expect(provenance.getByText("2026-08-19 11:00:00 KST", { exact: true }))
       .toHaveCount(2);
 
     const publication = page.getByRole("region", { name: "시장 보드 게시 상태" });

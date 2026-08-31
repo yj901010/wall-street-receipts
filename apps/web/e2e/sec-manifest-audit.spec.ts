@@ -38,7 +38,8 @@ test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", as
     .toBeVisible();
   const form = page.getByRole("form", { name: "정확한 manifest와 기준 시각을 입력하세요." });
   await expect(form.getByLabel("Manifest ID")).toHaveAttribute("pattern", "[0-9a-f]{64}");
-  await expect(form.getByLabel("평가 기준 시각")).toHaveAttribute("type", "text");
+  await expect(form.getByLabel("평가 기준 원본 조회 키(UTC)"))
+    .toHaveAttribute("type", "text");
 
   if (!FIXTURE_MODE) {
     await expect(page.locator(".mode-badge")).toHaveCount(0);
@@ -66,7 +67,9 @@ test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", as
   await expect(page.getByText("ROOT_RELATIVE_SELECTED_REFERENCES_ONLY")).toBeVisible();
   await expect(page.getByText("NOT_CLAIMED")).toBeVisible();
   await expect(page.getByText(MANIFEST_ID).first()).toBeVisible();
-  await expect(page.getByText(CUTOFF).first()).toBeVisible();
+  const cutoff = page.getByText("2026-08-25 12:30:00.123456 KST").first();
+  await expect(cutoff).toBeVisible();
+  await expect(cutoff).toHaveAttribute("datetime", CUTOFF);
 
   await page.getByRole("link", { name: "Accession 비교" }).click();
   const comparisonRegion = page.getByRole("region", { name: "Accession occurrence 비교" });
@@ -99,7 +102,7 @@ test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", as
     .toBeVisible();
   await expect(page.getByText("Synthetic DEMO · not observed SEC data")).toBeVisible();
   await expect(page.getByText(MANIFEST_ID).first()).toBeVisible();
-  await expect(page.getByText(CUTOFF).first()).toBeVisible();
+  await expect(page.getByText("2026-08-25 12:30:00.123456 KST").first()).toBeVisible();
   await expect(page.getByText("ROOT_RECENT").first()).toBeVisible();
 
   await expectNoPageOverflow(page);

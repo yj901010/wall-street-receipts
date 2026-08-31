@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import type {
   SecManifestAuditAccession,
   SecManifestAuditPage,
@@ -47,17 +49,17 @@ function SummaryView({
   summary: SecManifestAuditSummary;
   messages: SecManifestAuditMessages;
 }) {
-  const facts = [
+  const facts: readonly (readonly [string, ReactNode])[] = [
     [messages.summary.manifestSchemaVersion, summary.manifestSchemaVersion],
     [messages.summary.provider, summary.provider],
     [messages.summary.product, summary.product],
     [messages.summary.reconciliationPolicy, summary.policyVersion],
     [messages.summary.selectionSha256, summary.selectionSha256],
     [messages.summary.rootCaptureId, summary.rootCaptureId],
-    [messages.summary.rootCapturedAt, summary.rootCapturedAt],
+    [messages.summary.rootCapturedAt, <KstTimestamp key="root-captured-at" value={summary.rootCapturedAt} />],
     [messages.summary.cik, summary.cik],
-    [messages.summary.evidenceAvailableAt, summary.evidenceAvailableAt],
-    [messages.summary.assembledAt, summary.assembledAt],
+    [messages.summary.evidenceAvailableAt, <KstTimestamp key="evidence-available-at" value={summary.evidenceAvailableAt} />],
+    [messages.summary.assembledAt, <KstTimestamp key="assembled-at" value={summary.assembledAt} />],
     [messages.summary.selectionCoverage, summary.selectionCoverage],
     [messages.summary.immutable, String(summary.immutable)],
   ] as const;
@@ -336,7 +338,7 @@ function OccurrenceTable({
                   <td className={`${styles.wrap} mono`}>{item.projectionSha256}</td>
                   <td className="mono">{item.filingDate}</td>
                   <td className="mono">{na(item.reportDate)}</td>
-                  <td className="mono">{item.acceptedAt}</td>
+                  <td className="mono"><KstTimestamp value={item.acceptedAt} /></td>
                   <td className={styles.wrap}>{na(item.primaryDocumentUri)}</td>
                 </tr>
               ))}
@@ -387,7 +389,7 @@ export function SecManifestAuditView({
           </div>
           <div>
             <dt>{messages.evidence.evaluationAsOf}</dt>
-            <dd className="mono">{data.evaluationAsOf}</dd>
+            <dd className="mono"><KstTimestamp value={data.evaluationAsOf} /></dd>
           </div>
           <div>
             <dt>{messages.evidence.schema}</dt>

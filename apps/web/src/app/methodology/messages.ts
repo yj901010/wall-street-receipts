@@ -109,12 +109,3 @@ const MESSAGES = { ko, en } as const satisfies Record<Locale, MethodologyMessage
 export function getMethodologyMessages(locale: Locale): MethodologyMessages {
   return MESSAGES[locale];
 }
-
-export function formatMethodologyUtc(value: string): string {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  });
-  return `${formatter.format(new Date(value))} UTC`;
-}

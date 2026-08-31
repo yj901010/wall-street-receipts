@@ -108,7 +108,7 @@ describe("CallDetailPage", () => {
     expect(screen.getByText("2분")).toBeInTheDocument();
     expect(screen.getByText("+$25.00 (+11.9%)")).toBeInTheDocument();
     expect(screen.getByText("$183.42")).toBeInTheDocument();
-    expect(screen.getAllByText("Aug 11, 2026, 2:20 PM UTC").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2026-08-11 23:20:00 KST").length).toBeGreaterThan(0);
 
     const eventSection = screen.getByRole("heading", { name: "콜 사실" }).closest("section");
     expect(eventSection).not.toBeNull();
@@ -271,9 +271,9 @@ describe("CallDetailPage", () => {
       "NA",
       "INCOMPLETE",
       "HORIZON_DATA_MISSING",
-      "2026-08-11T20:00:00Z",
-      "2026-08-11T20:01:00Z",
-      "2026-08-11T20:01:00Z",
+      "2026-08-12 05:00:00 KST",
+      "2026-08-12 05:01:00 KST",
+      "2026-08-12 05:01:00 KST",
       "NA",
       "NA",
       "NA",
@@ -296,8 +296,8 @@ describe("CallDetailPage", () => {
     expect(within(first).getByText("입력 지문")).toBeInTheDocument();
     expect(within(first).getByText("false", { exact: true })).toBeInTheDocument();
     expect(within(first).getAllByText("NA")).toHaveLength(13);
-    expect(within(first).getAllByText("2026-08-11T20:01:00Z")).toHaveLength(2);
-    for (const rawTime of within(first).getAllByText("2026-08-11T20:01:00Z")) {
+    expect(within(first).getAllByText("2026-08-12 05:01:00 KST")).toHaveLength(2);
+    for (const rawTime of within(first).getAllByText("2026-08-12 05:01:00 KST")) {
       expect(rawTime).toHaveAttribute("datetime", "2026-08-11T20:01:00Z");
     }
     expect(within(first).getAllByText("03af803fd61c21b86e1897d006e6cf4f92f28ce627b06eda13b319ebfa8a07e2").length)
@@ -314,19 +314,19 @@ describe("CallDetailPage", () => {
     }
   });
 
-  it("preserves raw outcome microseconds without presentation formatting", async () => {
+  it("preserves raw outcome microseconds in datetime while displaying KST", async () => {
     providers.callAuditProvider.mockImplementation(() => new OutcomePrecisionAuditProvider());
     await renderDetail("demo-call-001");
 
     const outcome = screen.getByRole("article", {
       name: "성과 기록 1 · D1 · 방법론 1.0.0 · INCOMPLETE",
     });
-    for (const instant of [
-      "2026-08-11T20:00:00.000001Z",
-      "2026-08-11T20:01:00.000002Z",
-      "2026-08-11T20:01:00.000003Z",
+    for (const [display, instant] of [
+      ["2026-08-12 05:00:00.000001 KST", "2026-08-11T20:00:00.000001Z"],
+      ["2026-08-12 05:01:00.000002 KST", "2026-08-11T20:01:00.000002Z"],
+      ["2026-08-12 05:01:00.000003 KST", "2026-08-11T20:01:00.000003Z"],
     ]) {
-      expect(within(outcome).getByText(instant)).toHaveAttribute("datetime", instant);
+      expect(within(outcome).getByText(display)).toHaveAttribute("datetime", instant);
     }
   });
 
@@ -358,14 +358,20 @@ describe("CallDetailPage", () => {
     expect(within(correction).getByText("fixture-call-revision-001")).toBeInTheDocument();
     expect(within(correction).getByText("DEMO Buy (corrected)")).toBeInTheDocument();
     expect(within(correction).getByText("232")).toBeInTheDocument();
-    expect(within(correction).getByText("2026-08-11T14:40:00Z")).toBeInTheDocument();
+    expect(within(correction).getByText("2026-08-11 23:40:00 KST")).toHaveAttribute(
+      "datetime",
+      "2026-08-11T14:40:00Z",
+    );
     const correctedTargetDate = within(correction).getByText("정정 목표 기준일");
     expect(correctedTargetDate.nextElementSibling).toHaveTextContent(/^NA$/);
 
     const cancellation = within(section!).getByRole("article", { name: "변경 2 · CANCELLATION" });
     expect(within(cancellation).getByText("demo-call-revision-002")).toBeInTheDocument();
     expect(within(cancellation).getByText("취소 이벤트에는 정정 조건이 없습니다.")).toBeInTheDocument();
-    expect(within(cancellation).getByText("2026-08-11T15:00:00Z")).toBeInTheDocument();
+    expect(within(cancellation).getByText("2026-08-12 00:00:00 KST")).toHaveAttribute(
+      "datetime",
+      "2026-08-11T15:00:00Z",
+    );
     expect(screen.getByText("ACTIVE", { exact: true })).toBeInTheDocument();
     expect(screen.getAllByText("BULLISH", { exact: true }).length).toBeGreaterThan(0);
     expect(screen.getByText("$235.00")).toBeInTheDocument();
@@ -391,10 +397,16 @@ describe("CallDetailPage", () => {
     await renderDetail("demo-call-002");
 
     const correction = screen.getByRole("article", { name: "변경 1 · CORRECTION" });
-    const rawTime = within(correction).getByText("2026-08-11T14:40:00.000001Z");
+    const rawTime = within(correction).getByText("2026-08-11 23:40:00.000001 KST");
     expect(rawTime).toHaveAttribute("datetime", "2026-08-11T14:40:00.000001Z");
-    expect(within(correction).getByText("2026-08-11T14:42:00.000002Z")).toBeInTheDocument();
-    expect(within(correction).getByText("2026-08-11T14:42:00.000003Z")).toBeInTheDocument();
+    expect(within(correction).getByText("2026-08-11 23:42:00.000002 KST")).toHaveAttribute(
+      "datetime",
+      "2026-08-11T14:42:00.000002Z",
+    );
+    expect(within(correction).getByText("2026-08-11 23:42:00.000003 KST")).toHaveAttribute(
+      "datetime",
+      "2026-08-11T14:42:00.000003Z",
+    );
     expect(within(correction).getByText("210.123456")).toBeInTheDocument();
     expect(within(correction).getByText("232.987654")).toBeInTheDocument();
     expect(within(correction).getByText("USD", { exact: true })).toBeInTheDocument();
@@ -437,7 +449,7 @@ describe("CallDetailPage", () => {
     const earnings = within(eventSection!).getByText("실적 발표");
     const nextCpi = within(eventSection!).getByText("다음 CPI");
     expect(earnings.nextElementSibling).toHaveTextContent(/^NA$/);
-    expect(nextCpi.nextElementSibling).toHaveTextContent("Aug 12, 2026, 12:30 PM UTC");
+    expect(nextCpi.nextElementSibling).toHaveTextContent("2026-08-12 21:30:00 KST");
     expect(within(macroSection!).queryByText(/proximity|regime|score|days? until|근접|국면|점수/i)).not.toBeInTheDocument();
     expect(within(eventSection!).queryByText(/proximity|regime|score|days? until|근접|국면|점수/i)).not.toBeInTheDocument();
   });
@@ -498,7 +510,7 @@ describe("CallDetailPage", () => {
     expect(screen.getByText("2 minutes")).toBeInTheDocument();
     expect(screen.getByText("+$25.00 (+11.9%)")).toBeInTheDocument();
     expect(screen.getByText("$183.42")).toBeInTheDocument();
-    expect(screen.getAllByText("Aug 11, 2026, 2:20 PM UTC").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2026-08-11 23:20:00 KST").length).toBeGreaterThan(0);
     expect(screen.getAllByText("source-ref-demo-002").length).toBeGreaterThan(0);
     expect(screen.getAllByText("NA").length).toBeGreaterThan(5);
     expect(screen.getByRole("heading", { name: "Call revision history" })).toBeInTheDocument();

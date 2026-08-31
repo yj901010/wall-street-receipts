@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import { SiteHeader } from "@/components/site-header";
 import {
-  formatDashboardUtc,
   getDashboardMessages,
   type DashboardMessages,
 } from "@/components/dashboard-messages";
@@ -64,15 +64,15 @@ function MarketMapPreview({
       >
         <div>
           <dt>{messages.mapPreview.asOf}</dt>
-          <dd>{formatDashboardUtc(snapshot.asOf)}</dd>
+          <dd><KstTimestamp value={snapshot.asOf} /></dd>
         </div>
         <div>
           <dt>{messages.mapPreview.generated}</dt>
-          <dd>{formatDashboardUtc(snapshot.generatedAt)}</dd>
+          <dd><KstTimestamp value={snapshot.generatedAt} /></dd>
         </div>
         <div>
           <dt>{messages.mapPreview.captured}</dt>
-          <dd>{formatDashboardUtc(snapshot.provenance.capturedAt)}</dd>
+          <dd><KstTimestamp value={snapshot.provenance.capturedAt} /></dd>
         </div>
         <div>
           <dt>{messages.mapPreview.provenance}</dt>
@@ -141,7 +141,7 @@ function MarketMapPreview({
                   </div>
                   <div>
                     <dt>{messages.mapPreview.timestamp}</dt>
-                    <dd>{formatDashboardUtc(cell.timestamp)}</dd>
+                    <dd><KstTimestamp value={cell.timestamp} /></dd>
                   </div>
                 </dl>
               </li>
@@ -245,7 +245,7 @@ export function DashboardView({ snapshot, locale }: { snapshot: DashboardSnapsho
           <dl className="dashboard-section-provenance" aria-label={messages.calls.provenanceLabel}>
             <div>
               <dt>{messages.calls.asOf}</dt>
-              <dd>{formatDashboardUtc(snapshot.latestCalls.asOf)}</dd>
+              <dd><KstTimestamp value={snapshot.latestCalls.asOf} /></dd>
             </div>
             <div>
               <dt>{messages.calls.source}</dt>
@@ -299,7 +299,7 @@ export function DashboardView({ snapshot, locale }: { snapshot: DashboardSnapsho
                         className="mono"
                       >
                         <Link className="row-link" href={`/calls/${call.callId}`}>
-                          {formatDashboardUtc(call.eventTime)}
+                          <KstTimestamp value={call.eventTime} />
                         </Link>
                       </td>
                       <td data-field="institution-analyst" data-label={messages.calls.columns.institutionAnalyst}>

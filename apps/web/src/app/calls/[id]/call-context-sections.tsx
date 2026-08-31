@@ -1,12 +1,7 @@
+import { KstTimestamp } from "@/components/kst-timestamp";
 import type { Locale } from "@/lib/i18n/config";
 import type { AnalystCall, CallContext, EventContext, MacroSnapshot } from "@/lib/providers";
 import { getCallsMessages, type CallsMessages } from "../messages";
-
-const utcFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
 
 const decimalFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 12,
@@ -15,12 +10,8 @@ const decimalFormatter = new Intl.NumberFormat("en-US", {
 type CallCutoff = Pick<AnalystCall, "eventTime" | "dataMode">;
 type ContextMessages = CallsMessages["context"];
 
-function utc(value: string) {
-  return `${utcFormatter.format(new Date(value))} UTC`;
-}
-
 function instantOrNa(value: string | null) {
-  return value === null ? "NA" : utc(value);
+  return value === null ? "NA" : <KstTimestamp value={value} />;
 }
 
 function valueOrNa(value: string | number | null) {
@@ -45,7 +36,7 @@ function EmptyContextEvidence({
   return (
     <>
       <dl className="snapshot-metadata context-metadata" aria-label={messages.availabilityEvidence(subject)}>
-        <div><dt>{messages.asOfCallEvent}</dt><dd className="mono">{utc(call.eventTime)}</dd></div>
+        <div><dt>{messages.asOfCallEvent}</dt><dd className="mono"><KstTimestamp value={call.eventTime} /></dd></div>
         <div><dt>{messages.dataMode}</dt><dd>{call.dataMode}</dd></div>
         <div><dt>{messages.source}</dt><dd>NA</dd></div>
         <div><dt>{messages.provenance}</dt><dd>NA</dd></div>
@@ -69,9 +60,9 @@ function MacroContext({
     <>
       <dl className="snapshot-metadata context-metadata" aria-label={messages.macroProvenanceLabel}>
         <div><dt>{messages.snapshotId}</dt><dd className="mono">{snapshot.macroSnapshotId}</dd></div>
-        <div><dt>{messages.asOf}</dt><dd className="mono">{utc(snapshot.eventTime)}</dd></div>
-        <div><dt>{messages.processingTime}</dt><dd className="mono">{utc(snapshot.processingTime)}</dd></div>
-        <div><dt>{messages.captured}</dt><dd className="mono">{utc(snapshot.capturedAt)}</dd></div>
+        <div><dt>{messages.asOf}</dt><dd className="mono"><KstTimestamp value={snapshot.eventTime} /></dd></div>
+        <div><dt>{messages.processingTime}</dt><dd className="mono"><KstTimestamp value={snapshot.processingTime} /></dd></div>
+        <div><dt>{messages.captured}</dt><dd className="mono"><KstTimestamp value={snapshot.capturedAt} /></dd></div>
         <div><dt>{messages.dataMode}</dt><dd>{snapshot.dataMode}</dd></div>
         <div><dt>{messages.provenance}</dt><dd className="mono">{snapshot.provenanceId}</dd></div>
         <div><dt>{messages.sources}</dt><dd>{messages.perObservationSources}</dd></div>
@@ -111,9 +102,9 @@ function MacroContext({
                 <td className="numeric mono" data-field="value" data-label={messages.value}>{valueOrNa(observation.value)}</td>
                 <td data-field="unit" data-label={messages.unit}>{observation.unit}</td>
                 <td className="mono" data-field="observation-date" data-label={messages.observationDate}>{observation.observationDate}</td>
-                <td className="mono" data-field="released" data-label={messages.released}>{utc(observation.releasedAt)}</td>
-                <td className="mono" data-field="processing" data-label={messages.processing}>{utc(observation.processingTime)}</td>
-                <td className="mono" data-field="captured" data-label={messages.captured}>{utc(observation.capturedAt)}</td>
+                <td className="mono" data-field="released" data-label={messages.released}><KstTimestamp value={observation.releasedAt} /></td>
+                <td className="mono" data-field="processing" data-label={messages.processing}><KstTimestamp value={observation.processingTime} /></td>
+                <td className="mono" data-field="captured" data-label={messages.captured}><KstTimestamp value={observation.capturedAt} /></td>
                 <td className="mono" data-field="vintage-start" data-label={messages.vintageStart}>{valueOrNa(observation.vintageStart)}</td>
                 <td className="mono" data-field="vintage-end" data-label={messages.vintageEnd}>{valueOrNa(observation.vintageEnd)}</td>
                 <td className="mono" data-field="source" data-label={messages.source}>{observation.sourceReferenceId}</td>
@@ -139,9 +130,9 @@ function ScheduledEventContext({
     <>
       <dl className="snapshot-metadata context-metadata" aria-label={messages.scheduledProvenanceLabel}>
         <div><dt>{messages.contextId}</dt><dd className="mono">{context.eventContextId}</dd></div>
-        <div><dt>{messages.asOf}</dt><dd className="mono">{utc(context.eventTime)}</dd></div>
-        <div><dt>{messages.processingTime}</dt><dd className="mono">{utc(context.processingTime)}</dd></div>
-        <div><dt>{messages.captured}</dt><dd className="mono">{utc(context.capturedAt)}</dd></div>
+        <div><dt>{messages.asOf}</dt><dd className="mono"><KstTimestamp value={context.eventTime} /></dd></div>
+        <div><dt>{messages.processingTime}</dt><dd className="mono"><KstTimestamp value={context.processingTime} /></dd></div>
+        <div><dt>{messages.captured}</dt><dd className="mono"><KstTimestamp value={context.capturedAt} /></dd></div>
         <div><dt>{messages.dataMode}</dt><dd>{context.dataMode}</dd></div>
         <div><dt>{messages.provenance}</dt><dd className="mono">{context.provenanceId}</dd></div>
         <div><dt>{messages.source}</dt><dd className="mono">{context.sourceReferenceId}</dd></div>

@@ -1,6 +1,7 @@
+import { KstTimestamp } from "@/components/kst-timestamp";
 import type { MethodologyCatalog } from "@/lib/providers";
 import type { Locale } from "@/lib/i18n/config";
-import { formatMethodologyUtc, getMethodologyMessages } from "./messages";
+import { getMethodologyMessages } from "./messages";
 
 export function MethodologyRegistry({ catalog, locale }: { catalog: MethodologyCatalog; locale: Locale }) {
   const messages = getMethodologyMessages(locale);
@@ -47,8 +48,8 @@ export function MethodologyRegistry({ catalog, locale }: { catalog: MethodologyC
                   <td className="mono" data-label={messages.registry.columns.version}>{methodology.methodologyVersion}</td>
                   <td className="mono methodology-status" data-label={messages.registry.columns.status}>{methodology.status}</td>
                   <td className="mono" data-label={messages.registry.columns.mode}>{methodology.dataMode}</td>
-                  <td className="mono" data-label={messages.registry.columns.effective}>{formatMethodologyUtc(methodology.effectiveAt)}</td>
-                  <td className="mono" data-label={messages.registry.columns.captured}>{formatMethodologyUtc(methodology.capturedAt)}</td>
+                  <td className="mono" data-label={messages.registry.columns.effective}><KstTimestamp value={methodology.effectiveAt} /></td>
+                  <td className="mono" data-label={messages.registry.columns.captured}><KstTimestamp value={methodology.capturedAt} /></td>
                   <td className="mono definition-hash" data-label={messages.registry.columns.definitionHash}>{methodology.definitionHash}</td>
                   <td className="mono" data-label={messages.registry.columns.provenance}>{methodology.provenanceId}</td>
                 </tr>

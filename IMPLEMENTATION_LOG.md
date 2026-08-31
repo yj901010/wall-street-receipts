@@ -6766,3 +6766,96 @@ current, complete, corrected, or legally authoritative company-filings view.
   ticker/CIK identity and selection decision, freshness/source-attribution
   policy, amendment/correction/removal treatment, cache/concurrency/rate
   controls, and public operating review.
+
+## 2026-08-31 — ADR-054 site-wide KST display-time policy
+
+Status: implemented and locally validated. Hosted CI, public deployment, and
+target-Ubuntu runtime behavior are not claimed by these local results.
+
+ADR-054 standardizes every human-readable web instant on explicit
+`Asia/Seoul` presentation without changing canonical UTC evidence. It is a web
+presentation and civil-date-filter slice, not a database, API, fixture,
+provider, operating-system, or deployment timezone migration.
+
+### Scope and decisions
+
+- Add one deterministic `formatKstInstant` boundary and one semantic
+  `KstTimestamp` component. Visible values use
+  `YYYY-MM-DD HH:mm:ss[.source-fraction] KST`, an explicit Gregorian calendar,
+  Latin digits, and the IANA `Asia/Seoul` zone. Source fractional precision is
+  retained through nine digits. The four-digit-year contract rejects source
+  year `0000` and any KST conversion outside years 0001–9999. Invalid non-null
+  instants throw rather than rendering `Invalid Date`, raw text, or `NA`.
+- Keep exact source RFC 3339 values in `<time datetime>`. PostgreSQL, fixtures,
+  Java `Instant`, DTOs, adapters, JSON/OpenAPI, event/processing/capture
+  distinctions, sorting, hashes, and point-in-time comparison remain UTC and
+  unchanged.
+- Route dashboard, maps/treemaps, market publication, institution and analyst
+  directories, methodology, call list/detail/context/revision/outcome, S&P 500
+  history, and SEC manifest audit instants through the shared KST component.
+  Remove every page-local UTC formatter and raw `<time>` renderer.
+- Preserve calendar-only source facts without timezone conversion: target,
+  observation, vintage, filing, report, and provider-advertised range dates.
+  Durations, horizons, processing delays, and media offsets also remain
+  unchanged.
+- Interpret `/calls` date controls as Korean civil days. The selected start is
+  inclusive `00:00 KST`; the through date becomes the following day's
+  exclusive `00:00 KST`. Convert those bounds to UTC before the existing API
+  read while retaining `YYYY-MM-DD` URL values. For example, 2026-08-11 maps to
+  `2026-08-10T15:00:00.000Z` through
+  `2026-08-11T15:00:00.000Z` exclusive.
+- Preserve ADR-053's exact SEC `evaluationAsOf` UTC `Z` query key and canonical
+  URLs. Label the form field as an original API lookup key and state that
+  human-readable results are KST. Request evidence, summary provenance, and
+  occurrence acceptance instants display KST with raw UTC in `datetime`.
+- Add a production-source regression guard that rejects a page-local
+  `timeZone: "UTC"`, a legacy `format*Utc` helper, or direct semantic `<time>`
+  markup outside the shared component.
+
+### Verification status
+
+- Web lint: **PASS**.
+- Full Vitest suite: **PASS — 50 files / 641 tests**. This includes UTC-to-KST
+  day rollover, 1–9 digit fraction retention, RFC 3339 offsets, four-digit-year
+  boundaries, malformed instant rejection, leap dates, exact Korean-day UTC
+  API bounds, semantic `datetime` preservation, Korean/English parity, and the
+  production-source KST boundary guard.
+- Production Next build: **PASS**. TypeScript and all 12 route builds completed;
+  every route remains dynamically server-rendered on demand.
+- Full Playwright suite: **PASS — 78/78** across 1440, 1280, and 390 pixel
+  projects in 3.3 minutes. The run covers bilingual KST evidence, raw
+  `datetime`, exact query preservation, keyboard focus, mobile/desktop
+  containment, absence of browser-to-private-API requests, and runtime-error
+  checks.
+- Focused SEC API-mode failure boundary: **PASS — 1/1** at 1440 pixels with an
+  intentionally unavailable private API base. The route kept the exact UTC
+  lookup key contract, rendered the localized fail-closed boundary, emitted no
+  browser-to-private-API request, and exposed no synthetic DEMO fallback.
+- ADR-054 workflow custody replay: **PASS — 54/54 exact file surfaces** in an
+  isolated temporary clone. The outer projection replaced 49 modified files
+  and removed five added files at exact base `8fc3732`, ran ahead of the locked
+  ADR-053/052/048/045 historical chain, and restored every current byte. The
+  workflow parsed successfully, both embedded ADR-054 Python programs compiled,
+  ADR-053's locked hashes stayed unchanged, and `apps/web/next-env.d.ts` stayed
+  outside custody.
+- No Java, Flyway, OpenAPI, database, provider fixture, Compose runtime, or
+  backend source changed, so this slice did not rerun or make a new claim about
+  Docker-gated API/Testcontainers execution.
+- The caller-owned `apps/web/next-env.d.ts` remained excluded. Next build's
+  generated production import was restored to the pre-existing development
+  import, retaining SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+
+### External inputs and next work
+
+- This slice required no API key, provider account, paid plan, domain, home-
+  server access, deployment machine, operator token, `SEC_CONTACT_EMAIL`, or
+  new secret.
+- An API-backed SEC success still needs an actually persisted manifest ID and
+  allowed UTC cutoff. Internet publication still needs the actual domain and
+  target Ubuntu/DNS/TLS/router/capacity/backup facts. Live SEC collection still
+  needs a separately approved request policy and monitored contact email in an
+  untracked server environment.
+- New web instants must use `KstTimestamp`. New civil-date filters must name
+  their calendar zone and convert to canonical API instants at the server
+  boundary rather than depending on host or browser timezone.

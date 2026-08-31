@@ -144,12 +144,3 @@ const MESSAGES = { ko, en } as const satisfies Record<Locale, InstitutionMessage
 export function getInstitutionMessages(locale: Locale): InstitutionMessages {
   return MESSAGES[locale];
 }
-
-export function formatInstitutionUtc(value: string): string {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  });
-  return `${formatter.format(new Date(value))} UTC`;
-}

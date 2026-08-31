@@ -56,7 +56,7 @@ describe("Sp500HistoryPage", () => {
     const provenance = screen.getByLabelText("S&P 500 콜 이력 출처 정보");
     expect(within(provenance).getByText("콜 카탈로그 기준 시각", { exact: true }))
       .toBeInTheDocument();
-    expect(within(provenance).getByText("2026-08-18T00:00:00Z", { exact: true }))
+    expect(within(provenance).getByText("2026-08-18 09:00:00 KST", { exact: true }))
       .toHaveAttribute("datetime", "2026-08-18T00:00:00Z");
     expect(within(provenance).getByText("fixture-analyst-calls-v1", { exact: true }))
       .toBeInTheDocument();
@@ -100,7 +100,7 @@ describe("Sp500HistoryPage", () => {
     })).not.toBeInTheDocument();
 
     const row = within(table).getAllByRole("row")[1];
-    expect(within(row).getByRole("link", { name: "2026-08-10T12:00:00Z" }))
+    expect(within(row).getByRole("link", { name: "2026-08-10 21:00:00 KST" }))
       .toHaveAttribute("href", "/calls/demo-call-001");
     expect(within(row).getByText("demo-call-001", { exact: true })).toBeInTheDocument();
     expect(within(row).getByText("JPMorgan", { exact: true })).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe("Sp500HistoryPage", () => {
       .toHaveAttribute("href", "/calls/demo-call-001#source");
     expect(within(row).getByText("DEMO Publisher · 검증 여부: false", { exact: true }))
       .toBeInTheDocument();
-    expect(within(row).getAllByText("2026-08-10T12:03:00Z", { exact: true }))
+    expect(within(row).getAllByText("2026-08-10 21:03:00 KST", { exact: true }))
       .toHaveLength(2);
     expect(within(row).getByText("DEMO · fixture-analyst-calls-v1", { exact: true }))
       .toBeInTheDocument();
@@ -140,7 +140,7 @@ describe("Sp500HistoryPage", () => {
     });
     const row = within(table).getAllByRole("row")[1];
 
-    expect(within(row).getByRole("link", { name: "2026-08-10T12:00:00Z" }))
+    expect(within(row).getByRole("link", { name: "2026-08-10 21:00:00 KST" }))
       .toHaveAttribute("href", "/calls/demo-call-001");
     expect(within(row).getByText("demo-call-001", { exact: true })).toBeInTheDocument();
     expect(within(row).getByText("BULLISH", { exact: true })).toBeInTheDocument();
@@ -193,12 +193,12 @@ describe("Sp500HistoryPage", () => {
       "ko",
     );
 
-    for (const instant of [
-      "2026-08-10T12:00:00.000001Z",
-      "2026-08-10T12:03:00.000002Z",
-      "2026-08-10T12:03:00.000003Z",
+    for (const [display, instant] of [
+      ["2026-08-10 21:00:00.000001 KST", "2026-08-10T12:00:00.000001Z"],
+      ["2026-08-10 21:03:00.000002 KST", "2026-08-10T12:03:00.000002Z"],
+      ["2026-08-10 21:03:00.000003 KST", "2026-08-10T12:03:00.000003Z"],
     ]) {
-      expect(screen.getByText(instant, { exact: true })).toHaveAttribute("datetime", instant);
+      expect(screen.getByText(display, { exact: true })).toHaveAttribute("datetime", instant);
     }
   });
 

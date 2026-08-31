@@ -87,7 +87,10 @@ describe("CallsPage", () => {
     expect(callRow).not.toBeNull();
     expect(within(callRow!).getByText("Goldman Sachs")).toBeInTheDocument();
     expect(within(callRow!).getByText("NVDA")).toBeInTheDocument();
-    expect(within(callRow!).getByText("Aug 11, 2026, 2:20 PM UTC")).toBeInTheDocument();
+    expect(within(callRow!).getByText("2026-08-11 23:20:00 KST")).toHaveAttribute(
+      "datetime",
+      "2026-08-11T14:20:00Z",
+    );
     expect(within(callRow!).getByText("$210.00 → $235.00")).toBeInTheDocument();
     expect(sourceLink).toHaveAttribute("href", "/calls/demo-call-002#source");
   });
@@ -107,7 +110,10 @@ describe("CallsPage", () => {
     expect(callRow).not.toBeNull();
     expect(within(callRow!).getByText("Goldman Sachs")).toBeInTheDocument();
     expect(within(callRow!).getByText("NVDA")).toBeInTheDocument();
-    expect(within(callRow!).getByText("Aug 11, 2026, 2:20 PM UTC")).toBeInTheDocument();
+    expect(within(callRow!).getByText("2026-08-11 23:20:00 KST")).toHaveAttribute(
+      "datetime",
+      "2026-08-11T14:20:00Z",
+    );
     expect(within(callRow!).getByText("$210.00 → $235.00")).toBeInTheDocument();
     expect(sourceLink).toHaveAttribute("href", "/calls/demo-call-002#source");
   });
@@ -181,8 +187,8 @@ describe("CallsPage", () => {
       assetId: "asset-nvda",
       ticker: "nvda",
       dataMode: "DEMO",
-      from: "2026-08-11T00:00:00.000Z",
-      to: "2026-08-12T00:00:00.000Z",
+      from: "2026-08-10T15:00:00.000Z",
+      to: "2026-08-11T15:00:00.000Z",
       page: 0,
       size: 1,
       sort: "capturedAt",

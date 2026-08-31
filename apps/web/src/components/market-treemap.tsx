@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
-import { formatMarketMapUtc, getMarketMapMessages } from "@/components/market-map-messages";
+import { KstTimestamp } from "@/components/kst-timestamp";
+import { getMarketMapMessages } from "@/components/market-map-messages";
 import type { Locale } from "@/lib/i18n/config";
 import type { MarketTreemapSnapshot, MarketTreemapUniverse } from "@/lib/providers";
 import {
@@ -187,7 +188,7 @@ export function MarketTreemap({
                           </div>
                           <div>
                             <dt>{messages.tooltip.timestamp}</dt>
-                            <dd>{formatMarketMapUtc(cell.timestamp)}</dd>
+                            <dd><KstTimestamp value={cell.timestamp} /></dd>
                           </div>
                           <div>
                             <dt>{messages.tooltip.dataMode}</dt>
@@ -280,7 +281,7 @@ export function MarketTreemap({
                           {messages.relativeUnits(cell.syntheticMarketCapProxy)}
                         </td>
                         <td data-field="timestamp" data-label={messages.columns.timestamp}>
-                          {formatMarketMapUtc(cell.timestamp)}
+                          <KstTimestamp value={cell.timestamp} />
                         </td>
                         <td data-field="data-mode" data-label={messages.columns.dataMode} className="mono">
                           {cell.dataMode}

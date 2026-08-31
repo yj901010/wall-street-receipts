@@ -147,11 +147,11 @@ const ko: SecManifestAuditMessages = {
     eyebrow: "알려진 증거 식별자",
     title: "정확한 manifest와 기준 시각을 입력하세요.",
     description:
-      "두 값은 자동 선택되지 않습니다. 저장된 manifest ID와 그 증거를 볼 수 있는 UTC Z 시각을 그대로 붙여넣으세요.",
+      "두 값은 자동 선택되지 않습니다. API 조회 키에는 저장된 manifest ID와 원본 UTC Z 시각을 그대로 붙여넣으세요. 조회 결과의 사람이 읽는 시각은 KST로 표시됩니다.",
     manifestId: "Manifest ID",
     manifestHint: "소문자 SHA-256 64자리",
-    evaluationAsOf: "평가 기준 시각",
-    evaluationHint: "UTC Z 형식 · 소수점 이하 최대 6자리",
+    evaluationAsOf: "평가 기준 원본 조회 키(UTC)",
+    evaluationHint: "API 계약용 UTC Z 형식 · 결과 표시는 KST · 소수점 이하 최대 6자리",
     submit: "정확 증거 열기",
     invalidTitle: "조회 주소가 닫힌 문법과 맞지 않습니다.",
     invalidBody:
@@ -297,11 +297,11 @@ const en: SecManifestAuditMessages = {
     eyebrow: "Known evidence identity",
     title: "Enter an exact manifest and evaluation cutoff.",
     description:
-      "Neither value is selected automatically. Paste the stored manifest ID and the UTC Z instant at which its evidence may be visible.",
+      "Neither value is selected automatically. Paste the stored manifest ID and original UTC Z API key. Human-readable result times are displayed in KST.",
     manifestId: "Manifest ID",
     manifestHint: "64 lowercase SHA-256 characters",
-    evaluationAsOf: "Evaluation as of",
-    evaluationHint: "UTC Z format · at most six fractional digits",
+    evaluationAsOf: "Original lookup key (UTC)",
+    evaluationHint: "UTC Z API contract · results display KST · at most six fractional digits",
     submit: "Open exact evidence",
     invalidTitle: "The lookup URL does not match the closed grammar.",
     invalidBody:

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import { SiteHeader } from "@/components/site-header";
 import { formatMoney } from "@/lib/format-money";
 import { getLocale } from "@/lib/i18n/server";
@@ -14,16 +15,6 @@ import {
   type CallDirection,
 } from "@/lib/providers/calls-provider";
 import { getCallsMessages } from "./messages";
-
-const utcFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
-
-function utc(value: string) {
-  return `${utcFormatter.format(new Date(value))} UTC`;
-}
 
 function directionLabel(value: CallDirection) {
   return value.replaceAll("_", " ");
@@ -67,7 +58,7 @@ export default async function CallsPage({
             <div>
               <dt>{messages.latestReturnedCapture}</dt>
               <dd>{result.returnedPageEvidence.latestCallCapturedAt
-                ? utc(result.returnedPageEvidence.latestCallCapturedAt)
+                ? <KstTimestamp value={result.returnedPageEvidence.latestCallCapturedAt} />
                 : "NA"}</dd>
             </div>
             <div>
@@ -87,7 +78,7 @@ export default async function CallsPage({
             <div>
               <dt>{messages.asOf}</dt>
               <dd>{result.datasetEvidence.availability === "AVAILABLE"
-                ? utc(result.datasetEvidence.asOf)
+                ? <KstTimestamp value={result.datasetEvidence.asOf} />
                 : "NA"}</dd>
             </div>
             <div>
@@ -230,7 +221,9 @@ export default async function CallsPage({
                   {result.items.map(({ call, institution, analyst, asset, source }) => (
                     <tr key={call.callId}>
                       <td data-field="event-time" data-label={messages.eventTime} className="mono">
-                        <Link className="row-link" href={`/calls/${call.callId}`}>{utc(call.eventTime)}</Link>
+                        <Link className="row-link" href={`/calls/${call.callId}`}>
+                          <KstTimestamp value={call.eventTime} />
+                        </Link>
                       </td>
                       <td data-field="institution-analyst" data-label={messages.institutionAnalyst}>
                         <strong>{institution.canonicalName}</strong>

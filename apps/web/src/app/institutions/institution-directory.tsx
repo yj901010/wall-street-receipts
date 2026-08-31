@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import type { Locale } from "@/lib/i18n/config";
 import type { InstitutionDirectorySnapshot } from "@/lib/providers";
-import { formatInstitutionUtc, getInstitutionMessages } from "./messages";
+import { getInstitutionMessages } from "./messages";
 
 export function InstitutionDirectory({ snapshot, locale }: { snapshot: InstitutionDirectorySnapshot; locale: Locale }) {
   const messages = getInstitutionMessages(locale);
@@ -93,8 +94,8 @@ export function InstitutionDirectory({ snapshot, locale }: { snapshot: Instituti
                     {String(institution.active)}
                   </td>
                   <td className="mono" data-label={messages.directory.columns.mode}>{institution.dataMode}</td>
-                  <td className="mono" data-label={messages.directory.columns.effective}>{formatInstitutionUtc(institution.effectiveAt)}</td>
-                  <td className="mono" data-label={messages.directory.columns.captured}>{formatInstitutionUtc(institution.capturedAt)}</td>
+                  <td className="mono" data-label={messages.directory.columns.effective}><KstTimestamp value={institution.effectiveAt} /></td>
+                  <td className="mono" data-label={messages.directory.columns.captured}><KstTimestamp value={institution.capturedAt} /></td>
                   <td className="mono" data-label={messages.directory.columns.provenance}>{institution.provenanceId}</td>
                   <td data-label={messages.directory.columns.callLedger}>
                     <Link

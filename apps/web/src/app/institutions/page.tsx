@@ -1,8 +1,9 @@
 import { SiteHeader } from "@/components/site-header";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import { getLocale } from "@/lib/i18n/server";
 import { institutionDirectoryProvider } from "@/lib/providers";
 import { InstitutionDirectory } from "./institution-directory";
-import { formatInstitutionUtc, getInstitutionMessages } from "./messages";
+import { getInstitutionMessages } from "./messages";
 
 export default async function InstitutionsPage() {
   const locale = await getLocale();
@@ -31,11 +32,11 @@ export default async function InstitutionsPage() {
             </div>
             <div>
               <dt>{messages.page.generated}</dt>
-              <dd>{formatInstitutionUtc(snapshot.generatedAt)}</dd>
+              <dd><KstTimestamp value={snapshot.generatedAt} /></dd>
             </div>
             <div>
               <dt>{messages.page.captured}</dt>
-              <dd>{formatInstitutionUtc(snapshot.provenance.capturedAt)}</dd>
+              <dd><KstTimestamp value={snapshot.provenance.capturedAt} /></dd>
             </div>
             <div>
               <dt>{messages.page.source}</dt>

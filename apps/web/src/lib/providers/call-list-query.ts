@@ -4,6 +4,10 @@ import {
   CALL_STATUSES,
   type CallsQuery,
 } from "./calls-provider";
+import {
+  kstCalendarDateStartUtc,
+  nextKstCalendarDateStartUtc,
+} from "@/lib/kst-time";
 
 export type CallListSearchValue = string | string[] | undefined;
 export type CallListSearchParams = Record<string, CallListSearchValue>;
@@ -112,15 +116,14 @@ function date(value: string | undefined, field: "from" | "to"): string | undefin
   return value;
 }
 
-function nextUtcDate(value: string): string {
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  parsed.setUTCDate(parsed.getUTCDate() + 1);
-  if (!Number.isFinite(parsed.getTime())) invalid("to", "date cannot be converted to an exclusive upper bound");
-  const exclusive = parsed.toISOString();
-  if (!/^\d{4}-\d{2}-\d{2}T/.test(exclusive)) {
-    invalid("to", "date exceeds the supported four-digit exclusive upper bound");
+function kstBoundary(value: string, field: "from" | "to", exclusive: boolean): string {
+  try {
+    return exclusive
+      ? nextKstCalendarDateStartUtc(value)
+      : kstCalendarDateStartUtc(value);
+  } catch {
+    return invalid(field, "date cannot be converted to a four-digit KST boundary");
   }
-  return exclusive;
 }
 
 export function parseCallListSearchParams(raw: CallListSearchParams): ParsedCallListSearch {
@@ -145,8 +148,8 @@ export function parseCallListSearchParams(raw: CallListSearchParams): ParsedCall
   const sort = enumValue(single(raw, "sort"), CALL_SORT_FIELDS, "sort");
   const order = enumValue(single(raw, "order"), ["asc", "desc"] as const, "order");
 
-  const fromInstant = from ? `${from}T00:00:00.000Z` : undefined;
-  const toInstant = to ? nextUtcDate(to) : undefined;
+  const fromInstant = from ? kstBoundary(from, "from", false) : undefined;
+  const toInstant = to ? kstBoundary(to, "to", true) : undefined;
   if (fromInstant && toInstant && Date.parse(fromInstant) >= Date.parse(toInstant)) {
     invalid("to", "exclusive upper bound must follow from");
   }

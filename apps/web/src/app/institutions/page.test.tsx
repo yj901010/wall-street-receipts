@@ -30,7 +30,7 @@ describe("InstitutionsPage", () => {
     expect(within(provenance).getByText("v1")).toBeInTheDocument();
     expect(within(provenance).getByText("fixture-master-data-v1")).toBeInTheDocument();
     expect(within(provenance).getByText("DEMO")).toBeInTheDocument();
-    expect(within(provenance).getAllByText("Aug 18, 2026, 12:00 AM UTC")).toHaveLength(2);
+    expect(within(provenance).getAllByText("2026-08-18 09:00:00 KST")).toHaveLength(2);
 
     const sourceEvidence = screen.getByLabelText("기관 소스 증거");
     for (const value of [
@@ -74,8 +74,8 @@ describe("InstitutionsPage", () => {
       expect(within(row).getByText("US")).toBeInTheDocument();
       expect(within(row).getByText("true")).toBeInTheDocument();
       expect(within(row).getByText("DEMO")).toBeInTheDocument();
-      expect(within(row).getByText("Aug 10, 2026, 12:00 AM UTC")).toBeInTheDocument();
-      expect(within(row).getByText("Aug 18, 2026, 12:00 AM UTC")).toBeInTheDocument();
+      expect(within(row).getByText("2026-08-10 09:00:00 KST")).toBeInTheDocument();
+      expect(within(row).getByText("2026-08-18 09:00:00 KST")).toBeInTheDocument();
       expect(within(row).getByText("fixture-master-data-v1")).toBeInTheDocument();
       expect(within(row).getByRole("link", {
         name: `다음 기관으로 콜 원장 필터링: ${institution.name}`,
@@ -96,7 +96,7 @@ describe("InstitutionsPage", () => {
       name: "Canonical institution identities and their captured evidence",
     });
     expect(within(table).getByText("Goldman Sachs")).toBeInTheDocument();
-    expect(within(table).getAllByText("Aug 10, 2026, 12:00 AM UTC")).toHaveLength(2);
+    expect(within(table).getAllByText("2026-08-10 09:00:00 KST")).toHaveLength(2);
     expect(within(table).getAllByText("fixture-master-data-v1")).toHaveLength(2);
   });
 

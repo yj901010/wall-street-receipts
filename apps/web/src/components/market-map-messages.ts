@@ -283,12 +283,3 @@ const MESSAGES = { ko, en } as const satisfies Record<Locale, MarketMapMessages>
 export function getMarketMapMessages(locale: Locale): MarketMapMessages {
   return MESSAGES[locale];
 }
-
-export function formatMarketMapUtc(value: string): string {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  });
-  return `${formatter.format(new Date(value))} UTC`;
-}

@@ -33,7 +33,7 @@ describe("MarketPage", () => {
     for (const value of ["1.0.0", "v1", "fixture-market-board-v1", "DEMO"]) {
       expect(within(provenance).getByText(value, { exact: true })).toBeInTheDocument();
     }
-    expect(within(provenance).getAllByText("Aug 19, 2026, 2:00 AM UTC", { exact: true }))
+    expect(within(provenance).getAllByText("2026-08-19 11:00:00 KST", { exact: true }))
       .toHaveLength(2);
 
     const publication = screen.getByRole("region", { name: "시장 보드 게시 상태" });
@@ -86,7 +86,7 @@ describe("MarketPage", () => {
     })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Market board publication state" }))
       .toHaveTextContent("NO_CANONICAL_GLOBAL_QUOTE_CATALOG");
-    expect(screen.getAllByText("Aug 19, 2026, 2:00 AM UTC", { exact: true })).toHaveLength(2);
+    expect(screen.getAllByText("2026-08-19 11:00:00 KST", { exact: true })).toHaveLength(2);
     expect(screen.getByText(/Known-unavailable DEMO publication state only/))
       .toHaveTextContent("Not investment advice.");
   });

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import { SiteHeader } from "@/components/site-header";
 import { formatMoney } from "@/lib/format-money";
 import { getLocale } from "@/lib/i18n/server";
@@ -7,16 +8,6 @@ import { callAuditProvider } from "@/lib/providers/call-audit-provider.server";
 import type { AnalystCallDetail } from "@/lib/providers";
 import { getCallsMessages, type CallsMessages } from "../messages";
 import { CallContextSections } from "./call-context-sections";
-
-const utcFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
-
-function utc(value: string) {
-  return `${utcFormatter.format(new Date(value))} UTC`;
-}
 
 function valueOrNa(value: string | number | null) {
   return value ?? "NA";
@@ -136,7 +127,7 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
         <dl className="provenance-strip detail-provenance" aria-label={messages.recordProvenanceLabel}>
           <div>
             <dt>{messages.asOf}</dt>
-            <dd>{utc(call.capturedAt)}</dd>
+            <dd><KstTimestamp value={call.capturedAt} /></dd>
           </div>
           <div>
             <dt>{messages.dataMode}</dt>
@@ -161,8 +152,8 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
               </div>
             </div>
             <dl className="fact-grid">
-              <div><dt>{messages.eventTime}</dt><dd className="mono">{utc(call.eventTime)}</dd></div>
-              <div><dt>{messages.processingTime}</dt><dd className="mono">{utc(call.processingTime)}</dd></div>
+              <div><dt>{messages.eventTime}</dt><dd className="mono"><KstTimestamp value={call.eventTime} /></dd></div>
+              <div><dt>{messages.processingTime}</dt><dd className="mono"><KstTimestamp value={call.processingTime} /></dd></div>
               <div><dt>{messages.processingDelay}</dt><dd>{delay(call.eventTime, call.processingTime, messages)}</dd></div>
               <div><dt>{messages.originalRating}</dt><dd>{valueOrNa(call.originalRating)}</dd></div>
               <div><dt>{messages.previousTarget}</dt><dd className="mono">{formatMoney(call.previousTarget, call.currency)}</dd></div>
@@ -188,9 +179,9 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
               <div><dt>{messages.title}</dt><dd>{source.document.title}</dd></div>
               <div><dt>{messages.provider}</dt><dd>{source.document.provider}</dd></div>
               <div><dt>{messages.externalId}</dt><dd className="mono">{valueOrNa(source.document.externalId)}</dd></div>
-              <div><dt>{messages.published}</dt><dd className="mono">{source.document.publishedAt ? utc(source.document.publishedAt) : "NA"}</dd></div>
-              <div><dt>{messages.documentCaptured}</dt><dd className="mono">{utc(source.document.capturedAt)}</dd></div>
-              <div><dt>{messages.referenceCaptured}</dt><dd className="mono">{utc(source.reference.capturedAt)}</dd></div>
+              <div><dt>{messages.published}</dt><dd className="mono">{source.document.publishedAt ? <KstTimestamp value={source.document.publishedAt} /> : "NA"}</dd></div>
+              <div><dt>{messages.documentCaptured}</dt><dd className="mono"><KstTimestamp value={source.document.capturedAt} /></dd></div>
+              <div><dt>{messages.referenceCaptured}</dt><dd className="mono"><KstTimestamp value={source.reference.capturedAt} /></dd></div>
               <div><dt>{messages.documentDataMode}</dt><dd>{source.document.dataMode}</dd></div>
               <div><dt>{messages.referenceDataMode}</dt><dd>{source.reference.dataMode}</dd></div>
               <div><dt>{messages.documentProvenance}</dt><dd className="mono">{source.document.provenanceId}</dd></div>
@@ -249,9 +240,9 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
                       <div><dt>{messages.revisionSequence}</dt><dd className="mono">{revision.sequenceNumber}</dd></div>
                       <div><dt>{messages.revisionType}</dt><dd>{revision.revisionType}</dd></div>
                       <div><dt>{messages.supersedesRevision}</dt><dd className="mono">{valueOrNa(revision.supersedesRevisionId)}</dd></div>
-                      <div><dt>{messages.revisionEventTime}</dt><dd className="mono"><time dateTime={revision.eventTime}>{revision.eventTime}</time></dd></div>
-                      <div><dt>{messages.revisionProcessingTime}</dt><dd className="mono"><time dateTime={revision.processingTime}>{revision.processingTime}</time></dd></div>
-                      <div><dt>{messages.revisionCapturedAt}</dt><dd className="mono"><time dateTime={revision.capturedAt}>{revision.capturedAt}</time></dd></div>
+                      <div><dt>{messages.revisionEventTime}</dt><dd className="mono"><KstTimestamp value={revision.eventTime} /></dd></div>
+                      <div><dt>{messages.revisionProcessingTime}</dt><dd className="mono"><KstTimestamp value={revision.processingTime} /></dd></div>
+                      <div><dt>{messages.revisionCapturedAt}</dt><dd className="mono"><KstTimestamp value={revision.capturedAt} /></dd></div>
                       <div><dt>{messages.revisionProvider}</dt><dd>{revision.provider}</dd></div>
                       <div><dt>{messages.revisionProviderEvent}</dt><dd className="mono">{revision.providerEventId}</dd></div>
                       <div><dt>{messages.revisionSourceReference}</dt><dd className="mono">{revision.sourceReferenceId}</dd></div>
@@ -293,9 +284,9 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
             <>
               <dl className="snapshot-metadata">
                 <div><dt>{messages.snapshotId}</dt><dd>{snapshot.snapshotId}</dd></div>
-                <div><dt>{messages.snapshotEventTime}</dt><dd className="mono">{utc(snapshot.eventTime)}</dd></div>
-                <div><dt>{messages.snapshotProcessingTime}</dt><dd className="mono">{utc(snapshot.processingTime)}</dd></div>
-                <div><dt>{messages.captured}</dt><dd className="mono">{utc(snapshot.capturedAt)}</dd></div>
+                <div><dt>{messages.snapshotEventTime}</dt><dd className="mono"><KstTimestamp value={snapshot.eventTime} /></dd></div>
+                <div><dt>{messages.snapshotProcessingTime}</dt><dd className="mono"><KstTimestamp value={snapshot.processingTime} /></dd></div>
+                <div><dt>{messages.captured}</dt><dd className="mono"><KstTimestamp value={snapshot.capturedAt} /></dd></div>
                 <div><dt>{messages.dataMode}</dt><dd>{snapshot.dataMode}</dd></div>
                 <div><dt>{messages.provenance}</dt><dd className="mono">{snapshot.provenanceId}</dd></div>
                 <div><dt>{messages.assetId}</dt><dd className="mono">{snapshot.assetId}</dd></div>
@@ -370,9 +361,9 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
                       <div><dt>{messages.supersedesOutcome}</dt><dd className="mono">{valueOrNa(outcome.supersedesOutcomeId)}</dd></div>
                       <div><dt>{messages.evaluationStatus}</dt><dd>{outcome.evaluationStatus}</dd></div>
                       <div><dt>{messages.reasonCode}</dt><dd>{outcome.reasonCode}</dd></div>
-                      <div><dt>{messages.outcomeEventTime}</dt><dd className="mono"><time dateTime={outcome.eventTime}>{outcome.eventTime}</time></dd></div>
-                      <div><dt>{messages.outcomeProcessingTime}</dt><dd className="mono"><time dateTime={outcome.processingTime}>{outcome.processingTime}</time></dd></div>
-                      <div><dt>{messages.outcomeCapturedAt}</dt><dd className="mono"><time dateTime={outcome.capturedAt}>{outcome.capturedAt}</time></dd></div>
+                      <div><dt>{messages.outcomeEventTime}</dt><dd className="mono"><KstTimestamp value={outcome.eventTime} /></dd></div>
+                      <div><dt>{messages.outcomeProcessingTime}</dt><dd className="mono"><KstTimestamp value={outcome.processingTime} /></dd></div>
+                      <div><dt>{messages.outcomeCapturedAt}</dt><dd className="mono"><KstTimestamp value={outcome.capturedAt} /></dd></div>
                       <div><dt>{messages.assetReturn}</dt><dd>NA</dd></div>
                       <div><dt>{messages.benchmarkReturn}</dt><dd>NA</dd></div>
                       <div><dt>{messages.sectorReturn}</dt><dd>NA</dd></div>

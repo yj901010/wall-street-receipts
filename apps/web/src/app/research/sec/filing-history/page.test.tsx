@@ -59,7 +59,8 @@ describe("SecFilingHistoryAuditPage", () => {
       "pattern",
       "[0-9a-f]{64}",
     );
-    expect(within(form).getByLabelText("평가 기준 시각")).toHaveAttribute("type", "text");
+    expect(within(form).getByLabelText("평가 기준 원본 조회 키(UTC)"))
+      .toHaveAttribute("type", "text");
     expect(form.querySelector('input[name="view"]')).toHaveValue("summary");
     expect(screen.getByText("합성 DEMO 예시")).toBeInTheDocument();
     expect(screen.getByText(/실제 SEC 관측이 아닙니다/)).toBeInTheDocument();
@@ -107,6 +108,8 @@ describe("SecFilingHistoryAuditPage", () => {
     expect(screen.getAllByText("NOT_RESOLVED")).toHaveLength(3);
     expect(screen.getByText("NOT_CLAIMED")).toBeInTheDocument();
     expect(screen.getByText("합성 DEMO · 실제 SEC 자료 아님")).toBeInTheDocument();
+    expect(screen.getAllByText("2026-08-25 12:30:00.123456 KST").length)
+      .toBeGreaterThan(0);
   });
 
   it("preserves accession source order and labels conflict without choosing a winner", async () => {
@@ -129,6 +132,8 @@ describe("SecFilingHistoryAuditPage", () => {
     const uri = "https://www.sec.gov/Archives/edgar/data/320193/000032019326000001/form10q.htm";
     expect(screen.getByText(uri)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: uri })).not.toBeInTheDocument();
+    expect(screen.getByText("2026-08-21 05:00:00.123456 KST"))
+      .toHaveAttribute("datetime", "2026-08-20T20:00:00.123456Z");
     expect(screen.getAllByText("NA").length).toBeGreaterThan(0);
   });
 
@@ -165,8 +170,11 @@ describe("SecFilingHistoryAuditPage", () => {
       .toBeInTheDocument();
     expect(screen.getAllByText(SEC_MANIFEST_AUDIT_DEMO_QUERY.manifestId).length)
       .toBeGreaterThan(0);
-    expect(screen.getAllByText(SEC_MANIFEST_AUDIT_DEMO_QUERY.evaluationAsOf).length)
-      .toBeGreaterThan(0);
+    const cutoff = screen.getAllByText("2026-08-25 12:30:00.123456 KST")[0];
+    expect(cutoff).toHaveAttribute(
+      "datetime",
+      SEC_MANIFEST_AUDIT_DEMO_QUERY.evaluationAsOf,
+    );
     expect(screen.getByText("ROOT_RELATIVE_SELECTED_REFERENCES_ONLY"))
       .toBeInTheDocument();
     expect(screen.getByText("Synthetic DEMO · not observed SEC data")).toBeInTheDocument();

@@ -48,8 +48,8 @@ test("keeps filtered call-list API evidence response-bounded, bilingual, keyboar
   await expect(page.getByLabel("애널리스트 ID (대소문자 정확히 일치)")).toHaveValue("analyst-demo-b");
   await expect(page.getByLabel("방향")).toHaveValue("BULLISH");
   await expect(page.getByLabel("상태")).toHaveValue("ACTIVE");
-  await expect(page.getByLabel("시작일")).toHaveValue("2026-08-11");
-  await expect(page.getByLabel("종료일(UTC)")).toHaveValue("2026-08-11");
+  await expect(page.getByLabel("시작일(KST)")).toHaveValue("2026-08-11");
+  await expect(page.getByLabel("종료일(KST)")).toHaveValue("2026-08-11");
   await expect(page.getByLabel("행 수")).toHaveValue("1");
   await expect(page.getByLabel("정렬 기준")).toHaveValue("capturedAt");
   await expect(page.getByLabel("정렬 순서")).toHaveValue("asc");

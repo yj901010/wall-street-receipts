@@ -27,7 +27,7 @@ describe("call list raw search parser", () => {
     });
   });
 
-  it("preserves valid URL filters and converts the through date to an exclusive UTC bound", () => {
+  it("preserves valid URL filters and converts the selected KST dates to UTC API bounds", () => {
     expect(parseCallListSearchParams({
       assetId: "asset-nvda",
       ticker: "nvda",
@@ -51,8 +51,8 @@ describe("call list raw search parser", () => {
         direction: "BULLISH",
         status: "ACTIVE",
         dataMode: "DEMO",
-        from: "2026-08-10T00:00:00.000Z",
-        to: "2026-08-12T00:00:00.000Z",
+        from: "2026-08-09T15:00:00.000Z",
+        to: "2026-08-11T15:00:00.000Z",
         page: 0,
         size: 1,
         sort: "capturedAt",
@@ -64,13 +64,13 @@ describe("call list raw search parser", () => {
 
   it("accepts a real leap day and rejects an inverted exclusive date range", () => {
     expect(parseCallListSearchParams({ from: "2028-02-29" }).query.from)
-      .toBe("2028-02-29T00:00:00.000Z");
+      .toBe("2028-02-28T15:00:00.000Z");
     expect(() => parseCallListSearchParams({ from: "2026-08-12", to: "2026-08-11" }))
       .toThrow(/exclusive upper bound must follow/);
     expect(parseCallListSearchParams({ from: "2026-08-11", to: "2026-08-11" }).query)
       .toMatchObject({
-        from: "2026-08-11T00:00:00.000Z",
-        to: "2026-08-12T00:00:00.000Z",
+        from: "2026-08-10T15:00:00.000Z",
+        to: "2026-08-11T15:00:00.000Z",
       });
   });
 

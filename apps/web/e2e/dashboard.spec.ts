@@ -49,7 +49,7 @@ test.describe("dashboard responsive regression", () => {
       "fixture-analyst-calls-v1",
     );
     await expect(callProvenance.getByText("기준 시각", { exact: true })).toBeVisible();
-    await expect(callProvenance).toContainText("Aug 18, 2026, 12:00 AM UTC");
+    await expect(callProvenance).toContainText("2026-08-18 09:00:00 KST");
     await expect(callProvenance).toContainText(
       "원본 이벤트 시각 내림차순",
     );
@@ -83,8 +83,8 @@ test.describe("dashboard responsive regression", () => {
       await expect(previewProvenance.getByText("기준 시각", { exact: true })).toBeVisible();
       await expect(previewProvenance.getByText("생성 시각", { exact: true })).toBeVisible();
       await expect(previewProvenance.getByText("수집 시각", { exact: true })).toBeVisible();
-      await expect(previewProvenance).toContainText("Aug 19, 2026, 12:30 AM UTC");
-      await expect(previewProvenance).toContainText("Aug 19, 2026, 1:00 AM UTC");
+      await expect(previewProvenance).toContainText("2026-08-19 09:30:00 KST");
+      await expect(previewProvenance).toContainText("2026-08-19 10:00:00 KST");
       await expect(preview).toContainText("SAMPLE · 셀 3개");
       await expect(preview).toContainText("외부 섹터 1개 · 산업 3개");
       await expect(preview).toContainText("SYNTHETIC_MARKET_CAP_PROXY");

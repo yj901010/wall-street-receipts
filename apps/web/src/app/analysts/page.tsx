@@ -1,8 +1,9 @@
 import { SiteHeader } from "@/components/site-header";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import { getLocale } from "@/lib/i18n/server";
 import { analystDirectoryProvider } from "@/lib/providers";
 import { AnalystDirectory } from "./analyst-directory";
-import { formatAnalystUtc, getAnalystMessages } from "./messages";
+import { getAnalystMessages } from "./messages";
 
 export default async function AnalystsPage() {
   const locale = await getLocale();
@@ -31,11 +32,11 @@ export default async function AnalystsPage() {
             </div>
             <div>
               <dt>{messages.page.generated}</dt>
-              <dd>{formatAnalystUtc(snapshot.generatedAt)}</dd>
+              <dd><KstTimestamp value={snapshot.generatedAt} /></dd>
             </div>
             <div>
               <dt>{messages.page.captured}</dt>
-              <dd>{formatAnalystUtc(snapshot.provenance.capturedAt)}</dd>
+              <dd><KstTimestamp value={snapshot.provenance.capturedAt} /></dd>
             </div>
             <div>
               <dt>{messages.page.source}</dt>

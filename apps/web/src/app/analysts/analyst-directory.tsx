@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import type { Locale } from "@/lib/i18n/config";
 import type { AnalystDirectorySnapshot } from "@/lib/providers";
-import { formatAnalystUtc, getAnalystMessages } from "./messages";
+import { getAnalystMessages } from "./messages";
 
 export function AnalystDirectory({ snapshot, locale }: { snapshot: AnalystDirectorySnapshot; locale: Locale }) {
   const messages = getAnalystMessages(locale);
@@ -84,8 +85,8 @@ export function AnalystDirectory({ snapshot, locale }: { snapshot: AnalystDirect
                     {String(analyst.active)}
                   </td>
                   <td className="mono" data-label={messages.directory.columns.mode}>{analyst.dataMode}</td>
-                  <td className="mono" data-label={messages.directory.columns.effective}>{formatAnalystUtc(analyst.effectiveAt)}</td>
-                  <td className="mono" data-label={messages.directory.columns.captured}>{formatAnalystUtc(analyst.capturedAt)}</td>
+                  <td className="mono" data-label={messages.directory.columns.effective}><KstTimestamp value={analyst.effectiveAt} /></td>
+                  <td className="mono" data-label={messages.directory.columns.captured}><KstTimestamp value={analyst.capturedAt} /></td>
                   <td className="mono" data-label={messages.directory.columns.provenance}>{analyst.provenanceId}</td>
                   <td data-label={messages.directory.columns.callLedger}>
                     <Link

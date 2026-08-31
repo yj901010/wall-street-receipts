@@ -139,12 +139,3 @@ const MESSAGES = { ko, en } as const satisfies Record<Locale, MarketMessages>;
 export function getMarketMessages(locale: Locale): MarketMessages {
   return MESSAGES[locale];
 }
-
-export function formatMarketUtc(value: string): string {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  });
-  return `${formatter.format(new Date(value))} UTC`;
-}

@@ -1,7 +1,8 @@
 import type { MarketMapSnapshot, MarketMapUniverse } from "@/lib/providers";
 import { presentMarketMapCell } from "@/lib/market-map-engine";
 import type { Locale } from "@/lib/i18n/config";
-import { formatMarketMapUtc, getMarketMapMessages } from "@/components/market-map-messages";
+import { KstTimestamp } from "@/components/kst-timestamp";
+import { getMarketMapMessages } from "@/components/market-map-messages";
 
 export const MARKET_MAP_LABELS: Record<MarketMapUniverse, string> = {
   sp500: "S&P 500",
@@ -96,7 +97,7 @@ export function MarketMap({ snapshot, locale }: { snapshot: MarketMapSnapshot; l
                       </div>
                       <div>
                         <dt>{messages.timestamp}</dt>
-                        <dd className="mono">{formatMarketMapUtc(cell.timestamp)}</dd>
+                        <dd className="mono"><KstTimestamp value={cell.timestamp} /></dd>
                       </div>
                       <div>
                         <dt>{messages.mode}</dt>

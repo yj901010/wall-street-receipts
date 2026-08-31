@@ -254,6 +254,6 @@ describe("MarketMapPage", () => {
       .toHaveStyle({ backgroundColor: nvdaPresentation.backgroundColor });
     expect(container.querySelector('[data-proxy="144"]')).toHaveAttribute("data-rect-width");
     expect(screen.getAllByText("144 relative units").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Aug 19, 2026, 12:30 AM UTC").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2026-08-19 09:30:00 KST").length).toBeGreaterThan(0);
   });
 });

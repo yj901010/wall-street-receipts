@@ -33,7 +33,7 @@ describe("DashboardPage", () => {
     expect(callProvenance).toHaveTextContent("fixture-analyst-calls-v1");
     expect(callProvenance).toHaveTextContent("DEMO");
     expect(within(callProvenance).getByText("기준 시각", { exact: true })).toBeInTheDocument();
-    expect(callProvenance).toHaveTextContent("Aug 18, 2026, 12:00 AM UTC");
+    expect(callProvenance).toHaveTextContent("2026-08-18 09:00:00 KST");
     expect(callProvenance).toHaveTextContent("원본 이벤트 시각 내림차순");
     expect(within(callSection).getByText(/커밋된 DEMO 픽스처 안에서 가장 최근/i))
       .toBeInTheDocument();
@@ -75,8 +75,8 @@ describe("DashboardPage", () => {
       expect(within(previewProvenance).getByText("기준 시각", { exact: true })).toBeInTheDocument();
       expect(within(previewProvenance).getByText("생성 시각", { exact: true })).toBeInTheDocument();
       expect(within(previewProvenance).getByText("수집 시각", { exact: true })).toBeInTheDocument();
-      expect(previewProvenance).toHaveTextContent("Aug 19, 2026, 12:30 AM UTC");
-      expect(within(previewProvenance).getAllByText("Aug 19, 2026, 1:00 AM UTC")).toHaveLength(2);
+      expect(previewProvenance).toHaveTextContent("2026-08-19 09:30:00 KST");
+      expect(within(previewProvenance).getAllByText("2026-08-19 10:00:00 KST")).toHaveLength(2);
       expect(preview).toHaveTextContent("SAMPLE · 셀 3개");
       expect(preview).toHaveTextContent("false");
       expect(preview).toHaveTextContent("외부 섹터 1개 · 산업 3개");
@@ -183,7 +183,7 @@ describe("DashboardPage", () => {
 
     expect(screen.getByRole("heading", { name: "Market evidence, without inferred gaps." }))
       .toBeInTheDocument();
-    expect(screen.getByText("Aug 18, 2026, 12:00 AM UTC")).toBeInTheDocument();
+    expect(screen.getByText("2026-08-18 09:00:00 KST")).toBeInTheDocument();
     expect(screen.getAllByText("fixture-market-treemap-sp500-v1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("DEMO").length).toBeGreaterThan(0);
   });

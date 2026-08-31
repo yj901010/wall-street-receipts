@@ -1,4 +1,5 @@
 import { SiteHeader } from "@/components/site-header";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import { getLocale } from "@/lib/i18n/server";
 import { sp500HistoryProvider } from "@/lib/providers";
 import { getSp500HistoryMessages } from "./messages";
@@ -23,7 +24,7 @@ export default async function Sp500HistoryPage() {
             <div>
               <dt>{messages.catalogAsOf}</dt>
               <dd className="mono">
-                <time dateTime={snapshot.asOf}>{snapshot.asOf}</time>
+                <KstTimestamp value={snapshot.asOf} />
               </dd>
             </div>
             <div>

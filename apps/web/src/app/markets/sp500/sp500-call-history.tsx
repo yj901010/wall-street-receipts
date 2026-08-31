@@ -1,13 +1,10 @@
 import Link from "next/link";
+import { KstTimestamp } from "@/components/kst-timestamp";
 import { formatMoney } from "@/lib/format-money";
 import type { Locale } from "@/lib/i18n/config";
 import type { Sp500HistorySnapshot } from "@/lib/providers";
 import { KeyboardScrollRegion } from "./keyboard-scroll-region";
 import { getSp500HistoryMessages } from "./messages";
-
-function UtcTimestamp({ value }: { value: string }) {
-  return <time dateTime={value}>{value}</time>;
-}
 
 function directionLabel(value: string) {
   return value.replaceAll("_", " ");
@@ -110,7 +107,7 @@ export function Sp500CallHistory({
                 <tr key={call.callId}>
                   <td data-field="event-record" data-label={messages.eventRecord} className="mono">
                     <Link className="row-link" href={`/calls/${call.callId}`}>
-                      <UtcTimestamp value={call.eventTime} />
+                      <KstTimestamp value={call.eventTime} />
                     </Link>
                     <span className="cell-secondary">{call.callId}</span>
                   </td>
@@ -145,9 +142,9 @@ export function Sp500CallHistory({
                     </span>
                   </td>
                   <td data-field="processing-capture" data-label={messages.processingCaptureEvidence} className="mono">
-                    <UtcTimestamp value={call.processingTime} />
+                    <KstTimestamp value={call.processingTime} />
                     <span className="cell-secondary">
-                      {messages.captured} <UtcTimestamp value={call.capturedAt} />
+                      {messages.captured} <KstTimestamp value={call.capturedAt} />
                     </span>
                     <span className="cell-secondary">{call.dataMode} · {call.provenanceId}</span>
                   </td>

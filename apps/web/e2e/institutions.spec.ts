@@ -23,7 +23,7 @@ test.describe("institution identity directory", () => {
     await expect(provenance.getByText("1.0.0", { exact: true })).toBeVisible();
     await expect(provenance.getByText("v1", { exact: true })).toBeVisible();
     await expect(provenance.getByText("fixture-master-data-v1", { exact: true })).toBeVisible();
-    await expect(provenance.getByText("Aug 18, 2026, 12:00 AM UTC", { exact: true })).toHaveCount(2);
+    await expect(provenance.getByText("2026-08-18 09:00:00 KST", { exact: true })).toHaveCount(2);
 
     const sourceEvidence = page.getByLabel("기관 소스 증거");
     await expect(sourceEvidence.getByText("LOCAL_SPECIFICATION", { exact: true })).toBeVisible();

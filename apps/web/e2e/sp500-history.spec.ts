@@ -57,7 +57,7 @@ test.describe("recorded S&P 500 call-event history", () => {
       .toHaveAttribute("aria-current", "page");
 
     const provenance = page.getByLabel("S&P 500 콜 이력 출처 정보");
-    const catalogAsOf = provenance.getByText("2026-08-18T00:00:00Z", { exact: true });
+    const catalogAsOf = provenance.getByText("2026-08-18 09:00:00 KST", { exact: true });
     await expect(catalogAsOf).toHaveAttribute("datetime", "2026-08-18T00:00:00Z");
     await expect(provenance.getByText("fixture-analyst-calls-v1", { exact: true }))
       .toBeVisible();
@@ -120,7 +120,7 @@ test.describe("recorded S&P 500 call-event history", () => {
     })).toHaveCount(0);
 
     const row = rows.nth(1);
-    const eventLink = row.getByRole("link", { name: "2026-08-10T12:00:00Z" });
+    const eventLink = row.getByRole("link", { name: "2026-08-10 21:00:00 KST" });
     await expect(eventLink).toHaveAttribute("href", "/calls/demo-call-001");
     await expect(eventLink.locator("time"))
       .toHaveAttribute("datetime", "2026-08-10T12:00:00Z");
@@ -272,7 +272,7 @@ test.describe("recorded S&P 500 call-event history", () => {
     await expect(filteredTable.getByRole("row")).toHaveCount(2);
     const filteredRow = filteredTable.getByRole("row").nth(1);
     await expect(filteredRow).toContainText("SPX");
-    await expect(filteredRow.getByRole("link", { name: "Aug 10, 2026, 12:00 PM UTC" }))
+    await expect(filteredRow.getByRole("link", { name: "2026-08-10 21:00:00 KST" }))
       .toHaveAttribute("href", "/calls/demo-call-001");
 
     await expectNoPageOverflow(page);
