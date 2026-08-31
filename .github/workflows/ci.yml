@@ -3042,7 +3042,7 @@ jobs:
           from pathlib import Path
 
           BASE_REVISION = "20d70d73f53668a7f1bf2b5b1d70e4c1e9fbfca2"
-          WORKFLOW_SELF_DIGEST = "d1b6aff4f551e2464cc9249f0587ef5de8adc314f33db61becf55559b37ee7e8"  # ADR056_WORKFLOW_SELF_DIGEST
+          WORKFLOW_SELF_DIGEST = "2082b673fd7f4d6eeed3715d18689b0806f61a518f70a5025b6c7c38d05f5fe0"  # ADR056_WORKFLOW_SELF_DIGEST
 
           def require(condition, message):
               if not condition:
@@ -42805,7 +42805,7 @@ jobs:
           from pathlib import Path
 
           BASE_REVISION = "20d70d73f53668a7f1bf2b5b1d70e4c1e9fbfca2"
-          CUSTODY_MANIFEST_DIGEST = "f4ebe920fc5110271fe2a2be402ce067c4dfbbf80958d2845466f1f5c1b84dee"  # ADR056_CUSTODY_MANIFEST_DIGEST
+          CUSTODY_MANIFEST_DIGEST = "b3e5cd22650cdde13b7ea24753cd9068bdd6a08669166e052a1ab399fbbad824"  # ADR056_CUSTODY_MANIFEST_DIGEST
 
           def require(condition, message):
               if not condition:
@@ -43457,7 +43457,6 @@ jobs:
               "ADR-056 local-only Git process isolation changed",
           )
           forbidden_network_fragments = (
-              '"fetch"',
               '"pull"',
               '"ls-remote"',
               "Invoke-WebRequest",
@@ -43475,6 +43474,124 @@ jobs:
                   harness,
               ),
               "ADR-056 harness gained a network/origin contact path",
+          )
+
+          approved_seed_init = (
+              '-WorkingDirectory $temporaryRoot -Arguments @('
+              '"init", "--bare", $remoteRepository) '
+              '-FailureMessage "Could not initialize the owned '
+              'simulated bare remote"'
+          )
+          approved_seed_fetch = (
+              '-WorkingDirectory $temporaryRoot -Arguments @('
+              '"--git-dir=$remoteRepository", "fetch", "--no-tags", '
+              '"--no-write-fetch-head", "--no-recurse-submodules", '
+              '$repositoryRoot, '
+              '"refs/remotes/origin/main:refs/heads/main", '
+              '"refs/remotes/origin/develop:refs/heads/develop") '
+              '-FailureMessage "Could not seed the simulated remote from '
+              'the approved cached refs"'
+          )
+          approved_seed_head = (
+              '-WorkingDirectory $temporaryRoot -Arguments @('
+              '"--git-dir=$remoteRepository", "symbolic-ref", '
+              '"HEAD", "refs/heads/develop")'
+          )
+          approved_seed_head_verification = (
+              '-WorkingDirectory $temporaryRoot -Arguments @('
+              '"--git-dir=$remoteRepository", "symbolic-ref", '
+              '"--quiet", "HEAD")'
+          )
+          approved_seed_remotes = (
+              '-WorkingDirectory $temporaryRoot -Arguments @('
+              '"--git-dir=$remoteRepository", "remote")'
+          )
+          approved_empty_seed_inventory = (
+              '-WorkingDirectory $temporaryRoot -Arguments @('
+              '"--git-dir=$remoteRepository", "for-each-ref", '
+              '"--format=%(refname)")'
+          )
+          approved_seed_inventory = (
+              '-WorkingDirectory $temporaryRoot -Arguments @('
+              '"--git-dir=$remoteRepository", "for-each-ref", '
+              '"--format=%(refname)%00%(objectname)")'
+          )
+          forbidden_seed_fragments = (
+              '"--mirror"',
+              '"--all"',
+              '"--tags"',
+              '"--recurse-submodules"',
+              '"--filter"',
+              '"remote", "add"',
+              '"+refs/remotes/origin/',
+              '"update-ref", "-d"',
+              '"update-ref", "--delete"',
+              '"branch", "-D"',
+              '"tag", "-d"',
+          )
+          require(
+              compact_harness.count(approved_seed_init) == 1
+              and compact_harness.count(approved_empty_seed_inventory) == 1
+              and compact_harness.count(approved_seed_fetch) == 1
+              and compact_harness.count(approved_seed_head) == 1
+              and compact_harness.count(
+                  approved_seed_head_verification
+              ) == 1
+              and compact_harness.count(approved_seed_remotes) == 1
+              and compact_harness.count(approved_seed_inventory) == 1
+              and compact_harness.count(
+                  'Assert-GitRepositoryComplete $remoteRepository '
+                  '"Simulated remote"'
+              ) == 1
+              and compact_harness.count('"fetch"') == 1
+              and (
+                  compact_harness.index(approved_seed_init)
+                  < compact_harness.index(approved_empty_seed_inventory)
+                  < compact_harness.index(approved_seed_fetch)
+                  < compact_harness.index(approved_seed_head)
+                  < compact_harness.index(approved_seed_head_verification)
+                  < compact_harness.index(approved_seed_remotes)
+                  < compact_harness.index(approved_seed_inventory)
+                  < compact_harness.index(
+                      'Assert-GitRepositoryComplete $remoteRepository '
+                      '"Simulated remote"'
+                  )
+              )
+              and all(
+                  harness.count(marker) == 1
+                  for marker in (
+                      '"--no-tags", "--no-write-fetch-head", '
+                      '"--no-recurse-submodules"',
+                      '"refs/remotes/origin/main:refs/heads/main"',
+                      '"refs/remotes/origin/develop:refs/heads/develop"',
+                  )
+              )
+              and '$initialRemoteRefs.Count -eq 0' in harness
+              and (
+                  'The newly initialized simulated remote unexpectedly '
+                  'contains refs.'
+              ) in harness
+              and '-ceq "refs/heads/develop"' in harness
+              and 'The simulated remote HEAD does not select develop.'
+              in harness
+              and '$seededRemotes.Count -eq 0' in harness
+              and 'The simulated remote unexpectedly persisted a remote.'
+              in harness
+              and '$seededRefs.Count -eq 2' in harness
+              and (
+                  '$seededRefs -contains '
+                  '"refs/heads/develop`0$cachedOriginDevelop"'
+              ) in harness
+              and (
+                  '$seededRefs -contains '
+                  '"refs/heads/main`0$cachedOriginMain"'
+              ) in harness
+              and '"--format=%(refname)%00%(objectname)"' in harness
+              and not any(
+                  fragment in compact_harness
+                  for fragment in forbidden_seed_fragments
+              ),
+              "ADR-056 approved cached-ref-only bare seed boundary changed",
           )
 
           forbidden_git_mutation_fragments = (
@@ -43500,11 +43617,6 @@ jobs:
               and (
                   '-WorkingDirectory $serverRepository -Arguments @('
                   '"checkout", "--detach", $mainReleaseCommit)'
-              ) in compact_harness
-              and (
-                  '-WorkingDirectory $temporaryRoot -Arguments @('
-                  '"--git-dir=$remoteRepository", "update-ref", "-d", '
-                  '$temporaryRef)'
               ) in compact_harness
               and not re.search(
                   r'(?i)(?:ReadAllText|ReadAllBytes|Get-Content|Copy-Item|'
@@ -43593,7 +43705,13 @@ jobs:
               'Assert-GitAncestor $repositoryRoot $cachedOriginMain $localDevelop',
               'Assert-GitAncestor $repositoryRoot $localDevelop $sourceCommit',
               '"rev-list", "--count", "$localDevelop..$sourceCommit"',
-              '"clone", "--mirror", "--no-local", "--no-hardlinks"',
+              '"init", "--bare", $remoteRepository',
+              '"--git-dir=$remoteRepository", "fetch"',
+              '"--no-tags", "--no-write-fetch-head", "--no-recurse-submodules"',
+              '"refs/remotes/origin/main:refs/heads/main"',
+              '"refs/remotes/origin/develop:refs/heads/develop"',
+              '"clone", "--no-local", "--no-hardlinks", '
+              '$remoteRepository, $integrationRepository',
               '"bundle", "create", $candidateInputBundle',
               '"refs/heads/develop", $sourceRef',
               '"merge", "--no-ff", "--no-edit", $sourceCommit',
@@ -43774,6 +43892,17 @@ jobs:
                   "uploadpack.packobjectshook",
                   "filter.*.(clean|smudge|process)",
                   "flushed 48-hex owner marker",
+                  "`clone --mirror`",
+                  "initialize an empty bare repository",
+                  "zero-ref inventory",
+                  "fetching only cached",
+                  "two non-forcing explicit refspecs",
+                  "non-forcing explicit refspecs with tags",
+                  "`FETCH_HEAD`, and submodules disabled",
+                  "exactly those two refs",
+                  "rechecks `HEAD` as `develop`",
+                  "zero persisted remotes",
+                  "complete-repository/strict-`fsck` gate",
                   "receipt names and hashes only",
                   "complete three-file set",
                   "manifest-only Git Flow identity",
@@ -43873,7 +44002,8 @@ jobs:
 
           print(
               "Validated ADR-056 no-input local-only source custody, exact "
-              "temporary Git Flow parent/tree graph, canonical 22-field "
+              "approved-ref-only bare seed, temporary Git Flow parent/tree "
+              "graph, canonical 22-field "
               "tag-only bundle handoff, two corruption rejections, offline "
               "complete checkout, docs/external-input honesty, and parse-only CI"
           )
