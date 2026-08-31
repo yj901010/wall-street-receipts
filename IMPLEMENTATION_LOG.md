@@ -6954,6 +6954,12 @@ and assembly identities.
   supplements the harness's successful API-mode SEC branch without changing
   the recorded full-stack result.
 - PowerShell parser validation for the extended harness: **PASS**.
+- The first post-commit nested workflow projection failed safely inside its
+  disposable clone before ADR-054 mutated evidence: ADR-055 had projected the
+  `a121eb1` files but left Git `HEAD` at the new commit, so ADR-054 correctly
+  rejected the enlarged `8fc3732..HEAD` inventory. The outer guard was changed
+  to custody and temporarily detach `HEAD` at `a121eb1`, then restore the exact
+  original commit/ref state and current bytes after all historical guards.
 - ADR-055 repository-workflow custody and historical projection: **PASS** in an
   isolated local clone. Exact pre-ADR-055 bytes were projected before ADR-054's
   own historical guard, the current 18-file delta was restored byte-for-byte,

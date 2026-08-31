@@ -3042,7 +3042,7 @@ jobs:
           from pathlib import Path
 
           BASE_REVISION = "a121eb143dfaea4ac4fb021e41d6904d1bb5300e"
-          WORKFLOW_SELF_DIGEST = "5a1c1a551a9882ce46599847d311d5b96989e2a95173cfdaec9226fc13f770ba"  # ADR055_WORKFLOW_SELF_DIGEST
+          WORKFLOW_SELF_DIGEST = "baa1cb86743c14ac728b8fabba1f7db86811f3fde9fe8b32056349538fe2b8ef"  # ADR055_WORKFLOW_SELF_DIGEST
 
           def require(condition, message):
               if not condition:
@@ -3194,36 +3194,121 @@ jobs:
               "ADR-055 current-byte custody manifest changed",
           )
           (projection_root / "manifest.json").write_bytes(manifest_bytes)
+          next_env_path = Path("apps/web/next-env.d.ts")
+          next_env_status_line = " M apps/web/next-env.d.ts"
+          original_tracked_status = subprocess.check_output(
+              ["git", "status", "--porcelain=v1", "--untracked-files=no"],
+              text=True,
+          ).splitlines()
+          require(
+              original_tracked_status in ([], [next_env_status_line]),
+              "ADR-055 projection requires a clean tracked checkout except the "
+              "unstaged user-owned Next declaration",
+          )
+          next_env_dirty = original_tracked_status == [next_env_status_line]
+          next_env_custody_path = (
+              projection_root / "excluded-user-owned" / next_env_path
+          )
+          next_env_state = {
+              "dirty": next_env_dirty,
+              "rawSha256": None,
+              "normalizedSha256": None,
+          }
+          if next_env_dirty:
+              require(
+                  next_env_path.is_file(),
+                  "User-owned Next declaration is missing before projection",
+              )
+              next_env_custody_path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(next_env_path, next_env_custody_path)
+              next_env_state = {
+                  "dirty": True,
+                  "rawSha256": raw_digest(next_env_path),
+                  "normalizedSha256": normalized_digest(next_env_path),
+              }
+          original_head = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          symbolic_head = subprocess.run(
+              ["git", "symbolic-ref", "-q", "HEAD"],
+              text=True,
+              capture_output=True,
+              check=False,
+          )
+          require(
+              symbolic_head.returncode in {0, 1},
+              "ADR-055 original HEAD state could not be resolved",
+          )
+          original_symbolic_ref = (
+              symbolic_head.stdout.strip()
+              if symbolic_head.returncode == 0
+              else None
+          )
+          require(
+              original_symbolic_ref is None
+              or original_symbolic_ref.startswith("refs/heads/"),
+              "ADR-055 original symbolic HEAD is not a local branch",
+          )
+          head_state_path = projection_root / "head-state.json"
+          head_state_path.write_text(
+              json.dumps(
+                  {
+                      "commit": original_head,
+                      "excludedNextEnv": next_env_state,
+                      "symbolicRef": original_symbolic_ref,
+                  },
+                  sort_keys=True,
+              ),
+              encoding="utf-8",
+          )
           (projection_root / ".prepared").write_text(
               "ADR-055 exact current bytes saved before historical projection\n",
               encoding="utf-8",
           )
-
-          def historical_bytes(path):
-              return subprocess.check_output(
-                  ["git", "show", f"{BASE_REVISION}:{path.as_posix()}"],
-              )
-
-          historical_files = {
-              path: historical_bytes(path)
-              for path in modified_paths
-          }
-          for path in added_paths:
-              path.unlink()
-          for path, content in historical_files.items():
-              path.write_bytes(content)
+          subprocess.run(
+              ["git", "checkout", "--detach", BASE_REVISION],
+              check=True,
+          )
+          projected_head = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          projected_symbolic_head = subprocess.run(
+              ["git", "symbolic-ref", "-q", "HEAD"],
+              capture_output=True,
+              check=False,
+          )
+          require(
+              projected_head == BASE_REVISION
+              and projected_symbolic_head.returncode == 1,
+              "ADR-055 historical projection did not detach exact a121eb1 HEAD",
+          )
           require(
               all(not path.exists() for path in added_paths),
               "ADR-055 added file survived historical projection",
           )
-          for path, expected_bytes in historical_files.items():
-              require(
-                  path.is_file() and path.read_bytes() == expected_bytes,
-                  f"ADR-055 exact a121eb1 bytes were not projected: {path}",
-              )
+          tracked_status = subprocess.check_output(
+              ["git", "status", "--porcelain=v1", "--untracked-files=no"],
+              text=True,
+          ).splitlines()
+          require(
+              tracked_status == ([next_env_status_line] if next_env_dirty else []),
+              "ADR-055 historical projection is not tracked-clean outside the "
+              "preserved user-owned Next declaration",
+          )
+          require(
+              not next_env_dirty
+              or (
+                  raw_digest(next_env_path) == next_env_state["rawSha256"]
+                  and normalized_digest(next_env_path)
+                  == next_env_state["normalizedSha256"]
+              ),
+              "User-owned Next declaration changed during ADR-055 projection",
+          )
           print(
-              "Projected the exact pre-ADR-055 a121eb1 source/test/document "
-              "view before the ADR-054 historical projection"
+              "Detached the exact clean pre-ADR-055 a121eb1 repository view "
+              "before the ADR-054 historical projection"
           )
           PYTHON
 
@@ -42082,7 +42167,7 @@ jobs:
           from pathlib import Path
 
           BASE_REVISION = "a121eb143dfaea4ac4fb021e41d6904d1bb5300e"
-          CUSTODY_MANIFEST_DIGEST = "a91dd2e2b20b47dfdd0cc47b3e19c46137d34782cafdf66690a900b8f467f2cb"  # ADR055_CUSTODY_MANIFEST_DIGEST
+          CUSTODY_MANIFEST_DIGEST = "553e30a9bfddf5879b17220837a2f925ce13559d7ad985972b1ef104ffcc697e"  # ADR055_CUSTODY_MANIFEST_DIGEST
 
           def require(condition, message):
               if not condition:
@@ -42126,6 +42211,75 @@ jobs:
               == "ADR-055 exact current bytes saved before historical projection\n",
               "ADR-055 projection custody marker changed",
           )
+          head_state_path = projection_root / "head-state.json"
+          require(
+              head_state_path.is_file(),
+              "ADR-055 original HEAD custody is missing",
+          )
+          head_state = json.loads(head_state_path.read_text(encoding="utf-8"))
+          require(
+              isinstance(head_state, dict)
+              and set(head_state) == {
+                  "commit", "excludedNextEnv", "symbolicRef"
+              }
+              and isinstance(head_state["commit"], str)
+              and re.fullmatch(r"[0-9a-f]{40}", head_state["commit"])
+              and isinstance(head_state["excludedNextEnv"], dict)
+              and set(head_state["excludedNextEnv"]) == {
+                  "dirty", "rawSha256", "normalizedSha256"
+              }
+              and isinstance(head_state["excludedNextEnv"]["dirty"], bool)
+              and (
+                  head_state["symbolicRef"] is None
+                  or (
+                      isinstance(head_state["symbolicRef"], str)
+                      and head_state["symbolicRef"].startswith("refs/heads/")
+                  )
+              ),
+              "ADR-055 original HEAD custody is invalid",
+          )
+          original_head = head_state["commit"]
+          original_symbolic_ref = head_state["symbolicRef"]
+          next_env_path = Path("apps/web/next-env.d.ts")
+          next_env_status_line = " M apps/web/next-env.d.ts"
+          next_env_state = head_state["excludedNextEnv"]
+          next_env_dirty = next_env_state["dirty"]
+          require(
+              (
+                  next_env_dirty
+                  and isinstance(next_env_state["rawSha256"], str)
+                  and re.fullmatch(
+                      r"[0-9a-f]{64}", next_env_state["rawSha256"]
+                  )
+                  and isinstance(next_env_state["normalizedSha256"], str)
+                  and re.fullmatch(
+                      r"[0-9a-f]{64}", next_env_state["normalizedSha256"]
+                  )
+              )
+              or (
+                  not next_env_dirty
+                  and next_env_state["rawSha256"] is None
+                  and next_env_state["normalizedSha256"] is None
+              ),
+              "ADR-055 excluded Next declaration custody is invalid",
+          )
+          next_env_custody_path = (
+              projection_root / "excluded-user-owned" / next_env_path
+          )
+          if next_env_dirty:
+              require(
+                  next_env_custody_path.is_file()
+                  and raw_digest(next_env_custody_path)
+                  == next_env_state["rawSha256"]
+                  and normalized_digest(next_env_custody_path)
+                  == next_env_state["normalizedSha256"],
+                  "User-owned Next declaration custody changed",
+              )
+          else:
+              require(
+                  not next_env_custody_path.exists(),
+                  "Unexpected user-owned Next declaration custody exists",
+              )
           manifest_path = projection_root / "manifest.json"
           require(
               manifest_path.is_file(),
@@ -42218,27 +42372,92 @@ jobs:
               resolved_revision == BASE_REVISION,
               "ADR-055 base revision is unavailable or changed",
           )
-
-          def historical_bytes(path):
-              return subprocess.check_output(
-                  ["git", "show", f"{BASE_REVISION}:{path.as_posix()}"],
+          projection_errors = []
+          observed_head = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          observed_symbolic_head = subprocess.run(
+              ["git", "symbolic-ref", "-q", "HEAD"],
+              text=True,
+              capture_output=True,
+              check=False,
+          )
+          require(
+              observed_symbolic_head.returncode in {0, 1},
+              "ADR-055 projected HEAD state could not be resolved",
+          )
+          if observed_head == BASE_REVISION:
+              if observed_symbolic_head.returncode != 1:
+                  projection_errors.append(
+                      "ADR-055 historical HEAD was not detached after nested guards"
+                  )
+              tracked_status = subprocess.check_output(
+                  ["git", "status", "--porcelain=v1", "--untracked-files=no"],
+                  text=True,
+              ).splitlines()
+              if tracked_status != (
+                  [next_env_status_line] if next_env_dirty else []
+              ):
+                  projection_errors.append(
+                      "ADR-055 historical tracked checkout changed during nested guards"
+                  )
+              for path in added_paths:
+                  if path.exists():
+                      projection_errors.append(
+                          f"ADR-055 added path reappeared during historical guards: {path}"
+                      )
+          elif observed_head == original_head:
+              print(
+                  "ADR-055 projection stopped after custody but before the base "
+                  "checkout; restoring the original repository state"
+              )
+          else:
+              projection_errors.append(
+                  "ADR-055 nested guards left HEAD at an unexpected commit: "
+                  + observed_head
               )
 
-          historical_files = {
-              path: historical_bytes(path)
-              for path in modified_paths
-          }
-          projection_errors = []
-          for path in added_paths:
-              if path.exists():
-                  projection_errors.append(
-                      f"ADR-055 added path reappeared during historical guards: {path}"
-                  )
-          for path, expected_bytes in historical_files.items():
-              if not path.is_file() or path.read_bytes() != expected_bytes:
-                  projection_errors.append(
-                      f"ADR-055 historical bytes changed before restoration: {path}"
-                  )
+          if next_env_dirty:
+              next_env_path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(next_env_custody_path, next_env_path)
+          subprocess.run(
+              ["git", "checkout", "--detach", original_head],
+              check=True,
+          )
+          if original_symbolic_ref is not None:
+              original_ref_head = subprocess.check_output(
+                  ["git", "rev-parse", f"{original_symbolic_ref}^{{commit}}"],
+                  text=True,
+              ).strip()
+              require(
+                  original_ref_head == original_head,
+                  "ADR-055 original branch moved during historical guards",
+              )
+              subprocess.run(
+                  ["git", "symbolic-ref", "HEAD", original_symbolic_ref],
+                  check=True,
+              )
+          restored_head = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          restored_symbolic_head = subprocess.run(
+              ["git", "symbolic-ref", "-q", "HEAD"],
+              text=True,
+              capture_output=True,
+              check=False,
+          )
+          restored_symbolic_ref = (
+              restored_symbolic_head.stdout.strip()
+              if restored_symbolic_head.returncode == 0
+              else None
+          )
+          require(
+              restored_head == original_head
+              and restored_symbolic_ref == original_symbolic_ref,
+              "ADR-055 original commit/symbolic HEAD state was not restored",
+          )
 
           for path in current_files:
               custody_path = projection_root / path
@@ -42263,6 +42482,31 @@ jobs:
                       == metadata["normalizedSha256"],
                       f"ADR-055 current bytes were not restored exactly: {path}",
                   )
+          if next_env_dirty:
+              shutil.copyfile(next_env_custody_path, next_env_path)
+          restored_status = subprocess.check_output(
+              ["git", "status", "--porcelain=v1", "--untracked-files=no"],
+              text=True,
+          ).splitlines()
+          require(
+              restored_status == (
+                  [next_env_status_line] if next_env_dirty else []
+              ),
+              "ADR-055 restored checkout is not tracked-clean outside the "
+              "preserved user-owned Next declaration",
+          )
+          require(
+              not next_env_dirty
+              or (
+                  raw_digest(next_env_path) == next_env_state["rawSha256"]
+                  and normalized_digest(next_env_path)
+                  == next_env_state["normalizedSha256"]
+              ),
+              "User-owned Next declaration was not restored byte-for-byte",
+          )
+          if next_env_dirty:
+              next_env_custody_path.unlink()
+          head_state_path.unlink()
           prepared.unlink()
           (projection_root / ".restored").write_text(
               "ADR-055 exact current bytes restored after historical guards\n",
@@ -42346,6 +42590,89 @@ jobs:
               path: path.read_text(encoding="utf-8")
               for path in documentation_paths
           }
+
+          adr055_project_marker = (
+              "      - name: Project exact pre-ADR-055 repository view\n"
+          )
+          adr054_project_marker = (
+              "      - name: Project exact pre-ADR-054 repository view\n"
+          )
+          adr054_restore_marker = (
+              "      - name: Restore exact ADR-054 repository view\n"
+          )
+          adr055_restore_marker = (
+              "      - name: Restore exact ADR-055 repository view\n"
+          )
+          adr055_guard_marker = (
+              "      - name: Guard ADR-055 offline SEC manifest API-mode "
+              "full-stack acceptance\n"
+          )
+          require(
+              all(
+                  workflow.count(marker) == 1
+                  for marker in (
+                      adr055_project_marker,
+                      adr054_project_marker,
+                      adr054_restore_marker,
+                      adr055_restore_marker,
+                      adr055_guard_marker,
+                  )
+              )
+              and workflow.index(adr055_project_marker)
+              < workflow.index(adr054_project_marker)
+              < workflow.index(adr054_restore_marker)
+              < workflow.index(adr055_restore_marker)
+              < workflow.index(adr055_guard_marker),
+              "ADR-055 nested projection/restore ordering changed",
+          )
+          adr055_project = workflow.split(
+              adr055_project_marker, 1
+          )[1].split(adr054_project_marker, 1)[0]
+          adr055_restore = workflow.split(
+              adr055_restore_marker, 1
+          )[1].split(adr055_guard_marker, 1)[0]
+          require(
+              'projection_root / "head-state.json"' in adr055_project
+              and '["git", "symbolic-ref", "-q", "HEAD"]'
+              in adr055_project
+              and (
+                  '["git", "checkout", "--detach", '
+                  'BASE_REVISION]'
+              ) in adr055_project
+              and 'projected_head == BASE_REVISION' in adr055_project
+              and '"--untracked-files=no"' in adr055_project
+              and 'next_env_status_line = " M apps/web/next-env.d.ts"'
+              in adr055_project
+              and 'projection_root / "excluded-user-owned" / next_env_path'
+              in adr055_project
+              and 'shutil.copyfile(next_env_path, next_env_custody_path)'
+              in adr055_project
+              and '"--force"' not in adr055_project
+              and '["git", "show"' not in adr055_project,
+              "ADR-055 outer projection must detach a canonical base without "
+              "discarding the user-owned Next declaration",
+          )
+          require(
+              'projection_root / "head-state.json"' in adr055_restore
+              and 'observed_head == BASE_REVISION' in adr055_restore
+              and 'observed_head == original_head' in adr055_restore
+              and (
+                  '["git", "checkout", "--detach", '
+                  'original_head]'
+              ) in adr055_restore
+              and '["git", "symbolic-ref", "HEAD", original_symbolic_ref]'
+              in adr055_restore
+              and 'restored_symbolic_ref == original_symbolic_ref'
+              in adr055_restore
+              and 'shutil.copyfile(next_env_custody_path, next_env_path)'
+              in adr055_restore
+              and 'User-owned Next declaration was not restored byte-for-byte'
+              in adr055_restore
+              and '"--force"' not in adr055_restore
+              and "head_state_path.unlink()" in adr055_restore
+              and "prepared.unlink()" in adr055_restore,
+              "ADR-055 outer restoration lost partial-failure HEAD recovery",
+          )
 
           seed_class = "SecManifestAuditAcceptanceSeedHarness"
           require(
