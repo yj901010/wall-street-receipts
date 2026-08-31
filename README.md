@@ -430,6 +430,61 @@ gates always remain `REVIEW_REQUIRED`. Live provisioning still waits for the
 actual server report plus operator downtime, probation, write-freeze/RPO,
 boot-recovery, backup-device, and offline/off-site-copy decisions.
 
+ADR-056 adds a disposable offline rehearsal for creating that exact release-
+source checkout without moving this Codex conversation or contacting GitHub.
+From the current committed feature `HEAD`, the harness builds a complete
+temporary Git Flow graph: cached `main`/`develop`, backlog fast-forward,
+feature `--no-ff` merge, empty rehearsal release commit, release `--no-ff`
+merges into both temporary branches, and one annotated rehearsal tag. It proves
+the tagged release tree is exactly the feature `HEAD` tree, then creates a
+complete no-prerequisite tag-only Git bundle, strict JSON identity manifest,
+and adjacent SHA-256 receipt. Corrupt or inconsistent artifacts are rejected;
+an isolated offline import must prove the exact tag/commit/tree, clean status,
+detached `HEAD`, zero remotes, full object connectivity, and required deployment
+paths before cleanup. Git children are file-protocol-only, disable lazy fetch
+and optional locks, inject `gc.auto=0`, `maintenance.auto=0`, and
+`core.fsmonitor=false`, and reject local executable `core.fsmonitor`,
+`uploadpack.packobjectshook`, or `filter.*.(clean|smudge|process)` configuration.
+Each child has a 120-second deadline; after a timeout, its killed process tree
+must terminate within five more seconds. Captured stdout and stderr are each
+rejected after completion when longer than 1,048,576 characters—this is not a
+streaming memory cap. Cleanup
+requires the exact temporary parent/name plus its unpredictable owner marker:
+
+```powershell
+pwsh -NoProfile -File ./scripts/verify-local-release-handoff.ps1
+```
+
+The command must finish with `NOT_RELEASED` and `REMOTE_NOT_CONTACTED`. It
+creates or changes no branch or tag in the source checkout or configured
+remote, pull request, real release, Docker image, or Ubuntu checkout. Its
+temporary refs and commits exist only under the owned rehearsal root. The
+user-owned modified bytes at
+`apps/web/next-env.d.ts` are excluded and preserved; the bundle and isolated
+checkout receive only the version already recorded in `HEAD`.
+
+The adjacent checksum receipt covers only the named bundle bytes, not
+`manifest.json` or the complete three-file set. Canonical parsing and bundle
+cross-checks reject malformed metadata and inconsistencies in the fields they
+actually compare, but a syntactically valid change to manifest-only Git Flow
+identities or `featureAheadCount` can pass a later retained-artifact import.
+Preserve an independently reviewed manifest, commit/digest record, or signature
+before relying on those fields. This is source custody only: it is not a source
+signature, reproducible binary or container-image claim, image scan, offline
+image archive, deployment, or rollback proof. The full offline Ubuntu
+verification/import commands and later GitHub alternative are documented in
+[`deploy/home-server/README.md`](deploy/home-server/README.md) and
+[`ADR-056`](decisions/ADR-056-disposable-offline-git-flow-release-source-handoff-rehearsal.md).
+
+No API key, domain, server, Docker daemon, GitHub login, or network permission
+is needed for this rehearsal. Actual remote work later requires explicit
+network authorization, a fresh fetch, repository visibility, a release-version
+decision (`v0.1.0-rc.1` is the recommended first candidate), and GitHub
+authentication configured locally. Never send a token or SSH private key in
+chat or commit it. ADR-056 performs none of the feature push/PR,
+`release/<version>` creation, `main`/`develop` merges, annotated tag, or tag-push
+steps.
+
 ## Fixture contract
 
 Canonical demo data lives under [`fixtures/v1`](fixtures/v1). Every fixture has

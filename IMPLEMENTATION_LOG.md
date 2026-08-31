@@ -6982,3 +6982,125 @@ and assembly identities.
   work. Live SEC collection still requires separate approval and a monitored
   contact email placed in an untracked server secret environment rather than
   chat or Git.
+
+## 2026-08-31 — ADR-056 disposable offline Git Flow release-source handoff rehearsal
+
+Status: implemented and observed in a disposable exact-candidate clone. The
+successful run remained local and ended with `NOT_RELEASED` and
+`REMOTE_NOT_CONTACTED`; it did not create a real release or contact the
+configured origin or any network endpoint.
+
+### Objective
+
+- Prove on this development computer that the exact committed product tree can
+  pass through the repository's required feature/release Git Flow shape, an
+  annotated rehearsal tag, a complete tag-only Git bundle, and an offline fresh
+  import without using this Codex conversation as deployment state.
+- Keep the exercise disposable and local. Its terminal status remains
+  `NOT_RELEASED` and `REMOTE_NOT_CONTACTED`; it must not fetch from or push to
+  the configured origin, open a pull request, create a real release branch/tag,
+  contact GitHub, or deploy Ubuntu. File-protocol pushes exist only inside the
+  owned simulated remote.
+
+### Scope and decisions
+
+- Add `scripts/verify-local-release-handoff.ps1` as the single no-input local
+  command. It records source commit/ref/status and user-owned
+  `apps/web/next-env.d.ts` custody, including source config/index/refs digests,
+  performs all graph and artifact work under a harness-owned temporary root,
+  and revalidates unchanged source state after cleanup. The source must be a
+  complete symbolic `feature/*` checkout and clean except for that one exact
+  unstaged Next declaration.
+- Strip Git/hosting/SSH/proxy overrides, disable credentials and hooks, inject
+  `gc.auto=0`, `maintenance.auto=0`, and `core.fsmonitor=false`, allow only the
+  local file protocol, and set `GIT_NO_LAZY_FETCH=1` and
+  `GIT_OPTIONAL_LOCKS=0`. Give every Git child 120 seconds; after timeout kill
+  its process tree and require exit within five more seconds. Read both streams
+  to completion, then reject either captured string above 1,048,576 characters;
+  this is an accepted-output limit, not a streaming memory cap. Reject shallow,
+  partial, promisor,
+  partial-clone-filter, alternate, HTTP-alternate, graft, replacement, or
+  strict-`fsck`-incomplete source/imported repositories, plus local executable
+  `core.fsmonitor`, `uploadpack.packobjectshook`, or
+  `filter.*.(clean|smudge|process)` configuration; resolve repository
+  metadata through `git rev-parse --git-path` so linked worktrees do not bypass
+  the gate.
+- Require local `main` to equal cached `origin/main`, cached `origin/develop` to
+  be an ancestor of local `develop`, and local `develop` to be an ancestor of a
+  feature candidate at least one commit ahead. Seed only those cached origin
+  refs in the temporary bare remote, fast-forward its `develop` backlog, merge
+  the exact feature through `--no-ff`, create an empty rehearsal-only release
+  stabilization commit, merge that release through `--no-ff` into both
+  temporary `main` and `develop`, and create one annotated
+  `v0.0.0-rehearsal.<24-hex>` tag. Every generated commit tree must equal the
+  exact source feature `HEAD` tree; temporary commit/tag identity never becomes
+  a real release identity.
+- Export only the annotated temporary tag through a complete bundle with no
+  prerequisites. The bundle is named from `mainReleaseCommit`; a canonical
+  printable-ASCII, one-line, final-LF `manifest.json` has exactly 22 ordered
+  fields: `schemaVersion`, `featureAheadCount`, `bundleBytes`, and
+  `bundlePrerequisiteCount` are JSON Number/int64 values, while the other 18
+  are JSON Strings. Its adjacent GNU-style SHA-256 receipt names and hashes only
+  that bundle, not `manifest.json` or the complete three-file set. The manifest
+  binds source/cached/local identities, feature distance, four generated commits,
+  tag/ref/object, bundle bytes/digest, `NOT_RELEASED`, and
+  `REMOTE_NOT_CONTACTED` during the same in-memory rehearsal.
+- Reject a byte-flipped bundle with unchanged metadata and a 64-byte-truncated
+  bundle even after its manifest and receipt are recomputed. The bundle receipt
+  detects bundle-byte corruption only. A later retained-artifact import does not
+  recompute every manifest-only Git Flow identity or `featureAheadCount`, so a
+  syntactically valid change to those fields can pass without an independently
+  reviewed manifest/commit digest or signature. Require each negative to match
+  its exact digest or structural-import failure pattern.
+- Import through a fresh local-only Git repository, prove annotated-tag type,
+  exact release/tree identity, clean checkout, complete non-shallow/non-
+  promisor/non-alternate/non-replacement object graph with strict no-dangling
+  `fsck`, detached `HEAD`, zero remotes, and the exact 13 required source/
+  deployment paths. Artifact acceptance itself also unbundles into a new bare
+  verifier, restores only the recorded tag, peels it to the exact commit/tree,
+  and runs strict `fsck` before the server-checkout exercise.
+- Preserve the user-owned source `apps/web/next-env.d.ts` bytes while excluding
+  them from the release candidate. The imported tree contains only the version
+  committed in the exact source `HEAD`.
+- Own cleanup through an exact system-temp parent, fixed 24-hex directory name,
+  and separate flushed 48-hex owner marker. Refuse a reparse point, changed or
+  absent marker, wrong parent/name, or malformed token before recursive removal.
+- Keep Docker images, image signing/custody, reproducible binary claims,
+  dependency caches, database data, secrets, server provisioning, and actual
+  release publication outside ADR-056.
+
+### Verification status
+
+- `pwsh -NoProfile -File ./scripts/verify-local-release-handoff.ps1`:
+  **PASS** in a disposable clone containing the exact six-file ADR-056
+  candidate and the excluded user-owned Next declaration. The run completed
+  feature/release Git Flow, tag-only bundle creation, artifact rejection, and
+  detached offline import, then removed both its owned harness root and the
+  enclosing test clone.
+- PowerShell parser, canonical JSON/receipt validation, two corrupt-bundle
+  negative cases, offline tag-only import, full-object `git fsck`, source-
+  custody comparison, and owned cleanup:
+  **PASS**. The byte-flipped bundle failed only at the expected SHA-256 check;
+  the truncated-and-rehashed bundle failed only at structural verification or
+  full import. The source `HEAD`, symbolic ref, status, config, index, refs, and
+  user-owned `apps/web/next-env.d.ts` bytes were unchanged.
+- Documentation marker parity and `git diff --check`:
+  **PASS**. The focused CI guard, PowerShell parse, embedded-Python compile,
+  workflow YAML parse, and documentation checks also passed locally.
+- Hosted GitHub Actions, remote feature branch, pull request, release branch,
+  `main`/`develop` merge, annotated release tag, and Ubuntu import:
+  **NOT RUN / NOT CREATED**.
+
+### External inputs and next work
+
+- The disposable rehearsal needs no API key, domain, home-server access, Docker
+  daemon, GitHub login, network authorization, repository-visibility decision,
+  release version, token, private key, or new secret.
+- Actual remote work later requires explicit network authorization, a fresh
+  fetch and divergence review, a public/private repository decision, a version
+  decision (`v0.1.0-rc.1` recommended), and GitHub authentication configured
+  locally. Tokens and SSH private keys must never enter chat or Git.
+- ADR-056 performs no actual feature push/PR, release branch/tag, or merges into
+  `main` and `develop`. Persistent offline artifact export, source
+  authentication/signing, Docker image custody, and the real Ubuntu server-fact
+  and deployment rehearsal remain later steps.

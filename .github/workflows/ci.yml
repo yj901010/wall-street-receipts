@@ -3029,6 +3029,278 @@ jobs:
           )
           PYTHON
 
+      - name: Project exact pre-ADR-056 repository view
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import os
+          import re
+          import shutil
+          import subprocess
+          from pathlib import Path
+
+          BASE_REVISION = "20d70d73f53668a7f1bf2b5b1d70e4c1e9fbfca2"
+          WORKFLOW_SELF_DIGEST = "d1b6aff4f551e2464cc9249f0587ef5de8adc314f33db61becf55559b37ee7e8"  # ADR056_WORKFLOW_SELF_DIGEST
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def raw_digest(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+
+          def normalized_digest(path):
+              return hashlib.sha256(
+                  path.read_bytes().replace(b"\r\n", b"\n")
+              ).hexdigest()
+
+          def masked_workflow_digest(path):
+              content = path.read_bytes().replace(b"\r\n", b"\n")
+              patterns = (
+                  rb'(?m)^(          WORKFLOW_SELF_DIGEST = ")[0-9a-f]{64}("  # ADR056_WORKFLOW_SELF_DIGEST)$',
+                  rb'(?m)^(          CUSTODY_MANIFEST_DIGEST = ")[0-9a-f]{64}("  # ADR056_CUSTODY_MANIFEST_DIGEST)$',
+              )
+              for pattern in patterns:
+                  content, replacement_count = re.subn(
+                      pattern,
+                      rb'\1<ADR056-MASKED-SHA256>\2',
+                      content,
+                  )
+                  require(
+                      replacement_count == 1,
+                      "ADR-056 workflow self-hash slot changed",
+                  )
+              return hashlib.sha256(content).hexdigest()
+
+          modified_paths = {
+              Path(value)
+              for value in (
+                  ".github/workflows/ci.yml",
+                  "IMPLEMENTATION_LOG.md",
+                  "README.md",
+                  "deploy/home-server/README.md",
+              )
+          }
+          added_paths = {
+              Path(value)
+              for value in (
+                  "decisions/ADR-056-disposable-offline-git-flow-release-source-handoff-rehearsal.md",
+                  "scripts/verify-local-release-handoff.ps1",
+              )
+          }
+          current_paths = modified_paths | added_paths
+          require(
+              len(modified_paths) == 4
+              and len(added_paths) == 2
+              and len(current_paths) == 6,
+              "ADR-056 source/script/document delta inventory changed",
+          )
+          require(
+              Path("apps/web/next-env.d.ts") not in current_paths,
+              "Generated Next.js declaration entered ADR-056 custody",
+          )
+
+          resolved_revision = subprocess.check_output(
+              ["git", "rev-parse", f"{BASE_REVISION}^{{commit}}"],
+              text=True,
+          ).strip()
+          require(
+              resolved_revision == BASE_REVISION,
+              "ADR-056 base revision is unavailable or changed",
+          )
+          delta_lines = subprocess.check_output(
+              [
+                  "git", "diff", "--name-status", "--no-renames",
+                  BASE_REVISION, "HEAD", "--",
+              ],
+              text=True,
+          ).splitlines()
+          actual_delta = {}
+          for line in delta_lines:
+              status, raw_path = line.split("\t", 1)
+              actual_delta[Path(raw_path)] = status
+          expected_delta = {
+              **{path: "M" for path in modified_paths},
+              **{path: "A" for path in added_paths},
+          }
+          require(
+              actual_delta == expected_delta,
+              "ADR-056 exact 20d70d7-to-current delta inventory changed",
+          )
+
+          workflow_path = Path(".github/workflows/ci.yml")
+          current_files = {}
+          for path in current_paths:
+              require(path.is_file(), f"ADR-056 current path is missing: {path}")
+              if path == workflow_path:
+                  current_files[path] = {
+                      "kind": "self",
+                      "rawSha256": WORKFLOW_SELF_DIGEST,
+                      "normalizedSha256": None,
+                  }
+              else:
+                  current_files[path] = {
+                      "kind": "text",
+                      "rawSha256": raw_digest(path),
+                      "normalizedSha256": normalized_digest(path),
+                  }
+          require(
+              masked_workflow_digest(workflow_path) == WORKFLOW_SELF_DIGEST,
+              "ADR-056 workflow self-custody bytes changed",
+          )
+
+          projection_root = (
+              Path(os.environ["RUNNER_TEMP"]) / "wsr-adr056-current-view"
+          )
+          require(
+              not projection_root.exists(),
+              f"ADR-056 projection custody already exists: {projection_root}",
+          )
+          projection_root.mkdir(parents=True)
+          for path in current_paths:
+              custody_path = projection_root / path
+              custody_path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(path, custody_path)
+          manifest = {
+              path.as_posix(): metadata
+              for path, metadata in current_files.items()
+          }
+          manifest_bytes = json.dumps(
+              manifest,
+              sort_keys=True,
+          ).encode("utf-8")
+          custody_matches = re.findall(
+              rb'(?m)^          CUSTODY_MANIFEST_DIGEST = "([0-9a-f]{64})"  # ADR056_CUSTODY_MANIFEST_DIGEST$',
+              workflow_path.read_bytes().replace(b"\r\n", b"\n"),
+          )
+          require(
+              len(custody_matches) == 1
+              and hashlib.sha256(manifest_bytes).hexdigest()
+              == custody_matches[0].decode("ascii"),
+              "ADR-056 current-byte custody manifest changed",
+          )
+          (projection_root / "manifest.json").write_bytes(manifest_bytes)
+
+          next_env_path = Path("apps/web/next-env.d.ts")
+          next_env_status_line = " M apps/web/next-env.d.ts"
+          original_tracked_status = subprocess.check_output(
+              ["git", "status", "--porcelain=v1", "--untracked-files=no"],
+              text=True,
+          ).splitlines()
+          require(
+              original_tracked_status in ([], [next_env_status_line]),
+              "ADR-056 projection requires a clean tracked checkout except the "
+              "unstaged user-owned Next declaration",
+          )
+          next_env_dirty = original_tracked_status == [next_env_status_line]
+          next_env_custody_path = (
+              projection_root / "excluded-user-owned" / next_env_path
+          )
+          next_env_state = {
+              "dirty": next_env_dirty,
+              "rawSha256": None,
+              "normalizedSha256": None,
+          }
+          if next_env_dirty:
+              require(
+                  next_env_path.is_file(),
+                  "User-owned Next declaration is missing before projection",
+              )
+              next_env_custody_path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(next_env_path, next_env_custody_path)
+              next_env_state = {
+                  "dirty": True,
+                  "rawSha256": raw_digest(next_env_path),
+                  "normalizedSha256": normalized_digest(next_env_path),
+              }
+
+          original_head = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          symbolic_head = subprocess.run(
+              ["git", "symbolic-ref", "-q", "HEAD"],
+              text=True,
+              capture_output=True,
+              check=False,
+          )
+          require(
+              symbolic_head.returncode in {0, 1},
+              "ADR-056 original HEAD state could not be resolved",
+          )
+          original_symbolic_ref = (
+              symbolic_head.stdout.strip()
+              if symbolic_head.returncode == 0
+              else None
+          )
+          require(
+              original_symbolic_ref is None
+              or original_symbolic_ref.startswith("refs/heads/"),
+              "ADR-056 original symbolic HEAD is not a local branch",
+          )
+          (projection_root / "head-state.json").write_text(
+              json.dumps(
+                  {
+                      "commit": original_head,
+                      "excludedNextEnv": next_env_state,
+                      "symbolicRef": original_symbolic_ref,
+                  },
+                  sort_keys=True,
+              ),
+              encoding="utf-8",
+          )
+          (projection_root / ".prepared").write_text(
+              "ADR-056 exact current bytes saved before historical projection\n",
+              encoding="utf-8",
+          )
+          subprocess.run(
+              ["git", "checkout", "--detach", BASE_REVISION],
+              check=True,
+          )
+          projected_head = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          projected_symbolic_head = subprocess.run(
+              ["git", "symbolic-ref", "-q", "HEAD"],
+              capture_output=True,
+              check=False,
+          )
+          require(
+              projected_head == BASE_REVISION
+              and projected_symbolic_head.returncode == 1,
+              "ADR-056 historical projection did not detach exact 20d70d7 HEAD",
+          )
+          require(
+              all(not path.exists() for path in added_paths),
+              "ADR-056 added file survived historical projection",
+          )
+          tracked_status = subprocess.check_output(
+              ["git", "status", "--porcelain=v1", "--untracked-files=no"],
+              text=True,
+          ).splitlines()
+          require(
+              tracked_status == ([next_env_status_line] if next_env_dirty else []),
+              "ADR-056 historical projection is not tracked-clean outside the "
+              "preserved user-owned Next declaration",
+          )
+          require(
+              not next_env_dirty
+              or (
+                  raw_digest(next_env_path) == next_env_state["rawSha256"]
+                  and normalized_digest(next_env_path)
+                  == next_env_state["normalizedSha256"]
+              ),
+              "User-owned Next declaration changed during ADR-056 projection",
+          )
+          print(
+              "Detached the exact clean pre-ADR-056 20d70d7 repository view "
+              "before the ADR-055 historical projection"
+          )
+          PYTHON
+
       - name: Project exact pre-ADR-055 repository view
         shell: bash
         run: |
@@ -42518,6 +42790,1108 @@ jobs:
               "file surfaces"
           )
           PYTHON
+
+      - name: Restore exact ADR-056 repository view
+        if: always()
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import os
+          import re
+          import shutil
+          import subprocess
+          from pathlib import Path
+
+          BASE_REVISION = "20d70d73f53668a7f1bf2b5b1d70e4c1e9fbfca2"
+          CUSTODY_MANIFEST_DIGEST = "f4ebe920fc5110271fe2a2be402ce067c4dfbbf80958d2845466f1f5c1b84dee"  # ADR056_CUSTODY_MANIFEST_DIGEST
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def raw_digest(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+
+          def normalized_digest(path):
+              return hashlib.sha256(
+                  path.read_bytes().replace(b"\r\n", b"\n")
+              ).hexdigest()
+
+          def masked_workflow_digest(path):
+              content = path.read_bytes().replace(b"\r\n", b"\n")
+              patterns = (
+                  rb'(?m)^(          WORKFLOW_SELF_DIGEST = ")[0-9a-f]{64}("  # ADR056_WORKFLOW_SELF_DIGEST)$',
+                  rb'(?m)^(          CUSTODY_MANIFEST_DIGEST = ")[0-9a-f]{64}("  # ADR056_CUSTODY_MANIFEST_DIGEST)$',
+              )
+              for pattern in patterns:
+                  content, replacement_count = re.subn(
+                      pattern,
+                      rb'\1<ADR056-MASKED-SHA256>\2',
+                      content,
+                  )
+                  require(
+                      replacement_count == 1,
+                      "ADR-056 workflow self-hash slot changed",
+                  )
+              return hashlib.sha256(content).hexdigest()
+
+          projection_root = (
+              Path(os.environ["RUNNER_TEMP"]) / "wsr-adr056-current-view"
+          )
+          prepared = projection_root / ".prepared"
+          if not prepared.is_file():
+              print("ADR-056 historical projection did not mutate the repository")
+              raise SystemExit(0)
+          require(
+              prepared.read_text(encoding="utf-8")
+              == "ADR-056 exact current bytes saved before historical projection\n",
+              "ADR-056 projection custody marker changed",
+          )
+          head_state_path = projection_root / "head-state.json"
+          require(
+              head_state_path.is_file(),
+              "ADR-056 original HEAD custody is missing",
+          )
+          head_state = json.loads(head_state_path.read_text(encoding="utf-8"))
+          require(
+              isinstance(head_state, dict)
+              and set(head_state) == {
+                  "commit", "excludedNextEnv", "symbolicRef"
+              }
+              and isinstance(head_state["commit"], str)
+              and re.fullmatch(r"[0-9a-f]{40}", head_state["commit"])
+              and isinstance(head_state["excludedNextEnv"], dict)
+              and set(head_state["excludedNextEnv"]) == {
+                  "dirty", "rawSha256", "normalizedSha256"
+              }
+              and isinstance(head_state["excludedNextEnv"]["dirty"], bool)
+              and (
+                  head_state["symbolicRef"] is None
+                  or (
+                      isinstance(head_state["symbolicRef"], str)
+                      and head_state["symbolicRef"].startswith("refs/heads/")
+                  )
+              ),
+              "ADR-056 original HEAD custody is invalid",
+          )
+          original_head = head_state["commit"]
+          original_symbolic_ref = head_state["symbolicRef"]
+          next_env_path = Path("apps/web/next-env.d.ts")
+          next_env_status_line = " M apps/web/next-env.d.ts"
+          next_env_state = head_state["excludedNextEnv"]
+          next_env_dirty = next_env_state["dirty"]
+          require(
+              (
+                  next_env_dirty
+                  and isinstance(next_env_state["rawSha256"], str)
+                  and re.fullmatch(
+                      r"[0-9a-f]{64}", next_env_state["rawSha256"]
+                  )
+                  and isinstance(next_env_state["normalizedSha256"], str)
+                  and re.fullmatch(
+                      r"[0-9a-f]{64}", next_env_state["normalizedSha256"]
+                  )
+              )
+              or (
+                  not next_env_dirty
+                  and next_env_state["rawSha256"] is None
+                  and next_env_state["normalizedSha256"] is None
+              ),
+              "ADR-056 excluded Next declaration custody is invalid",
+          )
+          next_env_custody_path = (
+              projection_root / "excluded-user-owned" / next_env_path
+          )
+          if next_env_dirty:
+              require(
+                  next_env_custody_path.is_file()
+                  and raw_digest(next_env_custody_path)
+                  == next_env_state["rawSha256"]
+                  and normalized_digest(next_env_custody_path)
+                  == next_env_state["normalizedSha256"],
+                  "User-owned Next declaration custody changed",
+              )
+          else:
+              require(
+                  not next_env_custody_path.exists(),
+                  "Unexpected user-owned Next declaration custody exists",
+              )
+
+          manifest_path = projection_root / "manifest.json"
+          require(
+              manifest_path.is_file(),
+              "ADR-056 current-byte custody manifest is missing",
+          )
+          manifest_bytes = manifest_path.read_bytes()
+          require(
+              hashlib.sha256(manifest_bytes).hexdigest()
+              == CUSTODY_MANIFEST_DIGEST,
+              "ADR-056 current-byte custody manifest changed",
+          )
+          raw_manifest = json.loads(manifest_bytes)
+          require(
+              isinstance(raw_manifest, dict) and len(raw_manifest) == 6,
+              "ADR-056 current-byte custody inventory changed",
+          )
+          current_files = {
+              Path(raw_path): metadata
+              for raw_path, metadata in raw_manifest.items()
+          }
+          workflow_path = Path(".github/workflows/ci.yml")
+          added_paths = {
+              Path(value)
+              for value in (
+                  "decisions/ADR-056-disposable-offline-git-flow-release-source-handoff-rehearsal.md",
+                  "scripts/verify-local-release-handoff.ps1",
+              )
+          }
+          modified_paths = set(current_files) - added_paths
+          require(
+              len(modified_paths) == 4
+              and workflow_path in modified_paths
+              and added_paths <= set(current_files),
+              "ADR-056 modified/added custody partition changed",
+          )
+          require(
+              Path("apps/web/next-env.d.ts") not in current_files,
+              "Generated Next.js declaration entered ADR-056 custody",
+          )
+
+          for path, metadata in current_files.items():
+              require(
+                  isinstance(metadata, dict)
+                  and set(metadata) == {
+                      "kind", "rawSha256", "normalizedSha256"
+                  }
+                  and metadata["kind"] in {"text", "self"}
+                  and isinstance(metadata["rawSha256"], str)
+                  and re.fullmatch(r"[0-9a-f]{64}", metadata["rawSha256"]),
+                  f"ADR-056 custody metadata is invalid: {path}",
+              )
+              if metadata["kind"] == "self":
+                  require(
+                      path == workflow_path
+                      and metadata["normalizedSha256"] is None,
+                      f"ADR-056 workflow self-custody metadata changed: {path}",
+                  )
+              else:
+                  require(
+                      path != workflow_path
+                      and isinstance(metadata["normalizedSha256"], str)
+                      and re.fullmatch(
+                          r"[0-9a-f]{64}", metadata["normalizedSha256"]
+                      ),
+                      f"ADR-056 text custody hash is invalid: {path}",
+                  )
+              custody_path = projection_root / path
+              require(
+                  custody_path.is_file(),
+                  f"ADR-056 custody is missing: {path}",
+              )
+              if metadata["kind"] == "self":
+                  require(
+                      masked_workflow_digest(custody_path)
+                      == metadata["rawSha256"],
+                      "ADR-056 workflow self-custody bytes changed",
+                  )
+              else:
+                  require(
+                      raw_digest(custody_path) == metadata["rawSha256"]
+                      and normalized_digest(custody_path)
+                      == metadata["normalizedSha256"],
+                      f"ADR-056 current-byte custody changed: {path}",
+                  )
+
+          resolved_revision = subprocess.check_output(
+              ["git", "rev-parse", f"{BASE_REVISION}^{{commit}}"],
+              text=True,
+          ).strip()
+          require(
+              resolved_revision == BASE_REVISION,
+              "ADR-056 base revision is unavailable or changed",
+          )
+          projection_errors = []
+          observed_head = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          observed_symbolic_head = subprocess.run(
+              ["git", "symbolic-ref", "-q", "HEAD"],
+              text=True,
+              capture_output=True,
+              check=False,
+          )
+          require(
+              observed_symbolic_head.returncode in {0, 1},
+              "ADR-056 projected HEAD state could not be resolved",
+          )
+          if observed_head == BASE_REVISION:
+              if observed_symbolic_head.returncode != 1:
+                  projection_errors.append(
+                      "ADR-056 historical HEAD was not detached after nested guards"
+                  )
+              tracked_status = subprocess.check_output(
+                  ["git", "status", "--porcelain=v1", "--untracked-files=no"],
+                  text=True,
+              ).splitlines()
+              if tracked_status != (
+                  [next_env_status_line] if next_env_dirty else []
+              ):
+                  projection_errors.append(
+                      "ADR-056 historical tracked checkout changed during nested guards"
+                  )
+              for path in added_paths:
+                  if path.exists():
+                      projection_errors.append(
+                          f"ADR-056 added path reappeared during historical guards: {path}"
+                      )
+          elif observed_head == original_head:
+              print(
+                  "ADR-056 projection stopped after custody but before the base "
+                  "checkout; restoring the original repository state"
+              )
+          else:
+              projection_errors.append(
+                  "ADR-056 nested guards left HEAD at an unexpected commit: "
+                  + observed_head
+              )
+
+          if next_env_dirty:
+              next_env_path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(next_env_custody_path, next_env_path)
+          subprocess.run(
+              ["git", "checkout", "--detach", original_head],
+              check=True,
+          )
+          if original_symbolic_ref is not None:
+              original_ref_head = subprocess.check_output(
+                  ["git", "rev-parse", f"{original_symbolic_ref}^{{commit}}"],
+                  text=True,
+              ).strip()
+              require(
+                  original_ref_head == original_head,
+                  "ADR-056 original branch moved during historical guards",
+              )
+              subprocess.run(
+                  ["git", "symbolic-ref", "HEAD", original_symbolic_ref],
+                  check=True,
+              )
+          restored_head = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          restored_symbolic_head = subprocess.run(
+              ["git", "symbolic-ref", "-q", "HEAD"],
+              text=True,
+              capture_output=True,
+              check=False,
+          )
+          restored_symbolic_ref = (
+              restored_symbolic_head.stdout.strip()
+              if restored_symbolic_head.returncode == 0
+              else None
+          )
+          require(
+              restored_head == original_head
+              and restored_symbolic_ref == original_symbolic_ref,
+              "ADR-056 original commit/symbolic HEAD state was not restored",
+          )
+
+          for path in current_files:
+              custody_path = projection_root / path
+              path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(custody_path, path)
+          for path, metadata in current_files.items():
+              require(
+                  path.is_file(),
+                  f"ADR-056 current path was not restored: {path}",
+              )
+              custody_path = projection_root / path
+              if metadata["kind"] == "self":
+                  require(
+                      masked_workflow_digest(path) == metadata["rawSha256"]
+                      and raw_digest(path) == raw_digest(custody_path),
+                      "ADR-056 workflow bytes were not restored exactly",
+                  )
+              else:
+                  require(
+                      raw_digest(path) == metadata["rawSha256"]
+                      and normalized_digest(path)
+                      == metadata["normalizedSha256"],
+                      f"ADR-056 current bytes were not restored exactly: {path}",
+                  )
+          if next_env_dirty:
+              shutil.copyfile(next_env_custody_path, next_env_path)
+          restored_status = subprocess.check_output(
+              ["git", "status", "--porcelain=v1", "--untracked-files=no"],
+              text=True,
+          ).splitlines()
+          require(
+              restored_status == (
+                  [next_env_status_line] if next_env_dirty else []
+              ),
+              "ADR-056 restored checkout is not tracked-clean outside the "
+              "preserved user-owned Next declaration",
+          )
+          require(
+              not next_env_dirty
+              or (
+                  raw_digest(next_env_path) == next_env_state["rawSha256"]
+                  and normalized_digest(next_env_path)
+                  == next_env_state["normalizedSha256"]
+              ),
+              "User-owned Next declaration was not restored byte-for-byte",
+          )
+          if next_env_dirty:
+              next_env_custody_path.unlink()
+          head_state_path.unlink()
+          prepared.unlink()
+          (projection_root / ".restored").write_text(
+              "ADR-056 exact current bytes restored after historical guards\n",
+              encoding="utf-8",
+          )
+          require(not projection_errors, "\n".join(projection_errors))
+          print(
+              "Restored and verified all 6 exact ADR-056 "
+              "source/script/document file surfaces"
+          )
+          PYTHON
+
+      - name: Guard ADR-056 disposable offline Git Flow release-source handoff rehearsal
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import re
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def compact(value):
+              compacted = re.sub(
+                  r"\s+", " ", value.replace("`", " ")
+              ).strip()
+              return compacted.replace("@( ", "@(").replace(" )", ")")
+
+          harness_path = Path("scripts/verify-local-release-handoff.ps1")
+          workflow_path = Path(".github/workflows/ci.yml")
+          adr_path = Path(
+              "decisions/ADR-056-disposable-offline-git-flow-release-"
+              "source-handoff-rehearsal.md"
+          )
+          documentation_paths = (
+              Path("README.md"),
+              Path("deploy/home-server/README.md"),
+              Path("IMPLEMENTATION_LOG.md"),
+              adr_path,
+          )
+          required_paths = (
+              harness_path,
+              workflow_path,
+              *documentation_paths,
+          )
+          require(
+              all(path.is_file() for path in required_paths),
+              "ADR-056 script/workflow/document surface is incomplete",
+          )
+
+          harness = harness_path.read_text(encoding="utf-8")
+          workflow = workflow_path.read_text(encoding="utf-8")
+          documentation = {
+              path: path.read_text(encoding="utf-8")
+              for path in documentation_paths
+          }
+          compact_harness = compact(harness)
+
+          adr056_project_marker = (
+              "      - name: Project exact pre-ADR-056 repository view\n"
+          )
+          adr055_project_marker = (
+              "      - name: Project exact pre-ADR-055 repository view\n"
+          )
+          adr055_restore_marker = (
+              "      - name: Restore exact ADR-055 repository view\n"
+          )
+          adr056_restore_marker = (
+              "      - name: Restore exact ADR-056 repository view\n"
+          )
+          guard_marker = (
+              "      - name: Guard ADR-056 disposable offline Git Flow "
+              "release-source handoff rehearsal\n"
+          )
+          parse_marker = (
+              "      - name: Parse disposable offline Git Flow "
+              "release-source handoff rehearsal\n"
+          )
+          adr055_guard_marker = (
+              "      - name: Guard ADR-055 offline SEC manifest API-mode "
+              "full-stack acceptance\n"
+          )
+          ordered_markers = (
+              adr056_project_marker,
+              adr055_project_marker,
+              adr055_restore_marker,
+              adr056_restore_marker,
+              guard_marker,
+              parse_marker,
+              adr055_guard_marker,
+          )
+          require(
+              all(workflow.count(marker) == 1 for marker in ordered_markers)
+              and all(
+                  workflow.index(left) < workflow.index(right)
+                  for left, right in zip(ordered_markers, ordered_markers[1:])
+              ),
+              "ADR-056 outer projection/restore/guard/parser ordering changed",
+          )
+          project_block = workflow.split(
+              adr056_project_marker, 1
+          )[1].split(adr055_project_marker, 1)[0]
+          restore_block = workflow.split(
+              adr056_restore_marker, 1
+          )[1].split(guard_marker, 1)[0]
+          require(
+              'BASE_REVISION = "20d70d73f53668a7f1bf2b5b1d70e4c1e9fbfca2"'
+              in project_block
+              and 'Path("apps/web/next-env.d.ts") not in current_paths'
+              in project_block
+              and 'projection_root / "head-state.json"' in project_block
+              and 'projection_root / "excluded-user-owned" / next_env_path'
+              in project_block
+              and 'shutil.copyfile(next_env_path, next_env_custody_path)'
+              in project_block
+              and '["git", "checkout", "--detach", BASE_REVISION]'
+              in project_block
+              and 'projected_head == BASE_REVISION' in project_block
+              and 'len(modified_paths) == 4' in project_block
+              and 'len(added_paths) == 2' in project_block
+              and 'len(current_paths) == 6' in project_block
+              and '"--force"' not in project_block
+              and '["git", "show"' not in project_block,
+              "ADR-056 outer projection lost exact base/current/Next custody",
+          )
+          require(
+              "        if: always()\n" in restore_block
+              and 'BASE_REVISION = "20d70d73f53668a7f1bf2b5b1d70e4c1e9fbfca2"'
+              in restore_block
+              and 'observed_head == BASE_REVISION' in restore_block
+              and 'observed_head == original_head' in restore_block
+              and '["git", "checkout", "--detach", original_head]'
+              in restore_block
+              and '["git", "symbolic-ref", "HEAD", original_symbolic_ref]'
+              in restore_block
+              and 'restored_symbolic_ref == original_symbolic_ref'
+              in restore_block
+              and 'shutil.copyfile(next_env_custody_path, next_env_path)'
+              in restore_block
+              and 'User-owned Next declaration was not restored byte-for-byte'
+              in restore_block
+              and 'len(raw_manifest) == 6' in restore_block
+              and '"--force"' not in restore_block
+              and "head_state_path.unlink()" in restore_block
+              and "prepared.unlink()" in restore_block,
+              "ADR-056 outer restoration lost partial-failure byte-exact recovery",
+          )
+
+          require(
+              re.search(
+                  r"(?ms)^#Requires -Version 7\.0\s+"
+                  r"\[CmdletBinding\(\)\]\s+param\(\)\s+",
+                  harness,
+              ) is not None
+              and harness.count("[CmdletBinding()]") == 1
+              and harness.count("param()") == 1
+              and "Read-Host" not in harness
+              and "$env:" not in harness,
+              "ADR-056 harness must remain no-input and caller-environment independent",
+          )
+
+          manifest_match = re.search(
+              r"(?ms)^\$script:ManifestKeys = @\((.*?)^\)\s*$",
+              harness,
+          )
+          require(
+              manifest_match is not None,
+              "ADR-056 manifest key declaration is missing",
+          )
+          manifest_keys = tuple(
+              re.findall(
+                  r'^\s+"([A-Za-z][A-Za-z0-9]*)",?\s*$',
+                  manifest_match.group(1),
+                  re.MULTILINE,
+              )
+          )
+          expected_manifest_keys = (
+              "schemaVersion",
+              "project",
+              "releaseStatus",
+              "networkStatus",
+              "sourceBranch",
+              "sourceCommit",
+              "sourceTree",
+              "cachedOriginMain",
+              "cachedOriginDevelop",
+              "localDevelop",
+              "featureAheadCount",
+              "integrationCommit",
+              "releasePreparationCommit",
+              "mainReleaseCommit",
+              "developReleaseCommit",
+              "annotatedTag",
+              "tagObject",
+              "bundleRef",
+              "bundleFile",
+              "bundleBytes",
+              "bundleSha256",
+              "bundlePrerequisiteCount",
+          )
+          require(
+              manifest_keys == expected_manifest_keys,
+              "ADR-056 closed ordered 22-field manifest schema changed",
+          )
+          get_output_lines = harness.split(
+              "function Get-OutputLines {", 1
+          )[1].split("function Get-GitScalar {", 1)[0]
+          get_git_parents = harness.split(
+              "function Get-GitParents {", 1
+          )[1].split("function Assert-GitRepositoryComplete {", 1)[0]
+          require(
+              get_output_lines.count("return ,@()") == 2
+              and 'return ,@($normalized.Split("`n"))'
+              in get_output_lines
+              and get_git_parents.count("return ,@()") == 1
+              and 'return ,@($parts[1..($parts.Count - 1)])'
+              in get_git_parents,
+              "ADR-056 PowerShell collection return cardinality changed",
+          )
+          manifest_reader = harness.split(
+              "function Get-ManifestValuesFromFile {", 1
+          )[1].split("function Assert-HandoffArtifacts {", 1)[0]
+          numeric_match = re.search(
+              r"(?ms)^\s+\$numericKeys = @\((.*?)^\s+\)\s*$",
+              manifest_reader,
+          )
+          require(
+              numeric_match is not None,
+              "ADR-056 manifest numeric type boundary is missing",
+          )
+          numeric_keys = tuple(
+              re.findall(
+                  r'^\s+"([A-Za-z][A-Za-z0-9]*)",?\s*$',
+                  numeric_match.group(1),
+                  re.MULTILINE,
+              )
+          )
+          require(
+              numeric_keys == (
+                  "schemaVersion",
+                  "featureAheadCount",
+                  "bundleBytes",
+                  "bundlePrerequisiteCount",
+              )
+              and '$numericKeys -contains $key' in manifest_reader
+              and '[Text.Json.JsonValueKind]::Number' in manifest_reader
+              and '[Text.Json.JsonValueKind]::String' in manifest_reader
+              and '$properties[$index].Value.TryGetInt64([ref] $integerValue)'
+              in manifest_reader
+              and 'The handoff manifest numeric type changed at $key.'
+              in manifest_reader
+              and 'The handoff manifest integer syntax changed at $key.'
+              in manifest_reader
+              and 'The handoff manifest string type changed at $key.'
+              in manifest_reader,
+              "ADR-056 strict 4-number/18-string manifest type contract changed",
+          )
+
+          process_isolation_markers = (
+              '$startInfo.FileName = $script:GitCommand',
+              '$startInfo.UseShellExecute = $false',
+              '$startInfo.Environment["GIT_CONFIG_NOSYSTEM"] = "1"',
+              '$startInfo.Environment["GIT_CONFIG_GLOBAL"] = $script:NullDevice',
+              '$startInfo.Environment["GIT_TERMINAL_PROMPT"] = "0"',
+              '$startInfo.Environment["GIT_NO_LAZY_FETCH"] = "1"',
+              '$startInfo.Environment["GIT_OPTIONAL_LOCKS"] = "0"',
+              '$startInfo.Environment["GIT_ASKPASS"] = $script:NullDevice',
+              '$startInfo.Environment["GIT_ALLOW_PROTOCOL"] = "file"',
+              '"-c", "maintenance.auto=0"',
+              '"-c", "core.hooksPath=$($script:NullDevice)"',
+              '"-c", "core.fsmonitor=false"',
+              '"-c", "credential.helper="',
+              '"-c", "protocol.file.allow=always"',
+              '"-c", "protocol.http.allow=never"',
+              '"-c", "protocol.https.allow=never"',
+              '"-c", "protocol.ssh.allow=never"',
+              '"-c", "protocol.git.allow=never"',
+          )
+          require(
+              all(marker in harness for marker in process_isolation_markers)
+              and "(?i:GIT|GH|SSH|GCM|GITLAB|BITBUCKET)_" in harness
+              and "(?i:HTTP|HTTPS|ALL|NO)_PROXY" in harness
+              and '$gitResolutions = @(Get-Command git -CommandType Application -ErrorAction Stop)'
+              in harness
+              and '$gitResolutions.Count -ge 1' in harness
+              and '$gitResolutions[0].Source' in harness
+              and '$script:GitTimeoutMilliseconds = 120000' in harness
+              and '$script:GitAcceptedOutputCharacterLimit = 1048576'
+              in harness
+              and 'GitOutputCharacterLimit' not in harness
+              and '$process.StandardOutput.ReadToEndAsync()' in harness
+              and '$process.StandardError.ReadToEndAsync()' in harness
+              and '$process.WaitForExit($script:GitTimeoutMilliseconds)'
+              in harness
+              and '$process.Kill($true)' in harness
+              and 'Assert-Condition $process.HasExited' in harness
+              and '"$FailureMessage (timeout and termination failed)."'
+              in harness
+              and '$process.WaitForExit(5000)' in harness
+              and '"$FailureMessage (termination timeout)."' in harness
+              and 'Assert-Condition $exited "$FailureMessage (timeout)."'
+              in harness
+              and '$stdout.Length -le $script:GitAcceptedOutputCharacterLimit'
+              in harness
+              and '$stderr.Length -le $script:GitAcceptedOutputCharacterLimit'
+              in harness,
+              "ADR-056 local-only Git process isolation changed",
+          )
+          forbidden_network_fragments = (
+              '"fetch"',
+              '"pull"',
+              '"ls-remote"',
+              "Invoke-WebRequest",
+              "Invoke-RestMethod",
+              "System.Net.Http",
+              "https://",
+              "ssh://",
+              "git://",
+              "@github.com",
+          )
+          require(
+              not any(fragment in harness for fragment in forbidden_network_fragments)
+              and not re.search(
+                  r"(?im)^\s*(?:curl|curl\.exe|wget|gh|hub)\b",
+                  harness,
+              ),
+              "ADR-056 harness gained a network/origin contact path",
+          )
+
+          forbidden_git_mutation_fragments = (
+              '"reset"',
+              '"stash"',
+              '"restore"',
+              '"clean"',
+              '"--force"',
+              '"-f"',
+          )
+          require(
+              not any(
+                  fragment in harness
+                  for fragment in forbidden_git_mutation_fragments
+              )
+              and harness.count('"switch"') == 4
+              and harness.count('"checkout"') == 1
+              and harness.count('"push"') == 4
+              and harness.count('$remoteRepository,') >= 5
+              and compact_harness.count(
+                  '-WorkingDirectory $integrationRepository -Arguments @('
+              ) >= 20
+              and (
+                  '-WorkingDirectory $serverRepository -Arguments @('
+                  '"checkout", "--detach", $mainReleaseCommit)'
+              ) in compact_harness
+              and (
+                  '-WorkingDirectory $temporaryRoot -Arguments @('
+                  '"--git-dir=$remoteRepository", "update-ref", "-d", '
+                  '$temporaryRef)'
+              ) in compact_harness
+              and not re.search(
+                  r'(?i)(?:ReadAllText|ReadAllBytes|Get-Content|Copy-Item|'
+                  r'Get-Item|Test-Path)[^\n]*["\']\.env["\']',
+                  harness,
+              ),
+              "ADR-056 source reset/switch/stash/ref/file safety changed",
+          )
+
+          source_custody_markers = (
+              'Head          = $head',
+              'SymbolicRef   = $symbolic',
+              'StatusSha256  = Get-TextSha256 $status',
+              'RefsSha256    = Get-TextSha256 $refs',
+              'ConfigSha256  = Get-TextSha256 $config',
+              'IndexSha256   = Get-FileSha256 $indexPath',
+              'NextSha256    = Get-FileSha256 $NextDeclarationPath',
+              'NextByteCount = ([IO.FileInfo] $NextDeclarationPath).Length',
+              '" M apps/web/next-env.d.ts"',
+              'Assert-SourceSnapshotUnchanged',
+              'Remove-OwnedTemporaryRoot',
+              '^wsr-release-handoff-[0-9a-f]{24}$',
+              'Refused to remove a reparse-point temporary root.',
+              '$ownerToken = (New-RunId) + (New-RunId)',
+              '^[0-9a-f]{48}$',
+              '.wsr-release-handoff-owner',
+              '[IO.FileMode]::CreateNew',
+              '$ownerMarkerStream.Flush($true)',
+              'Refused to remove a temporary root without its owner marker.',
+              'Refused a reparse-point temporary owner marker.',
+              'Refused a temporary root whose owner marker changed.',
+              '-ExpectedOwnerToken $ownerToken',
+          )
+          require(
+              all(marker in harness for marker in source_custody_markers)
+              and 'Assert-GitRepositoryComplete $repositoryRoot "Source repository"'
+              in harness
+              and 'Assert-GitRepositoryComplete $serverRepository "Offline server checkout"'
+              in harness
+              and '"fsck", "--full", "--strict", "--no-dangling"'
+              in harness
+              and '"extensions.partialClone"' in harness
+              and "'^remote\\..*\\.promisor$'" in harness
+              and "'^remote\\..*\\.partialclonefilter$'" in harness
+              and 'objects/info/alternates' in harness
+              and 'objects/info/http-alternates' in harness
+              and 'info/grafts' in harness
+              and '"rev-parse", "--git-path", $relativeObjectPath'
+              in harness
+              and (
+                  "'^(core\\.fsmonitor|uploadpack\\.packobjectshook|"
+                  "filter\\..*\\.(clean|smudge|process))$'"
+              ) in compact_harness
+              and '$executableConfig.ExitCode -eq 1' in harness
+              and '(Get-OutputLines $executableConfig.Stdout).Count -eq 0'
+              in harness
+              and 'has executable local Git configuration' in harness
+              and '"refs/replace"' in harness,
+              "ADR-056 source/clone custody or full-object guard changed",
+          )
+          require(
+              '$pathComparison = if ($IsWindows)' in harness
+              and '[StringComparison]::OrdinalIgnoreCase' in harness
+              and '[StringComparison]::Ordinal' in harness
+              and '$reportedRepositoryRoot.Equals($repositoryRoot, $pathComparison)'
+              in harness
+              and '$scriptPath.Equals($expectedScriptPath, $pathComparison)'
+              in harness
+              and 'Run the exact committed release-handoff harness path.'
+              in harness
+              and '[IO.Path]::GetDirectoryName($resolvedRoot).Equals('
+              in harness
+              and '$resolvedParent,' in harness
+              and '$comparison' in harness,
+              "ADR-056 OS-aware exact repository/script/cleanup path boundary changed",
+          )
+
+          git_flow_markers = (
+              "^feature/[a-z0-9][a-z0-9._/-]*$",
+              '"refs/heads/main^{commit}"',
+              '"refs/heads/develop^{commit}"',
+              '"refs/remotes/origin/main^{commit}"',
+              '"refs/remotes/origin/develop^{commit}"',
+              '$localMain -ceq $cachedOriginMain',
+              'Assert-GitAncestor $repositoryRoot $cachedOriginDevelop $localDevelop',
+              'Assert-GitAncestor $repositoryRoot $cachedOriginMain $localDevelop',
+              'Assert-GitAncestor $repositoryRoot $localDevelop $sourceCommit',
+              '"rev-list", "--count", "$localDevelop..$sourceCommit"',
+              '"clone", "--mirror", "--no-local", "--no-hardlinks"',
+              '"bundle", "create", $candidateInputBundle',
+              '"refs/heads/develop", $sourceRef',
+              '"merge", "--no-ff", "--no-edit", $sourceCommit',
+              '$integrationParents[0] -ceq $localDevelop',
+              '$integrationParents[1] -ceq $sourceCommit',
+              '$releaseBranch = "release/0.0.0-rehearsal.$runId"',
+              '$rehearsalTag = "v0.0.0-rehearsal.$runId"',
+              '"commit", "--allow-empty", "--message"',
+              '$releaseParents[0] -ceq $integrationCommit',
+              '$mainParents[0] -ceq $cachedOriginMain',
+              '$mainParents[1] -ceq $releasePreparationCommit',
+              '$developParents[0] -ceq $integrationCommit',
+              '$developParents[1] -ceq $releasePreparationCommit',
+              '"tag", "--annotate", $rehearsalTag',
+              '"cat-file", "-t", $tagObject',
+              'A simulated Git Flow commit changed the candidate tree.',
+          )
+          require(
+              all(marker in compact_harness for marker in git_flow_markers)
+              and compact_harness.count(
+                  '"merge", "--no-ff", "--no-edit"'
+              ) == 3
+              and compact_harness.count(
+                  '"push", "--porcelain", $remoteRepository'
+              ) == 4,
+              "ADR-056 exact temporary Git Flow graph contract changed",
+          )
+
+          artifact_markers = (
+              '$values["schemaVersion"] -eq 1',
+              '$values["project"] -ceq "wall-street-receipts"',
+              '$values["releaseStatus"] -ceq "NOT_RELEASED"',
+              '$values["networkStatus"] -ceq "REMOTE_NOT_CONTACTED"',
+              '$values["bundlePrerequisiteCount"] -eq 0',
+              '"wall-street-receipts-$mainReleaseCommit.bundle"',
+              '"manifest.json"',
+              '"refs/tags/$rehearsalTag"',
+              '"bundle", "verify", $BundlePath',
+              '"bundle", "list-heads", $BundlePath',
+              '$headLines.Count -eq 1',
+              '-WorkingDirectory $VerifierRoot -Arguments @('
+              '"bundle", "unbundle", $BundlePath)',
+              '"update-ref", $values["bundleRef"], $values["tagObject"]',
+              '"cat-file", "-t", $values["tagObject"]',
+              '$values["mainReleaseCommit"]',
+              '$values["sourceTree"]',
+              'The imported handoff bundle identity changed.',
+              'The imported handoff bundle failed full object verification',
+              'Get-ManifestValuesFromFile',
+              'ConvertTo-CanonicalManifestText',
+              '$bytes.Length -ge 2 -and $bytes.Length -le 8192',
+              '$bytes[-1] -eq 10',
+              'The handoff manifest must be printable ASCII plus final LF.',
+              'Copy-FlippedFile $bundlePath $flippedBundle',
+              'A byte-flipped bundle was accepted.',
+              'Copy-TruncatedFile $bundlePath $truncatedBundle',
+              '$truncatedValues["bundleSha256"] = Get-FileSha256 $truncatedBundle',
+              'A truncated, rehashed bundle was accepted.',
+          )
+          require(
+              all(marker in compact_harness for marker in artifact_markers)
+              and '"$BundleSha256 *$BundleName`n"' in harness
+              and '"bundle", "create", $bundlePath, "refs/tags/$rehearsalTag"'
+              in compact_harness
+              and '[Parameter(Mandatory)][string] $ExpectedMessagePattern'
+              in harness
+              and '$_.Exception.Message -cmatch $ExpectedMessagePattern'
+              in harness
+              and 'The negative artifact failed for an unexpected reason.'
+              in harness
+              and (
+                  "-ExpectedMessagePattern '^The handoff bundle SHA-256 "
+                  "changed\\.$'"
+              ) in compact_harness
+              and (
+                  "-ExpectedMessagePattern '^The handoff bundle "
+                  "(is structurally incomplete|could not be fully imported) "
+                  "\\(exit code [1-9][0-9]*\\)\\.$'"
+              ) in compact_harness,
+              "ADR-056 bundle/manifest/receipt/corruption contract changed",
+          )
+
+          offline_markers = (
+              '[IO.Directory]::CreateDirectory($serverRepository)',
+              '-WorkingDirectory $serverRepository -Arguments @("init", ".")',
+              '-WorkingDirectory $serverRepository -Arguments @('
+              '"bundle", "verify", $bundlePath)',
+              '-WorkingDirectory $serverRepository -Arguments @('
+              '"bundle", "unbundle", $bundlePath)',
+              '"update-ref", "refs/tags/$rehearsalTag", $tagObject',
+              '"checkout", "--detach", $mainReleaseCommit',
+              '"status", "--porcelain=v1", "--untracked-files=all"',
+              '"symbolic-ref", "--quiet", "HEAD"',
+              '$serverSymbolicHead.ExitCode -eq 1',
+              '"remote"',
+              '$serverRemotes.Stdout',
+              'The offline server checkout unexpectedly has a remote.',
+              'HEAD:apps/web/next-env.d.ts',
+              '"scripts/verify-local-release-handoff.ps1"',
+              '"decisions/ADR-056-disposable-offline-git-flow-release-source-handoff-rehearsal.md"',
+          )
+          require(
+              all(marker in compact_harness for marker in offline_markers)
+              and '$sourceCommit`:apps/web/next-env.d.ts' in harness
+              and 'Write-Host "NOT_RELEASED"' in harness
+              and 'Write-Host "REMOTE_NOT_CONTACTED"' in harness
+              and '"HANDOFF_EVIDENCE|source="' in harness,
+              "ADR-056 offline clone/committed-Next/evidence boundary changed",
+          )
+
+          required_document_markers = {
+              Path("README.md"): (
+                  "ADR-056 adds a disposable offline rehearsal",
+                  "pwsh -NoProfile -File ./scripts/verify-local-release-handoff.ps1",
+                  "complete no-prerequisite tag-only Git bundle",
+                  "apps/web/next-env.d.ts",
+                  "disable lazy fetch",
+                  "optional locks",
+                  "bounded time/output",
+                  "unpredictable owner marker",
+                  "checksum receipt covers only the named bundle bytes",
+                  "complete three-file set",
+                  "manifest-only Git Flow",
+                  "featureAheadCount",
+                  "can pass a later retained-artifact import",
+                  "independently reviewed manifest, commit/digest record, or signature",
+                  "No API key, domain, server, Docker daemon, GitHub login, or network permission",
+                  "Actual remote work later requires explicit",
+                  "repository visibility",
+                  "release-version",
+                  "authentication configured locally",
+              ),
+              Path("deploy/home-server/README.md"): (
+                  "## Release-source handoff before server work",
+                  "pwsh -NoProfile -File ./scripts/verify-local-release-handoff.ps1",
+                  "complete no-prerequisite tag-only bundle",
+                  "apps/web/next-env.d.ts",
+                  "disables lazy fetch and optional locks",
+                  "maintenance.auto=0",
+                  "core.fsmonitor=false",
+                  "uploadpack.packobjectshook",
+                  "filter.*.(clean|smudge|process)",
+                  "Each child has a two-minute deadline",
+                  "terminate within five more seconds",
+                  "rejected above 1,048,576 characters",
+                  "flushed",
+                  "owner marker",
+                  "checksum receipt covers only the named bundle bytes",
+                  "complete three-file set",
+                  "manifest-only Git",
+                  "featureAheadCount",
+                  "can pass",
+                  "independently reviewed manifest",
+                  "commit/digest",
+                  "signature",
+                  "No API key, domain, server, Docker daemon, GitHub login, network authorization",
+                  "### Later GitHub alternative",
+                  "public or private",
+                  "v0.1.0-rc.1",
+                  "configure GitHub authentication locally",
+              ),
+              Path("IMPLEMENTATION_LOG.md"): (
+                  "## 2026-08-31 — ADR-056 disposable offline Git Flow release-source handoff rehearsal",
+                  "scripts/verify-local-release-handoff.ps1",
+                  "apps/web/next-env.d.ts",
+                  "manifest.json",
+                  "canonical JSON",
+                  "git fsck",
+                  "GIT_NO_LAZY_FETCH=1",
+                  "GIT_OPTIONAL_LOCKS=0",
+                  "maintenance.auto=0",
+                  "core.fsmonitor=false",
+                  "Give every Git child 120 seconds",
+                  "require exit within five more seconds",
+                  "above 1,048,576 characters",
+                  "partial-clone-filter",
+                  "HTTP-alternate",
+                  "uploadpack.packobjectshook",
+                  "filter.*.(clean|smudge|process)",
+                  "flushed 48-hex owner marker",
+                  "receipt names and hashes only",
+                  "complete three-file set",
+                  "manifest-only Git Flow identity",
+                  "featureAheadCount",
+                  "syntactically valid change",
+                  "independently",
+                  "manifest/commit digest or signature",
+                  "### External inputs and next work",
+                  "repository-visibility decision",
+                  "v0.1.0-rc.1",
+                  "GitHub authentication configured",
+              ),
+              adr_path: (
+                  "# ADR-056: Disposable offline Git Flow release-source handoff rehearsal",
+                  "accepts no GitHub credential, remote ref, release version",
+                  "complete, no-prerequisite, tag-only Git bundle",
+                  "exactly these 22",
+                  "apps/web/next-env.d.ts",
+                  "GIT_NO_LAZY_FETCH=1",
+                  "GIT_OPTIONAL_LOCKS=0",
+                  "maintenance.auto=0",
+                  "core.fsmonitor=false",
+                  "120-second deadline",
+                  "terminate within another five",
+                  "longer than 1,048,576 characters",
+                  "uploadpack.packobjectshook",
+                  "filter.*.(clean|smudge|process)",
+                  "non-HTTP-alternate",
+                  "non-graft",
+                  "checksum receipt hashes only the named bundle bytes",
+                  "complete three-file set",
+                  "manifest-only cached/local/generated Git Flow identity",
+                  "featureAheadCount",
+                  "syntactically valid change",
+                  "Preserve an independently",
+                  "reviewed manifest and commit/digest",
+                  "separately designed signature",
+                  "### Later GitHub alternative",
+                  "repository visibility",
+                  "v0.1.0-rc.1",
+                  "GitHub authentication is configured locally",
+              ),
+          }
+          for path, markers in required_document_markers.items():
+              require(
+                  all(marker in documentation[path] for marker in markers)
+                  and "NOT_RELEASED" in documentation[path]
+                  and "REMOTE_NOT_CONTACTED" in documentation[path],
+                  f"ADR-056 documentation/external-input parity changed: {path}",
+              )
+          require(
+              all(
+                  "reproducible" in documentation[path].lower()
+                  and (
+                      "does not" in documentation[path].lower()
+                      or "not " in documentation[path].lower()
+                      or "outside" in documentation[path].lower()
+                  )
+                  for path in documentation_paths
+              ),
+              "ADR-056 docs must not imply reproducible binary/image custody",
+          )
+
+          parse_block = workflow.split(parse_marker, 1)[1].split(
+              "\n      - name:", 1
+          )[0]
+          require(
+              parse_block.count(harness_path.as_posix()) == 1
+              and parse_block.count(
+                  "[System.Management.Automation.Language.Parser]::ParseFile("
+              ) == 1
+              and "-File" not in parse_block
+              and "& " not in parse_block,
+              "ADR-056 CI must parse the exact harness once without executing it",
+          )
+          workflow_behavior = workflow
+          for marker in (guard_marker, parse_marker):
+              start = workflow_behavior.index(marker)
+              next_step = workflow_behavior.find("\n      - name:", start + len(marker))
+              require(next_step != -1, "ADR-056 CI step boundary changed")
+              workflow_behavior = (
+                  workflow_behavior[:start] + workflow_behavior[next_step + 1:]
+              )
+          execution_patterns = (
+              r"(?m)^\s+run:\s*pwsh(?:\.exe)?\s+.*-File\s+"
+              r"\.?/?scripts/verify-local-release-handoff\.ps1\s*$",
+              r"(?m)^\s+pwsh(?:\.exe)?\s+.*-File\s+"
+              r"\.?/?scripts/verify-local-release-handoff\.ps1\s*$",
+          )
+          require(
+              all(
+                  re.search(pattern, workflow_behavior) is None
+                  for pattern in execution_patterns
+              ),
+              "Hosted CI must not execute the branch-dependent ADR-056 harness",
+          )
+
+          print(
+              "Validated ADR-056 no-input local-only source custody, exact "
+              "temporary Git Flow parent/tree graph, canonical 22-field "
+              "tag-only bundle handoff, two corruption rejections, offline "
+              "complete checkout, docs/external-input honesty, and parse-only CI"
+          )
+          PYTHON
+
+      - name: Parse disposable offline Git Flow release-source handoff rehearsal
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path "scripts/verify-local-release-handoff.ps1").Path,
+            [ref] $tokens,
+            [ref] $parseErrors
+          ) | Out-Null
+          if ($parseErrors.Count -ne 0) {
+            throw "PowerShell parser reported $($parseErrors.Count) error(s) in the disposable offline release-source handoff rehearsal."
+          }
 
       - name: Guard ADR-055 offline SEC manifest API-mode full-stack acceptance
         shell: bash
