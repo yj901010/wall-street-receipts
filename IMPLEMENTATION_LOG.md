@@ -7079,7 +7079,9 @@ configured origin or any network endpoint.
   require a zero-ref inventory before fetching only cached `origin/main` and
   `origin/develop` through two non-forcing explicit refspecs with tags,
   `FETCH_HEAD`, and submodules disabled. A focused local seed/fetch/strict-
-  `fsck` probe then passed with exactly those two refs.
+  `fsck` probe then passed with exactly those two refs. The harness also
+  rechecks `HEAD` as `develop`, requires zero persisted remotes, and runs its
+  complete-repository/strict-`fsck` gate before cloning the seed.
 - `pwsh -NoProfile -File ./scripts/verify-local-release-handoff.ps1` from the
   actual committed feature checkout at `54c5884e59d3ab8139ce5865f24d57d19454a5b7`:
   **PASS**. The exact source tree was

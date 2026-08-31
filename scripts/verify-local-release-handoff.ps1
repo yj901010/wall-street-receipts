@@ -931,6 +931,21 @@ try {
             "--git-dir=$remoteRepository", "symbolic-ref",
             "HEAD", "refs/heads/develop"
         ) | Out-Null
+    Assert-Condition (
+        (Get-GitScalar `
+            -WorkingDirectory $temporaryRoot `
+            -Arguments @(
+                "--git-dir=$remoteRepository", "symbolic-ref",
+                "--quiet", "HEAD"
+            )) -ceq "refs/heads/develop"
+    ) "The simulated remote HEAD does not select develop."
+    $seededRemotes = Get-OutputLines (
+        Invoke-Git `
+            -WorkingDirectory $temporaryRoot `
+            -Arguments @("--git-dir=$remoteRepository", "remote")
+    ).Stdout
+    Assert-Condition ($seededRemotes.Count -eq 0) `
+        "The simulated remote unexpectedly persisted a remote."
     $seededRefs = Get-OutputLines (
         Invoke-Git `
             -WorkingDirectory $temporaryRoot `
@@ -944,6 +959,7 @@ try {
         $seededRefs -contains "refs/heads/develop`0$cachedOriginDevelop" -and
         $seededRefs -contains "refs/heads/main`0$cachedOriginMain"
     ) "The simulated remote seed refs changed."
+    Assert-GitRepositoryComplete $remoteRepository "Simulated remote"
 
     Invoke-Git `
         -WorkingDirectory $temporaryRoot `
