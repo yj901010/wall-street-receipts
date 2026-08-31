@@ -48,6 +48,9 @@ and exact-evidence execution boundary.
 ADR-043 establishes a default-disabled, local-only single-operator HTTP
 boundary for executing and inspecting those attempts without live SEC traffic.
 
+ADR-052 establishes an anonymous, exact-ID, point-in-time manifest audit read
+without live SEC traffic.
+
 SEC submissions metadata adapter는 기본 비활성화다. 로컬에서 명시적으로
 활성화하려면 루트 `.env`에 다음 서버 전용 변수가 있어야 한다.
 
@@ -266,8 +269,48 @@ SEC-authored `asOf`로 표시하거나 filing date로 backdate하지 않는다.
 이 서비스는 zero-network이므로 `SEC_CONTACT_EMAIL`을 읽지 않으며 새 API key,
 account, paid plan, OAuth/EDGAR token, plugin, secret 또는 environment variable이
 필요 없다. 기존 PostgreSQL connection만 재사용한다. 활성화 설정만으로 실행되는
-scheduler, startup collector, fetch-all loop, retry, CLI, controller, OpenAPI/public
-read API, browser consumer 또는 UI는 없다.
+scheduler, startup collector, fetch-all loop, retry, CLI, browser consumer 또는 UI는
+없다. ADR-052가 이후 추가한 exact audit controller/OpenAPI는 아래의 별도 read
+boundary이며 capture나 assembly를 시작하지 않는다.
+
+### Exact manifest audit API
+
+ADR-052는 이미 저장된 manifest 하나만 다음 네 anonymous GET route로 읽는다.
+
+```text
+GET /v1/sec/filing-history/manifests/{manifestId}?evaluationAsOf=...
+GET /v1/sec/filing-history/manifests/{manifestId}/descriptors?evaluationAsOf=...
+GET /v1/sec/filing-history/manifests/{manifestId}/accessions?evaluationAsOf=...
+GET /v1/sec/filing-history/manifests/{manifestId}/occurrences?evaluationAsOf=...
+```
+
+`manifestId`는 exact lowercase 64-hex이고 `evaluationAsOf`는 최대 microsecond
+precision의 명시적 UTC `Z` instant다. summary에는 다른 query parameter를 허용하지
+않고 child route에는 `page`와 `size`만 추가로 허용한다. 기본값은 `0`/`25`, 최대
+size는 `100`이며 descriptor/accession/occurrence 순서는 각각
+`descriptorOrdinal`/`groupOrdinal`/`occurrenceOrdinal ASC`로 고정된다. unknown,
+duplicate, blank, signed, leading-zero parameter는 closed 400이다.
+
+조회는 오직
+`findByManifestIdAtOrBefore(manifestId, evaluationAsOf)`를 사용한다. 없는 exact ID와
+cutoff 뒤에 assembled된 manifest는 같은 sanitized 404이고 latest, CIK, ticker,
+root, provider fallback이 없다. repository가 root와 selected capture, counts,
+hashes, descriptor, group, occurrence를 모두 재구성·검증한 뒤 응답 page를 자른다.
+따라서 HTTP item 수는 제한되지만 whole-manifest replay 비용은 별도 후속 최적화
+대상이다. integrity/reconstruction failure는 sanitized 500이며 empty page나 partial
+manifest로 바뀌지 않는다.
+
+응답은 raw body/header, 연락처, User-Agent, secret, operator attempt, DB detail을
+노출하지 않는다. descriptor 선택과 모든 source occurrence, exact agreement와
+canonical conflict를 그대로 보존하고 winner/current/latest/complete history를
+만들지 않는다. GET/HEAD success와 handled 400/404/405/500에는
+`X-Request-Id`와 `Cache-Control: no-store`가 붙는다.
+
+이 read API의 로컬 구현/검증에는 API key, SEC account, domain, home server,
+operator token, `SEC_CONTACT_EMAIL` 또는 live provider가 필요 없다. 기존
+PostgreSQL evidence만 사용하고 테스트에서는 `SEC_PROVIDER_ENABLED=false`를
+유지한다. 현재 production Caddy는 Spring을 public origin으로 직접 proxy하지
+않으므로 이 route는 후속 same-origin web consumer를 위한 backend contract다.
 
 ### Operator-controlled collection attempt
 

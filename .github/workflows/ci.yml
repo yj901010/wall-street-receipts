@@ -130,15 +130,20 @@ jobs:
           spec = YAML.safe_load_file(path, aliases: false)
           abort "OpenAPI document must be an object" unless spec.is_a?(Hash)
           abort "OpenAPI 3.1.0 is required" unless spec["openapi"] == "3.1.0"
-          abort "OpenAPI contract version 0.4.0 is required" unless spec.dig("info", "version") == "0.4.0"
+          abort "OpenAPI contract version 0.5.0 is required" unless spec.dig("info", "version") == "0.5.0"
 
           required_paths = [
             "/v1/calls",
             "/v1/calls/{id}",
             "/v1/calls/{id}/revisions",
             "/v1/calls/{id}/outcomes",
-            "/v1/calls/{id}/context"
+            "/v1/calls/{id}/context",
+            "/v1/sec/filing-history/manifests/{manifestId}",
+            "/v1/sec/filing-history/manifests/{manifestId}/descriptors",
+            "/v1/sec/filing-history/manifests/{manifestId}/accessions",
+            "/v1/sec/filing-history/manifests/{manifestId}/occurrences"
           ]
+          abort "OpenAPI paths must be the exact approved nine-path surface" unless spec.fetch("paths").keys == required_paths
           required_paths.each do |required_path|
             operation = spec.dig("paths", required_path, "get")
             abort "Missing GET #{required_path}" unless operation.is_a?(Hash)
@@ -313,7 +318,382 @@ jobs:
             abort "Missing external schema #{reference}" unless File.file?(resolved)
           end
 
-          puts "OpenAPI contract parsed and required P1 surface is present"
+          puts "OpenAPI contract parsed and exact current nine-path surface is present"
+          RUBY
+
+      - name: Guard exact SEC filing-history manifest audit API
+        shell: bash
+        run: |
+          ruby <<'RUBY'
+          require "yaml"
+
+          def require_contract(condition, message)
+            abort message unless condition
+          end
+
+          spec = YAML.safe_load_file("contracts/openapi.yaml", aliases: false)
+          paths = spec.fetch("paths")
+          components = spec.fetch("components")
+          parameters = components.fetch("parameters")
+          responses = components.fetch("responses")
+          schemas = components.fetch("schemas")
+          prefix = "/v1/sec/filing-history/manifests/{manifestId}"
+          sec_paths = {
+            prefix => {
+              "parameters" => %w[manifestId evaluationAsOf],
+              "success" => "#/components/responses/SecManifestSummaryOk"
+            },
+            "#{prefix}/descriptors" => {
+              "parameters" => %w[manifestId evaluationAsOf page size],
+              "success" => "#/components/responses/SecManifestDescriptorPageOk",
+              "order" => "descriptorOrdinal"
+            },
+            "#{prefix}/accessions" => {
+              "parameters" => %w[manifestId evaluationAsOf page size],
+              "success" => "#/components/responses/SecManifestAccessionPageOk",
+              "order" => "groupOrdinal"
+            },
+            "#{prefix}/occurrences" => {
+              "parameters" => %w[manifestId evaluationAsOf page size],
+              "success" => "#/components/responses/SecManifestOccurrencePageOk",
+              "order" => "occurrenceOrdinal"
+            }
+          }
+          actual_sec_paths = paths.keys.select do |path|
+            path.start_with?("/v1/sec/filing-history/manifests")
+          end
+          require_contract(
+            actual_sec_paths == sec_paths.keys,
+            "ADR-052 must expose only the exact summary and three child paths"
+          )
+          require_contract(
+            paths.keys.none? do |path|
+              path.start_with?("/v1/sec") &&
+                path.match?(%r{/(?:latest|current|list)(?:/|\z)}i)
+            end,
+            "ADR-052 must not expose latest/current/list SEC selectors"
+          )
+
+          http_methods = %w[get put post delete options head patch trace]
+          error_references = {
+            "400" => "#/components/responses/SecManifestAuditBadRequest",
+            "404" => "#/components/responses/SecManifestAuditNotFound",
+            "405" => "#/components/responses/SecManifestAuditMethodNotAllowed",
+            "500" => "#/components/responses/SecManifestAuditInternalServerError"
+          }
+          sec_paths.each do |path, expectation|
+            path_item = paths.fetch(path)
+            require_contract(
+              path_item.keys == ["get"],
+              "ADR-052 resources must expose GET only: #{path}"
+            )
+            operation = path_item.fetch("get")
+            actual_parameters = operation.fetch("parameters").map do |entry|
+              reference = entry.fetch("$ref")
+              parameters.fetch(reference.split("/").last).fetch("name")
+            end
+            require_contract(
+              actual_parameters == expectation.fetch("parameters"),
+              "ADR-052 closed query/path parameter set changed: #{path}"
+            )
+            operation_responses = operation.fetch("responses")
+            require_contract(
+              operation_responses.keys == %w[200 400 404 405 500],
+              "ADR-052 response statuses changed: #{path}"
+            )
+            require_contract(
+              operation_responses.dig("200", "$ref") == expectation.fetch("success"),
+              "ADR-052 success response is miswired: #{path}"
+            )
+            error_references.each do |status, reference|
+              require_contract(
+                operation_responses.dig(status, "$ref") == reference,
+                "ADR-052 #{status} response is miswired: #{path}"
+              )
+            end
+            if expectation.key?("order")
+              description = operation.fetch("description")
+              require_contract(
+                description.include?(expectation.fetch("order")) &&
+                  description.include?("ASC") &&
+                  description.include?(
+                    "caller-controlled sorting is not supported"
+                  ),
+                "ADR-052 fixed response order changed: #{path}"
+              )
+            end
+            require_contract(
+              (path_item.keys & (http_methods - ["get"])).empty?,
+              "ADR-052 mutation method appeared: #{path}"
+            )
+          end
+
+          manifest_parameter = parameters.fetch("SecManifestId")
+          require_contract(
+            manifest_parameter.slice("in", "name", "required") == {
+              "in" => "path", "name" => "manifestId", "required" => true
+            } &&
+              manifest_parameter.dig("schema", "$ref") ==
+                "#/components/schemas/LowercaseSha256",
+            "ADR-052 manifestId parameter must remain exact lowercase SHA-256"
+          )
+          evaluation_parameter = parameters.fetch("SecManifestEvaluationAsOf")
+          expected_utc_pattern =
+            '^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T' \
+            '(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?Z$'
+          require_contract(
+            evaluation_parameter.slice("in", "name", "required") == {
+              "in" => "query", "name" => "evaluationAsOf", "required" => true
+            } &&
+              evaluation_parameter.dig("schema", "type") == "string" &&
+              evaluation_parameter.dig("schema", "format") == "date-time" &&
+              evaluation_parameter.dig("schema", "pattern") == expected_utc_pattern,
+            "ADR-052 evaluationAsOf must remain required UTC Z/microsecond input"
+          )
+          page_schema = parameters.dig("SecManifestPage", "schema")
+          size_schema = parameters.dig("SecManifestPageSize", "schema")
+          require_contract(
+            page_schema == {
+              "type" => "integer", "minimum" => 0,
+              "maximum" => 2_147_483_647, "default" => 0
+            } &&
+              size_schema == {
+                "type" => "integer", "minimum" => 1,
+                "maximum" => 100, "default" => 25
+              } &&
+              parameters.dig("SecManifestPage", "description").include?(
+                "canonical unsigned decimal"
+              ) &&
+              parameters.dig("SecManifestPageSize", "description").include?(
+                "canonical unsigned decimal"
+              ),
+            "ADR-052 page grammar/defaults/bounds changed"
+          )
+
+          success_responses = {
+            "SecManifestSummaryOk" =>
+              "#/components/schemas/SecFilingHistoryManifestAuditSummary",
+            "SecManifestDescriptorPageOk" =>
+              "#/components/schemas/SecFilingHistoryManifestDescriptorPage",
+            "SecManifestAccessionPageOk" =>
+              "#/components/schemas/SecFilingHistoryManifestAccessionPage",
+            "SecManifestOccurrencePageOk" =>
+              "#/components/schemas/SecFilingHistoryManifestOccurrencePage"
+          }
+          success_responses.each do |name, schema_reference|
+            response = responses.fetch(name)
+            require_contract(
+              response.fetch("headers").keys.sort ==
+                ["Cache-Control", "X-Request-Id"] &&
+                response.dig("headers", "Cache-Control", "$ref") ==
+                  "#/components/headers/NoStore" &&
+                response.dig("headers", "X-Request-Id", "$ref") ==
+                  "#/components/headers/RequestId" &&
+                response.dig(
+                  "content", "application/json", "schema", "$ref"
+                ) == schema_reference,
+              "ADR-052 success response headers/schema changed: #{name}"
+            )
+          end
+          error_components = {
+            "SecManifestAuditBadRequest" =>
+              "INVALID_SEC_FILING_HISTORY_MANIFEST_AUDIT_QUERY",
+            "SecManifestAuditNotFound" =>
+              "SEC_FILING_HISTORY_MANIFEST_NOT_FOUND",
+            "SecManifestAuditMethodNotAllowed" => "METHOD_NOT_ALLOWED",
+            "SecManifestAuditInternalServerError" => "INTERNAL_ERROR"
+          }
+          error_components.each do |name, code|
+            response = responses.fetch(name)
+            expected_headers = name == "SecManifestAuditMethodNotAllowed" ?
+              ["Allow", "Cache-Control", "X-Request-Id"] :
+              ["Cache-Control", "X-Request-Id"]
+            require_contract(
+              response["x-problem-code"] == code &&
+                response.fetch("headers").keys.sort == expected_headers &&
+                response.dig("headers", "Cache-Control", "$ref") ==
+                  "#/components/headers/NoStore" &&
+                response.dig("headers", "X-Request-Id", "$ref") ==
+                  "#/components/headers/RequestId" &&
+                response.dig(
+                  "content", "application/problem+json", "schema", "$ref"
+                ) == "#/components/schemas/Problem",
+              "ADR-052 sanitized no-store problem response changed: #{name}"
+            )
+          end
+
+          exact_fields = {
+            "SecFilingHistoryManifestAuditSummary" => %w[
+              auditSchemaVersion auditPolicyVersion evaluationAsOf manifestId
+              manifestSchemaVersion provider product policyVersion selectionSha256
+              rootCaptureId rootCapturedAt cik evidenceAvailableAt assembledAt
+              selectionCoverage advertisedDescriptorCount selectedDescriptorCount
+              omittedDescriptorCount sourceOccurrenceCount distinctAccessionCount
+              singleSourceAccessionCount exactAgreementAccessionCount
+              canonicalConflictAccessionCount immutable disclosure
+            ],
+            "SecFilingHistoryManifestDisclosure" => %w[
+              coverageScope atomicSecSnapshotClaim currentHistoryStatus
+              correctionRemovalStatus amendmentLinkageStatus legalAuthorityStatus
+            ],
+            "SecFilingHistoryManifestDescriptor" => %w[
+              descriptorOrdinal fileName advertisedFilingCount advertisedFilingFrom
+              advertisedFilingTo selectionState selectedSegmentCaptureId
+            ],
+            "SecFilingHistoryManifestAccession" => %w[
+              groupOrdinal accessionNumber occurrenceCount distinctProjectionCount
+              comparison
+            ],
+            "SecFilingHistoryManifestOccurrence" => %w[
+              occurrenceOrdinal groupOrdinal sourceKind sourceCaptureId
+              descriptorOrdinal sourceRowOrdinal projectionSha256 providerEventId
+              accessionNumber form filingDate reportDate acceptedAt primaryDocumentUri
+            ],
+            "SecFilingHistoryManifestDescriptorPageMetadata" => %w[
+              number size totalElements totalPages first last order
+            ],
+            "SecFilingHistoryManifestAccessionPageMetadata" => %w[
+              number size totalElements totalPages first last order
+            ],
+            "SecFilingHistoryManifestOccurrencePageMetadata" => %w[
+              number size totalElements totalPages first last order
+            ]
+          }
+          exact_fields.each do |name, fields|
+            schema = schemas.fetch(name)
+            require_contract(
+              schema["type"] == "object" &&
+                schema["additionalProperties"] == false &&
+                schema.fetch("properties").keys.sort == fields.sort &&
+                schema.fetch("required").sort == fields.sort,
+              "ADR-052 closed schema fields changed: #{name}"
+            )
+          end
+          require_contract(
+            schemas.dig("LowercaseSha256", "pattern") == '^[0-9a-f]{64}$' &&
+              schemas.dig("PersistentUtcInstant", "pattern") ==
+                expected_utc_pattern,
+            "ADR-052 identity/time primitives changed"
+          )
+          summary_properties = schemas.fetch(
+            "SecFilingHistoryManifestAuditSummary"
+          ).fetch("properties")
+          require_contract(
+            summary_properties.dig("auditSchemaVersion", "const") == "1.0.0" &&
+              summary_properties.dig("auditPolicyVersion", "const") ==
+                "SEC_EXACT_MANIFEST_AUDIT_V1" &&
+              summary_properties.dig("manifestSchemaVersion", "const") ==
+                "1.0.0" &&
+              summary_properties.dig("provider", "const") == "sec-edgar" &&
+              summary_properties.dig("product", "const") ==
+                "edgar-submissions-root-relative-collection-manifest" &&
+              summary_properties.dig("policyVersion", "const") ==
+                "SEC_ROOT_RELATIVE_ACCESSION_RECONCILIATION_V1" &&
+              summary_properties.dig("immutable", "const") == true &&
+              schemas.dig("SecFilingHistorySelectionCoverage", "enum") == [
+                "NO_ADVERTISED_DESCRIPTORS",
+                "PARTIAL_ADVERTISED_DESCRIPTORS_SELECTED",
+                "ALL_ADVERTISED_DESCRIPTORS_SELECTED"
+              ] &&
+              schemas.dig("SecFilingHistoryManifestDescriptor", "properties",
+                          "selectionState", "enum") == [
+                "NOT_SELECTED", "SELECTED_EXACT_CAPTURE"
+              ] &&
+              schemas.dig("SecFilingHistoryManifestAccession", "properties",
+                          "comparison", "enum") == [
+                "SINGLE_SOURCE_OCCURRENCE",
+                "MULTIPLE_OCCURRENCES_EXACT_AGREEMENT",
+                "MULTIPLE_OCCURRENCES_CANONICAL_CONFLICT"
+              ] &&
+              schemas.dig("SecFilingHistoryManifestOccurrence", "properties",
+                          "sourceKind", "enum") == [
+                "ROOT_RECENT", "HISTORICAL_SEGMENT"
+              ],
+            "ADR-052 evidence identity/classification constants changed"
+          )
+          fixed_page_orders = {
+            "SecFilingHistoryManifestDescriptorPageMetadata" =>
+              "descriptorOrdinal",
+            "SecFilingHistoryManifestAccessionPageMetadata" =>
+              "groupOrdinal",
+            "SecFilingHistoryManifestOccurrencePageMetadata" =>
+              "occurrenceOrdinal"
+          }
+          fixed_page_orders.each do |name, field|
+            order = schemas.dig(name, "properties", "order")
+            require_contract(
+              order["type"] == "object" &&
+                order["additionalProperties"] == false &&
+                order.fetch("required").sort == %w[direction field] &&
+                order.fetch("properties").keys.sort == %w[direction field] &&
+                order.dig("properties", "field", "const") == field &&
+                order.dig("properties", "direction", "const") == "ASC",
+              "ADR-052 route-specific fixed order changed: #{name}"
+            )
+          end
+          disclosure_constants = {
+            "coverageScope" => "ROOT_RELATIVE_SELECTED_REFERENCES_ONLY",
+            "atomicSecSnapshotClaim" => "NOT_MADE",
+            "currentHistoryStatus" => "NOT_RESOLVED",
+            "correctionRemovalStatus" => "NOT_RESOLVED",
+            "amendmentLinkageStatus" => "NOT_RESOLVED",
+            "legalAuthorityStatus" => "NOT_CLAIMED"
+          }
+          disclosure_constants.each do |field, value|
+            require_contract(
+              schemas.dig("SecFilingHistoryManifestDisclosure", "properties",
+                          field, "const") == value,
+              "ADR-052 disclosure semantics changed: #{field}"
+            )
+          end
+          page_items = {
+            "SecFilingHistoryManifestDescriptorPage" => [
+              "#/components/schemas/SecFilingHistoryManifestDescriptor",
+              "#/components/schemas/SecFilingHistoryManifestDescriptorPageMetadata"
+            ],
+            "SecFilingHistoryManifestAccessionPage" => [
+              "#/components/schemas/SecFilingHistoryManifestAccession",
+              "#/components/schemas/SecFilingHistoryManifestAccessionPageMetadata"
+            ],
+            "SecFilingHistoryManifestOccurrencePage" => [
+              "#/components/schemas/SecFilingHistoryManifestOccurrence",
+              "#/components/schemas/SecFilingHistoryManifestOccurrencePageMetadata"
+            ]
+          }
+          page_items.each do |name, references|
+            item_reference, page_reference = references
+            schema = schemas.fetch(name)
+            fields = %w[
+              auditSchemaVersion auditPolicyVersion manifestId evaluationAsOf items page
+            ]
+            require_contract(
+              schema["type"] == "object" &&
+                schema["additionalProperties"] == false &&
+                schema.fetch("properties").keys.sort == fields.sort &&
+                schema.fetch("required").sort == fields.sort &&
+                schema.dig("properties", "auditSchemaVersion", "const") ==
+                  "1.0.0" &&
+                schema.dig("properties", "auditPolicyVersion", "const") ==
+                  "SEC_EXACT_MANIFEST_AUDIT_V1" &&
+                schema.dig("properties", "items", "maxItems") == 100 &&
+                schema.dig("properties", "items", "items", "$ref") ==
+                  item_reference &&
+                schema.dig("properties", "page", "$ref") ==
+                  page_reference,
+              "ADR-052 bounded closed page schema changed: #{name}"
+            )
+          end
+
+          forbidden_item_fields = %w[
+            dataMode latest current winner issuer ticker rawBody rawHeaders
+            contactEmail operatorToken attemptId
+          ]
+          item_fields = exact_fields.values.flatten
+          require_contract(
+            (item_fields & forbidden_item_fields).empty?,
+            "ADR-052 response schema exposes a forbidden inferred/operator field"
+          )
+          puts "Validated exact anonymous read-only ADR-052 SEC manifest audit contract"
           RUBY
 
       - name: Parse canonical JSON Schemas
@@ -2644,6 +3024,731 @@ jobs:
           print(
               "Validated the exact one-row DEMO SPX call projection, injected provider "
               "boundary, route discovery, and no schema/fixture/API expansion"
+          )
+          PYTHON
+
+      - name: Project exact pre-ADR-052 repository view
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import os
+          import shutil
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def normalized_bytes(path):
+              return path.read_bytes().replace(b"\r\n", b"\n")
+
+          def digest(content):
+              return hashlib.sha256(content).hexdigest()
+
+          current_hashes = {
+              Path("contracts/openapi.yaml"):
+                  "6aed47152a974ed1de5557db8442d5ef5302380c528f2682f475e7dcaeb94426",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/FilingHistoryCollectionConfiguration.java"):
+                  "e92ca2637ba683203a7c6b9253ff182ff5f2197891e1ca73f7dddb574ff531bb",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/ApiRequestRejectedHandler.java"):
+                  "74fa3cd68f4f70a103537508305cbda60c361c215d944753ee2d774c018e307a",
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/migration/FilingHistoryCollectionManifestPostgreSqlTest.java"):
+                  "618a413334062038d10d2f72863ab64ba5188f59b301dc53187ccd48f9b85f3d",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/InvalidSecFilingHistoryManifestAuditQueryException.java"):
+                  "fc47852d1c6b08f94700fdce017f8d510d07a908b51b3d51f52072e2e484cf1f",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryManifestAuditNotFoundException.java"):
+                  "ece71eff2a7c29b5fb31e37008fb53444765fc00f5b5a7572f6fc6cc1a2a3ae8",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryManifestAuditQueryService.java"):
+                  "94a9210f2e6b565325e13520536cf162d7eaabeb011d12c617d412c0cb78ccf3",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/filinghistory/SecFilingHistoryManifestAuditController.java"):
+                  "6954d4e7477af3b4ae48a1a7fc5d058ff10a9a6ce35324e32c73447459d2b325",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/filinghistory/SecFilingHistoryManifestAuditResponses.java"):
+                  "f13476ac48aa48803856a5d649a678ea876d8407bba189e0e916f3028ce29dea",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/filinghistory/SecFilingHistoryManifestAuditExceptionHandler.java"):
+                  "93f7a5c6b4a0dad8da521a4ce1bbf4e127641a3d492fbace900927a22576334f",
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/filinghistory/SecFilingHistoryManifestAuditMethodNotAllowedExceptionHandler.java"):
+                  "56c4c1dced6beae69c3d6dd541289a5b4a0b5b8cb2c0f684ed5c63c5ee6939b5",
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory/SecFilingHistoryManifestAuditQueryServiceTest.java"):
+                  "0cc480ac5c461502b7cf4c0c85b326b2aa5c85ffb8f13d39cc14bb856e1a8fb9",
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/filinghistory/SecFilingHistoryManifestAuditApiTest.java"):
+                  "1592877bb8c4da34ec7e65a6bcbaf2da7b8d0781390699427e59f7ec09c70aa8",
+          }
+          modified_paths = {
+              Path("contracts/openapi.yaml"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/config/FilingHistoryCollectionConfiguration.java"),
+              Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/security/ApiRequestRejectedHandler.java"),
+              Path("apps/api/src/test/java/com/wallstreetreceipts/api/migration/FilingHistoryCollectionManifestPostgreSqlTest.java"),
+          }
+          added_paths = set(current_hashes) - modified_paths
+          expected_added_main = {
+              path for path in added_paths
+              if path.as_posix().startswith("apps/api/src/main/")
+          }
+          expected_added_tests = added_paths - expected_added_main
+          actual_added_main = {
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/application/filinghistory").glob("*ManifestAudit*.java"),
+              *Path("apps/api/src/main/java/com/wallstreetreceipts/api/web/filinghistory").glob("*.java"),
+          }
+          actual_added_tests = {
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/application/filinghistory").glob("*ManifestAudit*.java"),
+              *Path("apps/api/src/test/java/com/wallstreetreceipts/api/web/filinghistory").glob("*ManifestAudit*.java"),
+          }
+          require(
+              len(current_hashes) == 13
+              and len(modified_paths) == 4
+              and len(expected_added_main) == 7
+              and len(expected_added_tests) == 2
+              and actual_added_main == expected_added_main
+              and actual_added_tests == expected_added_tests,
+              "ADR-052 source/test delta inventory changed",
+          )
+          for path, expected_hash in current_hashes.items():
+              require(path.is_file(), f"ADR-052 current path is missing: {path}")
+              require(
+                  digest(normalized_bytes(path)) == expected_hash,
+                  f"ADR-052 current bytes changed: {path}",
+              )
+
+          projection_root = (
+              Path(os.environ["RUNNER_TEMP"]) / "wsr-adr052-current-view"
+          )
+          require(
+              not projection_root.exists(),
+              f"ADR-052 projection custody already exists: {projection_root}",
+          )
+          projection_root.mkdir(parents=True)
+          for path in current_hashes:
+              custody_path = projection_root / path
+              custody_path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(path, custody_path)
+          (projection_root / "manifest.json").write_text(
+              json.dumps(
+                  {path.as_posix(): value for path, value in current_hashes.items()},
+                  sort_keys=True,
+              ),
+              encoding="utf-8",
+          )
+          (projection_root / ".prepared").write_text(
+              "ADR-052 exact current bytes saved before historical projection\n",
+              encoding="utf-8",
+          )
+
+          for path in added_paths:
+              path.unlink()
+
+          openapi_path = Path("contracts/openapi.yaml")
+          openapi = normalized_bytes(openapi_path)
+
+          def replace_region(content, start, end, replacement):
+              require(
+                  start in content,
+                  f"ADR-052 OpenAPI projection start changed: {start!r}",
+              )
+              start_index = content.index(start)
+              end_index = content.index(end, start_index)
+              return content[:start_index] + replacement + content[end_index:]
+
+          openapi = replace_region(
+              openapi,
+              b"info:\n",
+              b"servers:\n",
+              b"""info:\n  title: Wall Street Receipts API\n  version: 0.4.0\n  summary: Point-in-time analyst-call read API\n  description: |\n    P1 read contract for canonical analyst-call events. All timestamps are UTC\n    RFC 3339 instants. Filters are combined with logical AND. Missing numeric\n    values remain JSON null and must not be interpreted as zero.\n  license:\n    name: Proprietary\n""",
+          )
+          openapi = replace_region(
+              openapi,
+              b"tags:\n",
+              b"paths:\n",
+              b"""tags:\n  - name: Analyst Calls\n    description: Immutable analyst-call event queries\n\n""",
+          )
+          openapi = replace_region(
+              openapi,
+              b"  /v1/sec/filing-history/manifests/{manifestId}:\n",
+              b"components:\n",
+              b"",
+          )
+          for start, end in (
+              (b"    SecManifestId:\n", b"  headers:\n"),
+              (b"    NoStore:\n", b"  responses:\n"),
+              (b"    SecManifestSummaryOk:\n", b"  schemas:\n"),
+          ):
+              openapi = replace_region(openapi, start, end, b"\n")
+          openapi = replace_region(
+              openapi,
+              b"    LowercaseSha256:\n",
+              b"    Identifier:\n",
+              b"",
+          )
+          openapi_path.write_bytes(openapi)
+
+          config_path = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/config/"
+              "FilingHistoryCollectionConfiguration.java"
+          )
+          config = normalized_bytes(config_path)
+          config_import = (
+              b"import com.wallstreetreceipts.api.application.filinghistory."
+              b"SecFilingHistoryManifestAuditQueryService;\n"
+          )
+          config_bean = b"""    @Bean\n    SecFilingHistoryManifestAuditQueryService\n            secFilingHistoryManifestAuditQueryService(\n                    FilingHistoryCollectionManifestRepository manifestRepository) {\n        return new SecFilingHistoryManifestAuditQueryService(manifestRepository);\n    }\n\n"""
+          require(
+              config.count(config_import) == 1 and config.count(config_bean) == 1,
+              "ADR-052 configuration delta changed",
+          )
+          config_path.write_bytes(
+              config.replace(config_import, b"", 1).replace(config_bean, b"", 1)
+          )
+
+          rejection_handler_path = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/web/security/"
+              "ApiRequestRejectedHandler.java"
+          )
+          rejection_handler = normalized_bytes(rejection_handler_path)
+          audit_prefix = b"""    private static final String MANIFEST_AUDIT_API_PREFIX =\n            "/v1/sec/filing-history/manifests/";\n"""
+          audit_branch = b"        if (requiresNoStore(request)) {\n"
+          operator_branch = b"        if (isOperatorApiRequest(request)) {\n"
+          current_predicate = b"""    private static boolean requiresNoStore(HttpServletRequest request) {\n        String requestUri = request.getRequestURI();\n        return requestUri != null\n                && (requestUri.startsWith(OPERATOR_API_PREFIX)\n                || requestUri.startsWith(MANIFEST_AUDIT_API_PREFIX));\n    }\n"""
+          historical_predicate = b"""    private static boolean isOperatorApiRequest(HttpServletRequest request) {\n        String requestUri = request.getRequestURI();\n        return requestUri != null && requestUri.startsWith(OPERATOR_API_PREFIX);\n    }\n"""
+          require(
+              rejection_handler.count(audit_prefix) == 1
+              and rejection_handler.count(audit_branch) == 1
+              and rejection_handler.count(current_predicate) == 1,
+              "ADR-052 request-rejection no-store delta changed",
+          )
+          rejection_handler_path.write_bytes(
+              rejection_handler.replace(audit_prefix, b"", 1)
+              .replace(audit_branch, operator_branch, 1)
+              .replace(current_predicate, historical_predicate, 1)
+          )
+
+          postgres_test_path = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/migration/"
+              "FilingHistoryCollectionManifestPostgreSqlTest.java"
+          )
+          postgres_test = normalized_bytes(postgres_test_path)
+          for added_import in (
+              b"import static org.assertj.core.api.Assertions.assertThatThrownBy;\n",
+              b"import com.wallstreetreceipts.api.application.filinghistory.SecFilingHistoryManifestAuditNotFoundException;\n",
+              b"import com.wallstreetreceipts.api.application.filinghistory.SecFilingHistoryManifestAuditQueryService;\n",
+          ):
+              require(
+                  postgres_test.count(added_import) == 1,
+                  "ADR-052 PostgreSQL import delta changed",
+              )
+              postgres_test = postgres_test.replace(added_import, b"", 1)
+          postgres_method_start = (
+              b"    @Test\n"
+              b"    void exactAuditQueryUsesTheInclusivePostgreSqlMicrosecondVisibilityBoundary() {"
+          )
+          postgres_next_method = (
+              b"    @Test\n"
+              b"    void concurrentIdenticalSelectionReturnsOneWinnerObservationToBothCallers()"
+          )
+          require(
+              postgres_test.count(postgres_method_start) == 1
+              and postgres_test.count(postgres_next_method) == 1,
+              "ADR-052 PostgreSQL method delta changed",
+          )
+          method_start = postgres_test.index(postgres_method_start)
+          method_end = postgres_test.index(postgres_next_method, method_start)
+          postgres_test_path.write_bytes(
+              postgres_test[:method_start] + postgres_test[method_end:]
+          )
+
+          historical_hashes = {
+              openapi_path:
+                  "f103489524ac14b0078a2e324dfded58395ec0fede1cf38f24f2c224bdf0bd8d",
+              config_path:
+                  "f1093c2c43b63286a6f590aa655c3aae3d7768898ebd37a66fa20af80a3519cf",
+              rejection_handler_path:
+                  "bcdfab301e9a8d2f9bb96d4951f206e86e535366d8dbba8c65d8f7691bbadf14",
+              postgres_test_path:
+                  "247e47a164e148311931117cc77662b1ea12ae43bb69a07912eeaf8ec6fbc3e4",
+          }
+          require(
+              all(not path.exists() for path in added_paths),
+              "ADR-052 added file survived historical projection",
+          )
+          for path, expected_hash in historical_hashes.items():
+              require(
+                  digest(normalized_bytes(path)) == expected_hash,
+                  f"ADR-052 historical reverse projection changed: {path}",
+              )
+          print(
+              "Projected exact pre-ADR-052 OpenAPI/config/source/test bytes for "
+              "historical invariant guards"
+          )
+          PYTHON
+
+      - name: Project exact pre-ADR-048 release inventory view
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import os
+          import shutil
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def normalized_bytes(path):
+              return path.read_bytes().replace(b"\r\n", b"\n")
+
+          def digest(content):
+              return hashlib.sha256(content).hexdigest()
+
+          pom_path = Path("apps/api/pom.xml")
+          application_path = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/"
+              "WallStreetReceiptsApiApplication.java"
+          )
+          command_path = Path(
+              "apps/api/src/main/java/com/wallstreetreceipts/api/release/"
+              "ReleaseSchemaInventoryCommand.java"
+          )
+          command_test_path = Path(
+              "apps/api/src/test/java/com/wallstreetreceipts/api/release/"
+              "ReleaseSchemaInventoryCommandTest.java"
+          )
+          current_hashes = {
+              pom_path:
+                  "d56beba72e6b00f7228386faad75ca54b79e22ef037ccd3d6007cd1793c2543b",
+              application_path:
+                  "d9c4c2b7e97eaf7b5344b33fd3838d270bd5f9171cf5dca42a5750726f248fc9",
+              command_path:
+                  "c5c79ff1df41fe7376d6fb7e696fdcdad736d3bc89b470888a94d09b4ec349b3",
+              command_test_path:
+                  "38c1897d5b963f965486dd79dd1f2fb7a059ba511d13346c2e19697c0aff05f3",
+          }
+          added_paths = {command_path, command_test_path}
+          require(
+              len(current_hashes) == 4 and len(added_paths) == 2,
+              "ADR-048 release-inventory delta inventory changed",
+          )
+          for path, expected_hash in current_hashes.items():
+              require(path.is_file(), f"ADR-048 current path is missing: {path}")
+              require(
+                  digest(normalized_bytes(path)) == expected_hash,
+                  f"ADR-048 current bytes changed: {path}",
+              )
+
+          projection_root = (
+              Path(os.environ["RUNNER_TEMP"]) / "wsr-adr048-current-view"
+          )
+          require(
+              not projection_root.exists(),
+              f"ADR-048 projection custody already exists: {projection_root}",
+          )
+          projection_root.mkdir(parents=True)
+          for path in current_hashes:
+              custody_path = projection_root / path
+              custody_path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(path, custody_path)
+          (projection_root / "manifest.json").write_text(
+              json.dumps(
+                  {path.as_posix(): value for path, value in current_hashes.items()},
+                  sort_keys=True,
+              ),
+              encoding="utf-8",
+          )
+          (projection_root / ".prepared").write_text(
+              "ADR-048 exact current bytes saved before historical projection\n",
+              encoding="utf-8",
+          )
+
+          for path in added_paths:
+              path.unlink()
+
+          pom = normalized_bytes(pom_path)
+          flyway_version = b"        <flyway.version>11.7.2</flyway.version>\n"
+          require(
+              pom.count(flyway_version) == 1,
+              "ADR-048 Flyway version pin delta changed",
+          )
+          pom_path.write_bytes(pom.replace(flyway_version, b"", 1))
+
+          application = normalized_bytes(application_path)
+          command_import = (
+              b"import com.wallstreetreceipts.api.release."
+              b"ReleaseSchemaInventoryCommand;\n\n"
+          )
+          command_dispatch = (
+              b"        var commandExitCode = ReleaseSchemaInventoryCommand."
+              b"runIfRequested(args, System.out, System.err);\n"
+              b"        if (commandExitCode.isPresent()) {\n"
+              b"            if (commandExitCode.getAsInt() != 0) {\n"
+              b"                System.exit(commandExitCode.getAsInt());\n"
+              b"            }\n"
+              b"            return;\n"
+              b"        }\n\n"
+          )
+          require(
+              application.count(command_import) == 1
+              and application.count(command_dispatch) == 1,
+              "ADR-048 application command-dispatch delta changed",
+          )
+          application_path.write_bytes(
+              application.replace(command_import, b"", 1)
+              .replace(command_dispatch, b"", 1)
+          )
+
+          historical_hashes = {
+              pom_path:
+                  "35cb3a3bc7634d14ac5f63178b17c6934ee748ce0c9912b96ae2ce3beaea3393",
+              application_path:
+                  "bf2a4d2025f3d455ca00ec9893212a03ee932ee5058e2414a727be72be8edac8",
+          }
+          require(
+              all(not path.exists() for path in added_paths),
+              "ADR-048 added file survived historical projection",
+          )
+          for path, expected_hash in historical_hashes.items():
+              require(
+                  digest(normalized_bytes(path)) == expected_hash,
+                  f"ADR-048 historical reverse projection changed: {path}",
+              )
+          print(
+              "Projected exact pre-ADR-048 POM/application bytes and removed "
+              "the exact release-inventory source/test pair"
+          )
+          PYTHON
+
+      - name: Project exact pre-ADR-045 historical repository view
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import os
+          import shutil
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def normalized_bytes(path):
+              return path.read_bytes().replace(b"\r\n", b"\n")
+
+          def digest(content):
+              return hashlib.sha256(content).hexdigest()
+
+          def replace_once(source, current, historical, context):
+              require(source.count(current) == 1, context)
+              return source.replace(current, historical, 1)
+
+          pom_path = Path("apps/api/pom.xml")
+          call_list_path = Path("apps/web/e2e/call-list-api.spec.ts")
+          call_outcomes_path = Path("apps/web/e2e/call-outcomes.spec.ts")
+          call_revisions_path = Path("apps/web/e2e/call-revisions.spec.ts")
+          runtime_assertions_path = Path("apps/web/e2e/runtime-assertions.ts")
+          i18n_path = Path("apps/web/e2e/i18n.spec.ts")
+          sp500_history_path = Path("apps/web/e2e/sp500-history.spec.ts")
+          playwright_config_path = Path("apps/web/playwright.config.ts")
+          tsconfig_path = Path("apps/web/tsconfig.json")
+          current_hashes = {
+              pom_path:
+                  "35cb3a3bc7634d14ac5f63178b17c6934ee748ce0c9912b96ae2ce3beaea3393",
+              call_list_path:
+                  "b5b79d713561e9fcc5c31e183ffe9a1e96b53fdfd6e1ca900202e200e013eca3",
+              call_outcomes_path:
+                  "ae90386897355661d1af5178c4f3bf9a66c28dc635e25122d52373f4132a62c4",
+              call_revisions_path:
+                  "a9a246bda781562ffc2e0a8b46176e73351a4556b2cf15c5f0ce20515feaeef1",
+              runtime_assertions_path:
+                  "f0afcf6aaedb03eae69e1a5ef0c7453c723c297a73f7532ccc989d9ba750cda8",
+              i18n_path:
+                  "f741e1f592ba4cfb4b164f52ca50d15dff4f3cdb8ba9ff73b48988f1a19824eb",
+              sp500_history_path:
+                  "ee894a8065ad7e9ad97d9f67826dd0ef44d43cbcf4d65934ce5b54636e56ac84",
+              playwright_config_path:
+                  "592b7414e438fef6b0a74687fb842590aea43e52b4eed9c5b581312bc334dc15",
+              tsconfig_path:
+                  "ad3a848e4b89a610fcd76f68816be0436be6090c30fb196b19e345084d276a7e",
+          }
+          require(
+              len(current_hashes) == 9,
+              "Pre-ADR-045 historical delta inventory changed",
+          )
+          for path, expected_hash in current_hashes.items():
+              require(path.is_file(), f"Pre-ADR-045 current path is missing: {path}")
+              require(
+                  digest(normalized_bytes(path)) == expected_hash,
+                  f"Pre-ADR-045 current bytes changed: {path}",
+              )
+
+          projection_root = (
+              Path(os.environ["RUNNER_TEMP"]) / "wsr-adr045-current-view"
+          )
+          require(
+              not projection_root.exists(),
+              f"Pre-ADR-045 projection custody already exists: {projection_root}",
+          )
+          projection_root.mkdir(parents=True)
+          for path in current_hashes:
+              custody_path = projection_root / path
+              custody_path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(path, custody_path)
+          (projection_root / "manifest.json").write_text(
+              json.dumps(
+                  {path.as_posix(): value for path, value in current_hashes.items()},
+                  sort_keys=True,
+              ),
+              encoding="utf-8",
+          )
+          (projection_root / ".prepared").write_text(
+              "Exact current bytes saved before the pre-ADR-045 projection\n",
+              encoding="utf-8",
+          )
+
+          pom = normalized_bytes(pom_path)
+          build_directory_property = (
+              b"        <wsr.build.directory>${project.basedir}/target"
+              b"</wsr.build.directory>\n"
+          )
+          build_directory = b"        <directory>${wsr.build.directory}</directory>\n"
+          require(
+              pom.count(build_directory_property) == 1
+              and pom.count(build_directory) == 1,
+              "ADR-045 POM delta changed",
+          )
+          pom_path.write_bytes(
+              pom.replace(build_directory_property, b"", 1)
+              .replace(build_directory, b"", 1)
+          )
+
+          locale_import = b"  activateEnglishLocale,\n"
+          configured_origin = (
+              b"  const configuredApiOrigin = process.env.API_BASE_URL\n"
+              b"    ? new URL(process.env.API_BASE_URL).origin\n"
+              b"    : \"http://localhost:8080\";\n"
+          )
+          locale_call = b"  await activateEnglishLocale(context, page, englishButton);\n"
+          historical_locale_call = b"  await englishButton.press(\"Enter\");\n"
+          call_list = normalized_bytes(call_list_path)
+          call_list = replace_once(
+              call_list, locale_import, b"", "ADR-045 call-list import delta changed"
+          )
+          call_list = replace_once(
+              call_list, configured_origin, b"",
+              "ADR-045 call-list API-origin delta changed",
+          )
+          call_list = replace_once(
+              call_list,
+              b"    if (url.origin === configuredApiOrigin) {\n"
+              b"      browserApiRequests.push(request.url());\n"
+              b"    }\n",
+              b"    if (url.hostname === \"localhost\" && url.port === \"8080\") {\n"
+              b"      browserApiRequests.push(request.url());\n"
+              b"    }\n",
+              "ADR-045 call-list request-observer delta changed",
+          )
+          call_list = replace_once(
+              call_list, locale_call, historical_locale_call,
+              "ADR-045 call-list locale delta changed",
+          )
+          call_list_path.write_bytes(call_list)
+
+          for path, context in (
+              (call_outcomes_path, "call-outcomes"),
+              (call_revisions_path, "call-revisions"),
+          ):
+              source = normalized_bytes(path)
+              source = replace_once(
+                  source, locale_import, b"",
+                  f"ADR-045 {context} import delta changed",
+              )
+              source = replace_once(
+                  source, configured_origin, b"",
+                  f"ADR-045 {context} API-origin delta changed",
+              )
+              source = replace_once(
+                  source,
+                  b"    if (url.origin === configuredApiOrigin) "
+                  b"browserApiRequests.push(request.url());\n",
+                  b"    if (url.hostname === \"localhost\" && url.port === \"8080\") "
+                  b"browserApiRequests.push(request.url());\n",
+                  f"ADR-045 {context} request-observer delta changed",
+              )
+              source = replace_once(
+                  source, locale_call, historical_locale_call,
+                  f"ADR-045 {context} locale delta changed",
+              )
+              path.write_bytes(source)
+
+          runtime_assertions = normalized_bytes(runtime_assertions_path)
+          runtime_assertions = replace_once(
+              runtime_assertions,
+              b"import { expect, type BrowserContext, type Locator, type Page } "
+              b"from \"@playwright/test\";\n",
+              b"import { expect, type Locator, type Page } from \"@playwright/test\";\n",
+              "ADR-045 runtime assertion import delta changed",
+          )
+          locale_function_start = b"\nexport async function activateEnglishLocale(\n"
+          require(
+              runtime_assertions.count(locale_function_start) == 1
+              and runtime_assertions.endswith(b"}\n"),
+              "ADR-045 runtime locale helper delta changed",
+          )
+          runtime_assertions = runtime_assertions[
+              :runtime_assertions.index(locale_function_start)
+          ]
+          runtime_assertions_path.write_bytes(runtime_assertions)
+
+          i18n = normalized_bytes(i18n_path)
+          i18n_replacements = (
+              (
+                  b"    await expect(page.locator(\"html\")).toHaveAttribute("
+                  b"\"lang\", \"en\", { timeout: 15_000 });\n",
+                  b"    await expect(page.locator(\"html\")).toHaveAttribute("
+                  b"\"lang\", \"en\");\n",
+              ),
+              (
+                  b"    if (new URL(page.url()).protocol === \"https:\") {\n"
+                  b"      expect(preference?.secure).toBe(true);\n"
+                  b"    }\n",
+                  b"",
+              ),
+              (
+                  b"      ignoreHTTPSErrors: testInfo.project.use.ignoreHTTPSErrors,\n",
+                  b"",
+              ),
+              (
+                  b"    const expectedNotFoundConsoleError =\n"
+                  b"      /^console error: Failed to load resource: the server responded "
+                  b"with a status of 404(?: \\(Not Found\\)| \\(\\))?$/;\n",
+                  b"    const expectedNotFoundConsoleError =\n"
+                  b"      \"console error: Failed to load resource: the server responded "
+                  b"with a status of 404 (Not Found)\";\n",
+              ),
+              (
+                  b"    expect(runtimeErrors.every((error) => "
+                  b"expectedNotFoundConsoleError.test(error)), runtimeErrors.join(\"\\n\"))\n"
+                  b"      .toBe(true);\n",
+                  b"    expect(runtimeErrors.every((error) => error === "
+                  b"expectedNotFoundConsoleError)).toBe(true);\n",
+              ),
+          )
+          for current, historical in i18n_replacements:
+              i18n = replace_once(
+                  i18n, current, historical,
+                  "ADR-046 i18n browser-rehearsal delta changed",
+              )
+          i18n_path.write_bytes(i18n)
+
+          sp500_history = normalized_bytes(sp500_history_path)
+          sp500_history = replace_once(
+              sp500_history,
+              b"    }), { timeout: 15_000 }).toBe(true);\n",
+              b"    })).toBe(true);\n",
+              "ADR-046 S&P 500 history timeout delta changed",
+          )
+          sp500_history_path.write_bytes(sp500_history)
+
+          playwright_config = normalized_bytes(playwright_config_path)
+          playwright_header = (
+              b"const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "
+              b"\"http://localhost:3000\";\n"
+              b"const externallyManagedWebServer = "
+              b"process.env.PLAYWRIGHT_EXTERNAL_SERVER === \"true\";\n"
+              b"const localProductionHttp = process.env.PLAYWRIGHT_LOCAL_PRODUCTION_HTTP;\n"
+              b"const localProductionHttps = process.env.PLAYWRIGHT_LOCAL_PRODUCTION_HTTPS;\n"
+              b"const rehearsalNoRetries = process.env.PLAYWRIGHT_REHEARSAL_NO_RETRIES;\n\n"
+              b"if (localProductionHttp !== undefined && localProductionHttp !== \"true\") {\n"
+              b"  throw new Error(\"PLAYWRIGHT_LOCAL_PRODUCTION_HTTP must be exactly true when configured.\");\n"
+              b"}\n"
+              b"if (localProductionHttps !== undefined && localProductionHttps !== \"true\") {\n"
+              b"  throw new Error(\"PLAYWRIGHT_LOCAL_PRODUCTION_HTTPS must be exactly true when configured.\");\n"
+              b"}\n"
+              b"if (rehearsalNoRetries !== undefined && rehearsalNoRetries !== \"true\") {\n"
+              b"  throw new Error(\"PLAYWRIGHT_REHEARSAL_NO_RETRIES must be exactly true when configured.\");\n"
+              b"}\n"
+          )
+          historical_playwright_header = (
+              b"const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "
+              b"\"http://localhost:3000\";\n"
+          )
+          playwright_config = replace_once(
+              playwright_config, playwright_header, historical_playwright_header,
+              "ADR-045/ADR-046 Playwright header delta changed",
+          )
+          playwright_config = replace_once(
+              playwright_config,
+              b"  retries: rehearsalNoRetries === \"true\" ? 0 : "
+              b"process.env.CI ? 2 : 0,\n",
+              b"  retries: process.env.CI ? 2 : 0,\n",
+              "ADR-046 Playwright retry delta changed",
+          )
+          playwright_config = replace_once(
+              playwright_config,
+              b"    ...(localProductionHttps === \"true\" ? "
+              b"{ ignoreHTTPSErrors: true } : {}),\n"
+              b"    ...(localProductionHttp === \"true\"\n"
+              b"      ? { launchOptions: { args: [\"--no-proxy-server\"] } }\n"
+              b"      : {}),\n",
+              b"",
+              "ADR-045/ADR-046 Playwright launch-option delta changed",
+          )
+          playwright_config = replace_once(
+              playwright_config,
+              b"  webServer: externallyManagedWebServer\n"
+              b"    ? undefined\n"
+              b"    : {\n"
+              b"        command: \"pnpm dev\",\n"
+              b"        url: baseURL,\n"
+              b"        reuseExistingServer: !process.env.CI,\n"
+              b"        timeout: 120_000,\n"
+              b"      },\n",
+              b"  webServer: {\n"
+              b"    command: \"pnpm dev\",\n"
+              b"    url: baseURL,\n"
+              b"    reuseExistingServer: !process.env.CI,\n"
+              b"    timeout: 120_000,\n"
+              b"  },\n",
+              "ADR-045 Playwright server delta changed",
+          )
+          playwright_config_path.write_bytes(playwright_config)
+
+          tsconfig = normalized_bytes(tsconfig_path)
+          tsconfig = replace_once(
+              tsconfig,
+              b'  "exclude": ["node_modules", ".wsr-local-full-stack-*"]\n',
+              b'  "exclude": ["node_modules"]\n',
+              "ADR-045 TypeScript exclusion delta changed",
+          )
+          tsconfig_path.write_bytes(tsconfig)
+
+          historical_hashes = {
+              pom_path:
+                  "450d0c7202acf8cd69ad8f9e6ad551904d6f16c5238a053ea7bb7122e5799484",
+              call_list_path:
+                  "ce8b2978d260fcc5caf3db877d232cd5b6bcd57eb2dd2c8c04287d49c37552d9",
+              call_outcomes_path:
+                  "4fe15ad5e9bf6934e817e68a28c92d3d7916721370cc46040a68aa8aded44a3b",
+              call_revisions_path:
+                  "cbfcb9c0c0be47013a40b1b6b5826665375500f41bb077ccf564a8518e0e4c8f",
+              runtime_assertions_path:
+                  "c56b4508f059b948f9371ae031af3e095d33f09b6467d14d78ce15ee3d7a7fa1",
+              i18n_path:
+                  "84bc474f54a552672f0fc8ff0c5bfe381b640e2ba9f742eee763039749644a52",
+              sp500_history_path:
+                  "a5ce688a3d62f48357bc454df82e01be1e8c722f061392e5be2e894b5843fd54",
+              playwright_config_path:
+                  "069512404a29749db1e168c8aca3adc2b98b28453c9dd9882d6c838338725c1d",
+              tsconfig_path:
+                  "a1b145f809038d72826168f4a31f0ee8c48fe5ad451c8b75751499ee6a543da0",
+          }
+          for path, expected_hash in historical_hashes.items():
+              require(
+                  digest(normalized_bytes(path)) == expected_hash,
+                  f"Pre-ADR-045 historical reverse projection changed: {path}",
+              )
+          print(
+              "Projected exact pre-ADR-045 POM and eight web test/config surfaces"
           )
           PYTHON
 
@@ -32496,6 +33601,70 @@ jobs:
           )
           PYTHON
 
+      - name: Restore exact post-ADR-045 repository view
+        if: always()
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import os
+          import shutil
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def normalized_digest(path):
+              content = path.read_bytes().replace(b"\r\n", b"\n")
+              return hashlib.sha256(content).hexdigest()
+
+          projection_root = (
+              Path(os.environ["RUNNER_TEMP"]) / "wsr-adr045-current-view"
+          )
+          prepared = projection_root / ".prepared"
+          if not prepared.is_file():
+              print("Pre-ADR-045 historical projection did not mutate the repository")
+              raise SystemExit(0)
+          manifest_path = projection_root / "manifest.json"
+          require(
+              manifest_path.is_file(),
+              "Post-ADR-045 current-byte custody manifest is missing",
+          )
+          raw_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          require(
+              isinstance(raw_manifest, dict) and len(raw_manifest) == 9,
+              "Post-ADR-045 current-byte custody manifest changed",
+          )
+          current_hashes = {
+              Path(path): expected_hash
+              for path, expected_hash in raw_manifest.items()
+          }
+          for path, expected_hash in current_hashes.items():
+              custody_path = projection_root / path
+              require(
+                  custody_path.is_file()
+                  and normalized_digest(custody_path) == expected_hash,
+                  f"Post-ADR-045 current-byte custody changed: {path}",
+              )
+          for path in current_hashes:
+              custody_path = projection_root / path
+              path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(custody_path, path)
+          for path, expected_hash in current_hashes.items():
+              require(
+                  path.is_file() and normalized_digest(path) == expected_hash,
+                  f"Post-ADR-045 current bytes were not restored exactly: {path}",
+              )
+          prepared.unlink()
+          (projection_root / ".restored").write_text(
+              "Exact post-ADR-045 bytes restored before ADR-043+ guards\n",
+              encoding="utf-8",
+          )
+          print("Restored and verified all nine exact post-ADR-045 file surfaces")
+          PYTHON
+
       - name: Guard default-disabled local single-operator SEC attempt API
         shell: bash
         run: |
@@ -33491,6 +34660,7 @@ jobs:
         shell: bash
         run: |
           python <<'PYTHON'
+          import hashlib
           import json
           import re
           import xml.etree.ElementTree as ET
@@ -34407,6 +35577,66 @@ jobs:
 
           playwright_config = playwright_config_path.read_text(encoding="utf-8")
           runtime_assertions = runtime_assertions_path.read_text(encoding="utf-8")
+          require(
+              hashlib.sha256(playwright_config.encode("utf-8")).hexdigest()
+                  == "592b7414e438fef6b0a74687fb842590aea43e52b4eed9c5b581312bc334dc15"
+              and hashlib.sha256(runtime_assertions.encode("utf-8")).hexdigest()
+                  == "f0afcf6aaedb03eae69e1a5ef0c7453c723c297a73f7532ccc989d9ba750cda8",
+              "Post-ADR-045 browser current-byte custody changed",
+          )
+          adr046_config_declarations = (
+              'const localProductionHttps = process.env.PLAYWRIGHT_LOCAL_PRODUCTION_HTTPS;\n'
+              'const rehearsalNoRetries = process.env.PLAYWRIGHT_REHEARSAL_NO_RETRIES;\n'
+          )
+          adr046_config_validation = (
+              'if (localProductionHttps !== undefined && localProductionHttps !== "true") {\n'
+              '  throw new Error("PLAYWRIGHT_LOCAL_PRODUCTION_HTTPS must be exactly true when configured.");\n'
+              '}\n'
+              'if (rehearsalNoRetries !== undefined && rehearsalNoRetries !== "true") {\n'
+              '  throw new Error("PLAYWRIGHT_REHEARSAL_NO_RETRIES must be exactly true when configured.");\n'
+              '}\n'
+          )
+          adr046_current_retries = (
+              '  retries: rehearsalNoRetries === "true" ? 0 : process.env.CI ? 2 : 0,\n'
+          )
+          adr045_retries = '  retries: process.env.CI ? 2 : 0,\n'
+          adr046_ignore_https_errors = (
+              '    ...(localProductionHttps === "true" ? { ignoreHTTPSErrors: true } : {}),\n'
+          )
+          require(
+              playwright_config.count(adr046_config_declarations) == 1
+              and playwright_config.count(adr046_config_validation) == 1
+              and playwright_config.count(adr046_current_retries) == 1
+              and playwright_config.count(adr045_retries) == 0
+              and playwright_config.count(adr046_ignore_https_errors) == 1,
+              "ADR-046 Playwright delta changed before historical projection",
+          )
+          playwright_config = (
+              playwright_config.replace(adr046_config_declarations, "", 1)
+              .replace(adr046_config_validation, "", 1)
+              .replace(adr046_current_retries, adr045_retries, 1)
+              .replace(adr046_ignore_https_errors, "", 1)
+          )
+          adr046_runtime_wait = (
+              '    // Production Server Actions can traverse a TLS reverse proxy before the\n'
+              '    // refreshed RSC payload commits. Keep this helper attached to the actual\n'
+              '    // action result instead of making each evidence test race that commit.\n'
+              '    await expect(page.locator("html")).toHaveAttribute("lang", "en", { timeout: 15_000 });\n'
+          )
+          require(
+              runtime_assertions.count(adr046_runtime_wait) == 1,
+              "ADR-046 runtime assertion delta changed before historical projection",
+          )
+          runtime_assertions = runtime_assertions.replace(
+              adr046_runtime_wait, "", 1
+          )
+          require(
+              hashlib.sha256(playwright_config.encode("utf-8")).hexdigest()
+                  == "f0691367c9d75e2dec63e96e8de580269529ad05b7bf291a4e6c11b78d9a63ad"
+              and hashlib.sha256(runtime_assertions.encode("utf-8")).hexdigest()
+                  == "3f4c93d5aad17e6b8b28cb633c8f1300551701d879d78f5d82065b359175b764",
+              "ADR-046 virtual reverse projection changed from exact ADR-045 bytes",
+          )
           specs = {path: path.read_text(encoding="utf-8") for path in spec_paths}
           require(
               'process.env.PLAYWRIGHT_EXTERNAL_SERVER === "true"'
@@ -34469,6 +35699,34 @@ jobs:
               workflow_behavior = remove_workflow_step(
                   workflow_behavior, step_name
               )
+          post_adr045_start = (
+              "\n      - name: Validate Ubuntu home-server deployment contract\n"
+          )
+          post_adr045_end = "\n      - name: Install JSON Schema validator\n"
+          require(
+              workflow_behavior.count(post_adr045_start) == 1
+              and workflow_behavior.count(post_adr045_end) == 1,
+              "Post-ADR-045 workflow projection markers changed",
+          )
+          post_adr045_start_index = workflow_behavior.index(post_adr045_start)
+          post_adr045_end_index = workflow_behavior.index(
+              post_adr045_end, post_adr045_start_index
+          )
+          post_adr045_workflow_steps = workflow_behavior[
+              post_adr045_start_index:post_adr045_end_index
+          ]
+          require(
+              post_adr045_workflow_steps.count("\n      - name: ") == 12
+              and hashlib.sha256(
+                  post_adr045_workflow_steps.encode("utf-8")
+              ).hexdigest()
+                  == "3b04ae774b4bd345e12f1834d1e60ac9466a957606a6f076ba586a11a07248dc",
+              "ADR-046 through ADR-051 workflow step/list delta changed",
+          )
+          workflow_behavior = (
+              workflow_behavior[:post_adr045_start_index]
+              + workflow_behavior[post_adr045_end_index:]
+          )
           integration_command = (
               "pnpm --dir apps/web exec playwright test call-revisions.spec.ts "
               "call-outcomes.spec.ts call-list-api.spec.ts --project=chromium-1280"
@@ -38990,6 +40248,134 @@ jobs:
           )
           PYTHON
 
+      - name: Restore exact ADR-048 release inventory view
+        if: always()
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import os
+          import shutil
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def normalized_digest(path):
+              content = path.read_bytes().replace(b"\r\n", b"\n")
+              return hashlib.sha256(content).hexdigest()
+
+          projection_root = (
+              Path(os.environ["RUNNER_TEMP"]) / "wsr-adr048-current-view"
+          )
+          prepared = projection_root / ".prepared"
+          if not prepared.is_file():
+              print("ADR-048 historical projection did not mutate the repository")
+              raise SystemExit(0)
+          manifest_path = projection_root / "manifest.json"
+          require(
+              manifest_path.is_file(),
+              "ADR-048 current-byte custody manifest is missing",
+          )
+          raw_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          require(
+              isinstance(raw_manifest, dict) and len(raw_manifest) == 4,
+              "ADR-048 current-byte custody manifest changed",
+          )
+          current_hashes = {
+              Path(path): expected_hash
+              for path, expected_hash in raw_manifest.items()
+          }
+          for path, expected_hash in current_hashes.items():
+              custody_path = projection_root / path
+              require(
+                  custody_path.is_file()
+                  and normalized_digest(custody_path) == expected_hash,
+                  f"ADR-048 current-byte custody changed: {path}",
+              )
+          for path in current_hashes:
+              custody_path = projection_root / path
+              path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(custody_path, path)
+          for path, expected_hash in current_hashes.items():
+              require(
+                  path.is_file() and normalized_digest(path) == expected_hash,
+                  f"ADR-048 current bytes were not restored exactly: {path}",
+              )
+          prepared.unlink()
+          (projection_root / ".restored").write_text(
+              "ADR-048 exact current bytes restored after historical guards\n",
+              encoding="utf-8",
+          )
+          print("Restored and verified all four exact ADR-048 current file surfaces")
+          PYTHON
+
+      - name: Restore exact ADR-052 repository view
+        if: always()
+        shell: bash
+        run: |
+          python <<'PYTHON'
+          import hashlib
+          import json
+          import os
+          import shutil
+          from pathlib import Path
+
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+
+          def normalized_digest(path):
+              content = path.read_bytes().replace(b"\r\n", b"\n")
+              return hashlib.sha256(content).hexdigest()
+
+          projection_root = (
+              Path(os.environ["RUNNER_TEMP"]) / "wsr-adr052-current-view"
+          )
+          prepared = projection_root / ".prepared"
+          if not prepared.is_file():
+              print("ADR-052 historical projection did not mutate the repository")
+              raise SystemExit(0)
+          manifest_path = projection_root / "manifest.json"
+          require(
+              manifest_path.is_file(),
+              "ADR-052 current-byte custody manifest is missing",
+          )
+          raw_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          require(
+              isinstance(raw_manifest, dict) and len(raw_manifest) == 13,
+              "ADR-052 current-byte custody manifest changed",
+          )
+          current_hashes = {
+              Path(path): expected_hash
+              for path, expected_hash in raw_manifest.items()
+          }
+          for path, expected_hash in current_hashes.items():
+              custody_path = projection_root / path
+              require(
+                  custody_path.is_file()
+                  and normalized_digest(custody_path) == expected_hash,
+                  f"ADR-052 current-byte custody changed: {path}",
+              )
+          for path in current_hashes:
+              custody_path = projection_root / path
+              path.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(custody_path, path)
+          for path, expected_hash in current_hashes.items():
+              require(
+                  path.is_file() and normalized_digest(path) == expected_hash,
+                  f"ADR-052 current bytes were not restored exactly: {path}",
+              )
+          prepared.unlink()
+          (projection_root / ".restored").write_text(
+              "ADR-052 exact current bytes restored after historical guards\n",
+              encoding="utf-8",
+          )
+          print("Restored and verified all 13 exact ADR-052 current file surfaces")
+          PYTHON
+
       - name: Validate analyst-call revision lineage
         shell: bash
         run: |
@@ -39715,6 +41101,13 @@ jobs:
         run: >-
           ./mvnw -B -ntp
           -Dtest=OperatorApiPropertiesTest,OperatorApiDisabledSecurityTest,OperatorApiSecurityTest,OperatorApiLoopbackBindingTest,OperatorSecCollectionAttemptApiConfigurationTest,SecFilingHistoryCollectionAttemptQueryServiceTest,OperatorSecCollectionAttemptApiTest,OperatorSecCollectionAttemptIntegrationTest
+          test
+
+      - name: Run exact SEC manifest audit API focused tests
+        working-directory: apps/api
+        run: >-
+          ./mvnw -B -ntp
+          -Dtest=SecFilingHistoryManifestAuditQueryServiceTest,SecFilingHistoryManifestAuditApiTest,FilingHistoryCollectionManifestPostgreSqlTest
           test
 
       - name: Guard benchmark-assignment golden runtime cardinality

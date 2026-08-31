@@ -1,6 +1,7 @@
 package com.wallstreetreceipts.api.migration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.net.URI;
@@ -23,6 +24,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import com.wallstreetreceipts.api.application.filinghistory.SecFilingHistoryManifestAuditNotFoundException;
+import com.wallstreetreceipts.api.application.filinghistory.SecFilingHistoryManifestAuditQueryService;
 import com.wallstreetreceipts.api.application.port.out.FilingCatalogCaptureAppendResult;
 import com.wallstreetreceipts.api.application.port.out.FilingHistoryCollectionManifestAppendOutcome;
 import com.wallstreetreceipts.api.application.port.out.FilingHistoryCollectionManifestAppendOutcome.Status;
@@ -86,6 +89,42 @@ class FilingHistoryCollectionManifestPostgreSqlTest {
                 new MapSqlParameterSource("schema", schema),
                 Long.class);
         assertThat(collectionTableCount).isEqualTo(4);
+    }
+
+    @Test
+    void exactAuditQueryUsesTheInclusivePostgreSqlMicrosecondVisibilityBoundary() {
+        TestContext context = migratedContext("history_collection_audit_pit_read");
+        FilingCatalogCapture root = persistRoot(context);
+        HistoricalFilingSegmentCapture selected = persistSegment(
+                context,
+                root,
+                0,
+                FIRST_SEGMENT_CAPTURED_AT,
+                List.of(record(
+                        "0000320193-20-000099",
+                        LocalDate.parse("2020-12-31"))));
+        FilingHistoryCollectionManifest manifest = FilingHistoryCollectionManifest.assemble(
+                root, List.of(selected), FIRST_ASSEMBLED_AT);
+        FilingHistoryCollectionManifestAppendOutcome append = context.transactions()
+                .execute(status -> context.manifestRepository().append(manifest));
+        assertThat(append).isNotNull();
+        assertThat(append.status()).isEqualTo(Status.INSERTED);
+
+        SecFilingHistoryManifestAuditQueryService queryService =
+                new SecFilingHistoryManifestAuditQueryService(
+                        context.manifestRepository());
+
+        assertThatThrownBy(() -> queryService.summary(
+                manifest.manifestId(),
+                FIRST_ASSEMBLED_AT.minusNanos(1_000).toString()))
+                .isInstanceOf(SecFilingHistoryManifestAuditNotFoundException.class);
+        assertThat(queryService.summary(
+                manifest.manifestId(), FIRST_ASSEMBLED_AT.toString()).manifest())
+                .isEqualTo(manifest);
+        assertThat(queryService.summary(
+                manifest.manifestId(), FIRST_ASSEMBLED_AT.plusNanos(1_000).toString())
+                .manifest())
+                .isEqualTo(manifest);
     }
 
     @Test

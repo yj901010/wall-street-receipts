@@ -631,6 +631,9 @@ ledger and exact-evidence execution boundary.
 ADR-043 establishes a default-disabled, local-only single-operator HTTP
 boundary for offline execution and immutable attempt inspection.
 
+ADR-052 establishes an anonymous, read-only audit API for one exact immutable
+manifest at an explicit point-in-time cutoff.
+
 ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
 submissions metadata. It is disabled by default and remains server-only. When
 `SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
@@ -641,9 +644,11 @@ and missing timestamps fail closed without fixture or empty-result fallback.
 
 The adapter maps filing metadata into a provider-neutral filing catalog.
 ADR-039 through ADR-042 add internal one-shot PostgreSQL persistence, assembly,
-and attempt-execution services. ADR-043 adds only a separately disabled local
-operator transport; there is still no scheduler, startup collector,
-command-line trigger, public HTTP product endpoint, or web publication.
+and attempt-execution services. ADR-043 adds a separately disabled local
+operator transport. ADR-052 adds only exact-ID, point-in-time public audit reads
+over already-persisted manifests; there is still no scheduler, startup
+collector, command-line trigger, current/latest company-filings selector, or
+web publication.
 `BLS_REGISTRATION_KEY`, `BEA_USER_ID`, and `EIA_API_KEY` may be
 present in the local secret file but are deliberately not consumed until their
 own P5 source, revision, canonical-model, and publication decisions are
@@ -818,9 +823,43 @@ backdates the non-atomic collection to a single SEC `asOf`.
 ADR-041 needs no new key, account, paid plan, OAuth, EDGAR token, plugin, secret,
 or environment variable, and its zero-network assembly does not consult
 `SEC_CONTACT_EMAIL`. Existing PostgreSQL configuration is sufficient. There is
-still no scheduler, fetch-all coordinator, retry owner, controller, public read
-API, browser consumer, or UI. Operator-controlled capture coordination and
-conflict-aware, attributed Korean publication remain later gates.
+still no scheduler, fetch-all coordinator, retry owner, browser consumer, or UI.
+ADR-052 subsequently adds the narrow public read contract described below;
+operator-controlled capture coordination and conflict-aware, attributed Korean
+publication remain separate gates.
+
+ADR-052 exposes exactly four anonymous GET resources for an already-persisted
+manifest:
+
+```text
+GET /v1/sec/filing-history/manifests/{manifestId}?evaluationAsOf=...
+GET /v1/sec/filing-history/manifests/{manifestId}/descriptors?evaluationAsOf=...
+GET /v1/sec/filing-history/manifests/{manifestId}/accessions?evaluationAsOf=...
+GET /v1/sec/filing-history/manifests/{manifestId}/occurrences?evaluationAsOf=...
+```
+
+`manifestId` must be exact lowercase SHA-256 hex and `evaluationAsOf` is a
+required UTC `Z` instant with at most microsecond precision. There is no list,
+CIK, ticker, latest, or current selector and no fallback to another manifest or
+provider. Child resources use fixed ordinal order and bounded `page`/`size`
+(default `0`/`25`, maximum size `100`). The repository reconstructs and verifies
+the complete manifest before slicing the HTTP response, so the response is
+bounded but replay cost is not yet a constant-time page read.
+
+The response preserves descriptor selection, every source occurrence, and
+exact agreement/conflict classification without choosing a winning filing. It
+explicitly states that coverage is root-relative selected-reference coverage,
+not an atomic, current, corrected, legally authoritative, or complete SEC
+history. Missing exact evidence and evidence assembled after the cutoff share
+one sanitized 404. Integrity failures are sanitized 500 responses, never empty
+or partial fallback results. GET/HEAD success and handled 400/404/405/500
+responses are `Cache-Control: no-store` and carry `X-Request-Id`.
+
+This audit read makes no network request and needs no API key, SEC account,
+domain, server access, operator token, or `SEC_CONTACT_EMAIL`. Tests keep the
+SEC provider disabled. Production Caddy still routes public traffic only to
+Next, so ADR-052 is a backend contract for a later same-origin Korean UI rather
+than a claim that the Spring origin is already Internet-reachable.
 
 The ADR-042 service itself remains an internal application boundary with no
 CLI, scheduler, startup hook, public route, or browser surface. `CAPTURE_ROOT`

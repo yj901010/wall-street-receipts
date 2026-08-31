@@ -22,6 +22,8 @@ public final class ApiRequestRejectedHandler implements RequestRejectedHandler {
 
     private static final URI SAFE_INSTANCE = URI.create("/invalid-request");
     private static final String OPERATOR_API_PREFIX = "/internal/v1/sec/";
+    private static final String MANIFEST_AUDIT_API_PREFIX =
+            "/v1/sec/filing-history/manifests/";
 
     private final Clock clock;
     private final ObjectMapper objectMapper;
@@ -52,15 +54,17 @@ public final class ApiRequestRejectedHandler implements RequestRejectedHandler {
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         response.setCharacterEncoding(java.nio.charset.StandardCharsets.UTF_8.name());
         response.setHeader(RequestIdFilter.HEADER, requestId);
-        if (isOperatorApiRequest(request)) {
+        if (requiresNoStore(request)) {
             response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
         }
         objectMapper.writeValue(response.getOutputStream(), problem);
     }
 
-    private static boolean isOperatorApiRequest(HttpServletRequest request) {
+    private static boolean requiresNoStore(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
-        return requestUri != null && requestUri.startsWith(OPERATOR_API_PREFIX);
+        return requestUri != null
+                && (requestUri.startsWith(OPERATOR_API_PREFIX)
+                || requestUri.startsWith(MANIFEST_AUDIT_API_PREFIX));
     }
 
     private static String requestId(HttpServletRequest request) {

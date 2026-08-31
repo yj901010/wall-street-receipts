@@ -6498,3 +6498,135 @@ shell output. It does not provision, deploy, or mutate the target server.
   direct block-device allowlist. Decide the actual storage layout first or add
   a separate reviewed LVM support decision; never weaken the existing recovery
   preflight merely to make an unknown server pass.
+
+## 2026-08-27 — ADR-052 exact SEC filing-history manifest audit API
+
+ADR-052 adds a bounded public read contract over one exact, already-persisted
+SEC filing-history collection manifest. It exposes immutable evidence without
+selecting a latest manifest, inventing company history, contacting SEC, or
+changing the future home-server deployment topology.
+
+### Scope and decisions
+
+- Require one exact 64-character lowercase SHA-256 `manifestId` and an explicit
+  `evaluationAsOf` on every evidence GET/HEAD request. The cutoff accepts only
+  a strict UTC `Z` timestamp with at most microsecond precision; normalized
+  offsets, invalid clock fields, excess precision, missing, blank, duplicate,
+  and unknown query
+  parameters fail closed as a sanitized 400.
+- Resolve only through
+  `findByManifestIdAtOrBefore(manifestId, evaluationAsOf)`. There is no
+  unrestricted lookup, latest/current selector, CIK search, alternate root or
+  manifest, provider request, or fallback. An absent identifier and a manifest
+  assembled after the cutoff return the same sanitized 404 contract.
+- Reconstruct and verify the complete manifest, root capture, selected segment
+  captures, descriptor members, accession groups, occurrences, counts, hashes,
+  and ordinals before applying HTTP pagination. Repository or integrity failure
+  is a sanitized no-store 500, never a 400, empty page, partial response, or
+  fallback result.
+- Keep child responses bounded with `page=0`, `size=25`, a maximum size of 100,
+  canonical unsigned-decimal pagination, and no caller-selected sort. Fixed
+  order is `descriptorOrdinal ASC`, `groupOrdinal ASC`, and
+  `occurrenceOrdinal ASC`; a page beyond the end returns an empty item list with
+  truthful totals.
+- Publish audit schema `1.0.0`, policy
+  `SEC_EXACT_MANIFEST_AUDIT_V1`, exact selection and reconciliation evidence,
+  explicit nullable fields, and the closed disclosure values
+  `ROOT_RELATIVE_SELECTED_REFERENCES_ONLY`, `NOT_MADE`, `NOT_RESOLVED`, and
+  `NOT_CLAIMED`. No winner, currentness, completeness, correction/removal,
+  amendment linkage, legal authority, ticker, issuer name, invented data mode,
+  raw body, headers, contact identity, credential, or operator state is exposed.
+- Permit anonymous GET with Spring's implicit HEAD behavior. Success and handled
+  audit problems, including MVC 400/404/405/500 and firewall-rejected requests,
+  preserve `X-Request-Id` and `Cache-Control: no-store`. The private operator
+  bearer-token boundary under `/internal/v1/sec/**` remains separate.
+- Accept the existing whole-manifest replay cost for this first audit slice.
+  The 100-item limit bounds response size, not database reconstruction work;
+  cache, concurrency, and rate controls remain separate future decisions.
+
+### Routes and module structure
+
+- Add exactly four read operations:
+  `GET /v1/sec/filing-history/manifests/{manifestId}`,
+  `GET /v1/sec/filing-history/manifests/{manifestId}/descriptors`,
+  `GET /v1/sec/filing-history/manifests/{manifestId}/accessions`, and
+  `GET /v1/sec/filing-history/manifests/{manifestId}/occurrences`. There is no
+  collection, latest/current, CIK, or write route.
+- `SecFilingHistoryManifestAuditQueryService` owns strict input validation,
+  exact point-in-time repository selection, post-lookup identity/cutoff checks,
+  and deterministic paging. Dedicated invalid-query and not-found exceptions
+  prevent repository corruption from being misclassified as caller input.
+- `SecFilingHistoryManifestAuditController` owns the closed query grammar.
+  `SecFilingHistoryManifestAuditResponses` owns the exact summary, disclosure,
+  descriptor, accession, occurrence, and page shapes. Scoped audit exception
+  advice and the method-not-allowed handler own sanitized no-store problems;
+  the shared request-firewall handler recognizes the audit namespace.
+- `FilingHistoryCollectionConfiguration` wires the query service to the existing
+  fully reconstructing repository. No Flyway migration, database table,
+  canonical fixture, provider DTO, outbound client, Caddy route, Compose
+  resource, port, or web UI changed.
+- `contracts/openapi.yaml` owns the four operations and closed schemas at API
+  version 0.5.0. CI preserves the original five analyst-call operations as a
+  historical projection while guarding the exact current nine-operation
+  surface and rejecting SEC list/latest/write expansion.
+
+### Verification
+
+- Full API Maven verify: **PASS — 2,403 tests, 0 failures, 0 errors, 15
+  skipped**. The skipped set is the existing Docker-gated Testcontainers set;
+  the packaged Spring Boot JAR was built successfully.
+- Focused application, HTTP, and security regression set: **PASS — 55/55**.
+  This covers strict manifest/time/page grammar, exact inclusive cutoff
+  semantics, absent/future-identical 404 behavior, full replay before paging,
+  fixed orders and page bounds, partial descriptor selection, exact agreement
+  and conflict preservation, explicit nulls, closed field sets, anonymous
+  access, GET-only mappings, implicit HEAD 200/400/404 status and headers,
+  mutation 405s, firewall rejection, request-ID propagation, no-store, provider
+  absence, and sanitized corruption failure.
+- Current CI contract validation: **PASS** — workflow YAML parsed as four
+  jobs with 75 repository-contract steps and 21 API steps; the exact
+  ADR-052 OpenAPI guard resolved all 175 references and retained the closed
+  nine-path API surface.
+- Local sequential replay of the workflow's embedded historical guards:
+  **PASS — 44/44**. The replay used nested exact-byte projections for
+  pre-ADR-052, pre-ADR-048, and pre-ADR-045 views, restored the nine-, four-,
+  and thirteen-file custody sets in LIFO order, and verified every restored
+  hash. This is local workflow-contract evidence, not a claim that a hosted
+  GitHub Actions run occurred.
+- Final rerun of the exact CI SEC audit test selection: **PASS — 50 tests,
+  0 failures, 0 errors, 5 skipped** (45 executed successfully). The five
+  skips are the same Docker-unavailable PostgreSQL Testcontainers class.
+- `FilingHistoryCollectionManifestPostgreSqlTest`: **5 tests skipped because
+  Docker was unavailable**, including the PostgreSQL microsecond cutoff
+  regression. The deterministic H2-backed HTTP path passed; this skip is not a
+  claim that the PostgreSQL Testcontainers boundary ran.
+- Tests ran with SEC provider beans disabled and made no SEC or other external
+  network request. No API key, SEC account, paid provider plan, domain, server
+  login, home-server fact, `SEC_CONTACT_EMAIL`, operator token, or new secret
+  was required.
+- The caller-owned `apps/web/next-env.d.ts` remained outside this work and
+  retained SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+
+### Next work and required operator inputs
+
+- Build the Korean same-origin evidence UI against these four exact-ID routes.
+  Keep Spring private behind the existing Next/Caddy boundary, show the exact
+  manifest and evaluation cutoff, preserve disclosure/conflict/partial-selection
+  states, and add accessible loading, empty, error, mobile, and pagination
+  behavior without introducing a latest or complete-history claim.
+- Before a useful public company-filings view, separately decide how a user
+  selects a known manifest, how ticker/CIK identity is sourced point in time,
+  and how freshness, source attribution, currentness, amendments, corrections,
+  removals, caching, concurrency, and anonymous rate limits are represented.
+  Those facts cannot be inferred from ADR-052.
+- Before live SEC collection, ask for the monitored SEC contact email through
+  an untracked server secret and confirm the provider enablement, retention,
+  request-budget, and operating policy. Do not request the secret value in chat.
+  Any later market-data provider may additionally require the operator's chosen
+  account and API key; ADR-052 itself requires neither.
+- Before Internet publication, obtain the actual Ubuntu server-fact report and
+  operator choices for hardware/capacity, backup disk, downtime/RPO, Docker
+  startup, domain/DNS, router exposure, ports 80/443, TLS/ACME contact, and
+  same-origin reverse proxy. This development computer is not the deployment
+  host, so no live-server readiness or reachability is claimed here.
