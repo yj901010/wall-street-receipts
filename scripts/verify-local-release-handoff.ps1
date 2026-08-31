@@ -905,14 +905,24 @@ try {
         -WorkingDirectory $temporaryRoot `
         -Arguments @("init", "--bare", $remoteRepository) `
         -FailureMessage "Could not initialize the owned simulated bare remote" | Out-Null
+    $initialRemoteRefs = Get-OutputLines (
+        Invoke-Git `
+            -WorkingDirectory $temporaryRoot `
+            -Arguments @(
+                "--git-dir=$remoteRepository", "for-each-ref",
+                "--format=%(refname)"
+            )
+    ).Stdout
+    Assert-Condition ($initialRemoteRefs.Count -eq 0) `
+        "The newly initialized simulated remote unexpectedly contains refs."
     Invoke-Git `
         -WorkingDirectory $temporaryRoot `
         -Arguments @(
             "--git-dir=$remoteRepository", "fetch",
             "--no-tags", "--no-write-fetch-head", "--no-recurse-submodules",
             $repositoryRoot,
-            "+refs/remotes/origin/main:refs/heads/main",
-            "+refs/remotes/origin/develop:refs/heads/develop"
+            "refs/remotes/origin/main:refs/heads/main",
+            "refs/remotes/origin/develop:refs/heads/develop"
         ) `
         -FailureMessage "Could not seed the simulated remote from the approved cached refs" | Out-Null
     Invoke-Git `

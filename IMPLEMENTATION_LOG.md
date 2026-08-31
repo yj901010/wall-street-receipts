@@ -7071,6 +7071,23 @@ configured origin or any network endpoint.
 
 ### Verification status
 
+- The first run from the committed feature checkout failed safely while
+  deleting a Codex-owned auxiliary `refs/codex/turn-diffs/...` ref copied by
+  `clone --mirror`; its length exceeded the Windows lock-path boundary inside
+  the disposable bare repository. Cleanup and complete source custody still
+  passed. The seed was changed to initialize an empty bare repository and
+  require a zero-ref inventory before fetching only cached `origin/main` and
+  `origin/develop` through two non-forcing explicit refspecs with tags,
+  `FETCH_HEAD`, and submodules disabled. A focused local seed/fetch/strict-
+  `fsck` probe then passed with exactly those two refs.
+- `pwsh -NoProfile -File ./scripts/verify-local-release-handoff.ps1` from the
+  actual committed feature checkout at `54c5884e59d3ab8139ce5865f24d57d19454a5b7`:
+  **PASS**. The exact source tree was
+  `903a11683d6a85422b2f5c5bdb6a068e473023c4`, the feature was seven commits
+  ahead of local `develop`, the run ended with `NOT_RELEASED` and
+  `REMOTE_NOT_CONTACTED`, and the only remaining worktree change was the
+  pre-existing user-owned Next declaration with SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
 - `pwsh -NoProfile -File ./scripts/verify-local-release-handoff.ps1`:
   **PASS** in a disposable clone containing the exact six-file ADR-056
   candidate and the excluded user-owned Next declaration. The run completed
