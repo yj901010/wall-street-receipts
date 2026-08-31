@@ -903,38 +903,18 @@ try {
 
     Invoke-Git `
         -WorkingDirectory $temporaryRoot `
+        -Arguments @("init", "--bare", $remoteRepository) `
+        -FailureMessage "Could not initialize the owned simulated bare remote" | Out-Null
+    Invoke-Git `
+        -WorkingDirectory $temporaryRoot `
         -Arguments @(
-            "clone", "--mirror", "--no-local", "--no-hardlinks",
-            $repositoryRoot, $remoteRepository
+            "--git-dir=$remoteRepository", "fetch",
+            "--no-tags", "--no-write-fetch-head", "--no-recurse-submodules",
+            $repositoryRoot,
+            "+refs/remotes/origin/main:refs/heads/main",
+            "+refs/remotes/origin/develop:refs/heads/develop"
         ) `
-        -FailureMessage "Could not create the owned simulated bare remote" | Out-Null
-    $temporaryRefs = Get-OutputLines (
-        Invoke-Git `
-            -WorkingDirectory $temporaryRoot `
-            -Arguments @(
-                "--git-dir=$remoteRepository", "for-each-ref",
-                "--format=%(refname)"
-            )
-    ).Stdout
-    foreach ($temporaryRef in $temporaryRefs) {
-        Invoke-Git `
-            -WorkingDirectory $temporaryRoot `
-            -Arguments @(
-                "--git-dir=$remoteRepository", "update-ref", "-d", $temporaryRef
-            ) | Out-Null
-    }
-    Invoke-Git `
-        -WorkingDirectory $temporaryRoot `
-        -Arguments @(
-            "--git-dir=$remoteRepository", "update-ref",
-            "refs/heads/main", $cachedOriginMain
-        ) | Out-Null
-    Invoke-Git `
-        -WorkingDirectory $temporaryRoot `
-        -Arguments @(
-            "--git-dir=$remoteRepository", "update-ref",
-            "refs/heads/develop", $cachedOriginDevelop
-        ) | Out-Null
+        -FailureMessage "Could not seed the simulated remote from the approved cached refs" | Out-Null
     Invoke-Git `
         -WorkingDirectory $temporaryRoot `
         -Arguments @(
