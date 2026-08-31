@@ -362,6 +362,82 @@ API-backed success에는 이미 PostgreSQL에 저장된 exact manifest와 assemb
 필요하다. monitored `SEC_CONTACT_EMAIL`은 나중에 별도 승인된 live collection을
 시작할 때만 untracked server secret environment에 둔다.
 
+### Disposable SEC manifest API-mode full-stack acceptance
+
+ADR-055는 ADR-045의 기존 명령을 확장해 위 API-backed success를 외부 SEC 요청 없이
+검증한다.
+
+```powershell
+pwsh -NoProfile -File ./scripts/verify-local-full-stack.ps1
+```
+
+고유 loopback PostgreSQL 17 project가 준비된 뒤
+`SecManifestAuditAcceptanceSeedHarness` 하나를 exact `-Dtest`로 지명하고
+`-Dwsr.sec-manifest-acceptance-seed=true`를 함께 준다. 이 클래스명은 기본 Surefire
+pattern과 일부러 일치하지 않으므로 일반 `test`, `verify`, API package/startup에서는
+실행되지 않는다. raw SQL, migration fixture, startup importer, controller 또는 operator
+route를 쓰지 않고 production
+`FilingCatalogCaptureRepository`,
+`HistoricalFilingSegmentCaptureRepository`,
+`PersistFilingHistoryCollectionManifestService`를 통해 root 1개, segment capture 2개,
+manifest 1개를 적재한다. ADR-053 JSON parity와 같은 Java synthetic fixture를
+공유하고, 적재 뒤에는 production audit query service로 exact summary와 pre-assembly
+not-found를 다시 읽는다.
+
+context 생성 전 guard와 실제 JDBC metadata 확인은 모두 다음 target만 허용한다.
+
+```text
+jdbc:postgresql://127.0.0.1:<1024..65535>/wsr_full_stack_acceptance
+user = wsr_full_stack_acceptance
+```
+
+datasource/Flyway URL·user·per-run 32-hex password가 서로 일치해야 하고,
+`SEC_PROVIDER_ENABLED=false`, `OPERATOR_API_ENABLED=false`, 빈 contact email,
+`SEC_BASE_URL=http://127.0.0.1:1`, 빈 root/segment/manifest repository여야 한다.
+하나라도 다르면 write 전에 seed를 거부한다. injected fixed clock이 만든 synthetic
+identity는 다음과 같다.
+
+```text
+manifest = cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd
+selection = eadb0c3bf6efb9b3323be1342d0b17e63631b706f088b23fa78e784e1b547acd
+root = c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8
+assembledAt = 2026-08-25T03:30:00.123456Z
+```
+
+Next build/runtime/browser child는 `SEC_MANIFEST_AUDIT_PROVIDER=api`를 명시한다.
+acceptance 전용 server setting이 위 exact manifest ID만 synthetic DEMO로 고정해,
+실제 API transport를 통과해도 화면의 `DEMO` badge와 실제 SEC 자료가 아니라는
+disclosure를 유지한다. 다른 API manifest에는 mode를 추론하지 않고 ADR-052 response에
+`dataMode`를 추가하지도 않는다. browser는 private Spring origin을 호출하지 않는다.
+
+하나의 run은 13 production route, call list/revision/outcome과 SEC 2개를 합친
+Chromium 5/5, exact Tomcat line 18개(기존 call 13 + SEC 200 네 개 + cutoff 직전
+404 한 개)를 요구한다. ADR-054 KST civil day는 정확히
+`2026-08-10T15:00:00.000Z` 이상,
+`2026-08-11T15:00:00.000Z` 미만의 API bound여야 한다. database는 다음 전체 tuple과
+byte-for-byte 같아야 한다.
+
+```text
+3|2|4|3|1|2|2|2|4|1|2|4|6|0|0|0|0|cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd|eadb0c3bf6efb9b3323be1342d0b17e63631b706f088b23fa78e784e1b547acd|c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8|2026-08-25T03:30:00.123456Z
+```
+
+앞의 값은 순서대로 call/revision/outcome `3|2|4`, decoded body/root/recent/
+descriptor/segment capture/segment row/manifest/selected descriptor/accession group/
+occurrence `3|1|2|2|2|4|1|2|4|6`, operator attempt/action/dispatch/outcome
+`0|0|0|0`, 뒤의 네 값은 manifest/selection/root/assembly identity다.
+
+성공·실패 모두 harness가 소유한 process, Compose project/volume, temp build,
+secret-free web mirror, report와 log만 검증 후 정리한다. root `.env`, 기본 database,
+일반 `.next`, `next-env.d.ts`, `tsconfig.json`은 건드리지 않는다. 도메인, API key,
+SEC account, paid plan, home-server access, operator/user token, OAuth 또는 monitored
+email은 필요 없다. live SEC와 operator boundary는 계속 꺼져 있고 SEC network call은
+허용되지 않는다.
+
+repository CI는 ADR-055 source/marker/expected identity와 historical projection을
+parse하고 guard하지만 Docker/Chromium harness 자체는 실행하지 않는다. 2026-08-31
+수동 실행의 complete PASS는 `IMPLEMENTATION_LOG.md`에 기록되어 있으며, 다음 release
+candidate는 그 결과를 상속하지 않고 같은 명령을 다시 실행해야 한다.
+
 ### Operator-controlled collection attempt
 
 ADR-042는 unconditional internal application service만 추가한다. controller, CLI,

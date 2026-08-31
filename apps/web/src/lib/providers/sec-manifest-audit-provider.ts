@@ -133,5 +133,6 @@ export type SecManifestAuditDemoQuery = Pick<
 export interface SecManifestAuditProvider {
   readonly mode: "fixture" | "api";
   readonly demoQuery: SecManifestAuditDemoQuery | null;
+  readonly syntheticDemoManifestId: string | null;
   findExact(query: SecManifestAuditQuery): Promise<SecManifestAuditResource | null>;
 }

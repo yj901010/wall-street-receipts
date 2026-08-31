@@ -571,6 +571,7 @@ $springApplicationJson = $null
 $javaProbeEnvironment = $null
 $nodeProbeEnvironment = $null
 $mavenBuildEnvironment = $null
+$seedEnvironment = $null
 $repositoryLock = $null
 $failure = $null
 $cleanupFailures = [Collections.Generic.List[string]]::new()
@@ -581,7 +582,7 @@ try {
         $runId `
         "ADR-045"
 
-    Write-Host "[1/7] Checking Java 21, Node.js 24, Docker, and repository prerequisites..."
+    Write-Host "[1/8] Checking Java 21, Node.js 24, Docker, and repository prerequisites..."
     foreach ($requiredPath in @(
         $composePath,
         $safeEnvironmentPath,
@@ -707,7 +708,7 @@ try {
     $temporaryDirectoryOwned = $true
 
     if (-not $SkipPackage) {
-        Write-Host "[2/7] Packaging the API into a harness-owned output directory..."
+        Write-Host "[2/8] Packaging the API into a harness-owned output directory..."
         $packageArguments = $mavenArgumentPrefix + @(
             "-B",
             "-ntp",
@@ -724,7 +725,7 @@ try {
         }
     }
     else {
-        Write-Host "[2/7] Reusing the existing packaged API..."
+        Write-Host "[2/8] Reusing the existing packaged API..."
     }
     Assert-Condition (Test-Path -LiteralPath $jarPath -PathType Leaf) `
         "The packaged API JAR was not found. Rerun without -SkipPackage."
@@ -740,7 +741,7 @@ try {
     $apiBaseUrl = "http://127.0.0.1:$apiPort"
 
     if (-not $SkipWebBuild) {
-        Write-Host "[3/7] Building production Next.js from a secret-free harness-owned source mirror..."
+        Write-Host "[3/8] Building production Next.js from a secret-free harness-owned source mirror..."
         New-Item -ItemType Directory -Path $webMirrorRoot | Out-Null
         $webMirrorOwned = $true
         New-AcceptanceWebMirror `
@@ -750,6 +751,9 @@ try {
             $mirroredWebDirectory
         $buildEnvironment = @{
             CALL_AUDIT_PROVIDER   = "api"
+            SEC_MANIFEST_AUDIT_PROVIDER = "api"
+            SEC_MANIFEST_AUDIT_SYNTHETIC_DEMO_MANIFEST_ID =
+                "cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd"
             API_BASE_URL          = $apiBaseUrl
             NEXT_PUBLIC_DATA_MODE = "DEMO"
             NEXT_PUBLIC_API_BASE_URL = ""
@@ -786,7 +790,7 @@ try {
         $buildEnvironment.Clear()
     }
     else {
-        Write-Host "[3/7] Reusing the existing production Next.js build..."
+        Write-Host "[3/8] Reusing the existing production Next.js build..."
     }
     Assert-Condition (Test-Path -LiteralPath $nextCliPath -PathType Leaf) `
         "The Next.js runtime is missing. Run pnpm install --frozen-lockfile first."
@@ -805,7 +809,7 @@ try {
         POSTGRES_PASSWORD = $databasePassword
     }
 
-    Write-Host "[4/7] Starting an isolated PostgreSQL 17 Compose project..."
+    Write-Host "[4/8] Starting an isolated PostgreSQL 17 Compose project..."
     $composeMayExist = $true
     Invoke-WithProcessEnvironment $composeEnvironment {
         Invoke-CheckedNative `
@@ -971,7 +975,35 @@ try {
     $apiEnvironment["SPRING_MVC_LOG_REQUEST_DETAILS"] = "false"
     $apiEnvironment["SPRING_CODEC_LOG_REQUEST_DETAILS"] = "false"
 
-    Write-Host "[5/7] Starting the loopback API and waiting for real PostgreSQL-backed health..."
+    $seedEnvironment = ConvertTo-ProcessEnvironmentMap @{}
+    foreach ($entry in $apiEnvironment.GetEnumerator()) {
+        $seedEnvironment[[string] $entry.Key] = $entry.Value
+    }
+    foreach ($entry in $mavenBuildEnvironment.GetEnumerator()) {
+        $seedEnvironment[[string] $entry.Key] = $entry.Value
+    }
+    $seedEnvironment["SPRING_MAIN_WEB_APPLICATION_TYPE"] = "servlet"
+
+    Write-Host "[5/8] Seeding one exact synthetic SEC manifest through production repositories..."
+    $seedArguments = $mavenArgumentPrefix + @(
+        "-B",
+        "-ntp",
+        "-f", (Join-Path $apiDirectory "pom.xml"),
+        ("-Dwsr.build.directory=" + $apiBuildDirectory),
+        "-Dtest=com.wallstreetreceipts.api.acceptance.SecManifestAuditAcceptanceSeedHarness",
+        "-Dwsr.sec-manifest-acceptance-seed=true",
+        "test"
+    )
+    Invoke-WithProcessEnvironment $seedEnvironment {
+        Invoke-CheckedNative `
+            $mavenCommand `
+            $seedArguments `
+            "Exact synthetic SEC manifest acceptance seed failed"
+    }
+    $seedEnvironment.Clear()
+    $seedEnvironment = $null
+
+    Write-Host "[6/8] Starting the loopback API and waiting for real PostgreSQL-backed health..."
     $apiStartParameters = @{
         FilePath               = $javaCommand
         ArgumentList           = @("-jar", ('"' + $jarPath + '"'))
@@ -1021,6 +1053,9 @@ try {
     $webLoopbackBaseUrl = "http://127.0.0.1:$webPort"
     $webEnvironment = @{
         CALL_AUDIT_PROVIDER     = "api"
+        SEC_MANIFEST_AUDIT_PROVIDER = "api"
+        SEC_MANIFEST_AUDIT_SYNTHETIC_DEMO_MANIFEST_ID =
+            "cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd"
         API_BASE_URL            = $apiBaseUrl
         NEXT_PUBLIC_DATA_MODE   = "DEMO"
         NEXT_PUBLIC_API_BASE_URL = ""
@@ -1051,7 +1086,7 @@ try {
         $webEnvironment `
         '^(?:HTTP|HTTPS|ALL|NO)_PROXY$'
 
-    Write-Host "[6/7] Starting production Next.js and smoke-checking every primary product route..."
+    Write-Host "[7/8] Starting production Next.js and smoke-checking every primary product route..."
     $webStartParameters = @{
         FilePath               = $nodeCommand
         ArgumentList           = @(
@@ -1119,7 +1154,8 @@ try {
         "/maps/nasdaq100",
         "/markets/sp500",
         "/screener",
-        "/methodology"
+        "/methodology",
+        "/research/sec/filing-history"
     )
     foreach ($route in $primaryRoutes) {
         $page = Invoke-HttpRequest $webHttpClient $route
@@ -1131,12 +1167,16 @@ try {
             "Primary route $route did not render the shared product shell."
     }
 
-    Write-Host "[7/7] Running focused real-browser API-mode checks and proving exact Spring reads..."
+    Write-Host "[8/8] Running focused real-browser API-mode checks and proving exact Spring reads..."
     $playwrightEnvironment = @{
         PLAYWRIGHT_BASE_URL     = $webLoopbackBaseUrl
         PLAYWRIGHT_EXTERNAL_SERVER = "true"
         PLAYWRIGHT_LOCAL_PRODUCTION_HTTP = "true"
         CALL_AUDIT_PROVIDER     = "api"
+        SEC_MANIFEST_AUDIT_PROVIDER = "api"
+        SEC_MANIFEST_AUDIT_SYNTHETIC_DEMO_MANIFEST_ID =
+            "cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd"
+        PLAYWRIGHT_SEC_MANIFEST_API_SUCCESS = "true"
         API_BASE_URL            = $apiBaseUrl
         NEXT_PUBLIC_DATA_MODE   = "DEMO"
         NEXT_PUBLIC_API_BASE_URL = ""
@@ -1175,6 +1215,7 @@ try {
                 "call-revisions.spec.ts",
                 "call-outcomes.spec.ts",
                 "call-list-api.spec.ts",
+                "sec-manifest-audit.spec.ts",
                 ("--config=" + $playwrightConfigPath),
                 "--project=chromium-1280",
                 "--workers=1",
@@ -1187,7 +1228,7 @@ try {
 
     $requiredAccessLines = @(
         "GET /v1/calls?dataMode=DEMO&page=0&size=25&sort=eventTime&order=desc 200",
-        "GET /v1/calls?assetId=asset-nvda&ticker=nvda&institutionId=inst-gs&analystId=analyst-demo-b&direction=BULLISH&status=ACTIVE&dataMode=DEMO&from=2026-08-11T00%3A00%3A00.000Z&to=2026-08-12T00%3A00%3A00.000Z&page=0&size=1&sort=capturedAt&order=asc 200",
+        "GET /v1/calls?assetId=asset-nvda&ticker=nvda&institutionId=inst-gs&analystId=analyst-demo-b&direction=BULLISH&status=ACTIVE&dataMode=DEMO&from=2026-08-10T15%3A00%3A00.000Z&to=2026-08-11T15%3A00%3A00.000Z&page=0&size=1&sort=capturedAt&order=asc 200",
         "GET /v1/calls?dataMode=DEMO&page=0&size=1&sort=eventTime&order=desc 200",
         "GET /v1/calls?dataMode=DEMO&page=1&size=1&sort=eventTime&order=desc 200",
         "GET /v1/calls?ticker=TSLA&dataMode=DEMO&page=0&size=1&sort=eventTime&order=desc 200",
@@ -1198,7 +1239,12 @@ try {
         "GET /v1/calls/demo-call-001- 200",
         "GET /v1/calls/demo-call-001/context- 200",
         "GET /v1/calls/demo-call-001/revisions- 200",
-        "GET /v1/calls/demo-call-001/outcomes- 200"
+        "GET /v1/calls/demo-call-001/outcomes- 200",
+        "GET /v1/sec/filing-history/manifests/cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd?evaluationAsOf=2026-08-25T03%3A30%3A00.123456Z 200",
+        "GET /v1/sec/filing-history/manifests/cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd/descriptors?evaluationAsOf=2026-08-25T03%3A30%3A00.123456Z&page=0&size=25 200",
+        "GET /v1/sec/filing-history/manifests/cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd/accessions?evaluationAsOf=2026-08-25T03%3A30%3A00.123456Z&page=0&size=25 200",
+        "GET /v1/sec/filing-history/manifests/cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd/occurrences?evaluationAsOf=2026-08-25T03%3A30%3A00.123456Z&page=0&size=25 200",
+        "GET /v1/sec/filing-history/manifests/cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd?evaluationAsOf=2026-08-25T03%3A30%3A00.123455Z 404"
     )
     $accessLogDirectory = Join-Path $tomcatBaseDirectory "logs"
     $accessDeadline = [DateTimeOffset]::UtcNow.AddSeconds(10)
@@ -1231,7 +1277,28 @@ try {
 SELECT
     (SELECT count(*) FROM analyst_calls) || '|' ||
     (SELECT count(*) FROM analyst_call_revisions) || '|' ||
-    (SELECT count(*) FROM call_outcomes);
+    (SELECT count(*) FROM call_outcomes) || '|' ||
+    (SELECT count(*) FROM sec_decoded_response_bodies) || '|' ||
+    (SELECT count(*) FROM sec_filing_catalog_captures) || '|' ||
+    (SELECT count(*) FROM sec_filing_catalog_recent_filings) || '|' ||
+    (SELECT count(*) FROM sec_filing_catalog_historical_segments) || '|' ||
+    (SELECT count(*) FROM sec_historical_filing_segment_captures) || '|' ||
+    (SELECT count(*) FROM sec_historical_filing_segment_filings) || '|' ||
+    (SELECT count(*) FROM sec_filing_history_collection_manifests) || '|' ||
+    (SELECT count(*) FROM sec_filing_history_collection_descriptors) || '|' ||
+    (SELECT count(*) FROM sec_filing_history_collection_accession_groups) || '|' ||
+    (SELECT count(*) FROM sec_filing_history_collection_occurrences) || '|' ||
+    (SELECT count(*) FROM sec_filing_collection_attempts) || '|' ||
+    (SELECT count(*) FROM sec_filing_collection_attempt_descriptor_actions) || '|' ||
+    (SELECT count(*) FROM sec_filing_collection_attempt_provider_dispatches) || '|' ||
+    (SELECT count(*) FROM sec_filing_collection_attempt_outcomes) || '|' ||
+    (SELECT manifest_id FROM sec_filing_history_collection_manifests) || '|' ||
+    (SELECT selection_sha256 FROM sec_filing_history_collection_manifests) || '|' ||
+    (SELECT root_capture_id FROM sec_filing_history_collection_manifests) || '|' ||
+    (SELECT to_char(
+        assembled_at AT TIME ZONE 'UTC',
+        'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
+    ) FROM sec_filing_history_collection_manifests);
 "@
     $databaseCountResult = Invoke-WithProcessEnvironment $composeEnvironment {
         $output = & $dockerCommand compose `
@@ -1250,13 +1317,20 @@ SELECT
     }
     Assert-Condition ($databaseCountResult.ExitCode -eq 0) `
         "Could not inspect the disposable PostgreSQL call ledger."
-    Assert-Condition ((($databaseCountResult.Output -join "").Trim()) -eq "3|2|4") `
-        "The disposable PostgreSQL ledger did not contain exactly 3 calls, 2 revisions, and 4 outcomes."
+    $expectedDatabaseIdentity =
+        "3|2|4|3|1|2|2|2|4|1|2|4|6|0|0|0|0|" +
+        "cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd|" +
+        "eadb0c3bf6efb9b3323be1342d0b17e63631b706f088b23fa78e784e1b547acd|" +
+        "c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8|" +
+        "2026-08-25T03:30:00.123456Z"
+    Assert-Condition `
+        ((($databaseCountResult.Output -join "").Trim()) -eq $expectedDatabaseIdentity) `
+        "The disposable PostgreSQL call and SEC evidence ledgers changed identity or counts."
 
-    Write-Host "PASS: 12 production routes rendered through the isolated local stack."
-    Write-Host "PASS: 3/3 focused Chromium checks used server-only API mode with no browser API call."
-    Write-Host "PASS: all 13 exact Spring reads and PostgreSQL counts 3|2|4 were observed."
-    Write-Host "PASS: SEC and operator boundaries remained disabled; no external provider was contacted."
+    Write-Host "PASS: 13 production routes rendered through the isolated local stack."
+    Write-Host "PASS: 5/5 focused Chromium checks used server-only API mode with no browser API call."
+    Write-Host "PASS: all 18 exact Spring reads and the exact call/SEC PostgreSQL identity were observed."
+    Write-Host "PASS: live SEC collection and operator boundaries remained disabled; no external provider was contacted."
 }
 catch {
     $logTail = Get-SanitizedLogTail `
@@ -1365,6 +1439,7 @@ finally {
         $javaProbeEnvironment,
         $nodeProbeEnvironment,
         $mavenBuildEnvironment,
+        $seedEnvironment,
         $apiEnvironment,
         $webEnvironment,
         $playwrightEnvironment,
@@ -1383,6 +1458,7 @@ finally {
     $javaProbeEnvironment = $null
     $nodeProbeEnvironment = $null
     $mavenBuildEnvironment = $null
+    $seedEnvironment = $null
 
     if ($null -ne $repositoryLock) {
         try {

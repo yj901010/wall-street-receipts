@@ -75,6 +75,7 @@ describe("SecFilingHistoryAuditPage", () => {
     providers.secManifestAuditProvider.mockReturnValue({
       mode: "fixture",
       demoQuery: SEC_MANIFEST_AUDIT_DEMO_QUERY,
+      syntheticDemoManifestId: SEC_MANIFEST_AUDIT_DEMO_QUERY.manifestId,
       findExact,
     } satisfies SecManifestAuditProvider);
 
@@ -92,6 +93,7 @@ describe("SecFilingHistoryAuditPage", () => {
     providers.secManifestAuditProvider.mockReturnValue({
       mode: "fixture",
       demoQuery: fixture.demoQuery,
+      syntheticDemoManifestId: fixture.syntheticDemoManifestId,
       findExact,
     });
 
@@ -151,6 +153,7 @@ describe("SecFilingHistoryAuditPage", () => {
     const apiLike: SecManifestAuditProvider = {
       mode: "api",
       demoQuery: null,
+      syntheticDemoManifestId: null,
       findExact: fixture.findExact.bind(fixture),
     };
     providers.secManifestAuditProvider.mockReturnValue(apiLike);
@@ -158,6 +161,22 @@ describe("SecFilingHistoryAuditPage", () => {
 
     expect(screen.getByText("저장된 감사 API 응답")).toBeInTheDocument();
     expect(screen.queryByText("DEMO", { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByText("LIVE", { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByText("REALTIME", { exact: true })).not.toBeInTheDocument();
+  });
+
+  it("labels an identity-pinned synthetic API response as DEMO", async () => {
+    const fixture = new FixtureSecManifestAuditProvider();
+    providers.secManifestAuditProvider.mockReturnValue({
+      mode: "api",
+      demoQuery: null,
+      syntheticDemoManifestId: SEC_MANIFEST_AUDIT_DEMO_QUERY.manifestId,
+      findExact: fixture.findExact.bind(fixture),
+    } satisfies SecManifestAuditProvider);
+    renderWithLocale(await page(raw()));
+
+    expect(screen.getByText("DEMO", { selector: ".mode-badge" })).toBeInTheDocument();
+    expect(screen.getByText("합성 DEMO · 실제 SEC 자료 아님")).toBeInTheDocument();
     expect(screen.queryByText("LIVE", { exact: true })).not.toBeInTheDocument();
     expect(screen.queryByText("REALTIME", { exact: true })).not.toBeInTheDocument();
   });
@@ -188,6 +207,7 @@ describe("SecFilingHistoryAuditPage", () => {
     providers.secManifestAuditProvider.mockReturnValue({
       mode: "api",
       demoQuery: null,
+      syntheticDemoManifestId: null,
       findExact,
     });
     await expect(page(raw())).rejects.toThrow(/404/);
@@ -197,6 +217,7 @@ describe("SecFilingHistoryAuditPage", () => {
     providers.secManifestAuditProvider.mockReturnValue({
       mode: "api",
       demoQuery: null,
+      syntheticDemoManifestId: null,
       findExact: failure,
     });
     await expect(page(raw())).rejects.toThrow("API unavailable");

@@ -1346,6 +1346,81 @@ contracts. Live/licensed providers, entitlements, rights, freshness/health,
 retry/polling/streaming, and non-DEMO publication remain P5 work. This consumer
 does not turn the four synthetic model records into observed performance.
 
+## Exact SEC manifest-audit API-mode full-stack acceptance boundary
+
+Status: implemented and observed PASS in the 2026-08-31 ADR-055 manual local
+gate recorded in `IMPLEMENTATION_LOG.md`. Repository CI guards this contract but
+does not execute the Docker/Chromium run.
+
+ADR-055 extends the existing disposable ADR-045 production-stack command. It
+does not change an OpenAPI route, Flyway migration, production repository,
+provider adapter, manifest assembly rule, or public mutation boundary. Its only
+write entry is an explicitly named JUnit acceptance harness outside the default
+Surefire class patterns. The harness is invoked only with the exact opt-in
+property and persists the shared synthetic ADR-053 parity evidence through
+production repositories and the production manifest persistence service.
+
+The seed refuses a non-isolated target both before context creation and through
+effective JDBC metadata. Only loopback PostgreSQL, database and user
+`wsr_full_stack_acceptance`, matching datasource/Flyway URLs and credentials,
+a 32-lowercase-hex per-run password, empty root/segment/manifest repositories,
+disabled SEC provider, disabled operator API, empty contact email, and the closed
+`http://127.0.0.1:1` SEC base URL are accepted. The live provider is never
+contacted, and ordinary Maven tests, verification, packaging, and application
+startup do not discover the seed class.
+
+The API-mode synthetic manifest remains data-mode evidence rather than a
+transport inference. A server-only acceptance setting names exactly its
+lowercase SHA-256 manifest identity. Only that matching API response receives
+the existing DEMO badge and synthetic-not-actual-SEC disclosure. Other API
+manifests are not called DEMO, LIVE, REALTIME, DELAYED, or EOD, and ADR-052's
+response contract remains unchanged.
+
+### ADR-055 contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-SFA01 | Explicit non-default seed | `SecManifestAuditAcceptanceSeedHarness` does not match default Surefire discovery and runs only when the command names the exact class and supplies `-Dwsr.sec-manifest-acceptance-seed=true`. No raw SQL, runtime endpoint, startup importer, scheduler, or operator command seeds evidence. |
+| P2-SFA02 | Strict effective database guard | Before any write, both environment and effective Spring/JDBC state identify only `jdbc:postgresql://127.0.0.1:<1024..65535>/wsr_full_stack_acceptance`, user `wsr_full_stack_acceptance`, identical datasource/Flyway settings, and the per-run password. Existing root, segment, or manifest rows fail the seed. |
+| P2-SFA03 | No external/provider authority | `SEC_PROVIDER_ENABLED=false`, `OPERATOR_API_ENABLED=false`, empty `SEC_CONTACT_EMAIL`, and `SEC_BASE_URL=http://127.0.0.1:1` are mandatory. No API key, SEC account, paid plan, domain, home-server access, OAuth credential, user/operator token, or monitored email is needed. |
+| P2-SFA04 | Production persistence path | One shared synthetic fixture is appended and reloaded through `FilingCatalogCaptureRepository` and `HistoricalFilingSegmentCaptureRepository`, then persisted through `PersistFilingHistoryCollectionManifestService` and read through the audit query service. It has one root, two selected historical captures, one manifest, two descriptors, four accession groups, and six occurrences. |
+| P2-SFA05 | Exact identity and PIT absence | The manifest is exact `cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd`, selection hash `eadb0c3bf6efb9b3323be1342d0b17e63631b706f088b23fa78e784e1b547acd`, root capture `c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8`, and assembled time `2026-08-25T03:30:00.123456Z`. The assembly cutoff succeeds and one microsecond earlier remains sanitized 404. |
+| P2-SFA06 | Explicit SEC API mode and DEMO truth | Build, production Next runtime, and browser children select `SEC_MANIFEST_AUDIT_PROVIDER=api`. The exact acceptance identity is separately pinned as synthetic and remains visibly DEMO; the browser never calls Spring directly, the API payload gains no invented mode, and no fixture fallback occurs. |
+| P2-SFA07 | Route and browser matrix | The production stack smoke-checks 13 primary routes including `/research/sec/filing-history`. Five retry-free Chromium tests cover the call list, revisions, outcomes, and two SEC cases; the SEC success case visits summary, descriptors, accessions, and occurrences in Korean and English with KST visible values and exact UTC `datetime` evidence. |
+| P2-SFA08 | Exact access evidence | The harness requires 18 exact full Tomcat access-log lines: the prior 13 call reads plus four successful SEC resources and the pre-assembly SEC 404. Substring matches and inferred totals are insufficient. |
+| P2-SFA09 | Correct KST day boundary | The exact filtered call-list line uses inclusive `from=2026-08-10T15%3A00%3A00.000Z` and exclusive `to=2026-08-11T15%3A00%3A00.000Z`, preserving ADR-054's `2026-08-11` Korean civil-day meaning. |
+| P2-SFA10 | Exact PostgreSQL tuple | The no-whitespace SQL result equals the complete tuple below, including zero operator-ledger rows and exact manifest/selection/root/assembly identities. A cardinality-only subset is insufficient. |
+| P2-SFA11 | Owned cleanup | Success and failure remove only the exact run-owned API/web processes, Compose project/volume, source mirror, temporary build, reports, logs, and lock. Root `.env`, default database/volume, normal `.next`, `apps/web/next-env.d.ts`, and `apps/web/tsconfig.json` remain untouched. |
+| P2-SFA12 | CI/manual separation | Repository CI parses and guards ADR-055 source, markers, expected identity, and nested historical projection, but does not run the Docker/Chromium harness. Only an actual manual local run may be recorded as runtime PASS. |
+
+The required database tuple is:
+
+```text
+3|2|4|3|1|2|2|2|4|1|2|4|6|0|0|0|0|cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd|eadb0c3bf6efb9b3323be1342d0b17e63631b706f088b23fa78e784e1b547acd|c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8|2026-08-25T03:30:00.123456Z
+```
+
+In order, it contains call/revision/outcome counts `3|2|4`; decoded body,
+root capture, recent row, root descriptor, segment capture, segment row,
+manifest, selected descriptor, accession-group, and occurrence counts
+`3|1|2|2|2|4|1|2|4|6`; operator attempt/action/dispatch/outcome counts
+`0|0|0|0`; and the exact manifest, selection, root, and assembly identities.
+
+### ADR-055 required manual verification
+
+Run from the repository root only after the documented PowerShell 7, Java 21,
+Node.js 24, installed dependency, Playwright Chromium, and local-Docker
+prerequisites are available:
+
+```powershell
+pwsh -NoProfile -File ./scripts/verify-local-full-stack.ps1
+```
+
+Acceptance requires all 13 routes, five Chromium tests, 18 exact HTTP lines,
+the complete database tuple, server-only private API isolation, disabled live
+SEC/operator boundaries, and owned cleanup to pass in one run. The 2026-08-31
+manual run met the complete contract; subsequent release candidates must rerun
+the same command rather than inheriting that result.
+
 ## Local gate
 
 Run from a clean feature branch before integration:

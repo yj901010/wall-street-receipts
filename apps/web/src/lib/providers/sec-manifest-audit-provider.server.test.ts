@@ -5,12 +5,14 @@ describe("secManifestAuditProvider", () => {
   beforeEach(() => {
     vi.stubGlobal("window", undefined);
     delete process.env.SEC_MANIFEST_AUDIT_PROVIDER;
+    delete process.env.SEC_MANIFEST_AUDIT_SYNTHETIC_DEMO_MANIFEST_ID;
     delete process.env.API_BASE_URL;
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     delete process.env.SEC_MANIFEST_AUDIT_PROVIDER;
+    delete process.env.SEC_MANIFEST_AUDIT_SYNTHETIC_DEMO_MANIFEST_ID;
     delete process.env.API_BASE_URL;
   });
 
@@ -53,6 +55,21 @@ describe("secManifestAuditProvider", () => {
     await expect(secManifestAuditProvider()).rejects.toThrow("API_BASE_URL is required");
     process.env.API_BASE_URL = "   ";
     await expect(secManifestAuditProvider()).rejects.toThrow("API_BASE_URL is required");
+  });
+
+  it("accepts only an exact server-side synthetic DEMO manifest identity", async () => {
+    process.env.SEC_MANIFEST_AUDIT_PROVIDER = "api";
+    process.env.API_BASE_URL = "http://api.example.test";
+    process.env.SEC_MANIFEST_AUDIT_SYNTHETIC_DEMO_MANIFEST_ID = "a".repeat(64);
+    await expect(secManifestAuditProvider()).resolves.toMatchObject({
+      mode: "api",
+      syntheticDemoManifestId: "a".repeat(64),
+    });
+
+    process.env.SEC_MANIFEST_AUDIT_SYNTHETIC_DEMO_MANIFEST_ID = "DEMO";
+    await expect(secManifestAuditProvider()).rejects.toThrow(
+      "SEC_MANIFEST_AUDIT_SYNTHETIC_DEMO_MANIFEST_ID must be lowercase SHA-256 hex",
+    );
   });
 
   it("rejects provider selection in a browser runtime", async () => {

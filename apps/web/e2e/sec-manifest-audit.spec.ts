@@ -11,6 +11,22 @@ const MANIFEST_ID = "cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f485755
 const CUTOFF = "2026-08-25T03:30:00.123456Z";
 const ROUTE = "/research/sec/filing-history";
 const FIXTURE_MODE = process.env.SEC_MANIFEST_AUDIT_PROVIDER !== "api";
+const API_SUCCESS_FLAG = process.env.PLAYWRIGHT_SEC_MANIFEST_API_SUCCESS;
+if (API_SUCCESS_FLAG !== undefined && API_SUCCESS_FLAG !== "true") {
+  throw new Error("PLAYWRIGHT_SEC_MANIFEST_API_SUCCESS accepts only exact true or absence.");
+}
+if (
+  API_SUCCESS_FLAG === "true" &&
+  (
+    process.env.SEC_MANIFEST_AUDIT_PROVIDER !== "api" ||
+    process.env.SEC_MANIFEST_AUDIT_SYNTHETIC_DEMO_MANIFEST_ID !== MANIFEST_ID
+  )
+) {
+  throw new Error(
+    "SEC manifest API success requires exact API mode and the pinned synthetic DEMO identity.",
+  );
+}
+const API_SUCCESS_MODE = !FIXTURE_MODE && API_SUCCESS_FLAG === "true";
 
 function collectBrowserApiRequests(page: Page) {
   const calls: string[] = [];
@@ -44,6 +60,9 @@ test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", as
   if (!FIXTURE_MODE) {
     await expect(page.locator(".mode-badge")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "합성 DEMO 요약 열기" })).toHaveCount(0);
+  }
+
+  if (!FIXTURE_MODE && !API_SUCCESS_MODE) {
     await page.goto(
       `${ROUTE}?manifestId=${MANIFEST_ID}`
       + `&evaluationAsOf=${encodeURIComponent(CUTOFF)}&view=summary`,
@@ -60,8 +79,17 @@ test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", as
     return;
   }
 
-  await expect(page.locator(".mode-badge")).toHaveText("DEMO");
-  await page.getByRole("link", { name: "합성 DEMO 요약 열기" }).click();
+  if (FIXTURE_MODE) {
+    await expect(page.locator(".mode-badge")).toHaveText("DEMO");
+    await page.getByRole("link", { name: "합성 DEMO 요약 열기" }).click();
+  } else {
+    await page.goto(
+      `${ROUTE}?manifestId=${MANIFEST_ID}`
+      + `&evaluationAsOf=${encodeURIComponent(CUTOFF)}&view=summary`,
+    );
+    await expect(page.locator(".mode-badge")).toHaveText("DEMO");
+    await expect(page.getByRole("link", { name: "합성 DEMO 요약 열기" })).toHaveCount(0);
+  }
   await expect(page).toHaveURL(new RegExp(`manifestId=${MANIFEST_ID}.*view=summary`));
   await expect(page.getByText("합성 DEMO · 실제 SEC 자료 아님")).toBeVisible();
   await expect(page.getByText("ROOT_RELATIVE_SELECTED_REFERENCES_ONLY")).toBeVisible();
@@ -70,6 +98,14 @@ test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", as
   const cutoff = page.getByText("2026-08-25 12:30:00.123456 KST").first();
   await expect(cutoff).toBeVisible();
   await expect(cutoff).toHaveAttribute("datetime", CUTOFF);
+
+  await page.getByRole("link", { name: "Descriptor", exact: true }).click();
+  const descriptorRegion = page.getByRole("region", {
+    name: "광고된 historical descriptor",
+  });
+  await expect(descriptorRegion).toContainText("CIK0000320193-submissions-002.json");
+  await expect(descriptorRegion).toContainText("CIK0000320193-submissions-001.json");
+  await expect(descriptorRegion).toContainText("SELECTED_EXACT_CAPTURE");
 
   await page.getByRole("link", { name: "Accession 비교" }).click();
   const comparisonRegion = page.getByRole("region", { name: "Accession occurrence 비교" });
@@ -114,8 +150,12 @@ test("fails closed for malformed and unavailable exact SEC manifest requests", a
   context,
   page,
 }) => {
-  test.skip(!FIXTURE_MODE, "Synthetic exact-absence fixture assertions require fixture mode.");
+  test.skip(
+    !FIXTURE_MODE && !API_SUCCESS_MODE,
+    "Exact-absence assertions require fixture mode or the isolated API success stack.",
+  );
   const runtimeErrors = collectRuntimeErrors(page);
+  const browserApiRequests = collectBrowserApiRequests(page);
   await context.clearCookies();
 
   await page.goto(`${ROUTE}?manifestId=${MANIFEST_ID}&evaluationAsOf=${encodeURIComponent(CUTOFF)}`
@@ -138,5 +178,6 @@ test("fails closed for malformed and unavailable exact SEC manifest requests", a
   expect(robots.every((value) => /noindex/i.test(value ?? ""))).toBe(true);
 
   await expectNoPageOverflow(page);
+  expect(browserApiRequests).toEqual([]);
   expectNoRuntimeErrors(runtimeErrors);
 });

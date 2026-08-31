@@ -55,7 +55,10 @@ remains P8 work. ADR-053 adds a Korean-default, same-origin exact SEC manifest
 audit consumer without adding a manifest list, latest selector, or live-data
 claim. ADR-054 makes every human-readable web instant an explicit
 `Asia/Seoul`/KST value while preserving canonical UTC storage, transport, and
-point-in-time identity. P1 provides a
+point-in-time identity. ADR-055 extends the disposable local production-stack
+gate with an isolated synthetic PostgreSQL manifest, so the exact SEC audit can
+be exercised successfully in API mode without SEC network traffic or a
+production seed surface. P1 provides a
 canonical analyst-call ledger,
 source evidence, immutable point-in-time market and macro/event context,
 list/detail APIs, and responsive web routes. The analyst-call ledger and each
@@ -194,6 +197,9 @@ No API key, SEC account, paid plan, domain, or `SEC_CONTACT_EMAIL` is needed for
 the fixture-backed local slice. API-backed success additionally requires an
 already-persisted exact manifest and an allowed cutoff; live collection later
 requires a monitored SEC contact email in an untracked server environment.
+ADR-055 supplies that persisted manifest only inside the disposable acceptance
+database. Its server-only synthetic identity pin keeps the API transport path
+visibly `DEMO`; it does not add `dataMode` to ADR-052 or label another manifest.
 
 The completed `feature/p2-call-outcome-audit-api` slice extends the same
 whole-page call audit with the existing read-only
@@ -259,16 +265,36 @@ Run the broader disposable production full-stack gate from the repository root:
 pwsh -NoProfile -File ./scripts/verify-local-full-stack.ps1
 ```
 
-This ADR-045 command packages Spring into a temporary output and builds Next.js
-from a secret-free, harness-owned source mirror in explicit call-audit API mode,
-while forcing every other web data selector to offline fixtures. It starts unique loopback
-PostgreSQL/API/web processes, smoke-checks all 12 primary routes, runs the
-focused Chromium integration checks, proves the exact Spring reads and `3|2|4`
-call-ledger counts, and removes only its owned processes, Compose project/volume,
-source mirror, and temporary reports. It preserves the existing root
+This ADR-045 command, extended by ADR-055, packages Spring into a temporary
+output and builds Next.js from a secret-free, harness-owned source mirror in
+explicit call-audit and SEC-manifest-audit API modes while forcing all remaining
+web data selectors to offline fixtures. After its unique loopback PostgreSQL
+project starts, an exact opt-in test-only JUnit harness inserts one synthetic
+manifest through production repositories and services. The class is named
+outside default Surefire discovery and refuses any effective datasource other
+than the harness-owned loopback database/user; normal `test`, `verify`, and
+application startup do not seed it.
+
+The gate then starts packaged Spring and production Next, smoke-checks 13
+primary routes, runs five focused Chromium tests, matches 18 exact Spring access
+lines, and compares the complete call/SEC database identity tuple:
+
+```text
+3|2|4|3|1|2|2|2|4|1|2|4|6|0|0|0|0|cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd|eadb0c3bf6efb9b3323be1342d0b17e63631b706f088b23fa78e784e1b547acd|c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8|2026-08-25T03:30:00.123456Z
+```
+
+The five SEC reads are the four exact resources at the assembly cutoff plus a
+one-microsecond-earlier 404. The call-list day read also locks ADR-054's Korean
+day conversion to `2026-08-10T15:00:00.000Z` through exclusive
+`2026-08-11T15:00:00.000Z`. The browser never calls Spring directly, and the
+exact seeded API identity retains a visible synthetic `DEMO` disclosure.
+
+The command removes only its owned processes, Compose project/volume, source
+mirror, and temporary reports. It preserves the existing root
 `.env`, default database volume, `apps/web/next-env.d.ts`, and
-`apps/web/tsconfig.json`; SEC and the operator API remain disabled. ADR-044 and
-ADR-045 share one fail-fast root `/.wsr-local-acceptance.lock`, so run them
+`apps/web/tsconfig.json`; live SEC collection and the operator API remain
+disabled. ADR-044 and ADR-045 share one fail-fast root
+`/.wsr-local-acceptance.lock`, so run them
 sequentially. A stale lock after a hard termination must be removed only after
 inspecting leftover harness processes and Docker resources. It needs PowerShell
 7, Java 21, Node.js 24, a local Docker daemon, installed workspace
@@ -281,6 +307,11 @@ are not selected. Inherited Spring, server, management, datasource/Hikari,
 JNDI, direct-provider, and logging namespaces are removed before the exact
 acceptance allowlist is applied. The validated local Docker endpoint is pinned
 for every daemon and Compose call.
+
+Repository CI parses and guards this ADR-055 contract and its nested historical
+projection, but does not execute the Docker/Chromium harness. Treat the command
+as a manual local pre-deployment gate; do not infer a runtime PASS until its
+actual result is recorded in `IMPLEMENTATION_LOG.md`.
 
 ## Ubuntu home-server deployment rehearsal
 
@@ -691,6 +722,9 @@ ADR-053 establishes a Korean-default, same-origin web consumer and exact
 locator for those resources without adding a latest/company selector or
 fixture fallback.
 
+ADR-055 extends the disposable production-stack gate with a guarded test-only
+synthetic manifest seed and successful server-only API-mode SEC audit proof.
+
 ADR-035 introduces the first P5 public-data adapter boundary for SEC EDGAR
 submissions metadata. It is disabled by default and remains server-only. When
 `SEC_PROVIDER_ENABLED=true`, the adapter requires `SEC_CONTACT_EMAIL` and sends
@@ -1018,24 +1052,36 @@ one-outcome database state, then validates and removes only its own resources.
 It does not read or edit `.env`, contact SEC, add a route, or approve remote
 deployment.
 
-ADR-045 adds the separate public production full-stack gate.
-`scripts/verify-local-full-stack.ps1` builds Next from an ignored, secret-free
-source mirror with explicit server-only call-audit API mode and all other web
-selectors fixed to offline fixtures, then starts a temporary-output Spring JAR and production Next server on distinct
-loopback ports against a uniquely named disposable PostgreSQL 17 project,
-smoke-checks every primary product route, and reuses the focused call list,
-revision, and outcome Chromium scenarios. API-only `NOT_EXPOSED` rendering,
-zero browser calls to the private API origin, 13 exact Tomcat access-log reads,
-and PostgreSQL counts `3|2|4` jointly prove that the web used Spring rather than
-its own call fixture provider. SEC and the operator API remain disabled. The
-command never builds in the caller's web directory, preserves the root `.env`,
-the default database/volume, `apps/web/next-env.d.ts`, `apps/web/tsconfig.json`,
-and standard `.next`, then validates and removes only its owned local processes
-and disposable resources. ADR-044 and ADR-045 share a fail-fast atomic root lock
-across their complete runs. The harnesses reject remote Docker endpoints before daemon contact and pin the validated local endpoint for their remaining Docker
-operations. Build, runtime, and browser children clear inherited proxy variables
-including mixed/lowercase variants; the browser uses exact `127.0.0.1`.
-This remains DEMO composition evidence, not permission for live data or deployment.
+ADR-045 adds the separate public production full-stack gate, and ADR-055 extends
+that same command with SEC manifest API-mode success. The ignored, secret-free
+web mirror selects both call and SEC audit API modes while all other web
+selectors remain offline fixtures. Against one uniquely named disposable
+PostgreSQL 17 project, an explicitly named non-default JUnit harness writes the
+shared synthetic SEC evidence only after strict effective loopback datasource,
+user, password, disabled-provider, and disabled-operator checks. Production
+repositories and services persist its exact root, two segments, and one
+manifest; no raw SQL or runtime seed endpoint is added.
+
+Packaged Spring and production Next then cover 13 primary routes and five
+focused Chromium tests. API-only call evidence, the four SEC audit views,
+pre-assembly 404, KST day bounds, no browser call to the private API origin, 18
+exact Tomcat lines, and the full 21-field count/identity tuple distinguish the
+API path from a web fixture. The one identity-pinned synthetic API manifest
+remains visibly DEMO; other API identities gain no mode claim. Live SEC and the
+operator API remain disabled.
+
+The command never builds in the caller's web directory, preserves the root
+`.env`, default database/volume, `apps/web/next-env.d.ts`,
+`apps/web/tsconfig.json`, and standard `.next`, then validates and removes only
+its owned local processes and disposable resources. ADR-044 and ADR-045 share a
+fail-fast atomic root lock across their complete runs. The harnesses reject
+remote Docker endpoints before daemon contact and pin the validated local
+endpoint for their remaining Docker operations. Build, runtime, and browser
+children clear inherited proxy variables including mixed/lowercase variants;
+the browser uses exact `127.0.0.1`. This remains synthetic DEMO composition
+evidence, not permission for live data or deployment. Repository CI guards the
+contract but does not run this Docker harness; an observed PASS must come from a
+manual local run and be recorded separately.
 
 ADR-022 remains the sole shared receipt for asset-return and directional-win readiness.
 ADR-025 makes this an ownership decision without adding a policy, digest,

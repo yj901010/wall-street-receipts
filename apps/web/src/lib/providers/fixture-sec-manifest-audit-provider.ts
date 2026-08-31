@@ -168,6 +168,7 @@ function page<T>(
 export class FixtureSecManifestAuditProvider implements SecManifestAuditProvider {
   readonly mode = "fixture" as const;
   readonly demoQuery = SEC_MANIFEST_AUDIT_DEMO_QUERY;
+  readonly syntheticDemoManifestId = SEC_MANIFEST_AUDIT_DEMO_QUERY.manifestId;
 
   async findExact(query: SecManifestAuditQuery): Promise<SecManifestAuditResource | null> {
     requireInternalQuery(query);

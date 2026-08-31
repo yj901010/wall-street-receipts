@@ -6859,3 +6859,120 @@ provider, operating-system, or deployment timezone migration.
 - New web instants must use `KstTimestamp`. New civil-date filters must name
   their calendar zone and convert to canonical API instants at the server
   boundary rather than depending on host or browser timezone.
+
+## 2026-08-31 — ADR-055 disposable offline SEC manifest-audit API-mode full-stack acceptance
+
+Status: implemented and locally validated. The Docker/Chromium full-stack gate
+passed on this development computer. The repository workflow's ADR-055 custody,
+nested historical projection, and current-tree guard also passed isolated local
+validation; a hosted GitHub Actions run is not claimed by these results.
+
+ADR-055 closes the local success-path gap between the exact ADR-052 manifest
+audit API and ADR-053 same-origin web consumer. It extends the existing ADR-045
+disposable production-stack command rather than adding another orchestrator,
+and it does not add a production seed, raw-SQL fixture, mutation route,
+scheduler, startup importer, or live provider activation.
+
+### Scope and decisions
+
+- Add `SecManifestAuditAcceptanceSeedHarness` as an exact opt-in JUnit class
+  whose name is outside default Surefire discovery. It runs only when Maven
+  names that class and supplies
+  `-Dwsr.sec-manifest-acceptance-seed=true`; ordinary `test`, `verify`, package,
+  and application startup do not execute it.
+- Reuse one shared Java synthetic fixture for the committed ADR-053 JSON parity
+  tree and the disposable database seed. Append and reload the root and two
+  historical captures through production repositories, then persist one
+  manifest through `PersistFilingHistoryCollectionManifestService` and verify
+  it through the production audit query service. No SQL shortcut or runtime
+  backdoor is introduced.
+- Refuse the seed unless both supplied and effective JDBC state identify exact
+  loopback PostgreSQL, database/user `wsr_full_stack_acceptance`, matching
+  datasource/Flyway settings, and the per-run 32-hex password. Also require
+  empty root/segment/manifest repositories, `SEC_PROVIDER_ENABLED=false`,
+  `OPERATOR_API_ENABLED=false`, an empty SEC contact email, and closed base URL
+  `http://127.0.0.1:1` before any write.
+- Pin `SEC_MANIFEST_AUDIT_PROVIDER=api` in the secret-free Next build,
+  production runtime, and browser child. A separate server-only acceptance
+  setting names only the exact synthetic manifest, so that API response retains
+  the visible `DEMO` badge and synthetic-not-actual-SEC disclosure. It does not
+  add `dataMode` to ADR-052 or infer a mode for any other API manifest.
+- Preserve ADR-054: the filtered `2026-08-11` Korean civil day is the exact UTC
+  interval from inclusive `2026-08-10T15:00:00.000Z` to exclusive
+  `2026-08-11T15:00:00.000Z`. SEC result instants remain visibly KST while their
+  semantic `datetime` values and exact `evaluationAsOf` lookup identity remain
+  canonical UTC.
+- Extend the production route smoke from 12 to 13 routes by including
+  `/research/sec/filing-history`. Extend the focused browser matrix to five
+  retry-free Chromium checks: call list, revisions, outcomes, and two SEC audit
+  tests covering all four views, malformed input, exact pre-assembly absence,
+  bilingual evidence, and zero browser requests to private Spring.
+- Require 18 exact full Tomcat access-log lines: the prior 13 call reads, four
+  HTTP-200 manifest resources, and one HTTP-404 summary at the cutoff one
+  microsecond before assembly. Require the complete database count/identity
+  tuple rather than a cardinality subset:
+
+```text
+3|2|4|3|1|2|2|2|4|1|2|4|6|0|0|0|0|cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd|eadb0c3bf6efb9b3323be1342d0b17e63631b706f088b23fa78e784e1b547acd|c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8|2026-08-25T03:30:00.123456Z
+```
+
+The tuple proves call/revision/outcome `3|2|4`; decoded body, root, recent row,
+descriptor, historical capture, historical row, manifest, selected descriptor,
+accession group, and occurrence counts `3|1|2|2|2|4|1|2|4|6`; zero operator
+attempt/action/dispatch/outcome rows; and the exact manifest, selection, root,
+and assembly identities.
+
+### Verification status
+
+- The local Docker daemon was initially stopped and was started on this
+  development computer before the disposable run. No remote Docker endpoint
+  was used.
+- The first seed attempt failed safely before persistence because
+  `WebEnvironment.NONE` did not create the `HttpSecurity` dependency required
+  by the production application context. The acceptance test was changed to
+  `WebEnvironment.MOCK`; the strict datasource/provider/operator guards stayed
+  intact, and the complete clean rerun passed.
+- `pwsh -NoProfile -File ./scripts/verify-local-full-stack.ps1`: **PASS**.
+  Production Next built successfully inside the secret-free harness mirror; 13
+  production routes rendered; focused Chromium passed **5/5**; all **18 exact
+  Spring reads** were observed; the complete call+SEC PostgreSQL tuple matched;
+  live SEC collection and the operator boundary remained disabled; and no
+  external provider was contacted.
+- Harness cleanup: **PASS**. The exact API/web processes, Compose project and
+  volume, source mirror, temporary build output, reports, logs, and shared lock
+  owned by the run were removed. The root `.env`, default database/volume,
+  normal web build, `apps/web/next-env.d.ts`, and `apps/web/tsconfig.json`
+  remained outside the cleanup boundary.
+- `.\mvnw.cmd -B -ntp verify` from `apps/api`: **PASS — 2,404 tests; BUILD
+  SUCCESS**.
+  The shared synthetic fixture/domain/ADR-052 response-mapper parity test also
+  passed.
+- Full web Vitest suite: **PASS — 50 files / 643 tests**.
+- Web lint: **PASS**.
+- Production Next build: **PASS** within the disposable full-stack harness.
+- Standalone fixture-mode SEC Chromium acceptance: **PASS — 2/2**. This
+  supplements the harness's successful API-mode SEC branch without changing
+  the recorded full-stack result.
+- PowerShell parser validation for the extended harness: **PASS**.
+- ADR-055 repository-workflow custody and historical projection: **PASS** in an
+  isolated local clone. Exact pre-ADR-055 bytes were projected before ADR-054's
+  own historical guard, the current 18-file delta was restored byte-for-byte,
+  and the focused current-tree markers were then checked. This is workflow
+  implementation validation, not a hosted GitHub Actions run and not a second
+  Docker/Chromium execution.
+- `git diff --check`: **PASS**.
+
+### External inputs and next work
+
+- This acceptance required no API key, SEC account, paid plan, domain,
+  home-server access, user/operator token, OAuth credential,
+  `SEC_CONTACT_EMAIL`, or other external credential. All SEC evidence was
+  synthetic and isolated; live collection remained off.
+- Repository CI now parses and guards the ADR-055 source graph, safety markers,
+  exact identities, and nested historical projection. Its implementation and
+  isolated projection passed locally; the hosted workflow still has to run on
+  the eventual remote branch. CI does not execute this Docker/Chromium harness.
+- Git/release handoff and the later Ubuntu home-server rehearsal remain separate
+  work. Live SEC collection still requires separate approval and a monitored
+  contact email placed in an untracked server secret environment rather than
+  chat or Git.

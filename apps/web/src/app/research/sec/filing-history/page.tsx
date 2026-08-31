@@ -31,6 +31,8 @@ export default async function SecFilingHistoryAuditPage({
   const resource = state.kind === "query"
     ? await provider.findExact(state.query)
     : null;
+  const syntheticDemo = state.kind === "query" && resource !== null
+    && provider.syntheticDemoManifestId === state.query.manifestId;
 
   if (state.kind === "query" && resource === null) {
     notFound();
@@ -38,7 +40,9 @@ export default async function SecFilingHistoryAuditPage({
 
   return (
     <main>
-      <SiteHeader dataMode={provider.mode === "fixture" ? "DEMO" : undefined} />
+      <SiteHeader
+        dataMode={provider.mode === "fixture" || syntheticDemo ? "DEMO" : undefined}
+      />
       <div className={`page-shell ${styles.shell}`}>
         <section className={`page-heading ${styles.heading}`} aria-labelledby="sec-audit-title">
           <div>
@@ -69,7 +73,7 @@ export default async function SecFilingHistoryAuditPage({
           <SecManifestAuditView
             query={state.query}
             resource={resource}
-            providerMode={provider.mode}
+            providerMode={syntheticDemo ? "fixture" : provider.mode}
             messages={messages}
           />
         ) : (

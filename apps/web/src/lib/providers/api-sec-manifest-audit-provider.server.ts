@@ -124,8 +124,17 @@ export class ApiSecManifestAuditProvider implements SecManifestAuditProvider {
   constructor(
     baseUrl: string,
     private readonly fetcher: FetchImplementation = fetch,
+    readonly syntheticDemoManifestId: string | null = null,
   ) {
     assertServerRuntime();
+    if (
+      syntheticDemoManifestId !== null &&
+      !isSecManifestAuditManifestId(syntheticDemoManifestId)
+    ) {
+      throw new Error(
+        "SEC_MANIFEST_AUDIT_SYNTHETIC_DEMO_MANIFEST_ID must be lowercase SHA-256 hex.",
+      );
+    }
     this.baseUrl = canonicalBaseUrl(baseUrl);
   }
 
