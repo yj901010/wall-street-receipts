@@ -199,7 +199,7 @@ class WorkflowParityTests(TemporaryTestCase):
     def write_workflow(self, value):
         self.write(bridge.WORKFLOW, yaml.safe_dump(value, sort_keys=False).encode())
 
-    def test_current_application_jobs_and_top_level_configuration_are_unchanged(self):
+    def test_application_jobs_allow_only_explicit_hosted_ci_corrections(self):
         baseline = pinned()
         for key, value in baseline.items():
             if key != "jobs":
@@ -207,7 +207,18 @@ class WorkflowParityTests(TemporaryTestCase):
         self.assertEqual(set(self.expected["jobs"]), set(baseline["jobs"]))
         for job in ("web", "api", "call-audit-integration"):
             with self.subTest(job=job):
-                self.assertEqual(self.expected["jobs"][job], baseline["jobs"][job])
+                restored = copy.deepcopy(self.expected["jobs"][job])
+                if job == "api":
+                    gates = [step for step in restored["steps"] if step.get("name") == "Verify SEC persistence test isolation"]
+                    self.assertEqual(len(gates), 1)
+                    self.assertIn("-Dsurefire.runOrder=reversealphabetical", gates[0]["run"])
+                    restored["steps"].remove(gates[0])
+                if job == "call-audit-integration":
+                    original = next(step for step in baseline["jobs"][job]["steps"] if step.get("name") == "Verify Next requested the real list and all audit resources")
+                    changed = next(step for step in restored["steps"] if step.get("name") == original["name"])
+                    self.assertEqual(changed["run"], "python scripts/ci/verify_call_audit_access.py")
+                    changed["run"] = original["run"]
+                self.assertEqual(restored, baseline["jobs"][job])
         self.assertEqual({key: value for key, value in self.expected["jobs"][bridge.JOB].items() if key != "steps"},
                          {key: value for key, value in baseline["jobs"][bridge.JOB].items() if key != "steps"})
         self.write_workflow(self.expected)
@@ -292,16 +303,19 @@ class ProductTreeTests(unittest.TestCase):
         for changed, untracked in ((b"apps/web/src/page.ts\0", b""),
                                    (b"", b"scripts/ci/unreviewed.py\0")):
             with self.subTest(changed=changed, untracked=untracked):
-                with patch.object(bridge, "git", side_effect=[b"", b"", changed, untracked]):
+                with patch.object(bridge, "git", side_effect=[b"", b"", changed, untracked]), \
+                        patch.object(bridge, "verify_current_test", return_value={}):
                     with self.assertRaisesRegex(ValueError, "Unexpected uncommitted"):
                         bridge.validate_product(SOURCE, manifest)
 
     def test_user_next_declaration_may_be_unstaged_but_never_staged(self):
         manifest = bridge.expected_manifest(pinned())
         changed = (bridge.NEXT_ENV + "\0").encode()
-        with patch.object(bridge, "git", side_effect=[b"", b"", changed, b"", b""]):
+        with patch.object(bridge, "git", side_effect=[b"", b"", changed, b"", b""]), \
+                patch.object(bridge, "verify_current_test", return_value={}):
             bridge.validate_product(SOURCE, manifest)
-        with patch.object(bridge, "git", side_effect=[b"", b"", changed, b"", changed]):
+        with patch.object(bridge, "git", side_effect=[b"", b"", changed, b"", changed]), \
+                patch.object(bridge, "verify_current_test", return_value={}):
             with self.assertRaisesRegex(ValueError, "must not be staged"):
                 bridge.validate_product(SOURCE, manifest)
 

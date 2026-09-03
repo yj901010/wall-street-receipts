@@ -7187,3 +7187,51 @@ configured origin or any network endpoint.
 - Before any further product change, migrate affected legacy guards to current
   source contracts and mutation tests; do not extend the CI-only allowlist to
   admit unverified feature changes.
+
+## ADR-058 — Hosted CI corrections and authorized integration merge
+
+### Scope and decisions
+
+- The user authorized correcting the reported CI failures and merging PR #7.
+  The destination is `develop` through a merge commit preserving historical
+  SHAs, conditional on green hosted CI. `main`, release/tag, deployment, and
+  live provider activation remain outside scope.
+- The previously pending public upload was subsequently approved and completed
+  at `a634993`. Hosted run #23 actually executed: Web PASS (643 unit, 78 E2E,
+  one extra error-boundary test), CI unit tests 71/71 PASS, but repository/API/
+  integration jobs failed at the three diagnosed boundaries. This supersedes
+  ADR-057's earlier upload-pending status; it was not an overall CI pass.
+- Add a step-12-only, exact-identity executable fixture in the isolated legacy
+  checkout with unconditional mode restoration. Preserve original legacy bytes,
+  expected exit codes, order, and all seven restoration steps.
+- Isolate the nontransactional SEC attempt persistence test in a dedicated H2
+  database. Preserve concurrency/commit semantics and all count assertions.
+  Add an explicit byte-exact current-test migration gate, rather than broadening
+  the product-path exemption, plus a hosted reverse-order regression command.
+- Extract the current call-audit access-log guard into a testable module and
+  correct the UTC bounds for the Korean calendar day. Require all 13 existing
+  successful requests; no product time behavior, route, or runtime module changes.
+
+### Verification
+
+- Focused offender-before-victims Maven regression: 34/34 PASS, with the SEC
+  attempt class first, followed by historical-segment, manifest, and catalog
+  persistence classes. Separate H2 datasource identities verified.
+- Full local Maven verify: BUILD SUCCESS, 2,404 tests, 0 failures/errors,
+  15 Docker-dependent skips (6 migration, 5 manifest PostgreSQL, 4 attempt
+  PostgreSQL tests). These skips require the hosted Docker-enabled run.
+- Combined Python mutation checks: 115 tests, 112 PASS, 3 Windows-only skips
+  (real POSIX execution plus two symlink capability checks). Exact current-test
+  migration and workflow parity PASS; workflow is 28,937 bytes, largest run 598
+  characters. Extracted access expectations match the baseline's 13 requests
+  with only the one KST interval corrected. `git diff --check`: PASS.
+- Complete hosted verification and merge outcome are recorded in PR #7 after
+  the final candidate runs. Existing `apps/web/next-env.d.ts` remains user-owned,
+  unstaged and excluded from all commits. No secrets are read or published.
+
+### Next boundary
+
+- No additional API key or server input is needed for this test/CI correction.
+  Actual home-server preparation and deployment are still deferred.
+- Further product changes must explicitly migrate their affected current-tree
+  contracts; the narrow ADR-058 test delta is not a general feature exemption.

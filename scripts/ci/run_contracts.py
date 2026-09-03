@@ -23,6 +23,8 @@ import sys
 import yaml
 
 from validate_limits import load_workflow
+from current_contracts import TEST_PATH, verify_current_test
+from legacy_environment import legacy_step_environment
 
 BASELINE = "3792100f49c496d751d1dd54a7fbdc1b7c2fd275"
 BASELINE_WORKFLOW_SHA256 = "ff079516f9524d19c51ea216d78489ba11b45eba81056d4c86ff9085fa415f20"
@@ -38,6 +40,10 @@ FIXED_CI_PATHS = frozenset({
     "scripts/ci/test_limits.py", "scripts/ci/requirements.txt",
     "scripts/ci/README.md", "IMPLEMENTATION_LOG.md",
     "decisions/ADR-057-size-bounded-ci-with-isolated-legacy-contracts.md",
+    "decisions/ADR-058-hosted-ci-portability-and-test-isolation.md",
+    "scripts/ci/current_contracts.py", "scripts/ci/test_current_contracts.py",
+    "scripts/ci/legacy_environment.py", "scripts/ci/test_legacy_environment.py",
+    "scripts/ci/verify_call_audit_access.py", "scripts/ci/test_call_audit_access.py",
 })
 
 
@@ -146,6 +152,18 @@ def expected_workflow(baseline):
     steps.append({"name": "Verify custody and remove isolated contract checkout", "if": "always()",
                   "run": "python scripts/ci/run_contracts.py finish"})
     result["jobs"][JOB]["steps"] = steps
+    access_steps = [step for step in result["jobs"]["call-audit-integration"]["steps"]
+                    if step.get("name") == "Verify Next requested the real list and all audit resources"]
+    require(len(access_steps) == 1, "Historical integration access step changed")
+    access_steps[0]["run"] = "python scripts/ci/verify_call_audit_access.py"
+    api_steps = result["jobs"]["api"]["steps"]
+    verify_indexes = [index for index, step in enumerate(api_steps) if step.get("name") == "Verify"]
+    require(len(verify_indexes) == 1, "Historical API verify step changed")
+    api_steps.insert(verify_indexes[0] + 1, {
+        "name": "Verify SEC persistence test isolation",
+        "working-directory": "apps/api",
+        "run": "./mvnw -B -ntp -Dtest=SecFilingHistoryCollectionAttemptPersistenceTest,HistoricalFilingSegmentCapturePersistenceTest,FilingHistoryCollectionManifestPersistenceTest,FilingCatalogCapturePersistenceTest -Dsurefire.runOrder=reversealphabetical test",
+    })
     return result
 
 
@@ -200,11 +218,13 @@ def permitted_paths(manifest):
 
 def validate_product(root, manifest):
     allowed = permitted_paths(manifest)
-    compare_product_trees(tree_records(git(root, "ls-tree", "-rz", BASELINE)),
-                          tree_records(git(root, "ls-tree", "-rz", "HEAD")), allowed)
+    baseline = tree_records(git(root, "ls-tree", "-rz", BASELINE))
+    current = tree_records(git(root, "ls-tree", "-rz", "HEAD"))
+    adjusted = verify_current_test(root, git, baseline, current)
+    compare_product_trees(adjusted, current, allowed)
     changed = set(filter(None, git(root, "diff", "--name-only", "-z", "HEAD").decode().split("\0")))
     untracked = set(filter(None, git(root, "ls-files", "--others", "--exclude-standard", "-z").decode().split("\0")))
-    require(changed <= allowed | {NEXT_ENV} and untracked <= allowed,
+    require(changed <= allowed | {NEXT_ENV, TEST_PATH} and untracked <= allowed,
             "Unexpected uncommitted product or untracked file")
     require(not git(root, "diff", "--cached", "--name-only", "--", NEXT_ENV),
             "User-owned Next declaration must not be staged")
@@ -212,7 +232,7 @@ def validate_product(root, manifest):
 
 def snapshot(root, manifest):
     files = {}
-    for relative in sorted(permitted_paths(manifest) | {NEXT_ENV}):
+    for relative in sorted(permitted_paths(manifest) | {NEXT_ENV, TEST_PATH}):
         path = root / relative
         require(not path.is_symlink(), "Source custody path must not be linked")
         files[relative] = digest(path.read_bytes()) if path.is_file() else None
@@ -396,7 +416,8 @@ def run_step(source, index):
         env["RUNNER_TEMP"] = str(root / "runner-temp")
         # Historical Python guards use 'python'; select the exact setup-python runtime.
         env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
-        code = execute(shell_command(entry, path), root / "legacy", env)
+        with legacy_step_environment(index, root / "legacy", git):
+            code = execute(shell_command(entry, path), root / "legacy", env)
     except BaseException:
         state["results"].append({"index": index, "code": 125})
         state["failed"] = True
@@ -438,8 +459,8 @@ def finish(source):
         legacy = root / "legacy"
         require(git(legacy, "rev-parse", "HEAD").decode().strip() == BASELINE, "Historical HEAD was not restored")
         require(not git(legacy, "status", "--porcelain=v1", "--untracked-files=all"), "Historical checkout is not clean")
-        require_restored_projections(root / "runner-temp")
         assert_complete_run(manifest, state)
+        require_restored_projections(root / "runner-temp")
     finally:
         remove_owned(root, state["token"])
     print("All 84 historical run steps passed; current source unchanged; owned checkout removed.")

@@ -42,7 +42,10 @@ import com.wallstreetreceipts.api.infrastructure.persistence.JdbcSecFilingHistor
 import com.wallstreetreceipts.api.support.FilingHistoryCollectionTestFixture;
 import com.wallstreetreceipts.api.support.SecHistoricalFilingSegmentCaptureTestFixture;
 
-@SpringBootTest
+// Cross-thread claim checks require real commits in a database isolated from rollback-based tests.
+@SpringBootTest(properties =
+        "spring.datasource.url=jdbc:h2:mem:wsr-sec-collection-attempt-persistence"
+                + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1")
 @ActiveProfiles("test")
 class SecFilingHistoryCollectionAttemptPersistenceTest {
 
