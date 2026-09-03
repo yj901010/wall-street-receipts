@@ -1,0 +1,48 @@
+{
+	email {$WSR_ACME_EMAIL}
+	default_sni {$WSR_DEFAULT_SNI}
+	admin localhost:2019
+	servers {
+		protocols h1 h2
+		max_header_size 32KB
+		timeouts {
+			read_body 15s
+			read_header 10s
+			write 2m
+			idle 2m
+		}
+	}
+}
+
+{$WSR_DOMAIN} {
+	encode zstd gzip
+
+	@unsupported not method GET HEAD POST
+	respond @unsupported "Method Not Allowed" 405
+
+	request_body {
+		max_size 1MB
+	}
+
+	header {
+		-X-Powered-By
+		-Server
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	reverse_proxy web:3000 {
+		health_uri /
+		health_interval 30s
+		health_timeout 5s
+		fail_duration 30s
+		max_fails 3
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

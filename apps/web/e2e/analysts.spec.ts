@@ -15,17 +15,17 @@ test.describe("analyst identity directory", () => {
     await page.goto("/analysts");
 
     await expect(page.getByRole("heading", {
-      name: "Analysts as recorded evidence, not a leaderboard.",
+      name: "애널리스트를 순위표가 아닌 기록된 증거로 봅니다.",
     })).toBeVisible();
     await expect(page.locator(".mode-badge")).toHaveText("DEMO");
 
-    const provenance = page.getByLabel("Analyst identity fixture provenance");
+    const provenance = page.getByLabel("애널리스트 식별 픽스처 출처");
     await expect(provenance.getByText("1.0.0", { exact: true })).toBeVisible();
     await expect(provenance.getByText("v1", { exact: true })).toBeVisible();
     await expect(provenance.getByText("fixture-master-data-v1", { exact: true })).toBeVisible();
-    await expect(provenance.getByText("Aug 18, 2026, 12:00 AM UTC", { exact: true })).toHaveCount(2);
+    await expect(provenance.getByText("2026-08-18 09:00:00 KST", { exact: true })).toHaveCount(2);
 
-    const sourceEvidence = page.getByLabel("Analyst source evidence");
+    const sourceEvidence = page.getByLabel("애널리스트 소스 증거");
     await expect(sourceEvidence.getByText("LOCAL_SPECIFICATION", { exact: true })).toBeVisible();
     await expect(sourceEvidence.getByText("INTERNAL_DEMO", { exact: true })).toBeVisible();
     await expect(sourceEvidence.getByText("docs/fixtures/institutions.json", { exact: true }))
@@ -33,30 +33,30 @@ test.describe("analyst identity directory", () => {
     await expect(sourceEvidence.getByText("docs/docs/DOMAIN_MODEL.md", { exact: true }))
       .toBeVisible();
 
-    const policy = page.getByLabel("Analyst directory policy");
-    await expect(policy.getByText("Product policy · not fixture evidence", { exact: true }))
+    const policy = page.getByLabel("애널리스트 디렉터리 정책");
+    await expect(policy.getByText("제품 정책 · 픽스처 증거 아님", { exact: true }))
       .toBeVisible();
-    await expect(policy).toContainText("Not ranked.");
-    await expect(policy).toContainText("not a live activity claim");
+    await expect(policy).toContainText("순위가 아닙니다.");
+    await expect(policy).toContainText("현재 활동 상태를 주장하지 않습니다");
     await expect(policy).toContainText(
-      "do not establish verified coverage, employer or affiliation, endorsement, performance, or investment advice",
+      "고용주나 소속, 보증, 성과 또는 투자 조언",
     );
-    await expect(page.getByText("DEMO identity fixture · coverage not asserted", { exact: true }))
+    await expect(page.getByText("DEMO 식별 픽스처 · 범위를 주장하지 않음", { exact: true }))
       .toBeVisible();
     await expect(page.getByText(/\b[0-9]+ DEMO fixture records\b/)).toHaveCount(0);
 
-    const region = page.getByRole("region", { name: "Analyst identity table" });
+    const region = page.getByRole("region", { name: "애널리스트 식별 정보 표" });
     const table = region.getByRole("table", {
-      name: "Canonical analyst identities and their captured evidence",
+      name: "정규 애널리스트 식별 정보와 수집된 증거",
     });
     const rows = table.getByRole("row");
     await expect(rows).toHaveCount(3);
-    await expect(rows.nth(1).locator('[data-label="Analyst"] strong')).toHaveText("Demo Analyst A");
-    await expect(rows.nth(2).locator('[data-label="Analyst"] strong')).toHaveText("Demo Analyst B");
+    await expect(rows.nth(1).locator('[data-label="애널리스트"] strong')).toHaveText("Demo Analyst A");
+    await expect(rows.nth(2).locator('[data-label="애널리스트"] strong')).toHaveText("Demo Analyst B");
     await expect(rows.nth(1).getByText("analyst-demo-a", { exact: true })).toBeVisible();
     await expect(rows.nth(2).getByText("analyst-demo-b", { exact: true })).toBeVisible();
-    await expect(table.getByRole("columnheader", { name: "Recorded active" })).toBeAttached();
-    await expect(table.getByRole("columnheader", { name: "Call ledger" })).toBeAttached();
+    await expect(table.getByRole("columnheader", { name: "기록된 active" })).toBeAttached();
+    await expect(table.getByRole("columnheader", { name: "콜 원장" })).toBeAttached();
     await expect(table.getByRole("columnheader", {
       name: /institution|employer|affiliation|rank|score|accuracy|performance|call count|outcome/i,
     })).toHaveCount(0);
@@ -65,10 +65,10 @@ test.describe("analyst identity directory", () => {
     await expect(page.getByText("demo-call-001", { exact: true })).toHaveCount(0);
     await expect(page.locator('a[href^="/analysts/"]')).toHaveCount(0);
     await expect(page.getByRole("link", {
-      name: "Filter call ledger for Demo Analyst A",
+      name: "다음 애널리스트로 콜 원장 필터링: Demo Analyst A",
     })).toHaveAttribute("href", "/calls?analystId=analyst-demo-a");
     await expect(page.getByRole("link", {
-      name: "Filter call ledger for Demo Analyst B",
+      name: "다음 애널리스트로 콜 원장 필터링: Demo Analyst B",
     })).toHaveAttribute("href", "/calls?analystId=analyst-demo-b");
 
     const overflow = await region.evaluate((element) => ({
@@ -95,8 +95,8 @@ test.describe("analyst identity directory", () => {
 
     await page.goto("/analysts");
 
-    const navigation = page.getByRole("navigation", { name: "Primary navigation" });
-    const analystsLink = navigation.getByRole("link", { name: "Analysts" });
+    const navigation = page.getByRole("navigation", { name: "주요 탐색" });
+    const analystsLink = navigation.getByRole("link", { name: "애널리스트" });
     await expect(analystsLink).toHaveAttribute("aria-current", "page");
 
     for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -105,7 +105,7 @@ test.describe("analyst identity directory", () => {
     }
     await expectVisibleKeyboardFocus(analystsLink);
 
-    const region = page.getByRole("region", { name: "Analyst identity table" });
+    const region = page.getByRole("region", { name: "애널리스트 식별 정보 표" });
     for (let attempt = 0; attempt < 8; attempt += 1) {
       await page.keyboard.press("Tab");
       if (await region.evaluate((element) => element === document.activeElement)) break;
@@ -113,7 +113,7 @@ test.describe("analyst identity directory", () => {
     await expectVisibleKeyboardFocus(region);
 
     const filterLink = page.getByRole("link", {
-      name: "Filter call ledger for Demo Analyst A",
+      name: "다음 애널리스트로 콜 원장 필터링: Demo Analyst A",
     });
     for (let attempt = 0; attempt < 4; attempt += 1) {
       await page.keyboard.press("Tab");
@@ -123,10 +123,10 @@ test.describe("analyst identity directory", () => {
     await page.keyboard.press("Enter");
 
     await expect(page).toHaveURL(/\/calls\?analystId=analyst-demo-a$/);
-    await expect(page.locator('select[name="analystId"]')).toHaveValue(
+    await expect(page.getByLabel("애널리스트 ID (대소문자 정확히 일치)")).toHaveValue(
       "analyst-demo-a",
     );
-    await expect(page.getByRole("heading", { name: "Analyst calls" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "애널리스트 콜" })).toBeVisible();
     await expectNoPageOverflow(page);
     expectNoRuntimeErrors(runtimeErrors);
   });

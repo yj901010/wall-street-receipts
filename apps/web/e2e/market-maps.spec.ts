@@ -29,27 +29,27 @@ test.describe("market map modes and nested treemap", () => {
     const response = await page.goto("/maps/sp500");
 
     expect(response?.ok()).toBe(true);
-    await expect(page.getByRole("heading", { name: "S&P 500 map evidence." })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "S&P 500 price-change treemap" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Price change" })).toHaveAttribute(
+    await expect(page.getByRole("heading", { name: "S&P 500 지도 증거." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "S&P 500 가격 변동 트리맵" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "가격 변동" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    await expect(page.getByLabel("S&P 500 map provenance")).toContainText(
+    await expect(page.getByLabel("S&P 500 지도 출처")).toContainText(
       "fixture-market-treemap-sp500-v1",
     );
-    await expect(page.getByText("3-cell DEMO sample", { exact: true })).toBeVisible();
+    await expect(page.getByText("DEMO 셀 표본 3개", { exact: true })).toBeVisible();
     await expect(page.getByRole("note")).toContainText(
-      "demonstrates 1 outer sector and 3 nested industries",
+      "외부 섹터 1개와 중첩 산업 3개를 시연합니다",
     );
     await expect(page.getByRole("note")).toContainText(
-      "synthetic proxy, never an official or current market-cap value",
+      "합성 프록시이며 공식 또는 현재 시가총액 값이 아닙니다",
     );
-    await expect(page.getByLabel(/palette saturates at -5% and \+5%/i)).toContainText(
-      "displayed values are never clamped",
+    await expect(page.getByLabel(/-5%.*\+5%/i)).toContainText(
+      "표시값은 제한하지 않습니다",
     );
 
-    const cellList = page.getByRole("list", { name: "S&P 500 nested DEMO treemap cells" });
+    const cellList = page.getByRole("list", { name: "S&P 500 중첩 DEMO 트리맵 셀" });
     const cells = cellList.getByRole("article");
     await expect(cells).toHaveCount(3);
     await expect(page.locator(".treemap-sector-outline > span")).toHaveText("Technology");
@@ -140,13 +140,13 @@ test.describe("market map modes and nested treemap", () => {
       Math.abs((geometry.groups[0].area / geometry.groups[2].area) / (144 / 100) - 1),
     ).toBeLessThan(0.002);
 
-    const nvda = cellList.getByRole("article", { name: "NVDA treemap evidence: +1.25%" });
+    const nvda = cellList.getByRole("article", { name: "NVDA 트리맵 증거: +1.25%" });
     const nvdaTooltip = nvda.getByRole("tooltip");
     await expect(nvdaTooltip).toBeHidden();
     await nvda.hover();
     await expect(nvdaTooltip).toBeVisible();
     await expect(nvdaTooltip).toContainText("Semiconductors");
-    await expect(nvdaTooltip).toContainText("144 relative units");
+    await expect(nvdaTooltip).toContainText("144 상대 단위");
     expect(await nvdaTooltip.evaluate((element) => {
       const bounds = element.getBoundingClientRect();
       const topmost = document.elementFromPoint(bounds.left + 20, bounds.top + 28);
@@ -179,7 +179,7 @@ test.describe("market map modes and nested treemap", () => {
       );
     })).toBe(true);
 
-    const aapl = cellList.getByRole("article", { name: "AAPL treemap evidence: NA" });
+    const aapl = cellList.getByRole("article", { name: "AAPL 트리맵 증거: NA" });
     await expect(aapl).toHaveClass(/treemap-metric-unavailable/);
     await expect(aapl).not.toHaveClass(/treemap-metric-positive/);
     await expect(aapl).not.toHaveClass(/treemap-metric-negative/);
@@ -187,24 +187,24 @@ test.describe("market map modes and nested treemap", () => {
     await expect(page.locator('a[href^="/stocks/"]')).toHaveCount(0);
     await expect(cellList.getByRole("link")).toHaveCount(0);
 
-    const evidenceSummary = page.getByText("Accessible evidence index · 3 cells", { exact: true });
+    const evidenceSummary = page.getByText("접근 가능한 증거 인덱스 · 셀 3개", { exact: true });
     await tabTo(page, evidenceSummary, 5);
     await expectVisibleKeyboardFocus(evidenceSummary);
     await page.keyboard.press("Enter");
     await expect(page.locator(".treemap-evidence-index")).toHaveAttribute("open", "");
 
     const evidenceIndex = page.getByRole("table", {
-      name: "S&P 500 accessible treemap evidence index",
+      name: "S&P 500 접근 가능한 트리맵 증거 인덱스",
     });
     await expect(evidenceIndex).toBeVisible();
     const aaplEvidence = evidenceIndex.getByRole("row").filter({ hasText: "AAPL" });
     await expect(aaplEvidence).toContainText("asset-aapl");
     await expect(aaplEvidence).toContainText("Consumer Electronics");
     await expect(aaplEvidence).toContainText("NA");
-    await expect(aaplEvidence).toContainText("100 relative units");
+    await expect(aaplEvidence).toContainText("100 상대 단위");
     await expect(aaplEvidence).toContainText("fixture-market-treemap-sp500-v1");
 
-    const indexScrollState = await page.getByLabel("S&P 500 accessible treemap evidence scroll region")
+    const indexScrollState = await page.getByLabel("S&P 500 접근 가능한 트리맵 증거 스크롤 영역")
       .evaluate((element) => ({
         clientWidth: element.clientWidth,
         scrollWidth: element.scrollWidth,
@@ -217,7 +217,7 @@ test.describe("market map modes and nested treemap", () => {
       expect(indexScrollState.scrollWidth).toBeLessThanOrEqual(indexScrollState.clientWidth + 1);
     }
 
-    const scrollState = await page.getByLabel("S&P 500 treemap scroll region").evaluate((element) => ({
+    const scrollState = await page.getByLabel("S&P 500 트리맵 스크롤 영역").evaluate((element) => ({
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth,
       overflowX: getComputedStyle(element).overflowX,
@@ -238,43 +238,43 @@ test.describe("market map modes and nested treemap", () => {
     const response = await page.goto("/maps/nasdaq100?mode=price-change");
 
     expect(response?.ok()).toBe(true);
-    await expect(page.getByRole("heading", { name: "Nasdaq 100 price-change treemap" })).toBeVisible();
-    await expect(page.getByLabel("Nasdaq 100 map provenance")).toContainText(
+    await expect(page.getByRole("heading", { name: "Nasdaq 100 가격 변동 트리맵" })).toBeVisible();
+    await expect(page.getByLabel("Nasdaq 100 지도 출처")).toContainText(
       "fixture-market-treemap-nasdaq100-v1",
     );
-    await expect(page.getByRole("list", { name: "Nasdaq 100 nested DEMO treemap cells" }))
+    await expect(page.getByRole("list", { name: "Nasdaq 100 중첩 DEMO 트리맵 셀" }))
       .toContainText("NVDA");
 
-    const modeNavigation = page.getByRole("navigation", { name: "Market map modes" });
-    const analystLink = modeNavigation.getByRole("link", { name: "Analyst consensus" });
+    const modeNavigation = page.getByRole("navigation", { name: "시장 지도 모드" });
+    const analystLink = modeNavigation.getByRole("link", { name: "애널리스트 컨센서스" });
     await tabTo(page, analystLink);
     await expectVisibleKeyboardFocus(analystLink);
     await page.keyboard.press("Enter");
 
     await expect(page).toHaveURL(/\/maps\/nasdaq100\?mode=analyst-consensus$/);
-    await expect(page.getByLabel("Nasdaq 100 map provenance")).toContainText(
+    await expect(page.getByLabel("Nasdaq 100 지도 출처")).toContainText(
       "fixture-market-map-nasdaq100-v1",
     );
     await expect(page.getByRole("status")).toContainText(
-      "No membership, weight, metric, or call count was inferred",
+      "편입, 가중치, 지표 또는 콜 수를 추론하지 않았으며",
     );
 
-    const universeNavigation = page.getByRole("navigation", { name: "Market map universes" });
+    const universeNavigation = page.getByRole("navigation", { name: "시장 지도 유니버스" });
     const sp500Link = universeNavigation.getByRole("link", { name: "S&P 500" });
     await expect(sp500Link).toHaveAttribute("href", "/maps/sp500?mode=analyst-consensus");
     await sp500Link.click();
     await expect(page).toHaveURL(/\/maps\/sp500\?mode=analyst-consensus$/);
-    await expect(page.getByRole("heading", { name: "S&P 500 analyst-consensus sample" }))
+    await expect(page.getByRole("heading", { name: "S&P 500 애널리스트 컨센서스 표본" }))
       .toBeVisible();
-    await expect(page.getByRole("list", { name: "S&P 500 limited DEMO sample cells" }))
+    await expect(page.getByRole("list", { name: "S&P 500 제한 DEMO 표본 셀" }))
       .toContainText("NVDA");
 
-    const priceChangeLink = page.getByRole("navigation", { name: "Market map modes" })
-      .getByRole("link", { name: "Price change" });
+    const priceChangeLink = page.getByRole("navigation", { name: "시장 지도 모드" })
+      .getByRole("link", { name: "가격 변동" });
     await priceChangeLink.click();
     await expect(page).toHaveURL(/\/maps\/sp500$/);
-    await expect(page.getByRole("heading", { name: "S&P 500 price-change treemap" })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "Market map universes" })
+    await expect(page.getByRole("heading", { name: "S&P 500 가격 변동 트리맵" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "시장 지도 유니버스" })
       .getByRole("link", { name: "Nasdaq 100" })).toHaveAttribute("href", "/maps/nasdaq100");
 
     await expectNoPageOverflow(page);
@@ -283,14 +283,14 @@ test.describe("market map modes and nested treemap", () => {
 
   test("fails closed for unknown and repeated mode query input", async ({ page }) => {
     await page.goto("/maps/sp500?mode=live");
-    await expect(page.getByRole("heading", { name: "This market map is not published." }))
+    await expect(page.getByRole("heading", { name: "이 시장 지도는 게시되지 않았습니다." }))
       .toBeVisible();
     await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", /noindex/i);
     await expect(page.locator(".treemap-canvas")).toHaveCount(0);
     await expect(page.locator(".market-map-cells")).toHaveCount(0);
 
     await page.goto("/maps/sp500?mode=price-change&mode=analyst-consensus");
-    await expect(page.getByRole("heading", { name: "This market map is not published." }))
+    await expect(page.getByRole("heading", { name: "이 시장 지도는 게시되지 않았습니다." }))
       .toBeVisible();
     await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", /noindex/i);
     await expect(page.locator(".treemap-canvas")).toHaveCount(0);

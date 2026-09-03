@@ -1,0 +1,38 @@
+# Install this file as the exact path /etc/wall-street-receipts/backup.conf
+# on the future Ubuntu home server. The installed file must be owned by root,
+# must not be a symlink or hard link, and must have mode 0600 or 0640.
+#
+# The mount must already exist as its own ext4 or XFS filesystem with the
+# configured filesystem UUID and rw,nodev,nosuid,noexec mount options. The
+# recovery scripts never mount, format, partition, or create the mount point.
+# They also refuse a backup device that shares a physical leaf disk with
+# DockerRootDir. This first contract accepts one disk, at most one partition,
+# and, only for luks2, one dm-crypt layer. LVM, RAID, multi-disk, loop, and
+# other mapper/virtual ancestry fail closed for the backup and Docker roots.
+# Each leaf also needs an allowlisted SATA/USB/NVMe transport and bounded serial;
+# the operator must separately attest that no hidden RAID/VM backing exists.
+#
+# Allowed encryption decisions:
+# - none-demo-only: acceptable only while the deployment contains replaceable
+#   DEMO data. Revisit before admitting licensed, private, or irreplaceable data.
+# - luks2: the mounted filesystem must resolve through a LUKS2 dm-crypt device.
+#
+# No password, passphrase, private key, API key, or Docker credential belongs
+# in this file.
+#
+# After formatting and mounting the selected disk, provision the fixed store
+# root and its versioned identity marker once. Replace the example UUID in both
+# files with the output of `findmnt -rn --mountpoint /mnt/wsr-backup -o UUID`:
+#
+#   sudo install -d -m 0700 -o root -g root /mnt/wsr-backup/wall-street-receipts
+#   printf 'schema_version=1\nnamespace=wall-street-receipts\nfilesystem_uuid=%s\n' \
+#     'replace-with-filesystem-uuid' | sudo tee \
+#     /mnt/wsr-backup/wall-street-receipts/.store-identity >/dev/null
+#   sudo chown root:root /mnt/wsr-backup/wall-street-receipts/.store-identity
+#   sudo chmod 0400 /mnt/wsr-backup/wall-street-receipts/.store-identity
+#
+# Preflight never creates or repairs this marker. A missing, copied, malformed,
+# or UUID-mismatched marker fails closed.
+WSR_BACKUP_MOUNT=/mnt/wsr-backup
+WSR_BACKUP_FILESYSTEM_UUID=replace-with-filesystem-uuid
+WSR_BACKUP_ENCRYPTION=none-demo-only

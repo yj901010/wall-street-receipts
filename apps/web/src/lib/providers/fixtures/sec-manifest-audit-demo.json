@@ -1,0 +1,227 @@
+{
+  "fixtureSchemaVersion" : "1.0.0",
+  "generatedBy" : "java-domain-and-adr-052-response-mapper",
+  "manifestId" : "cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd",
+  "evaluationAsOf" : "2026-08-25T03:30:00.123456Z",
+  "summary" : {
+    "auditSchemaVersion" : "1.0.0",
+    "auditPolicyVersion" : "SEC_EXACT_MANIFEST_AUDIT_V1",
+    "evaluationAsOf" : "2026-08-25T03:30:00.123456Z",
+    "manifestId" : "cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd",
+    "manifestSchemaVersion" : "1.0.0",
+    "provider" : "sec-edgar",
+    "product" : "edgar-submissions-root-relative-collection-manifest",
+    "policyVersion" : "SEC_ROOT_RELATIVE_ACCESSION_RECONCILIATION_V1",
+    "selectionSha256" : "eadb0c3bf6efb9b3323be1342d0b17e63631b706f088b23fa78e784e1b547acd",
+    "rootCaptureId" : "c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8",
+    "rootCapturedAt" : "2026-08-25T03:00:00.123456Z",
+    "cik" : "0000320193",
+    "evidenceAvailableAt" : "2026-08-25T03:20:00.123456Z",
+    "assembledAt" : "2026-08-25T03:30:00.123456Z",
+    "selectionCoverage" : "ALL_ADVERTISED_DESCRIPTORS_SELECTED",
+    "advertisedDescriptorCount" : 2,
+    "selectedDescriptorCount" : 2,
+    "omittedDescriptorCount" : 0,
+    "sourceOccurrenceCount" : 6,
+    "distinctAccessionCount" : 4,
+    "singleSourceAccessionCount" : 2,
+    "exactAgreementAccessionCount" : 1,
+    "canonicalConflictAccessionCount" : 1,
+    "immutable" : true,
+    "disclosure" : {
+      "coverageScope" : "ROOT_RELATIVE_SELECTED_REFERENCES_ONLY",
+      "atomicSecSnapshotClaim" : "NOT_MADE",
+      "currentHistoryStatus" : "NOT_RESOLVED",
+      "correctionRemovalStatus" : "NOT_RESOLVED",
+      "amendmentLinkageStatus" : "NOT_RESOLVED",
+      "legalAuthorityStatus" : "NOT_CLAIMED"
+    }
+  },
+  "descriptors" : {
+    "auditSchemaVersion" : "1.0.0",
+    "auditPolicyVersion" : "SEC_EXACT_MANIFEST_AUDIT_V1",
+    "manifestId" : "cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd",
+    "evaluationAsOf" : "2026-08-25T03:30:00.123456Z",
+    "items" : [ {
+      "descriptorOrdinal" : 0,
+      "fileName" : "CIK0000320193-submissions-002.json",
+      "advertisedFilingCount" : 2000,
+      "advertisedFilingFrom" : "2015-01-01",
+      "advertisedFilingTo" : "2020-12-31",
+      "selectionState" : "SELECTED_EXACT_CAPTURE",
+      "selectedSegmentCaptureId" : "b3c60bfac0a3e79a886ba795467a6ac2dfa8ac70266ec2913ec1a34e81bd55de"
+    }, {
+      "descriptorOrdinal" : 1,
+      "fileName" : "CIK0000320193-submissions-001.json",
+      "advertisedFilingCount" : 3000,
+      "advertisedFilingFrom" : "2001-01-01",
+      "advertisedFilingTo" : "2014-12-31",
+      "selectionState" : "SELECTED_EXACT_CAPTURE",
+      "selectedSegmentCaptureId" : "5cf0f3062c34d4b4bf080c828483b4470d8202c6593c4b5591d7567aa2e53bc9"
+    } ],
+    "page" : {
+      "number" : 0,
+      "size" : 25,
+      "totalElements" : 2,
+      "totalPages" : 1,
+      "first" : true,
+      "last" : true,
+      "order" : {
+        "field" : "descriptorOrdinal",
+        "direction" : "ASC"
+      }
+    }
+  },
+  "accessions" : {
+    "auditSchemaVersion" : "1.0.0",
+    "auditPolicyVersion" : "SEC_EXACT_MANIFEST_AUDIT_V1",
+    "manifestId" : "cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd",
+    "evaluationAsOf" : "2026-08-25T03:30:00.123456Z",
+    "items" : [ {
+      "groupOrdinal" : 0,
+      "accessionNumber" : "0000320193-26-000001",
+      "occurrenceCount" : 1,
+      "distinctProjectionCount" : 1,
+      "comparison" : "SINGLE_SOURCE_OCCURRENCE"
+    }, {
+      "groupOrdinal" : 1,
+      "accessionNumber" : "0000320193-26-000002",
+      "occurrenceCount" : 1,
+      "distinctProjectionCount" : 1,
+      "comparison" : "SINGLE_SOURCE_OCCURRENCE"
+    }, {
+      "groupOrdinal" : 2,
+      "accessionNumber" : "0000320193-14-000101",
+      "occurrenceCount" : 2,
+      "distinctProjectionCount" : 1,
+      "comparison" : "MULTIPLE_OCCURRENCES_EXACT_AGREEMENT"
+    }, {
+      "groupOrdinal" : 3,
+      "accessionNumber" : "0000320193-14-000102",
+      "occurrenceCount" : 2,
+      "distinctProjectionCount" : 2,
+      "comparison" : "MULTIPLE_OCCURRENCES_CANONICAL_CONFLICT"
+    } ],
+    "page" : {
+      "number" : 0,
+      "size" : 25,
+      "totalElements" : 4,
+      "totalPages" : 1,
+      "first" : true,
+      "last" : true,
+      "order" : {
+        "field" : "groupOrdinal",
+        "direction" : "ASC"
+      }
+    }
+  },
+  "occurrences" : {
+    "auditSchemaVersion" : "1.0.0",
+    "auditPolicyVersion" : "SEC_EXACT_MANIFEST_AUDIT_V1",
+    "manifestId" : "cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd",
+    "evaluationAsOf" : "2026-08-25T03:30:00.123456Z",
+    "items" : [ {
+      "occurrenceOrdinal" : 0,
+      "groupOrdinal" : 0,
+      "sourceKind" : "ROOT_RECENT",
+      "sourceCaptureId" : "c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8",
+      "descriptorOrdinal" : null,
+      "sourceRowOrdinal" : 0,
+      "projectionSha256" : "8d9e8cb9ebde6f050a7ac297e20624ca0b54cc7a820dacd151f04683fd06a8bb",
+      "providerEventId" : "0000320193-26-000001",
+      "accessionNumber" : "0000320193-26-000001",
+      "form" : "10-Q",
+      "filingDate" : "2026-08-20",
+      "reportDate" : "2026-06-27",
+      "acceptedAt" : "2026-08-20T20:00:00.123456Z",
+      "primaryDocumentUri" : "https://www.sec.gov/Archives/edgar/data/320193/000032019326000001/form10q.htm"
+    }, {
+      "occurrenceOrdinal" : 1,
+      "groupOrdinal" : 1,
+      "sourceKind" : "ROOT_RECENT",
+      "sourceCaptureId" : "c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8",
+      "descriptorOrdinal" : null,
+      "sourceRowOrdinal" : 1,
+      "projectionSha256" : "0927fb76a0f0971a176d9fe320bdabd5fcfde78a028dc3b5b2826e280366d1f7",
+      "providerEventId" : "0000320193-26-000002",
+      "accessionNumber" : "0000320193-26-000002",
+      "form" : "8-K",
+      "filingDate" : "2026-08-19",
+      "reportDate" : null,
+      "acceptedAt" : "2026-08-19T15:30:00Z",
+      "primaryDocumentUri" : "https://www.sec.gov/Archives/edgar/data/320193/000032019326000002/form8k.htm"
+    }, {
+      "occurrenceOrdinal" : 2,
+      "groupOrdinal" : 2,
+      "sourceKind" : "HISTORICAL_SEGMENT",
+      "sourceCaptureId" : "b3c60bfac0a3e79a886ba795467a6ac2dfa8ac70266ec2913ec1a34e81bd55de",
+      "descriptorOrdinal" : 0,
+      "sourceRowOrdinal" : 0,
+      "projectionSha256" : "a549ec7c7673e00b096711e00e7e9354ff3af564e4053e8aadfe265d3d9615f6",
+      "providerEventId" : "0000320193-14-000101",
+      "accessionNumber" : "0000320193-14-000101",
+      "form" : "10-K",
+      "filingDate" : "2014-12-31",
+      "reportDate" : "2014-09-27",
+      "acceptedAt" : "2014-12-31T20:00:00.123456Z",
+      "primaryDocumentUri" : null
+    }, {
+      "occurrenceOrdinal" : 3,
+      "groupOrdinal" : 3,
+      "sourceKind" : "HISTORICAL_SEGMENT",
+      "sourceCaptureId" : "b3c60bfac0a3e79a886ba795467a6ac2dfa8ac70266ec2913ec1a34e81bd55de",
+      "descriptorOrdinal" : 0,
+      "sourceRowOrdinal" : 1,
+      "projectionSha256" : "43aec50a609012c2cdfc0d13ff4fcdf0295b604146ed3c0e62b4095d29e0b500",
+      "providerEventId" : "0000320193-14-000102",
+      "accessionNumber" : "0000320193-14-000102",
+      "form" : "8-K",
+      "filingDate" : "2014-12-30",
+      "reportDate" : null,
+      "acceptedAt" : "2014-12-30T15:30:00.123456Z",
+      "primaryDocumentUri" : null
+    }, {
+      "occurrenceOrdinal" : 4,
+      "groupOrdinal" : 2,
+      "sourceKind" : "HISTORICAL_SEGMENT",
+      "sourceCaptureId" : "5cf0f3062c34d4b4bf080c828483b4470d8202c6593c4b5591d7567aa2e53bc9",
+      "descriptorOrdinal" : 1,
+      "sourceRowOrdinal" : 0,
+      "projectionSha256" : "a549ec7c7673e00b096711e00e7e9354ff3af564e4053e8aadfe265d3d9615f6",
+      "providerEventId" : "0000320193-14-000101",
+      "accessionNumber" : "0000320193-14-000101",
+      "form" : "10-K",
+      "filingDate" : "2014-12-31",
+      "reportDate" : "2014-09-27",
+      "acceptedAt" : "2014-12-31T20:00:00.123456Z",
+      "primaryDocumentUri" : null
+    }, {
+      "occurrenceOrdinal" : 5,
+      "groupOrdinal" : 3,
+      "sourceKind" : "HISTORICAL_SEGMENT",
+      "sourceCaptureId" : "5cf0f3062c34d4b4bf080c828483b4470d8202c6593c4b5591d7567aa2e53bc9",
+      "descriptorOrdinal" : 1,
+      "sourceRowOrdinal" : 1,
+      "projectionSha256" : "4c57228c55ab5896c5ebe6fe9d5afabfea8ebc2b853780e222ca97c0c7d5c396",
+      "providerEventId" : "0000320193-14-000102",
+      "accessionNumber" : "0000320193-14-000102",
+      "form" : "8-K",
+      "filingDate" : "2014-12-30",
+      "reportDate" : null,
+      "acceptedAt" : "2014-12-30T15:30:00.123456Z",
+      "primaryDocumentUri" : "https://www.sec.gov/Archives/edgar/data/320193/000032019314000102/conflict8k.htm"
+    } ],
+    "page" : {
+      "number" : 0,
+      "size" : 25,
+      "totalElements" : 6,
+      "totalPages" : 1,
+      "first" : true,
+      "last" : true,
+      "order" : {
+        "field" : "occurrenceOrdinal",
+        "direction" : "ASC"
+      }
+    }
+  }
+}

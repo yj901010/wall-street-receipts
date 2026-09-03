@@ -1,4 +1,7 @@
 import type { CSSProperties } from "react";
+import { KstTimestamp } from "@/components/kst-timestamp";
+import { getMarketMapMessages } from "@/components/market-map-messages";
+import type { Locale } from "@/lib/i18n/config";
 import type { MarketTreemapSnapshot, MarketTreemapUniverse } from "@/lib/providers";
 import {
   layoutMarketTreemap,
@@ -14,16 +17,6 @@ export const MARKET_TREEMAP_LABELS: Record<MarketTreemapUniverse, string> = {
   sp500: "S&P 500",
   nasdaq100: "Nasdaq 100",
 };
-
-const utcFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
-
-function utc(value: string) {
-  return `${utcFormatter.format(new Date(value))} UTC`;
-}
 
 function position(rect: TreemapRect): CSSProperties {
   const { width, height } = MARKET_TREEMAP_CANVAS;
@@ -45,7 +38,14 @@ function childrenOfKind(
   ]);
 }
 
-export function MarketTreemap({ snapshot }: { snapshot: MarketTreemapSnapshot }) {
+export function MarketTreemap({
+  snapshot,
+  locale,
+}: {
+  snapshot: MarketTreemapSnapshot;
+  locale: Locale;
+}) {
+  const messages = getMarketMapMessages(locale).treemap;
   const universeLabel = MARKET_TREEMAP_LABELS[snapshot.universe];
   const layout = layoutMarketTreemap(snapshot);
   const sectors = childrenOfKind(layout, "sector");
@@ -57,49 +57,41 @@ export function MarketTreemap({ snapshot }: { snapshot: MarketTreemapSnapshot })
     <section className="data-section market-treemap" aria-labelledby="market-treemap-title">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Nested synthetic map evidence</p>
-          <h2 id="market-treemap-title">{universeLabel} price-change treemap</h2>
+          <p className="eyebrow">{messages.eyebrow}</p>
+          <h2 id="market-treemap-title">{messages.title(universeLabel)}</h2>
         </div>
-        <span>{snapshot.coverage.cellCount}-cell {snapshot.dataMode} sample</span>
+        <span>{messages.sample(snapshot.coverage.cellCount, snapshot.dataMode)}</span>
       </div>
 
       <div className="treemap-coverage" role="note">
-        <strong>Limited DEMO sample — not a complete index treemap.</strong>
-        <span>
-          This committed fixture demonstrates {sectors.length} outer sector and {industries.length}
-          {" "}nested industries. The engine supports multiple sectors, but this sample does not
-          assert broader sector coverage, official membership, or composition.
-        </span>
-        <span>
-          Rectangle area uses only each stored <span className="mono">{snapshot.geometry.areaField}</span>
-          {" "}in {snapshot.geometry.areaUnit} units. It is a synthetic proxy, never an official or
-          current market-cap value.
-        </span>
+        <strong>{messages.coverageStrong}</strong>
+        <span>{messages.coverageGrouping(sectors.length, industries.length)}</span>
+        <span>{messages.coverageArea(snapshot.geometry.areaField, snapshot.geometry.areaUnit)}</span>
       </div>
 
-      <dl className="treemap-evidence-grid" aria-label={`${universeLabel} treemap definition`}>
+      <dl className="treemap-evidence-grid" aria-label={messages.definitionLabel(universeLabel)}>
         <div>
-          <dt>Map mode</dt>
+          <dt>{messages.mapMode}</dt>
           <dd className="mono">{snapshot.mode}</dd>
         </div>
         <div>
-          <dt>Stored metric</dt>
+          <dt>{messages.storedMetric}</dt>
           <dd className="mono">{snapshot.metric.name}</dd>
         </div>
         <div>
-          <dt>Metric unit</dt>
+          <dt>{messages.metricUnit}</dt>
           <dd className="mono">{snapshot.metric.unit}</dd>
         </div>
         <div>
-          <dt>Grouping</dt>
+          <dt>{messages.grouping}</dt>
           <dd className="mono">{snapshot.geometry.groupBy.join(" → ")}</dd>
         </div>
         <div>
-          <dt>Weight basis</dt>
+          <dt>{messages.weightBasis}</dt>
           <dd className="mono">{snapshot.coverage.weightBasis}</dd>
         </div>
         <div>
-          <dt>Coverage</dt>
+          <dt>{messages.coverage}</dt>
           <dd className="mono">
             {snapshot.coverage.kind} / completeUniverse={String(snapshot.coverage.completeUniverse)}
           </dd>
@@ -108,11 +100,14 @@ export function MarketTreemap({ snapshot }: { snapshot: MarketTreemapSnapshot })
 
       <div
         className="treemap-percent-legend"
-        aria-label={`Price-change percent color legend; palette saturates at ${snapshot.metric.scaleMinimum}% and +${snapshot.metric.scaleMaximum}%`}
+        aria-label={messages.legendLabel(
+          snapshot.metric.scaleMinimum,
+          snapshot.metric.scaleMaximum,
+        )}
       >
         <div>
-          <strong>Stored price-change percent</strong>
-          <span>Color saturates at the declared endpoints; displayed values are never clamped.</span>
+          <strong>{messages.storedPercent}</strong>
+          <span>{messages.saturation}</span>
         </div>
         <ol>
           {paletteStops.map((stop) => (
@@ -126,18 +121,18 @@ export function MarketTreemap({ snapshot }: { snapshot: MarketTreemapSnapshot })
             <span className="mono">NA</span>
           </li>
         </ol>
-        <span className="na-value">NA is unavailable, not zero or negative.</span>
+        <span className="na-value">{messages.unavailable}</span>
       </div>
 
       {cells.length > 0 ? (
         <>
-          <div className="treemap-scroll" aria-label={`${universeLabel} treemap scroll region`} tabIndex={0}>
+          <div className="treemap-scroll" aria-label={messages.scrollLabel(universeLabel)} tabIndex={0}>
             <div
               className="treemap-canvas"
               data-canvas-width={MARKET_TREEMAP_CANVAS.width}
               data-canvas-height={MARKET_TREEMAP_CANVAS.height}
             >
-              <ol className="treemap-cell-layer" aria-label={`${universeLabel} nested DEMO treemap cells`}>
+              <ol className="treemap-cell-layer" aria-label={messages.cellsLabel(universeLabel)}>
                 {cells.map((node) => {
                   if (node.value.kind !== "cell") return null;
                   const { cell, sectorLabel, industryLabel } = node.value;
@@ -160,45 +155,47 @@ export function MarketTreemap({ snapshot }: { snapshot: MarketTreemapSnapshot })
                         className={`treemap-cell treemap-metric-${presentation.metricTone} treemap-label-${labelDensity}`}
                         style={{ backgroundColor: presentation.backgroundColor }}
                         tabIndex={0}
-                        aria-label={`${cell.ticker} treemap evidence: ${presentation.metricDisplay}`}
+                        aria-label={messages.cellLabel(cell.ticker, presentation.metricDisplay)}
                         aria-describedby={tooltipId}
                       >
                         <div className="treemap-cell-copy">
                           <strong>{cell.ticker}</strong>
                           <span className="mono">{presentation.metricDisplay}</span>
-                          <small>Proxy {cell.syntheticMarketCapProxy}</small>
+                          <small>{messages.proxy(cell.syntheticMarketCapProxy)}</small>
                         </div>
                         <dl className="treemap-tooltip" id={tooltipId} role="tooltip">
                           <div>
-                            <dt>Ticker</dt>
+                            <dt>{messages.tooltip.ticker}</dt>
                             <dd>{cell.ticker}</dd>
                           </div>
                           <div>
-                            <dt>Sector</dt>
+                            <dt>{messages.tooltip.sector}</dt>
                             <dd>{sectorLabel}</dd>
                           </div>
                           <div>
-                            <dt>Industry</dt>
+                            <dt>{messages.tooltip.industry}</dt>
                             <dd>{industryLabel}</dd>
                           </div>
                           <div>
-                            <dt>Stored change</dt>
+                            <dt>{messages.tooltip.storedChange}</dt>
                             <dd className="mono">{presentation.metricDisplay}</dd>
                           </div>
                           <div>
-                            <dt>Synthetic proxy</dt>
-                            <dd className="mono">{cell.syntheticMarketCapProxy} relative units</dd>
+                            <dt>{messages.tooltip.syntheticProxy}</dt>
+                            <dd className="mono">
+                              {messages.tooltip.relativeUnits(cell.syntheticMarketCapProxy)}
+                            </dd>
                           </div>
                           <div>
-                            <dt>Timestamp</dt>
-                            <dd>{utc(cell.timestamp)}</dd>
+                            <dt>{messages.tooltip.timestamp}</dt>
+                            <dd><KstTimestamp value={cell.timestamp} /></dd>
                           </div>
                           <div>
-                            <dt>Data mode</dt>
+                            <dt>{messages.tooltip.dataMode}</dt>
                             <dd className="mono">{cell.dataMode}</dd>
                           </div>
                           <div>
-                            <dt>Provenance</dt>
+                            <dt>{messages.tooltip.provenance}</dt>
                             <dd className="mono">{cell.provenanceId}</dd>
                           </div>
                         </dl>
@@ -236,31 +233,28 @@ export function MarketTreemap({ snapshot }: { snapshot: MarketTreemapSnapshot })
           </div>
 
           <details className="treemap-evidence-index">
-            <summary tabIndex={0}>Accessible evidence index · {snapshot.cells.length} cells</summary>
-            <p>
-              This non-geometric index preserves every stored field when a proportional tile is too
-              small for visible content. It does not change or impose a minimum tile area.
-            </p>
+            <summary tabIndex={0}>{messages.indexSummary(snapshot.cells.length)}</summary>
+            <p>{messages.indexDescription}</p>
             <div
               className="table-scroll treemap-index-scroll"
-              aria-label={`${universeLabel} accessible treemap evidence scroll region`}
+              aria-label={messages.indexScrollLabel(universeLabel)}
               tabIndex={0}
             >
               <table
                 className="treemap-index-table"
-                aria-label={`${universeLabel} accessible treemap evidence index`}
+                aria-label={messages.indexTableLabel(universeLabel)}
               >
                 <thead>
                   <tr>
-                    <th scope="col">Asset ID</th>
-                    <th scope="col">Ticker</th>
-                    <th scope="col">Sector</th>
-                    <th scope="col">Industry</th>
-                    <th scope="col">Stored change</th>
-                    <th scope="col">Synthetic proxy</th>
-                    <th scope="col">Timestamp</th>
-                    <th scope="col">Data mode</th>
-                    <th scope="col">Provenance</th>
+                    <th scope="col">{messages.columns.assetId}</th>
+                    <th scope="col">{messages.columns.ticker}</th>
+                    <th scope="col">{messages.columns.sector}</th>
+                    <th scope="col">{messages.columns.industry}</th>
+                    <th scope="col">{messages.columns.storedChange}</th>
+                    <th scope="col">{messages.columns.syntheticProxy}</th>
+                    <th scope="col">{messages.columns.timestamp}</th>
+                    <th scope="col">{messages.columns.dataMode}</th>
+                    <th scope="col">{messages.columns.provenance}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -268,15 +262,33 @@ export function MarketTreemap({ snapshot }: { snapshot: MarketTreemapSnapshot })
                     const presentation = presentMarketTreemapCell(cell, snapshot.metric);
                     return (
                       <tr key={cell.assetId}>
-                        <td className="mono">{cell.assetId}</td>
-                        <td><strong>{cell.ticker}</strong></td>
-                        <td>{cell.sector ?? snapshot.geometry.unclassifiedDisplay}</td>
-                        <td>{cell.industry ?? snapshot.geometry.unclassifiedDisplay}</td>
-                        <td className="mono">{presentation.metricDisplay}</td>
-                        <td className="mono">{cell.syntheticMarketCapProxy} relative units</td>
-                        <td>{utc(cell.timestamp)}</td>
-                        <td className="mono">{cell.dataMode}</td>
-                        <td className="mono">{cell.provenanceId}</td>
+                        <td data-field="asset-id" data-label={messages.columns.assetId} className="mono">
+                          {cell.assetId}
+                        </td>
+                        <td data-field="ticker" data-label={messages.columns.ticker}>
+                          <strong>{cell.ticker}</strong>
+                        </td>
+                        <td data-field="sector" data-label={messages.columns.sector}>
+                          {cell.sector ?? snapshot.geometry.unclassifiedDisplay}
+                        </td>
+                        <td data-field="industry" data-label={messages.columns.industry}>
+                          {cell.industry ?? snapshot.geometry.unclassifiedDisplay}
+                        </td>
+                        <td data-field="stored-change" data-label={messages.columns.storedChange} className="mono">
+                          {presentation.metricDisplay}
+                        </td>
+                        <td data-field="synthetic-proxy" data-label={messages.columns.syntheticProxy} className="mono">
+                          {messages.relativeUnits(cell.syntheticMarketCapProxy)}
+                        </td>
+                        <td data-field="timestamp" data-label={messages.columns.timestamp}>
+                          <KstTimestamp value={cell.timestamp} />
+                        </td>
+                        <td data-field="data-mode" data-label={messages.columns.dataMode} className="mono">
+                          {cell.dataMode}
+                        </td>
+                        <td data-field="provenance" data-label={messages.columns.provenance} className="mono">
+                          {cell.provenanceId}
+                        </td>
                       </tr>
                     );
                   })}
@@ -287,18 +299,13 @@ export function MarketTreemap({ snapshot }: { snapshot: MarketTreemapSnapshot })
         </>
       ) : (
         <div className="empty-state treemap-empty" role="status">
-          <h3>No {universeLabel} treemap cells are available.</h3>
-          <p>
-            No sector, industry, ticker, proxy area, or price-change value was inferred, and no
-            cells from another universe were substituted.
-          </p>
+          <h3>{messages.emptyTitle(universeLabel)}</h3>
+          <p>{messages.emptyBody}</p>
         </div>
       )}
 
       <p className="section-note treemap-readonly-note">
-        Canonical ticker cells are read-only and keyboard focusable. The accessible evidence index
-        preserves inspection when proportional geometry becomes subpixel. Stock detail evidence is
-        not published in this phase, so no drilldown link is shown.
+        {messages.readonly}
       </p>
       <p className="dataset-disclaimer treemap-disclaimer">{snapshot.disclaimer}</p>
     </section>

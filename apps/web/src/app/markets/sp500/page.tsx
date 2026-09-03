@@ -1,9 +1,13 @@
 import { SiteHeader } from "@/components/site-header";
+import { KstTimestamp } from "@/components/kst-timestamp";
+import { getLocale } from "@/lib/i18n/server";
 import { sp500HistoryProvider } from "@/lib/providers";
+import { getSp500HistoryMessages } from "./messages";
 import { Sp500CallHistory } from "./sp500-call-history";
 
 export default async function Sp500HistoryPage() {
-  const snapshot = await sp500HistoryProvider().history();
+  const [snapshot, locale] = await Promise.all([sp500HistoryProvider().history(), getLocale()]);
+  const messages = getSp500HistoryMessages(locale).page;
 
   return (
     <main>
@@ -12,36 +16,33 @@ export default async function Sp500HistoryPage() {
       <div className="page-shell sp500-history-shell">
         <section className="page-heading sp500-history-page-heading" aria-labelledby="sp500-page-title">
           <div>
-            <p className="eyebrow">Committed DEMO call-event ledger</p>
-            <h1 id="sp500-page-title">Recorded S&amp;P 500 forecast-call events.</h1>
-            <p className="page-summary">
-              This is a point-in-time subset of original analyst-call records, not index-price
-              history, a current forecast, consensus, market trend, or performance series.
-            </p>
+            <p className="eyebrow">{messages.eyebrow}</p>
+            <h1 id="sp500-page-title">{messages.title}</h1>
+            <p className="page-summary">{messages.summary}</p>
           </div>
-          <dl className="provenance-strip" aria-label="S&P 500 call-history provenance">
+          <dl className="provenance-strip" aria-label={messages.provenanceLabel}>
             <div>
-              <dt>Call catalog as of</dt>
+              <dt>{messages.catalogAsOf}</dt>
               <dd className="mono">
-                <time dateTime={snapshot.asOf}>{snapshot.asOf}</time>
+                <KstTimestamp value={snapshot.asOf} />
               </dd>
             </div>
             <div>
-              <dt>Source</dt>
+              <dt>{messages.source}</dt>
               <dd className="mono">{snapshot.source}</dd>
             </div>
             <div>
-              <dt>Asset</dt>
+              <dt>{messages.asset}</dt>
               <dd className="mono">{snapshot.asset.ticker ?? "NA"}</dd>
             </div>
             <div>
-              <dt>Mode</dt>
+              <dt>{messages.mode}</dt>
               <dd className="mono">{snapshot.dataMode}</dd>
             </div>
           </dl>
         </section>
 
-        <Sp500CallHistory snapshot={snapshot} />
+        <Sp500CallHistory locale={locale} snapshot={snapshot} />
       </div>
     </main>
   );

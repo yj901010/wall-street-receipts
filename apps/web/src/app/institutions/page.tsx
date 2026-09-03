@@ -1,18 +1,13 @@
 import { SiteHeader } from "@/components/site-header";
+import { KstTimestamp } from "@/components/kst-timestamp";
+import { getLocale } from "@/lib/i18n/server";
 import { institutionDirectoryProvider } from "@/lib/providers";
 import { InstitutionDirectory } from "./institution-directory";
-
-const utcFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
-
-function utc(value: string) {
-  return `${utcFormatter.format(new Date(value))} UTC`;
-}
+import { getInstitutionMessages } from "./messages";
 
 export default async function InstitutionsPage() {
+  const locale = await getLocale();
+  const messages = getInstitutionMessages(locale);
   const snapshot = await institutionDirectoryProvider().directory();
 
   return (
@@ -22,42 +17,39 @@ export default async function InstitutionsPage() {
       <div className="page-shell institutions-shell">
         <section className="page-heading institutions-heading" aria-labelledby="institutions-title">
           <div>
-            <p className="eyebrow">Identity before performance</p>
-            <h1 id="institutions-title">Institutions as recorded evidence, not a leaderboard.</h1>
-            <p className="page-summary">
-              Inspect committed DEMO identity fields and provenance. This route publishes no
-              institution score, accuracy, performance metric, or rank.
-            </p>
+            <p className="eyebrow">{messages.page.eyebrow}</p>
+            <h1 id="institutions-title">{messages.page.title}</h1>
+            <p className="page-summary">{messages.page.summary}</p>
           </div>
-          <dl className="provenance-strip" aria-label="Institution identity fixture provenance">
+          <dl className="provenance-strip" aria-label={messages.page.provenanceLabel}>
             <div>
-              <dt>Schema</dt>
+              <dt>{messages.page.schema}</dt>
               <dd>{snapshot.schemaVersion}</dd>
             </div>
             <div>
-              <dt>Fixture</dt>
+              <dt>{messages.page.fixture}</dt>
               <dd>{snapshot.fixtureVersion}</dd>
             </div>
             <div>
-              <dt>Generated</dt>
-              <dd>{utc(snapshot.generatedAt)}</dd>
+              <dt>{messages.page.generated}</dt>
+              <dd><KstTimestamp value={snapshot.generatedAt} /></dd>
             </div>
             <div>
-              <dt>Captured</dt>
-              <dd>{utc(snapshot.provenance.capturedAt)}</dd>
+              <dt>{messages.page.captured}</dt>
+              <dd><KstTimestamp value={snapshot.provenance.capturedAt} /></dd>
             </div>
             <div>
-              <dt>Source</dt>
+              <dt>{messages.page.source}</dt>
               <dd>{snapshot.provenance.id}</dd>
             </div>
             <div>
-              <dt>Mode</dt>
+              <dt>{messages.page.mode}</dt>
               <dd>{snapshot.dataMode}</dd>
             </div>
           </dl>
         </section>
 
-        <InstitutionDirectory snapshot={snapshot} />
+        <InstitutionDirectory snapshot={snapshot} locale={locale} />
       </div>
     </main>
   );

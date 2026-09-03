@@ -1,17 +1,11 @@
 import Link from "next/link";
+import { KstTimestamp } from "@/components/kst-timestamp";
+import type { Locale } from "@/lib/i18n/config";
 import type { InstitutionDirectorySnapshot } from "@/lib/providers";
+import { getInstitutionMessages } from "./messages";
 
-const utcFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
-
-function utc(value: string) {
-  return `${utcFormatter.format(new Date(value))} UTC`;
-}
-
-export function InstitutionDirectory({ snapshot }: { snapshot: InstitutionDirectorySnapshot }) {
+export function InstitutionDirectory({ snapshot, locale }: { snapshot: InstitutionDirectorySnapshot; locale: Locale }) {
+  const messages = getInstitutionMessages(locale);
   return (
     <section
       className="data-section institution-directory"
@@ -19,46 +13,42 @@ export function InstitutionDirectory({ snapshot }: { snapshot: InstitutionDirect
     >
       <div className="section-heading institution-directory-heading">
         <div>
-          <p className="eyebrow">Canonical identity records</p>
-          <h2 id="institution-directory-title">Institution directory</h2>
+          <p className="eyebrow">{messages.directory.eyebrow}</p>
+          <h2 id="institution-directory-title">{messages.directory.title}</h2>
         </div>
         <span>
-          {snapshot.institutions.length} {snapshot.dataMode} fixture records · coverage not asserted
+          {snapshot.institutions.length} {snapshot.dataMode} {messages.directory.countSuffix}
         </span>
       </div>
 
-      <div className="institution-directory-policy" aria-label="Institution directory policy">
-        <p className="institution-policy-label">Product policy · not fixture evidence</p>
+      <div className="institution-directory-policy" aria-label={messages.directory.policyLabel}>
+        <p className="institution-policy-label">{messages.directory.productPolicy}</p>
         <p>
-          <strong>Not ranked.</strong> Rows use canonical-name order, never performance, accuracy,
-          score, call volume, or recommendation order.
+          <strong>{messages.directory.notRankedTitle}</strong> {messages.directory.notRankedBody}
         </p>
         <p>
-          <strong>Recorded state.</strong> The active field is preserved as captured fixture evidence
-          at its stated effective and capture times; it is not a live operating-status claim.
+          <strong>{messages.directory.recordedTitle}</strong> {messages.directory.recordedBody}
         </p>
         <p>
-          <strong>Limited DEMO catalog.</strong> The fixture record count does not assert market,
-          industry, or provider coverage. Identity inclusion is not an endorsement or investment
-          advice.
+          <strong>{messages.directory.limitedTitle}</strong> {messages.directory.limitedBody}
         </p>
       </div>
 
-      <div className="institution-source-evidence" aria-label="Institution source evidence">
+      <div className="institution-source-evidence" aria-label={messages.directory.sourceEvidenceLabel}>
         <div>
-          <span>Source type</span>
+          <span>{messages.directory.sourceType}</span>
           <strong>{snapshot.provenance.sourceType}</strong>
         </div>
         <div>
-          <span>License</span>
+          <span>{messages.directory.license}</span>
           <strong>{snapshot.provenance.licenseClass}</strong>
         </div>
         <div>
-          <span>Synthetic</span>
+          <span>{messages.directory.synthetic}</span>
           <strong>{String(snapshot.provenance.synthetic)}</strong>
         </div>
         <div className="institution-source-paths">
-          <span>Source paths</span>
+          <span>{messages.directory.sourcePaths}</span>
           <ul>
             {snapshot.provenance.sourcePaths.map((path) => (
               <li className="mono" key={path}>{path}</li>
@@ -71,49 +61,49 @@ export function InstitutionDirectory({ snapshot }: { snapshot: InstitutionDirect
         <div
           className="table-scroll institution-table-scroll"
           role="region"
-          aria-label="Institution identity table"
+          aria-label={messages.directory.tableLabel}
           tabIndex={0}
         >
           <table className="calls-table institution-table">
             <caption className="visually-hidden">
-              Canonical institution identities and their captured evidence
+              {messages.directory.caption}
             </caption>
             <thead>
               <tr>
-                <th scope="col">Institution</th>
-                <th scope="col">Slug</th>
-                <th scope="col">Country</th>
-                <th scope="col">Recorded active</th>
-                <th scope="col">Mode</th>
-                <th scope="col">Effective</th>
-                <th scope="col">Captured</th>
-                <th scope="col">Provenance</th>
-                <th scope="col">Call ledger</th>
+                <th scope="col">{messages.directory.columns.institution}</th>
+                <th scope="col">{messages.directory.columns.slug}</th>
+                <th scope="col">{messages.directory.columns.country}</th>
+                <th scope="col">{messages.directory.columns.recordedActive}</th>
+                <th scope="col">{messages.directory.columns.mode}</th>
+                <th scope="col">{messages.directory.columns.effective}</th>
+                <th scope="col">{messages.directory.columns.captured}</th>
+                <th scope="col">{messages.directory.columns.provenance}</th>
+                <th scope="col">{messages.directory.columns.callLedger}</th>
               </tr>
             </thead>
             <tbody>
               {snapshot.institutions.map((institution) => (
                 <tr key={institution.institutionId}>
-                  <td data-label="Institution">
+                  <td data-label={messages.directory.columns.institution}>
                     <strong>{institution.canonicalName}</strong>
                     <span className="cell-secondary mono">{institution.institutionId}</span>
                   </td>
-                  <td className="mono" data-label="Slug">{institution.slug}</td>
-                  <td className="mono" data-label="Country">{institution.country}</td>
-                  <td className="mono institution-recorded-state" data-label="Recorded active">
+                  <td className="mono" data-label={messages.directory.columns.slug}>{institution.slug}</td>
+                  <td className="mono" data-label={messages.directory.columns.country}>{institution.country}</td>
+                  <td className="mono institution-recorded-state" data-label={messages.directory.columns.recordedActive}>
                     {String(institution.active)}
                   </td>
-                  <td className="mono" data-label="Mode">{institution.dataMode}</td>
-                  <td className="mono" data-label="Effective">{utc(institution.effectiveAt)}</td>
-                  <td className="mono" data-label="Captured">{utc(institution.capturedAt)}</td>
-                  <td className="mono" data-label="Provenance">{institution.provenanceId}</td>
-                  <td data-label="Call ledger">
+                  <td className="mono" data-label={messages.directory.columns.mode}>{institution.dataMode}</td>
+                  <td className="mono" data-label={messages.directory.columns.effective}><KstTimestamp value={institution.effectiveAt} /></td>
+                  <td className="mono" data-label={messages.directory.columns.captured}><KstTimestamp value={institution.capturedAt} /></td>
+                  <td className="mono" data-label={messages.directory.columns.provenance}>{institution.provenanceId}</td>
+                  <td data-label={messages.directory.columns.callLedger}>
                     <Link
                       className="text-action"
                       href={`/calls?institutionId=${encodeURIComponent(institution.institutionId)}`}
-                      aria-label={`Filter call ledger for ${institution.canonicalName}`}
+                      aria-label={`${messages.directory.filterCallLedgerFor} ${institution.canonicalName}`}
                     >
-                      Filter call ledger
+                      {messages.directory.filterCallLedger}
                     </Link>
                   </td>
                 </tr>
@@ -123,8 +113,8 @@ export function InstitutionDirectory({ snapshot }: { snapshot: InstitutionDirect
         </div>
       ) : (
         <div className="empty-state" role="status">
-          <h3>No institution identities are recorded.</h3>
-          <p>No placeholder identity, coverage claim, score, accuracy, or rank was generated.</p>
+          <h3>{messages.directory.emptyTitle}</h3>
+          <p>{messages.directory.emptyBody}</p>
         </div>
       )}
     </section>

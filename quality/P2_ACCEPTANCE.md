@@ -3,10 +3,14 @@
 Current status: the methodology-registry, multiple market-map shell,
 sector/industry PRICE_CHANGE treemap, dashboard evidence-composition,
 institution and analyst identity directories, known-unavailable market-board
-publication state, recorded S&P 500 forecast-call history, and application-
-owned screener known-deferred shell vertical slices are complete. These checks
-close only delivered P2 slices. Leaderboard, full-universe map, and production
-market-mode work stays open; actual historical screening remains P8 work.
+publication state, recorded S&P 500 forecast-call history, application-owned
+screener known-deferred shell, Korean-default bilingual evidence-first product
+UI, and coherent call-detail and analyst-call list API consumer vertical slices
+are complete. The coherent call-outcome audit consumer described below is also
+complete. These checks close only delivered P2 slices. Leaderboard,
+full-universe map, and production market-mode work stays open; actual
+historical screening remains P8 work. Presentation localization does not
+change canonical evidence or any backend contract.
 
 The methodology registry is a read-only, fixture-backed explanation surface. It
 publishes the immutable definition identities already present in
@@ -780,6 +784,642 @@ regime analytics. P3 retains reproducible outcome and leaderboard metrics. P5
 retains licensed observed market/analyst providers, provider health, licensing
 flags, and current rights review. No future API, feature catalog, calculation,
 or provider capability is bootstrapped by this application-owned P2 status.
+
+## Korean-default bilingual product UI boundary
+
+- Every existing product route remains at its current URL. This slice adds no
+  locale-prefixed route, locale query parameter, API endpoint, canonical
+  schema, fixture, manifest member, OpenAPI path, Flyway migration, persisted
+  preference, or provider/network dependency.
+- Presentation locale is exactly `ko` or `en`. The server resolves the exact
+  `wsr_locale` cookie value; a missing, blank, or otherwise unsupported value
+  resolves to Korean. It does not infer locale from `Accept-Language`, browser
+  APIs, geography, timezone, URL state, or a client-side default.
+- Locale mutation is a server action accepting only exact scalar `ko` or `en`.
+  Invalid mutation input is rejected rather than normalized. It writes an
+  HTTP-only `wsr_locale` cookie with `Path=/`, `SameSite=Lax`, `Max-Age=31536000`
+  and `Secure` in production only. The action does not redirect, change the
+  current path/query/hash, or use local/session storage.
+- Korean is present in the raw first server response when the cookie is absent
+  or invalid; English is present in the raw first response for a valid `en`
+  cookie. The document `lang` value equals the resolved locale before
+  hydration. A server-set preference survives revisit and direct navigation.
+- Product labels, explanations, accessible names, loading/error/empty copy,
+  and mode-neutral unsupported-request copy may be translated. Canonical
+  evidence never is: IDs, hashes, versions, enum/status/reason/data-mode
+  tokens, tickers, entity identities, source titles/publishers, URLs,
+  `sourcePaths`, fixture disclaimers, ISO timestamps, numeric strings, nulls,
+  ordering, and `NA` remain byte- and meaning-preserving.
+- The common root not-found boundary resolves the same server locale and
+  exposes only translated route guidance plus exact `/` and `/calls` links. It
+  has no DEMO badge, provider state, inferred evidence, or route fallback.
+- The visual system is a white editorial financial terminal: white or quiet
+  off-white canvas, dark readable type, thin neutral rules, near-square
+  controls, restrained low radii, compact monospace metadata and tabular
+  values, restrained green/red semantic accents, and deliberate whitespace.
+  It does not introduce gradients, glass effects, neon glow, giant heroes,
+  decorative cards/pills, or fabricated live, ranking, screening, market, or
+  outcome values.
+
+## Korean-default bilingual product UI contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-L10N01 | Closed locale set and default | `SUPPORTED_LOCALES` is exactly ordered `ko`, `en`; `DEFAULT_LOCALE` is exactly `ko`. Server parsing returns only those values and maps every missing or unsupported cookie value to `ko`. No third locale or English fallback is accepted. |
+| P2-L10N02 | Exact server-owned cookie | The cookie is exactly `wsr_locale` with `HttpOnly`, `Path=/`, `SameSite=Lax`, and one-year `Max-Age=31536000`; `Secure` is true only in production. Mutation accepts only exact `ko` or `en`, rejects missing/file/unsupported input before writing, and neither redirects nor mutates URL state. |
+| P2-L10N03 | SSR before hydration | Locale is read through the server cookie boundary. Raw HTML without a valid cookie is Korean with `html[lang=ko]`; raw HTML with `wsr_locale=en` is English with `html[lang=en]`. Hydration, a client effect, local storage, or an extra translation request is never required to correct the language. |
+| P2-L10N04 | Revisit persistence | A keyboard-activated locale control invokes the server action, writes the exact cookie, preserves path/query/hash, and renders the selected locale on revisit and direct navigation. Invalid resolved cookie input deterministically returns to Korean. |
+| P2-L10N05 | No inference or remote translation | Production localization source contains no `Accept-Language`, `navigator.language`/`languages`, `localStorage`, `sessionStorage`, geolocation, remote translation SDK/API, locale fetch, or browser-only preference store. Message catalogs are typed, colocated, version-controlled application source. |
+| P2-L10N06 | Immutable canonical evidence | Locale changes presentation copy only. Canonical fixture/provider/API data, field values, source evidence, null/`NA` policy, microsecond UTC values, numeric formatting inputs, identity/order, route/query/hash semantics, and exact disclaimers are unchanged. Human-readable instants use the shared `Asia/Seoul` KST presentation in both locales while semantic `datetime` retains the source instant. No application adapter, API model, schema, fixture, manifest, OpenAPI, or Flyway contract is localized. |
+| P2-L10N07 | Route and state parity | Every supported route, loading/error/empty boundary, noindex unsupported request, link target, filter value, and current-navigation state remains available in both locales. The common root not-found boundary is Korean-default/English-selectable and mode-neutral with exact `/` and `/calls` links. A translated heading or accessible label cannot become a separate data state or conceal `DEMO`, unavailable/deferred, null, or incomplete semantics. |
+| P2-L10N08 | Evidence-first visual system | Shared tokens and layouts use the locked white editorial treatment, thin rules, near-square controls, compact mono evidence, tabular numerics, restrained semantic colors, and whitespace. Muted text is exactly `#70706c`; map positive/negative metric text uses the semantic positive/negative tokens, and neutral/map/treemap colored surfaces explicitly restore dark text. Color is never the only carrier of state; existing evidence hierarchy and local dense-table/treemap containment remain intact. |
+| P2-L10N09 | Source and backend isolation | Locale/config/message/action/provider components do not import raw fixture JSON, canonical adapters, outcome calculators, providers, API code, or network transports. Canonical schema/fixture/manifest/OpenAPI/Flyway and Spring production sets remain unchanged by this slice. |
+| P2-L10N10 | Deterministic replay | The same route, canonical evidence, and cookie yield the same locale and evidence order in raw SSR and hydrated navigation. Server locale logic has no `Clock`, randomness, host locale, timezone, or request-language dependency. |
+
+## Korean-default bilingual product UI web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-L10NW01 | Semantic locale control | The global header exposes one labelled locale group with exact `KO` and `EN` controls, current selection through `aria-pressed`, pending/disabled semantics, and a visible focus indicator. Accessible option names are stable autonyms, exactly `한국어` and `English`, in both locales; the buttons expose exact `lang=ko` / `lang=en`, are at least 24 pixels high, and focus returns to the newly selected language after the server render. No hidden test-only label is used. |
+| P2-L10NW02 | Korean default and English parity | Korean-default and English views cover the same information architecture and canonical rows. Navigation has the same eight targets/order/current item; only user-facing copy changes. Wordmark, canonical evidence, routes, and data ordering remain stable. |
+| P2-L10NW03 | Complete state translation | Route headings, policy explanations, table labels, loading, recoverable error, valid empty, route-local unsupported/not-found copy, and the common root not-found boundary are Korean by default and English when selected. Canonical status/reason/data-mode tokens and mode-neutral noindex constraints remain exact in both locales. |
+| P2-L10NW04 | Responsive editorial layout | At 1440, 1280, and 390 pixels, the white evidence-first layout preserves readable hierarchy, keyboard focus, locally contained navigation/tables/treemaps, and zero page overflow. Korean text may wrap without clipping, overlap, hidden evidence, or minimum-tile distortion. |
+| P2-L10NW05 | Runtime integrity | Supported flows produce zero hydration mismatch, console warning/error, or page error. Switching and revisiting do not flash the wrong locale, reset filters, lose anchors, execute a screen, create a quote, or change canonical data. |
+
+## Korean-default bilingual product UI required tests
+
+- Unit tests cover exact locale parsing/defaulting, typed Korean/English
+  catalogs, valid mutation, missing/unsupported/file mutation rejection, and
+  exact development/production cookie attributes without relying on browser
+  storage or a redirect.
+- Layout/header tests cover raw `html[lang]`/metadata resolution, all eight
+  localized navigation labels and targets, current state, exact `DEMO`
+  preservation, locale-control autonym names/pressed/pending/focus-restoration
+  behavior, exact per-button language attributes, and provider-required context
+  so missing localization wiring fails closed.
+- Common root not-found tests cover Korean and English copy, exact dashboard and
+  call-ledger links, mode neutrality, and absence of invented DEMO/evidence.
+- Raw-response tests request an existing SSR route with no cookie, an invalid
+  cookie, `ko`, and `en`; assert language-specific server HTML and matching
+  document language; then set the preference through the UI and prove revisit
+  and direct navigation preserve it without changing path/query/hash.
+- Existing route/component tests cover both presentation locales where copy is
+  owned by the route and continue to assert exact canonical evidence values.
+  Provider/domain tests remain locale-independent and unchanged.
+- Responsive Playwright exercises Korean default, English toggle/revisit, direct
+  navigation, keyboard focus restoration, per-language attributes and minimum
+  24-pixel targets, localized unknown routes, translated loading/error/empty
+  boundaries, local containment, page overflow, and zero console warnings/
+  errors/page errors at 1440, 1280, and 390 pixels.
+- Repository CI locks the exact locale/cookie/SSR source boundary, append-safe
+  discovery of production localization files and localization tests, forbidden
+  inference/storage/translation transports, canonical-source isolation, the
+  visual-system invariants, and the absence of schema/fixture/manifest/OpenAPI/
+  API/Flyway expansion without weakening existing contract gates.
+
+## Korean-default bilingual product UI deferred work
+
+Additional locales, user-account preferences, translated canonical source
+documents, machine translation, locale-prefixed routing, localized API payloads,
+and provider-supplied translations are not introduced. Live/current provider
+data remains P5-owned, deterministic leaderboard metrics remain P3-owned, and
+actual historical screening remains P8-owned. This presentation slice cannot
+turn unavailable, fixture, null, incomplete, or model-only evidence into an
+observed fact.
+
+## Coherent call-detail audit API boundary
+
+- This slice connects the existing `/calls/[id]` product route to the existing
+  Spring read API without adding or changing an API, OpenAPI, schema, fixture,
+  manifest, Flyway, persistence, provider-ingestion, or mutation contract.
+- `CALL_AUDIT_PROVIDER` accepts only exact `fixture` or `api`; missing input
+  selects the deterministic fixture implementation. The checked-in local
+  environment selects `api` so the documented two-process stack exercises the
+  real transport. Unsupported input fails closed. Provider selection never
+  changes during one request and no API failure falls back to fixtures.
+- `CallAuditProvider` returns one closed detail audit containing exactly the
+  canonical call detail, a required closed call-context object whose
+  `macroSnapshot` and `eventContext` members are independently nullable, and the
+  ordered revision lineage. A top-level null context is malformed, not known
+  empty. The route obtains all three surfaces from this one provider. It never combines
+  a legacy fixture `CallsProvider` result with an API revision result.
+- API mode uses only the private server-side `API_BASE_URL`. It first requests
+  exact `GET /v1/calls/{encodedCallId}` to establish existence, then requests
+  exact `GET /v1/calls/{encodedCallId}/context` and
+  `GET /v1/calls/{encodedCallId}/revisions` from the same normalized origin.
+  Every request accepts JSON and bypasses caches. It sends no body, mutation,
+  browser cookie, authorization value, locale, or user-controlled forwarding
+  header. `API_BASE_URL` is never a `NEXT_PUBLIC_*` setting or client fetch.
+- An exact detail 404 is the only transport result mapped to product not-found.
+  Missing/invalid configuration, network failure, redirect, any other non-2xx
+  status, non-JSON content, invalid JSON, wrong or extra fields, invalid values,
+  or a context/revision failure rejects the complete audit. Those states never
+  become `[]`, null context, `NA`, a partial page, or fixture evidence.
+- Runtime adaptation is closed at every object boundary. It preserves canonical
+  enums, IDs, names, source text, decimal JSON values, UTC instants, order, and
+  explicit nulls without filling or translating data. The detail's own source
+  document/reference joins, snapshot identity, and context observation/source
+  identifiers remain independently valid where the response carries both sides
+  of a documented join. Every provenance ID is preserved but equality is not
+  inferred between a call and its source records, a macro snapshot and its
+  observations, or separate canonical document families.
+- JSON numeric adaptation retains the existing web number boundary: every
+  accepted value is finite, targets and non-null snapshot asset price are
+  positive, and macro observation magnitude is strictly below `1e26`. The web
+  adapter does not claim to recover BigDecimal lexical scale after
+  `Response.json()` has produced a JavaScript number; exact stored decimal
+  replay remains owned by the canonical API/persistence contract.
+- This P2 transport accepts exactly `DEMO` throughout the aggregate. A
+  `REALTIME`, `DELAYED`, or `EOD` detail, nested source/snapshot/context record,
+  observation, or revision is rejected even when internally consistent. HTTP
+  delivery does not turn the fixture-backed Spring API into a licensed or live
+  provider publication boundary.
+- Every revision belongs to the requested original call, has the same data mode,
+  and preserves `original call eventTime <= revision eventTime <= processingTime
+  <= capturedAt`. Sequence numbers are exactly contiguous from one, the root has
+  a null predecessor, every later event names the immediately previous revision,
+  revision event time alone is nondecreasing, and a cancellation terminates the
+  lineage. Cross-row processing/capture monotonicity is deliberately not added
+  because it is not part of the canonical P1 contract.
+- A correction has the complete six-field replacement terms object; a
+  cancellation has JSON null there. Nullable ratings, targets, currency, and
+  target date stay null, not omitted or inferred. Revision reason,
+  `sourceReferenceId`, and `provenanceId` remain the raw revision evidence; they
+  are not required to equal the original call's source/provenance and are not
+  promoted into an unverified source document.
+- Revision `eventTime`, `processingTime`, and `capturedAt` render as their raw
+  canonical ISO strings so zero-to-six fractional digits are not lost through a
+  human date formatter. Corrected numeric targets render as raw JavaScript
+  number text with the independently supplied currency in its separate field;
+  they are not passed through money/percent rounding or used to calculate a
+  delta. This display rule does not claim recovery of JSON lexical trailing
+  zeros.
+- The page presents the original event and append-only revision events as
+  separate evidence. It does not overwrite or relabel the original call,
+  project an effective status/direction/target, select a scoring basis, infer a
+  cancellation outcome, or calculate return, alpha, target hit, accuracy, rank,
+  confidence, or recommendation. Visible Korean and English copy explicitly
+  says that the base `ACTIVE` value is the immutable original-event status, not
+  a current or effective stance, including when the lineage ends in cancellation.
+
+## Coherent call-detail audit API contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-CA01 | Whole-audit provider | One `CallAuditProvider` owns detail, context, and revisions for a request. API and fixture are explicit whole-aggregate modes; the page has no second calls-provider read and no mixed-source fallback. |
+| P2-CA02 | Private exact transport | API mode uses only private `API_BASE_URL`, an encoded opaque call ID, the exact existing detail/context/revision GET paths, JSON acceptance, and no-store caching. It performs no client fetch, mutation, request-body, credential forwarding, public API-base setting, retry, or alternate-origin request. |
+| P2-CA03 | Existence and failure semantics | Detail is requested first. Its exact 404 maps to route not-found; every other detail failure and every context/revision failure aborts the complete audit. Valid known-empty context or `[]` lineage is distinct from failure. |
+| P2-CA04 | Closed runtime shape and raw display | Detail, every nested source/snapshot record, context/observations, every 16-field revision, and every non-null six-field corrected-terms object reject missing, extra, or mistyped fields. JSON null is preserved, no missing numeric is coerced to zero, targets/non-null asset price are positive and finite, and macro magnitude is strictly below `1e26`. Revision ISO instants and corrected target numbers render without formatter rounding; the JS adapter does not claim lexical decimal-scale recovery. |
+| P2-CA05 | Cross-surface joins and phase mode | Detail call/source/snapshot, context records, and revisions retain their own canonical joins and all belong to the requested call where applicable. Every aggregate record is exactly `DEMO`; `REALTIME`, `DELAYED`, and `EOD` fail closed. Separate document-family provenance/source IDs remain independent rather than being forced equal. |
+| P2-CA06 | Compatible chronology | Call and nested records preserve their canonical point-in-time bounds. Revisions preserve original-event lower bound, their own event/processing/capture order, and nondecreasing event time only; the web adapter adds no unsupported cross-row processing/capture rule. |
+| P2-CA07 | Exact append-only lineage | Revision IDs and `(provider, providerEventId)` identity pairs are unique, sequence is `1..N`, parent links name the immediately preceding event, correction/cancellation payload rules are exact, and cancellation is terminal. Reuse of one provider-event string by a different provider is not rejected. Source IDs and raw reasons remain revision evidence. |
+| P2-CA08 | No lifecycle or scoring projection | Rendering explicitly identifies base `ACTIVE` as immutable original-event status rather than current/effective stance, even beside terminal cancellation. It does not mutate the original call or infer effective fields, outcome eligibility, result, metric, confidence, rank, or advice. Existing model-only outcomes remain disconnected. |
+| P2-CA09 | Backend and canonical isolation | The five existing OpenAPI paths, 14 schema files, 13 fixture files, manifest membership, V1–V5 Flyway set, and Spring read contracts remain unchanged. This slice adds only a web consumer of the existing reads. |
+
+## Coherent call-detail audit web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-CAW01 | Populated audit | `/calls/demo-call-002` retains original `ACTIVE`, `BULLISH`, and `$235.00` detail evidence and adds exactly the ordered `demo-call-revision-001` correction followed by terminal `demo-call-revision-002` cancellation, with canonical IDs, types, raw ISO times, reason, source reference, data mode, provenance, and nullable terms intact. Correction target `232` remains separate revision evidence. Adjacent copy explicitly says base `ACTIVE` is original-event status, not a current/effective stance. |
+| P2-CAW02 | Honest empty lineage | A known call with a valid API `[]` renders an explicit no-recorded-revisions state. It does not display zero revisions as completeness, unchanged status, provider health, or proof that no later correction exists. |
+| P2-CAW03 | Error and not-found distinction | Exact detail 404 uses the localized call not-found boundary. Configuration, transport, response, context, or revision validation failures use the recoverable localized route error and reveal no partial canonical record or fixture fallback. Korean and English state copy stays provider-neutral: it must not mislabel an API, configuration, transport, or validation failure as a fixture-read failure. |
+| P2-CAW04 | Canonical versus presentation language | Korean-default and English views translate only labels and explanations. Revision type, reason, IDs, source/provenance, timestamps, numeric inputs, null/`NA`, and lineage order remain canonical in both locales. |
+| P2-CAW05 | Evidence-first layout | Original and revision events remain visibly distinct, use semantic headings/list or table structures, and expose state without color alone. At 1440, 1280, and 390 pixels dense audit evidence is locally contained with no page overflow or hidden fields. |
+| P2-CAW06 | Server-only runtime | Browser navigation causes no request to `API_BASE_URL`; Next performs the transport server-side. Populated, empty, not-found, and recoverable-error flows produce no hydration, console warning/error, or page error. |
+| P2-CAW07 | Regression boundary | Calls list/dashboard and all other routes retain their current provider contracts. Existing detail/source/snapshot/context facts, locale persistence, navigation, schemas, backend responses, and deferred P3/P5/P8 boundaries are not weakened. |
+
+## Coherent call-detail audit API required tests
+
+- Adapter tests cover exact detail/context/revision records, all nullable fields,
+  populated and known-empty contexts, populated and empty lineages, opaque ID
+  encoding, closed keys, enum/date/instant/numeric validation, nested joins,
+  exact all-surface `DEMO` enforcement (including otherwise-consistent
+  `REALTIME`/`DELAYED`/`EOD` rejection), and the compatible chronology/lineage
+  rules. Context goldens include inclusive macro-vintage bounds, start/end
+  ordering, future-event lower bounds with earnings exempt, positive snapshot
+  asset price, strict macro `1e26` magnitude boundaries, and distinct preserved
+  provenance IDs that must not be forced equal.
+- Transport tests prove detail-first ordering, exact three paths from one private
+  origin, JSON/no-store options, 404-only not-found mapping, and fail-closed
+  behavior for invalid configuration, redirects, network errors, every non-2xx
+  stage, content-type/JSON/shape failures, and dependent endpoint divergence.
+- Fixture-provider tests prove it returns the same whole-audit shape without an
+  API import. Factory tests cover exact `fixture`/`api`, deterministic default,
+  unsupported input, and the absence of runtime fallback.
+- Page/component tests cover Korean and English populated correction and
+  cancellation, known-empty lineage, not-found/error separation, canonical
+  values, nullable terms, original-event preservation, and absence of effective
+  lifecycle, outcome, ranking, or advice claims. Both locales assert the explicit
+  base-`ACTIVE` original-event/not-current-or-effective disclosure.
+- A synthetic page-provider test renders revision instants containing six
+  fractional digits and a high-precision corrected target. It asserts the exact
+  ISO strings and raw numeric text, the separate currency, and unchanged base
+  status/direction/target, proving the UI does not silently format away evidence.
+- Responsive Playwright covers populated and empty audit flows, keyboard focus,
+  local containment, page overflow, external-browser request isolation, and
+  zero runtime errors at 1440, 1280, and 390 pixels.
+- A dedicated integration job boots PostgreSQL 17, the packaged Spring API, and
+  Next in exact API mode. It exercises the real server-side detail/context/
+  revision path for populated and known-empty calls and proves that the browser
+  never calls the API origin directly. Route interception or a web-only mock is
+  not accepted as the cross-stack proof.
+- Repository CI locks the exact server-only provider structure, adapter field
+  sets and transport markers, page/factory source isolation, unchanged canonical
+  and backend file/path sets, and the required unit/E2E/integration test sources.
+
+## Coherent call-detail audit API deferred work
+
+This slice does not connect a paid or production analyst provider. The Spring
+API still serves canonical DEMO fixture-backed persistence. P5 retains licensed
+provider ingestion, entitlements, freshness/health, retry policy, and rights
+review. P3 retains effective lifecycle/basis rules and deterministic outcomes;
+P8 retains historical materialization and screening. Authentication, user-
+specific visibility, cross-endpoint snapshot tokens, streaming, polling,
+revision writes, source-document expansion, and list/dashboard API migration
+require separate reviewed contracts.
+
+## Coherent analyst-call list API boundary
+
+Status: complete for this private `/calls` consumer slice. Broader P2 work,
+P3 lifecycle/scoring, P5 licensed provider publication, and P8 historical
+materialization remain open.
+
+- This slice connects only the existing server-rendered `GET /calls` product
+  route to the existing Spring `GET /v1/calls` read. It adds no API path,
+  OpenAPI field, canonical schema, fixture, manifest member, Flyway migration,
+  Spring class, persistence query, mutation, polling, or browser-side fetch.
+- The list and detail routes share the exact `CALL_AUDIT_PROVIDER=fixture|api`
+  selector and private `API_BASE_URL`. This prevents a documented local stack
+  from silently using API detail with a fixture list or vice versa. Missing
+  selector input remains deterministic fixture mode for isolated tests; the
+  checked-in local example explicitly selects API mode. Unsupported input and
+  every API failure fail closed without fixture fallback.
+- `CallListProvider` owns one page-scoped read. API mode makes exactly one
+  `GET /v1/calls` request with `Accept: application/json`, `cache: no-store`,
+  redirect rejection, no credentials/body/user headers, and the exact supported
+  scalar query. It always applies `dataMode=DEMO` as the explicit P2 phase
+  boundary. The browser never receives or calls `API_BASE_URL`.
+- The existing list API returns only the closed `{items,page}` response. It does
+  not expose fixture `generatedAt`, dataset provenance, disclaimer, or complete
+  filter facets. API mode therefore returns exact dataset-evidence state
+  `NOT_EXPOSED / LIST_API_HAS_NO_DATASET_METADATA` with null dataset as-of,
+  source, and disclaimer. The UI renders those values as `NA` and explains the
+  boundary; it never imports fixture metadata or derives dataset coverage from
+  one returned page.
+- Returned-page evidence is separate and carries exact scope
+  `RETURNED_PAGE`. It may contain only the maximum returned call's `capturedAt`
+  and the sorted distinct returned call `provenanceId` values. An empty page
+  yields null and an empty list. Neither is
+  relabelled as dataset as-of, API response time, market freshness, full
+  coverage, provider health, or publication status.
+- Fixture mode may expose its exact existing dataset as-of/source/disclaimer in
+  an `AVAILABLE` dataset-evidence variant, but it uses the same page contract,
+  page-only evidence calculation, DEMO guard, filter semantics, and UI. API mode
+  never imports or falls back to that variant.
+- Because the API has no facet endpoint, asset, institution, and analyst filters
+  are exact opaque-ID text inputs. Ticker remains the documented case-
+  insensitive ticker input; direction and original-event status use closed
+  canonical vocabularies; mode is fixed to DEMO. The UI does not present
+  current-page values as a complete suggestion catalog.
+- Browser date inputs accept only real Gregorian `YYYY-MM-DD` values and mean
+  Korean civil dates. `from` becomes inclusive `00:00:00.000 KST`; the through
+  date becomes the next Korean day's exclusive `00:00:00.000 KST`; both are
+  converted to canonical UTC instants before the API read. The page does not claim to mirror every wider
+  `Instant.parse` spelling accepted directly by Spring. The typed server
+  provider nevertheless preserves Spring-compatible offset instants with up to
+  nanosecond precision and rejects offsets outside Java's `ZoneOffset` range;
+  the response adapter remains independently locked to canonical UTC `Z`
+  instants at no more than microsecond precision. Recognized duplicate
+  scalar inputs, invalid dates/identifiers/tickers/enums/ranges/pages/sizes, and
+  a non-DEMO mode are rejected rather than dropped, normalized, or clamped.
+- API item adaptation is closed at the root, item, call, identity, source,
+  page, and sort boundaries. It preserves explicit nulls and raw order, checks
+  canonical joins and per-record chronology, requires call/document/reference
+  DEMO independently, and never folds revisions into the immutable original
+  status. A list 404, redirect, network error, non-200, non-JSON, malformed JSON,
+  wrong/extra field, unsafe integer, invalid page invariant, duplicate identity,
+  or ordering violation is an error, never an empty result or partial page.
+
+## Coherent analyst-call list API contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-CL01 | One page provider | `/calls` performs one `CallListProvider.list` read. API and fixture are explicit page-wide modes selected by the same exact selector as detail; the route imports neither transport nor raw fixture metadata. |
+| P2-CL02 | Exact private transport | API mode uses only private `API_BASE_URL` and one exact GET list request with JSON acceptance, no-store caching, redirect rejection, fixed DEMO phase filter, and no browser credentials/body/retry/fallback. |
+| P2-CL03 | Query fidelity | Opaque IDs are exact and case-sensitive, ticker follows the API's case-insensitive contract, enums retain exact case, filters combine with AND, `from` is inclusive, `to` is exclusive, page is zero-based, size is 1..100, and defaults are page 0/size 25/eventTime/desc. Every returned item must satisfy every effective AND filter. Invalid or duplicate recognized inputs are not silently normalized, discarded, defaulted, or clamped. |
+| P2-CL04 | Closed response | Root is exactly `{items,page}`; each item has exactly call/institution/analyst/asset/source and no snapshot; all nested required keys and explicit nulls are preserved. Unknown, missing, extra, mistyped, or invalid values fail the complete page. |
+| P2-CL05 | Canonical joins and DEMO guard | Every call joins its institution, nullable analyst, asset, source reference, and source document exactly. Call, source document, and source reference are independently DEMO; later real/delayed/EOD data cannot enter this P2 page through internally consistent payloads. |
+| P2-CL06 | Page invariants | Response number/size/sort/order echo the request; safe integers, totals, total pages, first/last, and item cardinality agree. Empty matches and out-of-range pages remain distinct valid 200 pages, including the echoed out-of-range number and `last=true`. |
+| P2-CL07 | Deterministic order | The adapter preserves server order and verifies the selected primary sort direction with `callId ASC` for equal primary values. It never resorts by translated text, target, status, revision state, or current time. |
+| P2-CL08 | Honest evidence states | API dataset evidence has exact availability NOT_EXPOSED with null metadata. Fixture dataset evidence has exact availability AVAILABLE, and its dataset `asOf` cannot precede any returned call `capturedAt`. Returned-page evidence has exact scope RETURNED_PAGE and derives capture/provenance only from returned calls; empty page evidence remains null/empty. This fixture coherence check is not promoted to API metadata, completeness, or coverage. |
+| P2-CL09 | Empty versus failure | A valid 200 `items:[]` renders the localized response-bounded empty state. Configuration, network, redirect, HTTP, media, JSON, shape, join, mode, page, or ordering failure renders the recoverable route error and exposes no partial rows or fixture fallback. |
+| P2-CL10 | Backend and canonical isolation | Existing five OpenAPI paths, list response shape/query semantics, Spring sources, V1-V5 migrations, 14 schemas, 13 fixtures, and manifest membership remain unchanged. This is a private web consumer slice, not a new backend or provider-publication contract. |
+
+## Coherent analyst-call list web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-CLW01 | Korean-default and English ledger | Both locales render the same ordered canonical rows, IDs, enums, numbers, nulls, source titles, links, totals, and page state. Human-readable instants use identical explicit KST strings backed by unchanged UTC API values and semantic `datetime`; only labels, explanations, and accessible names change. |
+| P2-CLW02 | Filter form truth | Identity fields are labelled exact-ID text inputs, ticker remains text, direction/status remain canonical selects, and data mode is fixed DEMO. No full-universe facet or current/live filter claim is shown. |
+| P2-CLW03 | Dataset metadata boundary | API mode visibly renders dataset as-of/source as `NA` and explains that the existing list API does not expose dataset metadata. Page-only capture/provenance is labelled as returned-page evidence, never dataset freshness or coverage. |
+| P2-CLW04 | Pagination and URLs | Provider page 0 renders as human page 1. Previous/next URLs preserve only validated scalar filters and exact sorting/size values. Empty and out-of-range pages do not fabricate substitute rows. |
+| P2-CLW05 | Server-only responsive runtime | At 1440, 1280, and 390 pixels populated, filtered, empty, and paginated states remain keyboard-operable and locally contained with no page overflow, hydration warning, console error, or page error. The browser makes no request to the API origin. |
+| P2-CLW06 | Regression boundary | Call detail keeps its coherent detail/context/revision provider. Dashboard, S&P history, maps, and other routes retain their current providers; list migration does not turn HTTP-delivered DEMO fixtures into live, licensed, complete, or current evidence. |
+
+## Coherent analyst-call list API verification
+
+- Query tests cover every scalar, defaults, fixed DEMO injection, exact
+  encoding/order, case-sensitive IDs, ticker case behavior, genuine leap-day and
+  invalid-date conversion, exclusive through-date, duplicate recognized values,
+  optional-filter empty-string omission, whitespace/malformed nonempty values,
+  required-control present-empty failure, page/size bounds, enum case, and
+  from/to range failure. Direct typed-provider tests separately cover valid
+  offset/nanosecond bounds and invalid Java offsets without weakening canonical
+  response-instant validation.
+- Adapter tests cover closed positive items with every nullable branch, all
+  canonical joins, one-at-a-time nested DEMO mutations, chronology/numeric/URL/
+  date/enum failures, duplicate call/provider-event identities, all three sort
+  fields and both orders, equal-primary `callId ASC`, no silent reordering, and
+  one-at-a-time response-row mismatches for every effective ID/ticker/direction/
+  status/DEMO/from/to AND filter.
+- Page tests cover valid empty, out-of-range echo, unsafe integers, totals/page/
+  cardinality/first/last divergence, API NOT_EXPOSED versus fixture AVAILABLE,
+  AVAILABLE `asOf` versus latest returned capture, and exact empty returned-page
+  evidence.
+- Transport/factory tests cover exact fixture/API/default/unsupported selection,
+  one private request, normalized base URL, every query field, no-store/JSON/
+  redirect options, and network/400/404/500/media/JSON/shape failure without a
+  fallback or second request.
+- Korean/English page tests cover populated, filtered, empty, paginated, dataset-
+  metadata-not-exposed, page-evidence, loading, and recoverable-error states with
+  unchanged canonical finance evidence.
+- Responsive Playwright exercises the list at 1440, 1280, and 390 pixels,
+  keyboard focus, exact filter/pagination URLs, populated/empty containment,
+  runtime errors, and browser-to-API request isolation.
+- The existing PostgreSQL 17 -> packaged Spring -> Next integration job runs the
+  list spec in exact API mode and proves the server made all five expected list
+  GETs while the browser did not call port 8080. The existing detail/context/
+  revision six-path proof remains intact.
+- Repository CI locks the exact list provider/adapter/factory/page source graph,
+  dataset-evidence union, test matrix, shared selector, one-fetch transport, and
+  unchanged canonical/backend sets.
+
+Observed closure on the final tree:
+
+- ESLint and non-incremental TypeScript passed. Focused call-list Vitest passed
+  162/162 across eight files; the full suite passed 515/515 across 41 files; and
+  the Next 16.2.11 production build completed 12/12 page-data generation for the
+  existing 11 dynamic routes.
+- Targeted call-list Playwright passed 3/3 at 1440, 1280, and 390 pixels, six
+  related legacy checks passed 6/6, and the retry-free full suite passed 69/69
+  across the same widths.
+- Maven verification passed 223/223 with no failures, errors, or skips,
+  including PostgreSQL 17.10 migration coverage at 4/4 with no skips. Compose
+  configuration validation passed.
+- The PostgreSQL -> packaged Spring -> Next API-mode run passed 2/2 browser
+  tests and exact full-line Tomcat evidence passed 11/11: five list queries and
+  six detail/context/revision reads. Queryless `%q` values are the observed `-`
+  placeholder; matching is exact line membership, not a path substring.
+- All 18 embedded repository Python blocks passed syntax and execution against
+  14 schemas and 32 canonical records. SnakeYAML 2.5, `git diff --check`, the
+  protected source sets, and generated-file cleanup passed. Independent review
+  reported zero blockers, zero HIGH findings, and zero known false positives.
+
+## Coherent analyst-call list API deferred work
+
+Dataset metadata/facet endpoints, cross-request snapshot tokens, dashboard/API
+migration, commercial provider ingestion, entitlements, licensing, rights,
+freshness/health, polling/streaming, saved filters, exports, user preferences,
+and current/effective lifecycle projection remain separate reviewed work. This
+slice is still synthetic DEMO evidence delivered through Spring/PostgreSQL, not
+a live or production market-data connection.
+
+## Coherent call-outcome audit API boundary
+
+Status: complete for this vertical slice; the broader P2 phase remains open.
+The results below close only the synthetic DEMO audit-consumer boundary.
+
+- This slice consumes the existing `GET /v1/calls/{id}/outcomes` subresource
+  without adding or changing an OpenAPI path, canonical schema, fixture,
+  manifest member, Flyway migration, Spring class, persistence query, mutation,
+  calculation, scheduler, or provider-ingestion boundary.
+- The existing page-scoped `CallAuditProvider` becomes one exact
+  `{detail, context, revisions, outcomes}` aggregate. The page may not obtain an
+  outcome from a second provider, a raw fixture import, another origin, or a
+  fallback. Fixture and API remain explicit whole-aggregate modes selected by
+  the same exact `CALL_AUDIT_PROVIDER` value used by the call list and detail.
+- API mode establishes existence with the exact encoded detail GET first. Only
+  after a non-null detail does it request context, revisions, and outcomes from
+  the same normalized private `API_BASE_URL`. An exact detail 404 remains the
+  only not-found result. Every dependent 404 or other transport/validation
+  failure rejects the complete audit rather than returning a partial page,
+  `[]`, `NA`, or fixture evidence.
+- A known call with an exact outcome `[]` is valid recorded-empty evidence. It
+  does not prove that a horizon was evaluated, that no future outcome will be
+  appended, or that the provider/data set is complete.
+- The web adapter accepts the closed 31-field canonical outcome shape and
+  preserves source array order, explicit nulls, raw canonical tokens, hashes,
+  fingerprints, IDs, and UTC instants. It never selects one record as current,
+  effective, latest, or authoritative and never folds an append-only lineage
+  into the immutable base call.
+- The fixture envelope groups records by call and sorts a copied group into the
+  existing server order before adaptation because its canonical document order
+  is not the API order. It never mutates the fixture. The shared adapter only
+  validates and preserves the array it receives; API payloads are never sorted.
+- This P2 publication boundary remains exact DEMO and null-only. The outcomes
+  API does not expose methodology status. Returned outcomes are accepted only
+  as `PENDING/HORIZON_NOT_REACHED` or
+  `INCOMPLETE/HORIZON_DATA_MISSING`, with `dataComplete=false` and all ten
+  metric/result fields JSON null. A coherent `CALCULATED` or `EXCLUDED` record,
+  a non-null metric/result, or any non-DEMO mode requires its separately
+  reviewed P3/P5 boundary and therefore fails closed here.
+- A nullable `basisRevisionId` remains recorded outcome evidence, not a basis
+  selected by the UI. If present, it must resolve to a same-call correction
+  available by outcome processing time. `cancellationRevisionId` is exact JSON
+  null in this boundary. Cancellation-reference relationship semantics remain
+  deferred with `EXCLUDED/CALL_CANCELLED`; the UI never infers either from a
+  terminal revision.
+
+## Coherent call-outcome audit API contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-OA01 | One coherent aggregate | `CallAuditProvider` returns exactly detail, required closed context, ordered revisions, and ordered outcomes from one selected mode. The page has one provider read and no mixed API/fixture source. |
+| P2-OA02 | Private exact transport | API mode uses the encoded opaque call ID and exact existing detail, context, revisions, and outcomes GET paths on one private normalized `API_BASE_URL`, with JSON acceptance, no-store caching, redirect rejection, no body/credentials/browser fetch, no retry, and no alternate origin. |
+| P2-OA03 | Existence and failure semantics | Detail is requested first; its exact 404 maps to route not-found. Every other detail failure and every context/revision/outcome failure aborts the whole aggregate. A known call plus exact outcome `[]` remains distinct from failure. |
+| P2-OA04 | Closed outcome shape | Every outcome has exactly `outcomeId`, `schemaVersion`, `callId`, `horizon`, `basisRevisionId`, `cancellationRevisionId`, `snapshotId`, `methodologyId`, `methodologyVersion`, `methodologyDefinitionHash`, `inputFingerprint`, `sequenceNumber`, `supersedesOutcomeId`, `evaluationStatus`, `reasonCode`, `eventTime`, `processingTime`, `assetReturn`, `benchmarkReturn`, `sectorReturn`, `alpha`, `sectorAlpha`, `mfe`, `mae`, `targetHit`, `directionalWin`, `targetError`, `dataComplete`, `dataMode`, `capturedAt`, and `provenanceId`; missing, extra, omitted-null, or mistyped fields fail closed. |
+| P2-OA05 | Canonical scalar boundary | Schema version is exact `1.0.0`; opaque IDs, methodology versions, lower-case SHA-256 hashes/fingerprints, horizons, statuses, reasons, `dataComplete`, and UTC `Z` instants with zero-to-six fractional digits retain their closed canonical rules. This P2 consumer accepts no metric number or result Boolean, makes no JavaScript-number precision claim, and defers BigDecimal lexical/scale support until calculated outcomes have a reviewed P3 transport boundary. |
+| P2-OA06 | Exact P2 phase guard | Every returned outcome is exact `DEMO`, is either `PENDING/HORIZON_NOT_REACHED` or `INCOMPLETE/HORIZON_DATA_MISSING`, has `dataComplete=false`, and has exact JSON null for asset, benchmark, sector, alpha, sector alpha, MFE, MAE, target-hit, directional-win, and target-error values. `CALCULATED`, `EXCLUDED`, `REALTIME`, `DELAYED`, `EOD`, or any number/Boolean/other non-null metric/result is rejected even when otherwise schema-coherent. |
+| P2-OA07 | Identity and natural-key uniqueness | Every outcome ID is unique. The natural input identity `(callId, basisRevisionId, horizon, methodologyId, methodologyVersion, inputFingerprint)` is unique, while the same fingerprint may validly appear under a different methodology version. One `(methodologyId, methodologyVersion)` never carries conflicting definition hashes. |
+| P2-OA08 | Append-only lineage | A lineage is scoped exactly by `(callId, basisRevisionId, horizon, methodologyId, methodologyVersion)`. It starts at sequence one with null supersession, remains contiguous, and every later record names the immediately preceding outcome. Event, processing, and capture times are independently nondecreasing within one lineage; unrelated lineages gain no invented cross-time constraint. |
+| P2-OA09 | Point-in-time joins | Every outcome belongs to the requested/base call and preserves `base eventTime <= outcome eventTime <= processingTime <= capturedAt`; base processing/capture are no later than outcome processing. A non-null snapshot matches the detail snapshot and was processed/captured by outcome processing. A non-null basis is a same-call correction whose event/processing/capture was available by outcome processing. Cancellation reference joins are not interpreted because this P2 boundary requires that field to be exact null. |
+| P2-OA10 | Exact response order | The adapter preserves and validates the current API order without sorting: horizon `D1`, `W1`, `M1`, `M3`, `M6`, `Y1`, followed by raw methodology ID, methodology version, sequence number, and outcome ID ascending. Methodology versions are not reinterpreted as semantic versions. Lineage validation remains scoped correctly if distinct basis lineages interleave. |
+| P2-OA11 | Provenance independence | Outcome provenance is preserved as raw evidence and need not equal call, snapshot, context, revision, or source-document provenance. The page does not fabricate a methodology source document or claim that the outcome endpoint exposes methodology activation status. |
+| P2-OA12 | No calculation or lifecycle projection | The page renders the immutable base event, revisions, and each outcome record separately. It never infers an excluded outcome from cancellation, chooses an effective basis, collapses to a latest result, or publishes return, target hit, win/loss, score, accuracy, rank, confidence, recommendation, or advice. |
+| P2-OA13 | Backend and canonical isolation | The five OpenAPI paths, 14 schema files, 13 fixture files, V1-V5 migrations, Spring production/read behavior, and P1/P3 domain source remain unchanged. This slice is a web consumer of the existing read only. |
+
+## Coherent call-outcome audit web behavior gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-OAW01 | Populated audit | `/calls/demo-call-001` renders all four existing outcome records in the exact API order, including the two-record D1 v1 lineage, the separate D1 v2 root, and the M1 root. Every canonical field, ID, nullable reference, methodology identity/hash, fingerprint, status/reason, KST-presented instant, data flag/mode, provenance, and null metric remains visible; exact source instants remain machine-readable in `datetime`. |
+| P2-OAW02 | Honest empty audit | `/calls/demo-call-002` renders an explicit no-recorded-outcomes state while retaining its correction/cancellation lineage. It does not infer `EXCLUDED`, unchanged eligibility, provider completeness, or absence of a future outcome. |
+| P2-OAW03 | Original and revision preservation | Adding outcome rows does not change the immutable base `ACTIVE`, direction, target, source/snapshot/context facts, or append-only revision values and order. Outcome status never becomes call status or an effective stance. |
+| P2-OAW04 | Canonical versus presentation language | Korean-default and English views translate only labels and explanatory copy. Horizon/status/reason tokens, IDs, hashes, fingerprints, booleans, null/`NA`, data mode, provenance, and response order remain canonical. Both locales present each instant through the same explicit KST formatter while preserving its raw UTC value in `datetime`. Copy does not call a methodology active/inactive because this endpoint does not expose that state. |
+| P2-OAW05 | Error and not-found truth | Exact detail 404 retains the localized not-found boundary. Configuration, transport, media, JSON, or validation failure on any of four resources uses the provider-neutral recoverable error boundary and reveals no partial audit, recorded-empty substitute, or fallback. |
+| P2-OAW06 | Accessibility and responsive containment | Outcome evidence uses semantic headings and table/list/description structures, has a sequential keyboard path and visible focus, and keeps long hashes/fingerprints and dense fields locally contained without truncating canonical text or creating page overflow at 1440, 1280, and 390 pixels. |
+| P2-OAW07 | Server-only runtime | Browser navigation produces no request to `API_BASE_URL`; Next performs all four reads server-side. Populated and empty outcome states produce no hydration, console warning/error, or page error. |
+
+## Coherent call-outcome audit required tests
+
+- Adapter tests must cover the exact 31-key row, every permitted nullable branch,
+  all six horizons, identity/version/hash/instant bounds, missing/extra/mistyped
+  fields, and explicit preservation of nulls and source order. Every metric
+  number and result Boolean is a negative phase test; numeric precision/scale
+  support is not claimed or tested by this consumer.
+- One-at-a-time phase mutations must reject every non-DEMO mode, coherent
+  calculated and excluded records, each wrong status/reason/completeness pair,
+  and each of the ten non-null metric/result fields.
+- Cross-record tests must cover requested-call mismatch, duplicate outcome and
+  natural-input identities, methodology hash conflicts, same fingerprint under
+  a different methodology version, lineage root/gap/predecessor/sequence and
+  each nondecreasing timestamp, unrelated-lineage independence, exact API order,
+  call/snapshot/correction joins and timing, exact-null cancellation reference,
+  and distinct valid provenance across document families.
+- Transport tests must prove exact detail-first four-path behavior, opaque-ID
+  encoding, one private origin, JSON/no-store/redirect options, known-empty
+  `[]`, and fail-whole behavior for invalid configuration, network, every
+  dependent non-200 including 404, media type, malformed JSON, and response
+  shape without retry or fallback.
+- Fixture tests must prove the same aggregate shape from the existing outcome
+  envelope, methodology/hash and call/revision/snapshot joins, populated and
+  known-empty calls, invalid envelope/reference failure, and no API dependency.
+  Factory tests retain the exact shared fixture/API selector and no fallback.
+- Korean/English page tests must lock the four-row populated audit, explicit
+  empty state, every raw evidence class, base/revision preservation, microsecond
+  display, and absence of current/effective/latest/score/win/rank/advice or
+  inferred cancellation-outcome claims.
+- Responsive Playwright must exercise populated call 001 and empty call 002 at
+  1440, 1280, and 390 pixels, sequential keyboard reachability, local overflow
+  containment, zero browser-to-API requests, and zero runtime errors.
+- The existing PostgreSQL 17 -> packaged Spring -> Next API-mode job must run
+  the outcome E2E and prove exact full-line Tomcat access for both outcomes
+  paths in addition to the existing five list and six detail/context/revision
+  reads. With `%m %U%q %s`, queryless rows retain Tomcat's observed `-` value;
+  the required set therefore contains 13 exact HTTP-200 lines.
+- Repository CI must lock the exact aggregate/provider graph, 31-field type,
+  phase and lineage markers, fixture/API reverse isolation, page/test/E2E
+  sources, and the unchanged protected backend/canonical digest.
+
+## Coherent call-outcome audit observed verification
+
+- Web ESLint and TypeScript both passed. Vitest passed all 42 files and 569
+  tests. The Next production build passed, including 12/12 static-generation
+  work items and 11 dynamic routes.
+- Retry-free Playwright passed all 72 tests across 1440, 1280, and 390 pixels;
+  the focused outcome-plus-revision matrix passed 6/6. It covered populated and
+  known-empty evidence, sequential keyboard focus, long hash/fingerprint
+  containment, and browser-to-API isolation.
+- The real PostgreSQL 17 -> packaged Spring -> Next API-mode gate passed 3/3
+  browser tests and matched all 13 exact Tomcat access-log lines: five list
+  queries plus eight populated/known-empty detail, context, revision, and
+  outcome reads.
+- Maven verification passed 223/223 tests with zero failures, errors, or skips.
+  PostgreSQL 17.10 migration coverage passed 4/4 Testcontainers integration
+  tests with zero skips; Compose configuration also passed.
+- All 18 embedded workflow Python blocks passed syntax and execution. Canonical
+  validation covered 14 JSON Schemas and 32 fixture records; SnakeYAML parsing
+  and `git diff --check` passed. Generated reports were removed and
+  `next-env.d.ts` retained its production import.
+- In-app browser QA confirmed Korean default SSR, desktop and 390-pixel
+  containment without overflow or canonical-token truncation, the honest empty
+  state, and zero console warnings or errors. Independent final review found
+  zero blockers, zero high-severity issues, and zero known false-positive gates.
+
+## Coherent call-outcome audit deferred work
+
+Effective original/correction/cancellation basis selection, named-horizon
+policy, calculated metrics, current/latest projection, scoring, aggregation,
+confidence, ranking, and persistence remain P3 work. Dashboard/API migration,
+dataset catalog metadata, and cross-request snapshot tokens require separate
+contracts. Live/licensed providers, entitlements, rights, freshness/health,
+retry/polling/streaming, and non-DEMO publication remain P5 work. This consumer
+does not turn the four synthetic model records into observed performance.
+
+## Exact SEC manifest-audit API-mode full-stack acceptance boundary
+
+Status: implemented and observed PASS in the 2026-08-31 ADR-055 manual local
+gate recorded in `IMPLEMENTATION_LOG.md`. Repository CI guards this contract but
+does not execute the Docker/Chromium run.
+
+ADR-055 extends the existing disposable ADR-045 production-stack command. It
+does not change an OpenAPI route, Flyway migration, production repository,
+provider adapter, manifest assembly rule, or public mutation boundary. Its only
+write entry is an explicitly named JUnit acceptance harness outside the default
+Surefire class patterns. The harness is invoked only with the exact opt-in
+property and persists the shared synthetic ADR-053 parity evidence through
+production repositories and the production manifest persistence service.
+
+The seed refuses a non-isolated target both before context creation and through
+effective JDBC metadata. Only loopback PostgreSQL, database and user
+`wsr_full_stack_acceptance`, matching datasource/Flyway URLs and credentials,
+a 32-lowercase-hex per-run password, empty root/segment/manifest repositories,
+disabled SEC provider, disabled operator API, empty contact email, and the closed
+`http://127.0.0.1:1` SEC base URL are accepted. The live provider is never
+contacted, and ordinary Maven tests, verification, packaging, and application
+startup do not discover the seed class.
+
+The API-mode synthetic manifest remains data-mode evidence rather than a
+transport inference. A server-only acceptance setting names exactly its
+lowercase SHA-256 manifest identity. Only that matching API response receives
+the existing DEMO badge and synthetic-not-actual-SEC disclosure. Other API
+manifests are not called DEMO, LIVE, REALTIME, DELAYED, or EOD, and ADR-052's
+response contract remains unchanged.
+
+### ADR-055 contract gate
+
+| ID | Check | Expected result |
+| --- | --- | --- |
+| P2-SFA01 | Explicit non-default seed | `SecManifestAuditAcceptanceSeedHarness` does not match default Surefire discovery and runs only when the command names the exact class and supplies `-Dwsr.sec-manifest-acceptance-seed=true`. No raw SQL, runtime endpoint, startup importer, scheduler, or operator command seeds evidence. |
+| P2-SFA02 | Strict effective database guard | Before any write, both environment and effective Spring/JDBC state identify only `jdbc:postgresql://127.0.0.1:<1024..65535>/wsr_full_stack_acceptance`, user `wsr_full_stack_acceptance`, identical datasource/Flyway settings, and the per-run password. Existing root, segment, or manifest rows fail the seed. |
+| P2-SFA03 | No external/provider authority | `SEC_PROVIDER_ENABLED=false`, `OPERATOR_API_ENABLED=false`, empty `SEC_CONTACT_EMAIL`, and `SEC_BASE_URL=http://127.0.0.1:1` are mandatory. No API key, SEC account, paid plan, domain, home-server access, OAuth credential, user/operator token, or monitored email is needed. |
+| P2-SFA04 | Production persistence path | One shared synthetic fixture is appended and reloaded through `FilingCatalogCaptureRepository` and `HistoricalFilingSegmentCaptureRepository`, then persisted through `PersistFilingHistoryCollectionManifestService` and read through the audit query service. It has one root, two selected historical captures, one manifest, two descriptors, four accession groups, and six occurrences. |
+| P2-SFA05 | Exact identity and PIT absence | The manifest is exact `cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd`, selection hash `eadb0c3bf6efb9b3323be1342d0b17e63631b706f088b23fa78e784e1b547acd`, root capture `c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8`, and assembled time `2026-08-25T03:30:00.123456Z`. The assembly cutoff succeeds and one microsecond earlier remains sanitized 404. |
+| P2-SFA06 | Explicit SEC API mode and DEMO truth | Build, production Next runtime, and browser children select `SEC_MANIFEST_AUDIT_PROVIDER=api`. The exact acceptance identity is separately pinned as synthetic and remains visibly DEMO; the browser never calls Spring directly, the API payload gains no invented mode, and no fixture fallback occurs. |
+| P2-SFA07 | Route and browser matrix | The production stack smoke-checks 13 primary routes including `/research/sec/filing-history`. Five retry-free Chromium tests cover the call list, revisions, outcomes, and two SEC cases; the SEC success case visits summary, descriptors, accessions, and occurrences in Korean and English with KST visible values and exact UTC `datetime` evidence. |
+| P2-SFA08 | Exact access evidence | The harness requires 18 exact full Tomcat access-log lines: the prior 13 call reads plus four successful SEC resources and the pre-assembly SEC 404. Substring matches and inferred totals are insufficient. |
+| P2-SFA09 | Correct KST day boundary | The exact filtered call-list line uses inclusive `from=2026-08-10T15%3A00%3A00.000Z` and exclusive `to=2026-08-11T15%3A00%3A00.000Z`, preserving ADR-054's `2026-08-11` Korean civil-day meaning. |
+| P2-SFA10 | Exact PostgreSQL tuple | The no-whitespace SQL result equals the complete tuple below, including zero operator-ledger rows and exact manifest/selection/root/assembly identities. A cardinality-only subset is insufficient. |
+| P2-SFA11 | Owned cleanup | Success and failure remove only the exact run-owned API/web processes, Compose project/volume, source mirror, temporary build, reports, logs, and lock. Root `.env`, default database/volume, normal `.next`, `apps/web/next-env.d.ts`, and `apps/web/tsconfig.json` remain untouched. |
+| P2-SFA12 | CI/manual separation | Repository CI parses and guards ADR-055 source, markers, expected identity, and nested historical projection, but does not run the Docker/Chromium harness. Only an actual manual local run may be recorded as runtime PASS. |
+
+The required database tuple is:
+
+```text
+3|2|4|3|1|2|2|2|4|1|2|4|6|0|0|0|0|cda6762d385d4e889294d0fec1f7a2a7b20c5157cf67c832b7d7f4857550a1cd|eadb0c3bf6efb9b3323be1342d0b17e63631b706f088b23fa78e784e1b547acd|c9bfc935b27e059397531a4dda1a1a0222e98528c33e85b886c91ca6b74f2fa8|2026-08-25T03:30:00.123456Z
+```
+
+In order, it contains call/revision/outcome counts `3|2|4`; decoded body,
+root capture, recent row, root descriptor, segment capture, segment row,
+manifest, selected descriptor, accession-group, and occurrence counts
+`3|1|2|2|2|4|1|2|4|6`; operator attempt/action/dispatch/outcome counts
+`0|0|0|0`; and the exact manifest, selection, root, and assembly identities.
+
+### ADR-055 required manual verification
+
+Run from the repository root only after the documented PowerShell 7, Java 21,
+Node.js 24, installed dependency, Playwright Chromium, and local-Docker
+prerequisites are available:
+
+```powershell
+pwsh -NoProfile -File ./scripts/verify-local-full-stack.ps1
+```
+
+Acceptance requires all 13 routes, five Chromium tests, 18 exact HTTP lines,
+the complete database tuple, server-only private API isolation, disabled live
+SEC/operator boundaries, and owned cleanup to pass in one run. The 2026-08-31
+manual run met the complete contract; subsequent release candidates must rerun
+the same command rather than inheriting that result.
 
 ## Local gate
 

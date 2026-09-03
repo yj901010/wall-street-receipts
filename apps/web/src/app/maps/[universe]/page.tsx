@@ -1,24 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MarketMap, MARKET_MAP_LABELS } from "@/components/market-map";
+import { KstTimestamp } from "@/components/kst-timestamp";
+import { getMarketMapMessages } from "@/components/market-map-messages";
 import { MarketTreemap } from "@/components/market-treemap";
 import { SiteHeader } from "@/components/site-header";
+import { getLocale } from "@/lib/i18n/server";
 import {
   isMarketTreemapUniverse,
   MARKET_TREEMAP_UNIVERSES,
   marketMapProvider,
   marketTreemapProvider,
 } from "@/lib/providers";
-
-const utcFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
-
-function utc(value: string) {
-  return `${utcFormatter.format(new Date(value))} UTC`;
-}
 
 export const dynamicParams = false;
 
@@ -51,6 +44,8 @@ export default async function MarketMapPage({
 }) {
   const { universe: rawUniverse } = await params;
   const { mode: rawMode } = await searchParams;
+  const locale = await getLocale();
+  const messages = getMarketMapMessages(locale);
   const routeMode = readMarketMapRouteMode(rawMode);
 
   if (!isMarketTreemapUniverse(rawUniverse) || routeMode === null) {
@@ -80,24 +75,24 @@ export default async function MarketMapPage({
       <SiteHeader current="maps" dataMode={snapshot.dataMode} />
 
       <div className="page-shell maps-shell">
-        <nav className="map-mode-nav" aria-label="Market map modes">
-          <span>Metric</span>
+        <nav className="map-mode-nav" aria-label={messages.route.modeNavLabel}>
+          <span>{messages.route.metric}</span>
           <Link
             href={`/maps/${snapshot.universe}`}
             aria-current={routeMode === "price-change" ? "page" : undefined}
           >
-            Price change
+            {messages.route.priceChange}
           </Link>
           <Link
             href={`/maps/${snapshot.universe}?mode=analyst-consensus`}
             aria-current={routeMode === "analyst-consensus" ? "page" : undefined}
           >
-            Analyst consensus
+            {messages.route.analystConsensus}
           </Link>
         </nav>
 
-        <nav className="map-universe-nav" aria-label="Market map universes">
-          <span>Universe</span>
+        <nav className="map-universe-nav" aria-label={messages.route.universeNavLabel}>
+          <span>{messages.route.universe}</span>
           {MARKET_TREEMAP_UNIVERSES.map((universe) => (
             <Link
               key={universe}
@@ -111,42 +106,45 @@ export default async function MarketMapPage({
 
         <section className="page-heading maps-heading" aria-labelledby="maps-title">
           <div>
-            <p className="eyebrow">Read-only fixture map</p>
-            <h1 id="maps-title">{universeLabel} map evidence.</h1>
+            <p className="eyebrow">{messages.route.eyebrow}</p>
+            <h1 id="maps-title">{messages.route.title(universeLabel)}</h1>
             <p className="page-summary">
               {routeMode === "price-change"
-                ? "This default surface displays a nested PRICE_CHANGE DEMO fixture. Area uses a synthetic market-cap proxy; color uses stored synthetic percent values. Neither is live or official market data."
-                : "This alternate surface preserves the standalone ANALYST_CONSENSUS DEMO fixture. It does not claim full index composition, live membership, official weights, or metrics derived from the canonical call ledger."}
+                ? messages.route.priceChangeSummary
+                : messages.route.analystConsensusSummary}
             </p>
           </div>
-          <dl className="provenance-strip map-provenance" aria-label={`${universeLabel} map provenance`}>
+          <dl
+            className="provenance-strip map-provenance"
+            aria-label={messages.route.provenanceLabel(universeLabel)}
+          >
             <div>
-              <dt>As of</dt>
-              <dd>{utc(snapshot.asOf)}</dd>
+              <dt>{messages.route.asOf}</dt>
+              <dd><KstTimestamp value={snapshot.asOf} /></dd>
             </div>
             <div>
-              <dt>Captured</dt>
-              <dd>{utc(capturedAt)}</dd>
+              <dt>{messages.route.captured}</dt>
+              <dd><KstTimestamp value={capturedAt} /></dd>
             </div>
             <div>
-              <dt>Generated</dt>
-              <dd>{utc(snapshot.generatedAt)}</dd>
+              <dt>{messages.route.generated}</dt>
+              <dd><KstTimestamp value={snapshot.generatedAt} /></dd>
             </div>
             <div>
-              <dt>Source</dt>
+              <dt>{messages.route.source}</dt>
               <dd>{source}</dd>
             </div>
             <div>
-              <dt>Data mode</dt>
+              <dt>{messages.route.dataMode}</dt>
               <dd>{snapshot.dataMode}</dd>
             </div>
           </dl>
         </section>
 
         {priceChangeSnapshot ? (
-          <MarketTreemap snapshot={priceChangeSnapshot} />
+          <MarketTreemap snapshot={priceChangeSnapshot} locale={locale} />
         ) : (
-          <MarketMap snapshot={analystConsensusSnapshot!} />
+          <MarketMap snapshot={analystConsensusSnapshot!} locale={locale} />
         )}
       </div>
     </main>

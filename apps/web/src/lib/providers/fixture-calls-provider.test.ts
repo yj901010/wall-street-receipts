@@ -58,6 +58,10 @@ describe("FixtureCallsProvider", () => {
     expect(empty.items).toEqual([]);
     expect(empty.page.totalElements).toBe(0);
     expect(empty.page.number).toBe(0);
+    await expect(provider.list({ assetId: "ASSET-NVDA" })).resolves.toMatchObject({
+      items: [],
+      page: { totalElements: 0, totalPages: 0 },
+    });
   });
 
   it("orders and range-checks whole-second and fractional UTC instants precisely", () => {
@@ -99,9 +103,27 @@ describe("FixtureCallsProvider", () => {
         "2026-08-11T15:20:00.000001+01:00",
       ),
     ).toBe(true);
+    expect(
+      fixtureCallMatchesEventRange(
+        "2026-08-11T14:20:00.000001Z",
+        "2026-08-11T14:20:00.000000999Z",
+        "2026-08-11T14:20:00.000001001Z",
+      ),
+    ).toBe(true);
+    expect(
+      fixtureCallMatchesEventRange(
+        "2026-08-11T14:20:00Z",
+        "2026-08-10T00:00:00+18:00",
+        "2026-08-13T00:00:00-18:00",
+      ),
+    ).toBe(true);
     expect(() => fixtureCallMatchesEventRange(
       "2026-08-11T14:20:00Z",
-      "2026-08-11T15:20:00.0000001+01:00",
+      "2026-08-11T15:20:00.0000000001+01:00",
+    )).toThrow("Invalid from instant");
+    expect(() => fixtureCallMatchesEventRange(
+      "2026-08-11T14:20:00Z",
+      "2026-08-11T00:00:00+18:01",
     )).toThrow("Invalid from instant");
   });
 

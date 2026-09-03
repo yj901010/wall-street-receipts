@@ -1,72 +1,92 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Locale } from "@/lib/i18n/config";
 import {
   FixtureCallsProvider,
   FixtureSp500HistoryProvider,
   type Sp500HistorySnapshot,
 } from "@/lib/providers";
+import { renderWithLocale } from "@/test/render-with-locale";
 import Sp500HistoryError from "./error";
 import { KeyboardScrollRegion } from "./keyboard-scroll-region";
 import Sp500HistoryLoading from "./loading";
 import Sp500HistoryPage from "./page";
 import { Sp500CallHistory } from "./sp500-call-history";
 
+const i18nServer = vi.hoisted(() => ({
+  getLocale: vi.fn(),
+}));
+
+vi.mock("@/lib/i18n/server", () => ({
+  getLocale: i18nServer.getLocale,
+}));
+
 async function fixtureSnapshot() {
   return new FixtureSp500HistoryProvider(new FixtureCallsProvider()).history();
 }
 
+async function renderPage(locale: Locale = "ko") {
+  i18nServer.getLocale.mockResolvedValue(locale);
+  return renderWithLocale(await Sp500HistoryPage(), locale);
+}
+
 describe("Sp500HistoryPage", () => {
+  beforeEach(() => {
+    i18nServer.getLocale.mockReset();
+    i18nServer.getLocale.mockResolvedValue("ko");
+  });
+
   it("renders the canonical recorded DEMO event with scoped catalog and source evidence", async () => {
-    render(await Sp500HistoryPage());
+    await renderPage();
 
     expect(screen.getByRole("heading", {
-      name: "Recorded S&P 500 forecast-call events.",
+      name: "기록된 S&P 500 전망 콜 이벤트",
     })).toBeInTheDocument();
-    const navigation = screen.getByRole("navigation", { name: "Primary navigation" });
+    const navigation = screen.getByRole("navigation", { name: "주요 탐색" });
     expect(within(navigation).getAllByRole("link")).toHaveLength(8);
-    expect(within(navigation).getByRole("link", { name: "Market" })).toHaveAttribute(
+    expect(within(navigation).getByRole("link", { name: "시장" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(within(navigation).getByRole("link", { name: "Market" })).toHaveAttribute(
+    expect(within(navigation).getByRole("link", { name: "시장" })).toHaveAttribute(
       "href",
       "/market",
     );
 
-    const provenance = screen.getByLabelText("S&P 500 call-history provenance");
-    expect(within(provenance).getByText("Call catalog as of", { exact: true }))
+    const provenance = screen.getByLabelText("S&P 500 콜 이력 출처 정보");
+    expect(within(provenance).getByText("콜 카탈로그 기준 시각", { exact: true }))
       .toBeInTheDocument();
-    expect(within(provenance).getByText("2026-08-18T00:00:00Z", { exact: true }))
+    expect(within(provenance).getByText("2026-08-18 09:00:00 KST", { exact: true }))
       .toHaveAttribute("datetime", "2026-08-18T00:00:00Z");
     expect(within(provenance).getByText("fixture-analyst-calls-v1", { exact: true }))
       .toBeInTheDocument();
     expect(within(provenance).getByText("SPX", { exact: true })).toBeInTheDocument();
     expect(within(provenance).getByText("DEMO", { exact: true })).toBeInTheDocument();
 
-    const history = screen.getByRole("region", { name: "S&P 500 call-event history" });
+    const history = screen.getByRole("region", { name: "S&P 500 콜 이벤트 이력" });
     expect(within(history).getByText(
-      "1 row shown · 1 matching DEMO event · incomplete fixture coverage",
+      "1개 행 표시 · 일치하는 DEMO 이벤트 1건 · 불완전한 픽스처 범위",
       { exact: true },
     )).toBeInTheDocument();
-    const policy = within(history).getByLabelText("S&P 500 call-history policy");
-    expect(within(policy).getByText("Presentation policy · not fixture evidence", { exact: true }))
+    const policy = within(history).getByLabelText("S&P 500 콜 이력 정책");
+    expect(within(policy).getByText("표시 정책 · 픽스처 증거 아님", { exact: true }))
       .toBeVisible();
-    expect(policy).toHaveTextContent("No correction or revision is folded into a current effective view");
+    expect(policy).toHaveTextContent("정정이나 개정 내용을 현재 유효 상태로 합치지 않습니다");
     expect(policy).toHaveTextContent(
-      "not current recommendations, prices, consensus, or performance",
+      "현재 추천, 가격, 컨센서스 또는 성과가 아닙니다",
     );
-    expect(policy).toHaveTextContent("do not assert S&P 500 coverage");
+    expect(policy).toHaveTextContent("S&P 500 범위, 신뢰도, 완전성 또는 시장 추세를 주장하지 않습니다");
 
-    const queryEvidence = within(history).getByLabelText("S&P 500 history query evidence");
+    const queryEvidence = within(history).getByLabelText("S&P 500 이력 쿼리 증거");
     expect(queryEvidence).toHaveTextContent("S&P 500 Index");
     expect(queryEvidence).toHaveTextContent("asset-spx");
     expect(queryEvidence).toHaveTextContent("SPX · INDEX");
     expect(queryEvidence).toHaveTextContent("asset-spx · page 0 · size 25");
-    expect(queryEvidence).toHaveTextContent("Event time descending · call ID ascending tie break");
+    expect(queryEvidence).toHaveTextContent("이벤트 시각 내림차순 · 동일 시각은 콜 ID 오름차순");
     expect(queryEvidence).toHaveTextContent("1 / 1");
 
     const table = within(history).getByRole("table", {
-      name: "Original committed S&P 500 DEMO analyst-call events",
+      name: "원본 확정 S&P 500 DEMO 애널리스트 콜 이벤트",
     });
     const disclaimer = within(history).getByText(
       "Synthetic DEMO events only; no record represents a real JPMorgan or Goldman Sachs analyst statement.",
@@ -80,7 +100,7 @@ describe("Sp500HistoryPage", () => {
     })).not.toBeInTheDocument();
 
     const row = within(table).getAllByRole("row")[1];
-    expect(within(row).getByRole("link", { name: "2026-08-10T12:00:00Z" }))
+    expect(within(row).getByRole("link", { name: "2026-08-10 21:00:00 KST" }))
       .toHaveAttribute("href", "/calls/demo-call-001");
     expect(within(row).getByText("demo-call-001", { exact: true })).toBeInTheDocument();
     expect(within(row).getByText("JPMorgan", { exact: true })).toBeInTheDocument();
@@ -89,23 +109,51 @@ describe("Sp500HistoryPage", () => {
     expect(within(row).getByText("DEMO Bullish", { exact: true })).toBeInTheDocument();
     expect(within(row).getByText("$7,800.00 → $8,000.00", { exact: true }))
       .toBeInTheDocument();
-    expect(within(row).getByText("Currency: USD", { exact: true })).toBeInTheDocument();
+    expect(within(row).getByText("통화: USD", { exact: true })).toBeInTheDocument();
     expect(within(row).getByText("NA", { exact: true })).toBeInTheDocument();
     expect(within(row).getByText("ACTIVE", { exact: true })).toBeInTheDocument();
     expect(within(row).getByRole("link", { name: "DEMO index outlook" }))
       .toHaveAttribute("href", "/calls/demo-call-001#source");
-    expect(within(row).getByText("DEMO Publisher · Verified: false", { exact: true }))
+    expect(within(row).getByText("DEMO Publisher · 검증 여부: false", { exact: true }))
       .toBeInTheDocument();
-    expect(within(row).getAllByText("2026-08-10T12:03:00Z", { exact: true }))
+    expect(within(row).getAllByText("2026-08-10 21:03:00 KST", { exact: true }))
       .toHaveLength(2);
     expect(within(row).getByText("DEMO · fixture-analyst-calls-v1", { exact: true }))
       .toBeInTheDocument();
     expect(within(row).queryByText("demo-source-001", { exact: true })).not.toBeInTheDocument();
 
-    expect(within(history).getByRole("link", { name: "Open filtered call ledger" }))
+    expect(within(history).getByRole("link", { name: "필터링된 콜 원장 열기" }))
       .toHaveAttribute("href", "/calls?assetId=asset-spx");
-    expect(within(history).getByRole("link", { name: "Return to market publication status" }))
+    expect(within(history).getByRole("link", { name: "시장 게시 상태로 돌아가기" }))
       .toHaveAttribute("href", "/market");
+  });
+
+  it("renders English UI without changing canonical dates, money, IDs, statuses, or sources", async () => {
+    await renderPage("en");
+
+    expect(screen.getByRole("heading", {
+      name: "Recorded S&P 500 forecast-call events.",
+    })).toBeInTheDocument();
+    const history = screen.getByRole("region", { name: "S&P 500 call-event history" });
+    const table = within(history).getByRole("table", {
+      name: "Original committed S&P 500 DEMO analyst-call events",
+    });
+    const row = within(table).getAllByRole("row")[1];
+
+    expect(within(row).getByRole("link", { name: "2026-08-10 21:00:00 KST" }))
+      .toHaveAttribute("href", "/calls/demo-call-001");
+    expect(within(row).getByText("demo-call-001", { exact: true })).toBeInTheDocument();
+    expect(within(row).getByText("BULLISH", { exact: true })).toBeInTheDocument();
+    expect(within(row).getByText("DEMO Bullish", { exact: true })).toBeInTheDocument();
+    expect(within(row).getByText("$7,800.00 → $8,000.00", { exact: true }))
+      .toBeInTheDocument();
+    expect(within(row).getByText("ACTIVE", { exact: true })).toBeInTheDocument();
+    expect(within(row).getByRole("link", { name: "DEMO index outlook" }))
+      .toHaveAttribute("href", "/calls/demo-call-001#source");
+    expect(within(history).getByText(
+      "Synthetic DEMO events only; no record represents a real JPMorgan or Goldman Sachs analyst statement.",
+      { exact: true },
+    )).toBeVisible();
   });
 
   it("renders honest empty paging and preserves visible microsecond evidence", async () => {
@@ -120,16 +168,19 @@ describe("Sp500HistoryPage", () => {
         last: true,
       },
     };
-    const emptyRender = render(<Sp500CallHistory snapshot={empty} />);
+    const emptyRender = renderWithLocale(
+      <Sp500CallHistory locale="ko" snapshot={empty} />,
+      "ko",
+    );
 
     expect(screen.getByText(
-      "0 rows shown · 0 matching DEMO events · incomplete fixture coverage",
+      "0개 행 표시 · 일치하는 DEMO 이벤트 0건 · 불완전한 픽스처 범위",
       { exact: true },
     )).toBeInTheDocument();
-    expect(screen.getByLabelText("S&P 500 history query evidence")).toHaveTextContent("0 / 0");
+    expect(screen.getByLabelText("S&P 500 이력 쿼리 증거")).toHaveTextContent("0 / 0");
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
-      "No placeholder forecast, target, status, source, market price, or outcome was created.",
+      "대체 전망, 목표가, 상태, 출처, 시장 가격 또는 성과를 만들지 않았습니다.",
     );
     emptyRender.unmount();
 
@@ -137,14 +188,17 @@ describe("Sp500HistoryPage", () => {
     item.call.eventTime = "2026-08-10T12:00:00.000001Z";
     item.call.processingTime = "2026-08-10T12:03:00.000002Z";
     item.call.capturedAt = "2026-08-10T12:03:00.000003Z";
-    render(<Sp500CallHistory snapshot={{ ...canonical, items: [item] }} />);
+    renderWithLocale(
+      <Sp500CallHistory locale="ko" snapshot={{ ...canonical, items: [item] }} />,
+      "ko",
+    );
 
-    for (const instant of [
-      "2026-08-10T12:00:00.000001Z",
-      "2026-08-10T12:03:00.000002Z",
-      "2026-08-10T12:03:00.000003Z",
+    for (const [display, instant] of [
+      ["2026-08-10 21:00:00.000001 KST", "2026-08-10T12:00:00.000001Z"],
+      ["2026-08-10 21:03:00.000002 KST", "2026-08-10T12:03:00.000002Z"],
+      ["2026-08-10 21:03:00.000003 KST", "2026-08-10T12:03:00.000003Z"],
     ]) {
-      expect(screen.getByText(instant, { exact: true })).toHaveAttribute("datetime", instant);
+      expect(screen.getByText(display, { exact: true })).toHaveAttribute("datetime", instant);
     }
   });
 
@@ -159,22 +213,28 @@ describe("Sp500HistoryPage", () => {
       return item;
     });
 
-    render(<Sp500CallHistory snapshot={{
-      ...canonical,
-      items,
-      page: {
-        ...canonical.page,
-        totalElements: 26,
-        totalPages: 2,
-        last: false,
-      },
-    }} />);
+    renderWithLocale(
+      <Sp500CallHistory
+        locale="ko"
+        snapshot={{
+          ...canonical,
+          items,
+          page: {
+            ...canonical.page,
+            totalElements: 26,
+            totalPages: 2,
+            last: false,
+          },
+        }}
+      />,
+      "ko",
+    );
 
     expect(screen.getByText(
-      "25 rows shown · 26 matching DEMO events · incomplete fixture coverage",
+      "25개 행 표시 · 일치하는 DEMO 이벤트 26건 · 불완전한 픽스처 범위",
       { exact: true },
     )).toBeInTheDocument();
-    expect(screen.getByLabelText("S&P 500 history query evidence")).toHaveTextContent("1 / 2");
+    expect(screen.getByLabelText("S&P 500 이력 쿼리 증거")).toHaveTextContent("1 / 2");
     expect(screen.getAllByRole("row")).toHaveLength(26);
   });
 
@@ -190,30 +250,34 @@ describe("Sp500HistoryPage", () => {
     item.call.targetDate = null;
     item.source.document.publisher = null;
 
-    render(<Sp500CallHistory snapshot={{ ...canonical, items: [item] }} />);
+    renderWithLocale(
+      <Sp500CallHistory locale="ko" snapshot={{ ...canonical, items: [item] }} />,
+      "ko",
+    );
 
     const row = screen.getAllByRole("row")[1];
-    const identity = row.querySelector('[data-label="Institution / analyst"]');
-    const rating = row.querySelector('[data-label="Recorded direction / rating"]');
-    const targets = row.querySelector('[data-label="Stored targets"]');
-    const targetDate = row.querySelector('[data-label="Target date"]');
-    const source = row.querySelector('[data-label="Source evidence"]');
+    const identity = row.querySelector('[data-field="institution-analyst"]');
+    const rating = row.querySelector('[data-field="direction-rating"]');
+    const targets = row.querySelector('[data-field="stored-targets"]');
+    const targetDate = row.querySelector('[data-field="target-date"]');
+    const source = row.querySelector('[data-field="source-evidence"]');
     expect(identity?.querySelector(".cell-secondary")).toHaveTextContent(/^NA$/);
     expect(rating?.querySelector(".cell-secondary")).toHaveTextContent(/^NA$/);
     expect(targets).toHaveTextContent("NA → NA");
-    expect(targets).toHaveTextContent("Currency: NA");
+    expect(targets).toHaveTextContent("통화: NA");
     expect(targets).not.toHaveTextContent("$0");
     expect(targetDate).toHaveTextContent(/^NA$/);
     expect(source?.querySelector(".cell-secondary")).toHaveTextContent(
-      /^NA · Verified: false$/,
+      /^NA · 검증 여부: false$/,
     );
   });
 
   it("moves only an overflowing focused table region with horizontal arrow keys", () => {
-    render(
+    renderWithLocale(
       <KeyboardScrollRegion ariaLabel="Test horizontal evidence" className="table-scroll">
         <button type="button">Nested evidence control</button>
       </KeyboardScrollRegion>,
+      "ko",
     );
     const region = screen.getByRole("region", { name: "Test horizontal evidence" });
     Object.defineProperties(region, {
@@ -237,34 +301,37 @@ describe("Sp500HistoryPage", () => {
     expect(region.scrollLeft).toBe(0);
   });
 
-  it("keeps DEMO navigation in accessible loading and retryable error states", () => {
-    const loading = render(<Sp500HistoryLoading />);
+  it("keeps DEMO navigation in accessible Korean loading and retryable error states", async () => {
+    const loading = renderWithLocale(await Sp500HistoryLoading(), "ko");
 
-    expect(screen.getByText("Loading the committed DEMO call subset…").closest("main"))
+    expect(screen.getByText("확정된 DEMO 콜 일부를 불러오는 중…").closest("main"))
       .toHaveAttribute("aria-busy", "true");
     expect(screen.getByText("DEMO", { selector: ".mode-badge" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Market" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "시장" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(screen.getByText(/No market price, chart, target, status, outcome, or placeholder/))
+    expect(screen.getByText(/시장 가격, 차트, 목표가, 상태, 성과 또는 대체 행을 채우지 않습니다/))
       .toBeInTheDocument();
     loading.unmount();
 
     const reset = vi.fn();
-    render(<Sp500HistoryError error={new Error("fixture failed")} reset={reset} />);
+    renderWithLocale(
+      <Sp500HistoryError error={new Error("fixture failed")} reset={reset} />,
+      "ko",
+    );
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "No partial call, market snapshot, chart, outcome, consensus, or application literal",
+      "일부 콜, 시장 스냅샷, 차트, 성과, 컨센서스 또는 애플리케이션 상수",
     );
     expect(screen.getByText("DEMO", { selector: ".mode-badge" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Market" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "시장" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(screen.getByRole("link", { name: "Return to market publication status" }))
+    expect(screen.getByRole("link", { name: "시장 게시 상태로 돌아가기" }))
       .toHaveAttribute("href", "/market");
-    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(reset).toHaveBeenCalledOnce();
   });
 });

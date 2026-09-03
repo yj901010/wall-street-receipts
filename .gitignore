@@ -9,6 +9,7 @@
 # Node / Next.js
 node_modules/
 .next/
+apps/web/.wsr-local-full-stack-*/
 /out/
 .pnpm-store/
 coverage/
@@ -30,4 +31,7 @@ Thumbs.db
 # Logs and temporary files
 *.log
 *.tmp
+__pycache__/
+*.py[cod]
+/.wsr-local-acceptance.lock
 .cache/

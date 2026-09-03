@@ -1,0 +1,649 @@
+package com.wallstreetreceipts.api.config;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.springframework.test.web.client.ExpectedCount.once;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.util.HexFormat;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.GZIPOutputStream;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
+
+import com.wallstreetreceipts.api.domain.filing.FilingCatalog;
+import com.wallstreetreceipts.api.domain.filing.FilingCatalogCapture;
+import com.wallstreetreceipts.api.application.filing.PersistFilingCatalogCaptureService;
+import com.wallstreetreceipts.api.application.port.out.FilingCatalogCaptureRepository;
+import com.wallstreetreceipts.api.domain.filing.HistoricalFilingSegmentDescriptor;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRepresentation;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.BodyRetention;
+import com.wallstreetreceipts.api.domain.source.SourceResponseReceipt.TransportContentEncoding;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecEdgarFilingCatalogProvider;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecProviderConfigurationException;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecProviderException;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecRequestRateLimiter;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecResponseSizeLimitInterceptor;
+import com.wallstreetreceipts.api.infrastructure.provider.sec.SecRetryAfterPolicy;
+
+class SecEdgarConfigurationTest {
+
+    private static final URI TEST_BASE_URL = URI.create("https://127.0.0.1:9443");
+    private static final String CONTACT_EMAIL = "operations@example.test";
+    private static final Instant RECEIVED_AT = Instant.parse("2026-08-21T00:00:00.123456789Z");
+    private static final Clock FIXED_CLOCK = Clock.fixed(RECEIVED_AT, ZoneOffset.UTC);
+    private static final String EXPECTED_ENDPOINT =
+            "https://127.0.0.1:9443/submissions/CIK0000320193.json";
+
+    private RestClient.Builder restClientBuilder;
+    private MockRestServiceServer server;
+    private SecEdgarFilingCatalogProvider provider;
+    private SecRequestRateLimiter rateLimiter;
+
+    @BeforeEach
+    void setUp() {
+        SecEdgarProperties properties =
+                new SecEdgarProperties(true, TEST_BASE_URL, CONTACT_EMAIL);
+        rateLimiter = new SecRequestRateLimiter();
+        restClientBuilder = new SecEdgarConfiguration(true)
+                .configureRestClient(RestClient.builder(), properties, rateLimiter);
+        server = MockRestServiceServer.bindTo(restClientBuilder).build();
+
+        RestClient restClient = restClientBuilder.build();
+        provider = new SecEdgarFilingCatalogProvider(
+                restClient,
+                TEST_BASE_URL,
+                FIXED_CLOCK,
+                rateLimiter,
+                new SecRetryAfterPolicy(FIXED_CLOCK));
+    }
+
+    @Test
+    void requestsRootSubmissionsExactlyOnceAndDoesNotFetchAdvertisedHistoricalFiles() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andExpect(header(
+                        HttpHeaders.USER_AGENT,
+                        "WallStreetReceipts/0.1 (" + CONTACT_EMAIL + ")"))
+                .andExpect(header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(header(HttpHeaders.ACCEPT_ENCODING, "gzip, deflate"))
+                .andRespond(withSuccess(validSubmissionsJson(), MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.ETAG, "\"revision-1\"")
+                        .header(
+                                HttpHeaders.LAST_MODIFIED,
+                                "Thu, 20 Aug 2026 20:00:00 GMT"));
+
+        FilingCatalog catalog = provider.loadRecentFilings("320193");
+
+        assertThat(catalog.cik()).isEqualTo("0000320193");
+        assertThat(catalog.sourceUri()).hasToString(EXPECTED_ENDPOINT);
+        assertThat(catalog.processingTime()).isEqualTo(RECEIVED_AT.truncatedTo(ChronoUnit.MICROS));
+        assertThat(catalog.capturedAt()).isEqualTo(RECEIVED_AT.truncatedTo(ChronoUnit.MICROS));
+        assertThat(catalog.sourceReceipt()).satisfies(receipt -> {
+            assertThat(receipt.sourceUri()).hasToString(EXPECTED_ENDPOINT);
+            assertThat(receipt.httpStatus()).isEqualTo(200);
+            assertThat(receipt.mediaType()).isEqualTo("application/json");
+            assertThat(receipt.transportContentEncoding())
+                    .isEqualTo(TransportContentEncoding.IDENTITY);
+            assertThat(receipt.etag()).isEqualTo("\"revision-1\"");
+            assertThat(receipt.lastModified())
+                    .isEqualTo(Instant.parse("2026-08-20T20:00:00Z"));
+            assertThat(receipt.parserVersion()).isEqualTo("SEC_SUBMISSIONS_CATALOG_V2");
+            assertThat(receipt.decodedBodySha256()).isEqualTo(sha256(validSubmissionsJson()));
+            assertThat(receipt.decodedBodyLength())
+                    .isEqualTo(validSubmissionsJson().getBytes(StandardCharsets.UTF_8).length);
+            assertThat(receipt.capturedAt())
+                    .isEqualTo(RECEIVED_AT.truncatedTo(ChronoUnit.MICROS));
+            assertThat(receipt.bodyRepresentation())
+                    .isEqualTo(BodyRepresentation.DECODED_HTTP_ENTITY_BODY);
+            assertThat(receipt.bodyRetention())
+                    .isEqualTo(BodyRetention.RECEIPT_ONLY_BODY_NOT_RETAINED);
+        });
+        assertThat(catalog.recentFilings()).hasSize(1);
+        assertThat(catalog.recentFilings().getFirst().accessionNumber())
+                .isEqualTo("0000320193-26-000001");
+        assertThat(catalog.historicalSegments())
+                .extracting(HistoricalFilingSegmentDescriptor::fileName)
+                .containsExactly(
+                        "CIK0000320193-submissions-002.json",
+                        "CIK0000320193-submissions-001.json");
+        assertThat(catalog.historicalSegments())
+                .extracting(HistoricalFilingSegmentDescriptor::advertisedFilingCount)
+                .containsExactly(2000L, 3000L);
+        assertThat(catalog.historicalSegmentStatus())
+                .isEqualTo(FilingCatalog.HistoricalSegmentStatus
+                        .RECENT_ONLY_SEGMENTS_ADVERTISED_NOT_FETCHED);
+        server.verify();
+    }
+
+    @Test
+    void exposesTheSameOwnedDecodedBytesForOnePersistenceCaptureRequest() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(validSubmissionsJson(), MediaType.APPLICATION_JSON));
+
+        FilingCatalogCapture capture = provider.loadCatalogCapture("320193");
+
+        assertThat(new String(capture.decodedBody(), StandardCharsets.UTF_8))
+                .isEqualTo(validSubmissionsJson());
+        assertThat(capture.catalog().sourceReceipt().decodedBodySha256())
+                .isEqualTo(sha256(validSubmissionsJson()));
+        assertThat(capture.catalog().sourceReceipt().bodyRetention())
+                .isEqualTo(BodyRetention.DECODED_BODY_ATTACHED_PENDING_PERSISTENCE);
+        server.verify();
+    }
+
+    @Test
+    void decodesAdvertisedGzipResponses() throws IOException {
+        byte[] compressedBody = gzip(validSubmissionsJson());
+        byte[] decodedBody = validSubmissionsJson().getBytes(StandardCharsets.UTF_8);
+        assertThat(compressedBody.length).isLessThan(decodedBody.length);
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(compressedBody, MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.CONTENT_ENCODING, "gzip")
+                        .header(
+                                HttpHeaders.CONTENT_LENGTH,
+                                Integer.toString(compressedBody.length)));
+
+        FilingCatalog catalog = provider.loadRecentFilings("320193");
+
+        assertThat(catalog.recentFilings()).hasSize(1);
+        assertThat(catalog.sourceReceipt().transportContentEncoding())
+                .isEqualTo(TransportContentEncoding.GZIP);
+        assertThat(catalog.sourceReceipt().decodedBodySha256())
+                .isEqualTo(sha256(validSubmissionsJson()));
+        assertThat(catalog.sourceReceipt().decodedBodyLength()).isEqualTo(decodedBody.length);
+        server.verify();
+    }
+
+    @Test
+    void decodesAdvertisedDeflateResponsesAndHashesTheSameDecodedBytes() throws IOException {
+        byte[] compressedBody = deflate(validSubmissionsJson());
+        byte[] decodedBody = validSubmissionsJson().getBytes(StandardCharsets.UTF_8);
+        assertThat(compressedBody.length).isLessThan(decodedBody.length);
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(compressedBody, MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.CONTENT_ENCODING, "deflate")
+                        .header(
+                                HttpHeaders.CONTENT_LENGTH,
+                                Integer.toString(compressedBody.length)));
+
+        FilingCatalog catalog = provider.loadRecentFilings("320193");
+
+        assertThat(catalog.sourceReceipt().transportContentEncoding())
+                .isEqualTo(TransportContentEncoding.DEFLATE);
+        assertThat(catalog.sourceReceipt().decodedBodySha256())
+                .isEqualTo(sha256(validSubmissionsJson()));
+        assertThat(catalog.sourceReceipt().decodedBodyLength()).isEqualTo(decodedBody.length);
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {206, 302, 404, 503})
+    void turnsEveryNonExactSuccessStatusIntoASanitizedExceptionWithoutRetry(int statusCode) {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withStatus(HttpStatusCode.valueOf(statusCode))
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body("secret-body api-key=do-not-expose " + CONTACT_EMAIL));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions request failed with HTTP " + statusCode)
+                .hasNoCause()
+                .message()
+                .doesNotContain("320193", "127.0.0.1", CONTACT_EMAIL, "do-not-expose");
+        server.verify();
+    }
+
+    @Test
+    void opensFailClosedCooldownAfter429BeforeInspectingAnOversizedErrorBody() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withStatus(HttpStatusCode.valueOf(429))
+                        .header(HttpHeaders.RETRY_AFTER, "1200")
+                        .header(
+                                HttpHeaders.CONTENT_LENGTH,
+                                Long.toString(
+                                        SecResponseSizeLimitInterceptor
+                                                        .MAX_DECOMPRESSED_RESPONSE_BYTES
+                                                + 1))
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body("secret-body api-key=do-not-expose " + CONTACT_EMAIL));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions request failed with HTTP 429")
+                .hasNoCause()
+                .message()
+                .doesNotContain("1200", "320193", CONTACT_EMAIL, "do-not-expose");
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage(
+                        "SEC submissions request was not started because the provider gate is closed")
+                .hasNoCause()
+                .message()
+                .doesNotContain("1200", "320193", CONTACT_EMAIL, "do-not-expose");
+        server.verify();
+    }
+
+    @Test
+    void rejectsDeclaredIdentityResponseOverDecodedLimitBeforeParsing() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON)
+                        .header(
+                                HttpHeaders.CONTENT_LENGTH,
+                                Long.toString(
+                                        SecResponseSizeLimitInterceptor
+                                                        .MAX_DECOMPRESSED_RESPONSE_BYTES
+                                                + 1)));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response exceeded the size limit")
+                .hasNoCause();
+        server.verify();
+    }
+
+    @Test
+    void rejectsMalformedPayloadWithoutExposingBodyOrEndpoint() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(
+                        "{\"cik\":\"secret-body-do-not-expose\",",
+                        MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain("320193", "127.0.0.1", CONTACT_EMAIL, "do-not-expose");
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"cik\":\"0000320193\",\"cik\":\"0000320193\"}",
+            "{\"cik\":\"0000320193\",\"filings\":{\"recent\":{\"size\":[\"1\"]}}}",
+            "{\"cik\":\"0000320193\",\"filings\":{\"recent\":{\"isXBRL\":[1.5]}}}",
+            "{\"cik\":\"0000320193\",\"filings\":{\"recent\":{\"form\":[10]}}}",
+            "{'cik':'0000320193'}",
+            "{/*comment*/\"cik\":\"0000320193\"}"
+    })
+    void rejectsDuplicateKeysAndNumericCoercionWithSanitizedFailure(String body) {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain(body, "0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "\"2000\"", "2000.5", "true", "2e3", "9223372036854775808"
+    })
+    void rejectsNonIntegralOrOverflowingHistoricalFilingCountsWithoutCoercion(
+            String invalidCount) {
+        String body = validSubmissionsJson().replace(
+                "\"filingCount\": 2000",
+                "\"filingCount\": " + invalidCount);
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain(body, invalidCount, "0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void rejectsNullOrMissingHistoricalFilesWithoutRecentOnlySalvage(
+            boolean explicitNull) {
+        String replacement = explicitNull
+                ? "\"files\": null, \"ignoredFiles\": ["
+                : "\"ignoredFiles\": [";
+        String body = validSubmissionsJson().replace("\"files\": [", replacement);
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response was invalid")
+                .hasNoCause()
+                .message()
+                .doesNotContain(body, "0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @Test
+    void rejectsDuplicateHistoricalKeysAtTheStrictReaderBoundary() {
+        String body = validSubmissionsJson().replace(
+                "\"filingCount\": 2000",
+                "\"filingCount\": 2000, \"filingCount\": 2000");
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain(body, "0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @Test
+    void rejectsInvalidHistoricalFilingToAtTheProviderBoundary() {
+        String body = validSubmissionsJson().replace(
+                "\"filingTo\": \"2004-12-31\"",
+                "\"filingTo\": \"2004-02-30\"");
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response was invalid")
+                .hasNoCause()
+                .message()
+                .doesNotContain(body, "0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @Test
+    void rejectsMissingMediaTypeWithoutExposingTheBody() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withStatus(HttpStatusCode.valueOf(200))
+                        .body("secret-body-do-not-expose"));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain("secret-body-do-not-expose", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @Test
+    void rejectsBomlessUtf16PayloadEvenWhenTheMediaTypeOmitsACharset() {
+        byte[] utf16Body = validSubmissionsJson().getBytes(StandardCharsets.UTF_16LE);
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess(utf16Body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain("0000320193", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @Test
+    void rejectsNonJsonMediaTypeWithoutExposingTheBody() {
+        server.expect(once(), requestTo(EXPECTED_ENDPOINT))
+                .andRespond(withSuccess("secret-body-do-not-expose", MediaType.TEXT_PLAIN));
+
+        assertThatThrownBy(() -> provider.loadRecentFilings("320193"))
+                .isInstanceOf(SecProviderException.class)
+                .hasMessage("SEC submissions response could not be read")
+                .hasNoCause()
+                .message()
+                .doesNotContain("secret-body-do-not-expose", CONTACT_EMAIL);
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", " ", "0", "0000000000", "12345678901", "12A3", "-1"})
+    void rejectsInvalidCikBeforeMakingARequest(String invalidCik) {
+        assertThatThrownBy(() -> provider.loadRecentFilings(invalidCik))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("CIK must contain between 1 and 10 digits")
+                .hasNoCause();
+        server.verify();
+    }
+
+    @Test
+    void rejectsNullCikBeforeMakingARequest() {
+        assertThatThrownBy(() -> provider.loadRecentFilings(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("CIK must contain between 1 and 10 digits")
+                .hasNoCause();
+        server.verify();
+    }
+
+    @Test
+    void remainsDisabledByDefault() {
+        contextRunner().run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).doesNotHaveBean(SecEdgarFilingCatalogProvider.class);
+        });
+    }
+
+    @Test
+    void wiresOneShotPersistenceOrchestrationOnlyWhenSecIsExplicitlyEnabled() {
+        new ApplicationContextRunner()
+                .withUserConfiguration(
+                        SecEdgarConfiguration.class,
+                        SecFilingCatalogPersistenceConfiguration.class,
+                        TestDependencies.class)
+                .withPropertyValues(
+                        "app.public-data.sec.enabled=true",
+                        "app.public-data.sec.base-url=https://data.sec.gov",
+                        "app.public-data.sec.contact-email=" + CONTACT_EMAIL)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(
+                            SecEdgarFilingCatalogProvider.class);
+                    assertThat(context).hasSingleBean(
+                            PersistFilingCatalogCaptureService.class);
+                });
+    }
+
+    @Test
+    void usesTheFixedOfficialBaseUrlWhenNoOverrideIsConfigured() {
+        SecEdgarProperties properties = new SecEdgarProperties(false, null, null);
+
+        assertThat(properties.baseUrl()).isEqualTo(URI.create("https://data.sec.gov"));
+    }
+
+    @Test
+    void failsStartupWhenEnabledWithoutContactEmailAndDoesNotExposeConfiguration() {
+        contextRunner()
+                .withPropertyValues(
+                        "app.public-data.sec.enabled=true",
+                        "app.public-data.sec.base-url=https://data.sec.gov",
+                        "app.public-data.sec.contact-email=")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasRootCauseInstanceOf(SecProviderConfigurationException.class)
+                            .rootCause()
+                            .hasMessage("SEC provider is enabled but SEC_CONTACT_EMAIL is not configured")
+                            .message()
+                            .doesNotContain(CONTACT_EMAIL);
+                });
+    }
+
+    @Test
+    void rejectsArbitraryBaseUrlsWithoutExposingThem() {
+        SecEdgarProperties properties = new SecEdgarProperties(
+                true,
+                URI.create("https://api-key@untrusted.example/secret?key=do-not-expose"),
+                CONTACT_EMAIL);
+
+        assertThatThrownBy(() -> new SecEdgarConfiguration()
+                .configureRestClient(
+                        RestClient.builder(), properties, new SecRequestRateLimiter()))
+                .isInstanceOf(SecProviderConfigurationException.class)
+                .hasMessage("SEC provider base URL is invalid")
+                .hasNoCause()
+                .message()
+                .doesNotContain("untrusted", "api-key", "do-not-expose", CONTACT_EMAIL);
+    }
+
+    @Test
+    void productionConfigurationRejectsLoopbackTestOverride() {
+        SecEdgarProperties properties = new SecEdgarProperties(
+                true,
+                TEST_BASE_URL,
+                CONTACT_EMAIL);
+
+        assertThatThrownBy(() -> new SecEdgarConfiguration()
+                .configureRestClient(
+                        RestClient.builder(), properties, new SecRequestRateLimiter()))
+                .isInstanceOf(SecProviderConfigurationException.class)
+                .hasMessage("SEC provider base URL is invalid")
+                .hasNoCause();
+    }
+
+    @Test
+    void rejectsInvalidContactEmailWithoutExposingIt() {
+        String invalidEmail = "do-not-expose";
+        SecEdgarProperties properties =
+                new SecEdgarProperties(true, TEST_BASE_URL, invalidEmail);
+
+        assertThatThrownBy(() -> new SecEdgarConfiguration(true)
+                .configureRestClient(
+                        RestClient.builder(), properties, new SecRequestRateLimiter()))
+                .isInstanceOf(SecProviderConfigurationException.class)
+                .hasMessage("SEC_CONTACT_EMAIL is invalid")
+                .hasNoCause()
+                .message()
+                .doesNotContain(invalidEmail);
+    }
+
+    @Test
+    void redactsConfigurationPropertiesStringRepresentation() {
+        SecEdgarProperties properties = new SecEdgarProperties(
+                true,
+                URI.create("https://data.sec.gov"),
+                CONTACT_EMAIL);
+
+        assertThat(properties.toString())
+                .contains("enabled=true", "baseUrl=<redacted>", "contactEmail=<redacted>")
+                .doesNotContain("data.sec.gov", CONTACT_EMAIL);
+    }
+
+    private ApplicationContextRunner contextRunner() {
+        return new ApplicationContextRunner()
+                .withUserConfiguration(SecEdgarConfiguration.class, TestDependencies.class);
+    }
+
+    private static String validSubmissionsJson() {
+        return """
+                {
+                  "cik": "0000320193",
+                  "filings": {
+                    "recent": {
+                      "accessionNumber": ["0000320193-26-000001"],
+                      "filingDate": ["2026-08-20"],
+                      "reportDate": ["2026-06-27"],
+                      "acceptanceDateTime": ["2026-08-20T20:00:00.123456Z"],
+                      "act": ["34"],
+                      "form": ["10-Q"],
+                      "fileNumber": ["001-36743"],
+                      "filmNumber": ["261234567"],
+                      "items": [""],
+                      "size": [123456],
+                      "isXBRL": [1],
+                      "isInlineXBRL": [1],
+                      "primaryDocument": ["xslF345X06/form4.xml"],
+                      "primaryDocDescription": ["10-Q"]
+                    },
+                    "files": [
+                      {
+                        "name": "CIK0000320193-submissions-002.json",
+                        "filingCount": 2000,
+                        "filingFrom": "1994-01-01",
+                        "filingTo": "2004-12-31"
+                      },
+                      {
+                        "name": "CIK0000320193-submissions-001.json",
+                        "filingCount": 3000,
+                        "filingFrom": "2005-01-01",
+                        "filingTo": "2020-12-31"
+                      }
+                    ]
+                  }
+                }
+                """;
+    }
+
+    private static byte[] gzip(String value) throws IOException {
+        ByteArrayOutputStream compressed = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(compressed)) {
+            gzip.write(value.getBytes(StandardCharsets.UTF_8));
+        }
+        return compressed.toByteArray();
+    }
+
+    private static byte[] deflate(String value) throws IOException {
+        ByteArrayOutputStream compressed = new ByteArrayOutputStream();
+        try (DeflaterOutputStream deflate = new DeflaterOutputStream(compressed)) {
+            deflate.write(value.getBytes(StandardCharsets.UTF_8));
+        }
+        return compressed.toByteArray();
+    }
+
+    private static String sha256(String value) {
+        try {
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256")
+                            .digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new AssertionError(exception);
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class TestDependencies {
+
+        @Bean
+        RestClient.Builder restClientBuilder() {
+            return RestClient.builder();
+        }
+
+        @Bean
+        Clock clock() {
+            return FIXED_CLOCK;
+        }
+
+        @Bean
+        FilingCatalogCaptureRepository filingCatalogCaptureRepository() {
+            return mock(FilingCatalogCaptureRepository.class);
+        }
+
+    }
+}

@@ -22,6 +22,10 @@ server:
 
 management:
   endpoint:
+    configprops:
+      show-values: never
+    env:
+      show-values: never
     health:
       probes:
         enabled: true
@@ -37,6 +41,14 @@ info:
     data-mode: ${DATA_MODE:fixture}
 
 app:
+  operator-api:
+    enabled: ${OPERATOR_API_ENABLED:false}
+    token-sha256: ${OPERATOR_API_TOKEN_SHA256:}
   providers:
     market: ${MARKET_PROVIDER:fixture}
     analyst: ${ANALYST_PROVIDER:fixture}
+  public-data:
+    sec:
+      enabled: ${SEC_PROVIDER_ENABLED:false}
+      base-url: ${SEC_BASE_URL:https://data.sec.gov}
+      contact-email: ${SEC_CONTACT_EMAIL:}

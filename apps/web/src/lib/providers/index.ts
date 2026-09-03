@@ -17,6 +17,18 @@ import type { AnalystDirectoryProvider } from "./analyst-directory-provider";
 import { FixtureAnalystDirectoryProvider } from "./fixture-analyst-directory-provider";
 
 export { callsProvider, FixtureCallsProvider } from "./fixture-calls-provider";
+export { FixtureCallAuditProvider } from "./fixture-call-audit-provider";
+export type {
+  CallAuditProvider,
+  CallAuditSnapshot,
+  CallOutcome,
+  CallOutcomeEvaluationStatus,
+  CallOutcomeHorizon,
+  CallOutcomeReasonCode,
+  CallRevision,
+  CallRevisionType,
+  CorrectedCallTerms,
+} from "./call-audit-provider";
 export { FixtureSp500HistoryProvider } from "./fixture-sp500-history-provider";
 export type {
   Sp500HistoryProvider,

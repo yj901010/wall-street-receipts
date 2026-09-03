@@ -18,9 +18,9 @@ export const MARKET_TREEMAP_CANVAS: TreemapRect = {
 };
 
 const palette = {
-  negative: "#8a3438",
-  neutral: "#303841",
-  positive: "#216b50",
+  negative: "#ddbcbc",
+  neutral: "#e2e4e2",
+  positive: "#b7cec4",
 } as const;
 
 export type MarketTreemapMetricTone = "negative" | "neutral" | "positive" | "unavailable";

@@ -1,0 +1,14 @@
+**
+!apps/api/.mvn/
+!apps/api/.mvn/**
+!apps/api/mvnw
+!apps/api/pom.xml
+!apps/api/src/
+!apps/api/src/**
+!fixtures/v1/
+!fixtures/v1/master-data.json
+!fixtures/v1/analyst-calls.json
+!fixtures/v1/analyst-call-revisions.json
+!fixtures/v1/market-snapshots.json
+!fixtures/v1/call-outcomes.json
+!fixtures/v1/call-contexts.json
