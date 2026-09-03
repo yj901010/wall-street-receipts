@@ -7257,3 +7257,73 @@ configured origin or any network endpoint.
   skips. Exact source/workflow parity and size guard PASS. The remaining original
   steps 84 and 85 also pass against unchanged current fixtures (2 revisions,
   2 methodologies, 4 outcomes across 3 lineages).
+
+## ADR-059 — Current-checkout DEMO fixture contracts
+
+### Starting state and delivered scope
+
+- PR #7 was merged into `develop` as `d625f184763d5d7a070eb5d9437fba30b961ff96`.
+  PR run #25 (`33717373706`) and merged-develop run #26 (`33717785718`) each
+  passed all four jobs. This supersedes the earlier pending-merge entries;
+  `main`, release tags, actual deployment, and live-provider activation did not
+  change. Those hosted results belong to the merged revision, not this new work.
+- Created `feature/p5-current-fixture-contracts` from the fetched merged
+  `origin/develop`. Preserve the existing unstaged `apps/web/next-env.d.ts`
+  exactly, SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Add the first current-checkout fixture-contract migration as a mandatory CI
+  step before historical preparation. No runtime route, application module,
+  API, schema, canonical fixture, Flyway migration, or provider behavior changes.
+- `fixture_contracts_common.py` owns bounded strict JSON parsing, local-only
+  schema references, UTC microsecond instants, and exact Decimal quantum checks.
+  `fixture_revisions.py` and `fixture_outcomes.py` preserve the substantive
+  historical 84/85 checks and reject duplicate identity/manifest evidence.
+  `validate_current_fixtures.py` composes them with a fixed own-checkout CLI root
+  and sanitized failure output. Four test modules exercise disposable copies.
+- Reject invented zero/Boolean metrics, broken parent chains, future references,
+  invalid source/methodology evidence, weakened numeric/time schemas, duplicate
+  JSON keys, non-finite numbers, and external references. Integer-ratio quantum
+  validation remains exact near the 38-digit boundary even at Decimal precision
+  6, 28, and 50. This is validation, not runtime financial calculation.
+- The existing 84 historical bodies, pinned manifest/baseline, seven restores,
+  and source custody remain intact. Only exact new CI/test/ADR paths are added
+  to the CI path set. No product path is unfrozen, and this does not complete
+  retirement of the frozen bridge or the broader P2/P3/P5 product phases.
+
+### Actual local verification
+
+- `python scripts/ci/validate_current_fixtures.py`: PASS against current files;
+  2 revisions / 1 revision lineage, 2 MODEL_ONLY methodologies, 4 all-null
+  PENDING/INCOMPLETE outcomes / 3 outcome lineages. The output explicitly says
+  DEMO; these counts are not observed analyst performance.
+- `python -m unittest discover -s scripts/ci -p 'test_*.py'`: 196 tests,
+  191 PASS, 0 failures/errors, 5 Windows capability skips, 19.210 seconds.
+  The skips are one real POSIX-only test and four symlink-capability tests.
+  Compared with ADR-058, 69 new tests were added (67 PASS, 2 symlink skips).
+- Real CLI subprocess checks: PASS with no Git repository, an unrelated working
+  directory, and misleading `GITHUB_WORKSPACE`/`RUNNER_TEMP` values. Current-file
+  corruption fails instead of using historical or cached data. A broken local
+  schema reference returns sanitized failure without traceback/schema content.
+- Workflow gate mutation checks: PASS for missing/skipped/ignored-error gates,
+  root redirection, and command fallback. All historical step metadata/order and
+  current application jobs retain exact reviewed parity.
+- `python scripts/ci/validate_limits.py`: PASS; workflow 29,069 / 500,000 bytes,
+  largest run 598 / 21,000 characters.
+- `python scripts/ci/run_contracts.py validate`: PASS; extraction custody,
+  workflow parity, exact ADR-058 test migration, and frozen product-tree checks.
+- `git diff --check`: PASS. Tracked fixture/schema/API/web files have no delta
+  from merged develop, apart from the preserved pre-existing Next declaration.
+- Web lint/build/responsive tests, Maven/PostgreSQL integration, all 84 historical
+  executions, and hosted CI were not rerun for this CI-only slice. Their earlier
+  merged-revision successes are not presented as runs of this new candidate.
+
+### Inputs and next step
+
+- No additional API key, account, paid service, server fact, domain, or live data
+  request was needed. No `.env` was read. Home-server preparation stays deferred.
+- A useful next user-visible slice is Korean/English navigation to the existing
+  exact SEC evidence audit page, with its affected current-source navigation
+  contracts migrated first. Preserve DEMO/exact-identity boundaries and KST
+  presentation; do not imply a latest-manifest index or live collection.
+- This candidate remains local until a separate PR upload; no new PR, merge,
+  release, or deployment was performed in this step.

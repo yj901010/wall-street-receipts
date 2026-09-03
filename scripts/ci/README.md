@@ -12,6 +12,7 @@ Use Python 3.12 or newer (Actions selects 3.13):
 python -m pip install -r scripts/ci/requirements.txt
 python scripts/ci/validate_limits.py
 python -m unittest discover -s scripts/ci -p 'test_*.py'
+python scripts/ci/validate_current_fixtures.py
 python scripts/ci/run_contracts.py validate
 ```
 
@@ -93,3 +94,23 @@ and explanation comment, preserving all other source bytes and assertions.
 The current call-audit job invokes `verify_call_audit_access.py`, with mutation
 tests for all 13 exact GET/200 requests and the UTC range of the Korean day.
 KST display/calendar semantics and UTC storage are unchanged.
+
+## Current-checkout fixture gate (ADR-059)
+
+Before preparing the historical checkout, CI independently validates the current
+DEMO revision and outcome documents with `validate_current_fixtures.py`. The CLI
+uses its own checkout root, reads no Git or `.env`, makes no network requests,
+and does not fall back to historical fixtures. It reports fixture counts, not
+observed financial results. Invalid evidence produces a nonzero exit without
+dumping the failed document.
+
+The importable `fixture_revisions` and `fixture_outcomes` modules preserve the
+substantive historical step-84/85 checks. `fixture_contracts_common` supplies
+strict duplicate-key/non-finite rejection, bounded local JSON loading, strict
+UTC instants, a closed schema-reference registry, and exact Decimal `multipleOf`
+checks. The 38-digit numeric boundary is checked without Decimal-context or
+binary-float rounding. Mutation tests corrupt only disposable copies.
+
+This is the first migration slice, not retirement of the frozen bridge. All 84
+historical bodies still run, and **no product path is unfrozen**. Other overlapping
+legacy contracts must be migrated before a related product change is admitted.

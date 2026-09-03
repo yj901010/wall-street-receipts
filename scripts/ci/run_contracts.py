@@ -46,6 +46,11 @@ FIXED_CI_PATHS = frozenset({
     "scripts/ci/legacy_environment.py", "scripts/ci/test_legacy_environment.py",
     "scripts/ci/verify_call_audit_access.py", "scripts/ci/test_call_audit_access.py",
     "scripts/ci/historical_guard_migrations.py", "scripts/ci/test_historical_guard_migrations.py",
+    "scripts/ci/fixture_contracts_common.py", "scripts/ci/test_fixture_contracts_common.py",
+    "scripts/ci/fixture_revisions.py", "scripts/ci/test_fixture_revisions.py",
+    "scripts/ci/fixture_outcomes.py", "scripts/ci/test_fixture_outcomes.py",
+    "scripts/ci/validate_current_fixtures.py", "scripts/ci/test_current_fixtures.py",
+    "decisions/ADR-059-current-checkout-demo-fixture-contracts.md",
 })
 
 
@@ -143,6 +148,8 @@ def expected_workflow(baseline):
               "run": "python -m pip install --disable-pip-version-check -r scripts/ci/requirements.txt"},
              {"name": "Validate CI platform limits and refactor tests",
               "run": "python scripts/ci/validate_limits.py\npython -m unittest discover -s scripts/ci -p 'test_*.py'\n"},
+             {"name": "Validate current-checkout DEMO revision and outcome contracts",
+              "run": "python scripts/ci/validate_current_fixtures.py"},
              {"name": "Prepare isolated historical contract checkout",
               "run": "python scripts/ci/run_contracts.py prepare"}]
     for index, original_step in enumerate(original):
