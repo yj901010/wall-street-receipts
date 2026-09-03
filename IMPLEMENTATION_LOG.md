@@ -7235,3 +7235,25 @@ configured origin or any network endpoint.
   Actual home-server preparation and deployment are still deferred.
 - Further product changes must explicitly migrate their affected current-tree
   contracts; the narrow ADR-058 test delta is not a general feature exemption.
+
+### Hosted follow-up: final historical guard boundary
+
+- Run #24 at `7cc8ea2`: Web PASS (643 unit, 78 E2E and one additional boundary),
+  API PASS (2,404 tests with 0 failures/errors/skips; reverse-order 34 tests and
+  focused 43/45/50-test gates also PASS), call-audit integration PASS (three
+  browser tests and all 13 KST-correct access requests).
+- Repository contracts reached step 83 and exposed an old static-slice defect:
+  ADR-055 restoration text included neighboring ADR-056 steps, so the latter's
+  own forbidden-token assertion triggered a false positive. All seven actual
+  restoration steps passed. Overall run #24 remained FAILURE; no merge occurred.
+- Add a digest-pinned, single-delimiter in-memory step-83 guard migration and
+  mutation tests. Preserve its original artifact, all assertions, failure
+  propagation, and the isolated checkout. No product files change in this
+  follow-up. Full green hosted execution remains the merge prerequisite.
+- Follow-up local verification: all 12 full-guard/migration tests PASS. The
+  original pinned guard reproduces the failure; the corrected complete guard
+  passes, while actual force/HEAD/symbolic-recovery and unrelated seed violations
+  still fail. Combined Python suite: 127 total, 124 PASS, 3 Windows capability
+  skips. Exact source/workflow parity and size guard PASS. The remaining original
+  steps 84 and 85 also pass against unchanged current fixtures (2 revisions,
+  2 methodologies, 4 outcomes across 3 lineages).

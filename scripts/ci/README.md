@@ -79,6 +79,12 @@ on the isolated source-only generation-state module. Its content stays pinned;
 the original physical mode and clean checkout must be restored even on failure.
 All other historical steps keep their original execution environment.
 
+Step 83 has one explicit in-memory guard migration: its exact digest-pinned
+Python body gets a corrected next-step slice boundary so ADR-056 assertion text
+cannot be mistaken for ADR-055 restoration code. Every original assertion and
+the extracted artifact remain intact; mutation tests still reject violations
+inside the actual restoration step. No other source transformation is allowed.
+
 The current API job additionally runs the committed-evidence persistence test
 before the three formerly contaminated classes using reverse-alphabetical
 ordering. `current_contracts.py` permits only its exact dedicated-H2 annotation

@@ -61,6 +61,24 @@ and the added persistence-isolation Maven gate. Other current app-job commands,
 environments, shells, conditions, and all historical step ordering remain
 checked against the pinned workflow.
 
+### Bound the ADR-055 restoration guard to its actual step
+
+Hosted run #24 passed Web, API (2,404 tests with zero skips plus all focused
+gates), and call-audit integration. It then exposed a pre-existing final
+historical guard defect: step 83 sliced the ADR-055 restoration text through
+the later ADR-055 guard marker. That range also contained newly nested ADR-056
+steps, whose assertion text mentioned the forbidden `"--force"` token. Actual
+ADR-055 restoration and all seven always-restores had already passed.
+
+`historical_guard_migrations.py` verifies the exact digest-pinned original
+step-83 heredoc, then replaces exactly one slice endpoint with the next workflow
+step boundary in memory. All other source bytes and assertions remain intact;
+the original extracted artifact and manifest are unchanged. Execute that one
+Python body directly with identical failure propagation, still against the
+isolated pinned checkout. Mutation tests require actual restoration violations
+to fail and reject any unreviewed original body. This explicit check migration
+does not bypass the guard or erase the historical evidence.
+
 ## Consequences
 
 No product route, financial value, live provider, server setting, or production

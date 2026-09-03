@@ -25,6 +25,7 @@ import yaml
 from validate_limits import load_workflow
 from current_contracts import TEST_PATH, verify_current_test
 from legacy_environment import legacy_step_environment
+from historical_guard_migrations import migrated_python_body
 
 BASELINE = "3792100f49c496d751d1dd54a7fbdc1b7c2fd275"
 BASELINE_WORKFLOW_SHA256 = "ff079516f9524d19c51ea216d78489ba11b45eba81056d4c86ff9085fa415f20"
@@ -44,6 +45,7 @@ FIXED_CI_PATHS = frozenset({
     "scripts/ci/current_contracts.py", "scripts/ci/test_current_contracts.py",
     "scripts/ci/legacy_environment.py", "scripts/ci/test_legacy_environment.py",
     "scripts/ci/verify_call_audit_access.py", "scripts/ci/test_call_audit_access.py",
+    "scripts/ci/historical_guard_migrations.py", "scripts/ci/test_historical_guard_migrations.py",
 })
 
 
@@ -416,8 +418,10 @@ def run_step(source, index):
         env["RUNNER_TEMP"] = str(root / "runner-temp")
         # Historical Python guards use 'python'; select the exact setup-python runtime.
         env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
+        migrated = migrated_python_body(index, path.read_bytes())
+        command = [sys.executable, "-c", migrated] if migrated is not None else shell_command(entry, path)
         with legacy_step_environment(index, root / "legacy", git):
-            code = execute(shell_command(entry, path), root / "legacy", env)
+            code = execute(command, root / "legacy", env)
     except BaseException:
         state["results"].append({"index": index, "code": 125})
         state["failed"] = True
