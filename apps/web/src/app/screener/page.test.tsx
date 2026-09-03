@@ -39,6 +39,7 @@ describe("ScreenerPage", () => {
       "시장 지도",
       "스크리너",
       "방법론",
+      "SEC 증거",
     ]);
     expect(within(navigation).getByRole("link", { name: "스크리너" }))
       .toHaveAttribute("aria-current", "page");

@@ -89,6 +89,10 @@ summary:focus-visible,
   color: var(--color-text);
 }
 
+.site-header nav a:focus-visible {
+  outline-offset: -3px;
+}
+
 .mode-badge {
   padding: 2px 0;
   border: 0;
@@ -2236,7 +2240,7 @@ button:hover,
   border: 0;
 }
 
-@media (max-width: 1120px) {
+@media (max-width: 1280px) {
   .site-header {
     grid-template-areas:
       "wordmark actions"

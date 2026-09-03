@@ -15,6 +15,7 @@ const primaryNavigationHrefs = [
   "/maps/sp500",
   "/screener",
   "/methodology",
+  "/research/sec/filing-history",
 ];
 
 async function tabTo(page: Page, target: Locator, attempts = 24) {

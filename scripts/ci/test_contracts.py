@@ -226,7 +226,7 @@ class WorkflowParityTests(TemporaryTestCase):
 
     def test_all_historical_run_steps_keep_metadata_and_exact_order(self):
         steps = self.expected["jobs"][bridge.JOB]["steps"]
-        historical = steps[5:-1]
+        historical = steps[6:-1]
         self.assertEqual(len(historical), 84)
         for original, current in zip(run_entries(), historical):
             with self.subTest(index=original["index"]):
@@ -241,7 +241,7 @@ class WorkflowParityTests(TemporaryTestCase):
         mutations = {
             "web command": lambda value: value["jobs"]["web"]["steps"][-1].update(run="echo skipped"),
             "api metadata": lambda value: value["jobs"]["api"].update({"timeout-minutes": 1}),
-            "shell": lambda value: value["jobs"][bridge.JOB]["steps"][5].update(shell="pwsh"),
+            "shell": lambda value: value["jobs"][bridge.JOB]["steps"][6].update(shell="pwsh"),
             "condition": lambda value: value["jobs"][bridge.JOB]["steps"][-1].pop("if"),
             "environment": lambda value: value["jobs"]["call-audit-integration"]["steps"][-2].update(env={}),
             "order": lambda value: value["jobs"][bridge.JOB]["steps"].reverse(),
@@ -304,7 +304,8 @@ class ProductTreeTests(unittest.TestCase):
                                    (b"", b"scripts/ci/unreviewed.py\0")):
             with self.subTest(changed=changed, untracked=untracked):
                 with patch.object(bridge, "git", side_effect=[b"", b"", changed, untracked]), \
-                        patch.object(bridge, "verify_current_test", return_value={}):
+                        patch.object(bridge, "verify_current_test", return_value={}), \
+                        patch.object(bridge, "verify_navigation", return_value={}):
                     with self.assertRaisesRegex(ValueError, "Unexpected uncommitted"):
                         bridge.validate_product(SOURCE, manifest)
 
@@ -312,10 +313,12 @@ class ProductTreeTests(unittest.TestCase):
         manifest = bridge.expected_manifest(pinned())
         changed = (bridge.NEXT_ENV + "\0").encode()
         with patch.object(bridge, "git", side_effect=[b"", b"", changed, b"", b""]), \
-                patch.object(bridge, "verify_current_test", return_value={}):
+                patch.object(bridge, "verify_current_test", return_value={}), \
+                patch.object(bridge, "verify_navigation", return_value={}):
             bridge.validate_product(SOURCE, manifest)
         with patch.object(bridge, "git", side_effect=[b"", b"", changed, b"", changed]), \
-                patch.object(bridge, "verify_current_test", return_value={}):
+                patch.object(bridge, "verify_current_test", return_value={}), \
+                patch.object(bridge, "verify_navigation", return_value={}):
             with self.assertRaisesRegex(ValueError, "must not be staged"):
                 bridge.validate_product(SOURCE, manifest)
 
