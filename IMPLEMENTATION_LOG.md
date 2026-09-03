@@ -7123,3 +7123,61 @@ configured origin or any network endpoint.
   `main` and `develop`. Persistent offline artifact export, source
   authentication/signing, Docker image custody, and the real Ubuntu server-fact
   and deployment rehearsal remain later steps.
+
+## ADR-057 — Size-bounded CI and isolated historical contract execution
+
+### Scope and implementation
+
+- Follow-up to the explicitly approved feature push and draft
+  [PR #7](https://github.com/yj901010/wall-street-receipts/pull/7) into `develop`.
+  No merge, release, provider activation, or home-server deployment is included.
+- Fix the Actions entry point that previously measured 2,438,119 bytes and had
+  36 `run` scalars over 21,000 characters (largest: 96,535). Extract all 84
+  repository-contract bodies to `scripts/ci/legacy/` with original 86-step
+  metadata in `legacy_steps.json`.
+- Add `validate_limits.py`, `run_contracts.py`, focused unittest modules,
+  CI-only pinned requirements, operational README, and ADR-057. No product
+  routes or runtime modules change. KST display and UTC storage remain intact.
+- Preserve current web/API/call-audit integration job semantics. Run historical
+  guards in an independent complete local-only checkout pinned to `3792100`;
+  require current product path/mode/type/blob parity outside a closed CI/doc
+  allowlist. Preserve all seven always-restores and byte-level source custody.
+- Keep the pre-existing unstaged `apps/web/next-env.d.ts` out of commits and out
+  of the historical clone. Never read or publish `.env` contents.
+
+### Verification in progress
+
+- Mechanical extraction: all 84 bodies and all 86 original step metadata
+  entries match the digest-pinned workflow. Bash syntax (80 scripts) and
+  PowerShell AST parsing (4 scripts): PASS.
+- Workflow size guard: PASS, 30,427 bytes; largest current `run`: 1,650
+  characters. Original app-job semantic parity and current product-tree parity:
+  PASS.
+- Combined platform-limit and contract-runner unit tests: 71 total, 70 PASS,
+  one Windows symlink-capability skip. Coverage includes extraction/body/step
+  tampering, product additions/deletions/modes/types, failure at every historical
+  step, all required restores, custody, read-only cleanup, timeout and
+  cancellation. Hosted Actions results are recorded below when completed.
+- Real local isolated preparation: PASS. A source-change negative correctly
+  rejected final custody. Its cleanup exposed read-only Git objects on Windows;
+  bounded owned-directory cleanup was fixed and the repeated cleanup passed.
+- Separate local historical projection integration: all 14 projection/restore
+  bodies (27-33, then 63 and 75-80) PASS in 14.6 seconds. Detached baseline
+  HEAD, clean checkout, all seven restored markers, source Next declaration,
+  and removal of the owned temporary checkout were verified. This is a focused
+  restoration probe, not a full 84-step run.
+- Local Docker Desktop Linux daemon is not running. Full hosted Ubuntu
+  execution, rather than local static checks alone, is required before claiming
+  end-to-end CI success.
+
+### External inputs and next phase
+
+- No new API key, server fact, domain, or paid service is needed for this CI
+  refactor. Existing GitHub authentication is used only for the approved feature
+  branch and PR.
+- Keep PR #7 draft until verification is reviewed; do not merge automatically.
+  Actual home-server facts and deployment remain deferred until that machine
+  is available.
+- Before any further product change, migrate affected legacy guards to current
+  source contracts and mutation tests; do not extend the CI-only allowlist to
+  admit unverified feature changes.

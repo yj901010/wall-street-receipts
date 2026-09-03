@@ -1,0 +1,786 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "3792100f49c496d751d1dd54a7fbdc1b7c2fd275",
+  "baselineWorkflowSha256": "ff079516f9524d19c51ea216d78489ba11b45eba81056d4c86ff9085fa415f20",
+  "jobId": "repository-contracts",
+  "jobMetadata": {
+    "name": "Repository contracts",
+    "runs-on": "ubuntu-latest",
+    "timeout-minutes": 5
+  },
+  "steps": [
+    {
+      "index": 0,
+      "name": "Check out repository",
+      "uses": "actions/checkout@v6",
+      "with": {
+        "fetch-depth": 0
+      }
+    },
+    {
+      "index": 1,
+      "name": "Validate Compose configuration",
+      "script": "scripts/ci/legacy/001-validate-compose-configuration.sh",
+      "sha256": "902e8453467e164164039dbb0fd339cedf13110476e9197749d1e3df6575d957",
+      "originalRunSha256": "cf29e8c8c6cf5703221ffdf549f83e5bc38e766696a0edfa083236b4e5e3756e",
+      "characters": 53
+    },
+    {
+      "index": 2,
+      "name": "Set up Python",
+      "uses": "actions/setup-python@v6",
+      "with": {
+        "python-version": "3.13"
+      }
+    },
+    {
+      "index": 3,
+      "name": "Validate Ubuntu home-server deployment contract",
+      "script": "scripts/ci/legacy/003-validate-ubuntu-home-server-deployment-contract.sh",
+      "sha256": "537b28c62a18adfa3f0f0f2037c5478f6cf7acd177d82d0a880d815ad9864148",
+      "originalRunSha256": "00d3f37835bff212a72eca900149499ff19f2b8a344cf202de71aa06723be0a2",
+      "characters": 47
+    },
+    {
+      "index": 4,
+      "name": "Validate home-server recovery contract",
+      "script": "scripts/ci/legacy/004-validate-home-server-recovery-contract.sh",
+      "sha256": "b5da31faff179935c6a6e2f1aac6f3cbe27d9308669b6ba139e45199c528b800",
+      "originalRunSha256": "2156120ec2dde0a8026f5d54b641c1669d0c20d937d42a5245652ef8fb5b654d",
+      "characters": 45
+    },
+    {
+      "index": 5,
+      "name": "Validate ADR-050 generation-control contract",
+      "script": "scripts/ci/legacy/005-validate-adr-050-generation-control-contract.sh",
+      "sha256": "2c656a1f184baf31e84c4ed1217151ec18a5b0827f9ec4845014ea0918344579",
+      "originalRunSha256": "1550ca4f34de917e03114812d712c213214abd9770c1312d976204fe854a09a9",
+      "characters": 53
+    },
+    {
+      "index": 6,
+      "name": "Validate ADR-051 server-fact collector contract",
+      "script": "scripts/ci/legacy/006-validate-adr-051-server-fact-collector-contract.sh",
+      "sha256": "fe59673277749c91c39b410b81e2a3ed44528ee62d4d372792a6d89c852a1dc6",
+      "originalRunSha256": "c9a3620ad0c8ee1c2c43e3838f8c955ab7961bb41b2f36def1fd19192c0fb39b",
+      "characters": 49
+    },
+    {
+      "index": 7,
+      "name": "Parse Ubuntu home-server shell tools",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/007-parse-ubuntu-home-server-shell-tools.sh",
+      "sha256": "93a512d8382eb4d1b9d45a25339de574e5091a40077ce6ea76779b1604f61f9d",
+      "originalRunSha256": "93a512d8382eb4d1b9d45a25339de574e5091a40077ce6ea76779b1604f61f9d",
+      "characters": 732
+    },
+    {
+      "index": 8,
+      "name": "Verify fixed UTC home-server retention policy",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/008-verify-fixed-utc-home-server-retention-policy.sh",
+      "sha256": "6f65ce10d8afbf0fe6375fae3cb5a0d54bb60a2525fd4f1420b60fe9fb75dc62",
+      "originalRunSha256": "f0fb894dee7b2cff4fdfebe13ad47f343b48d9887d6a945be6e62799fbab555e",
+      "characters": 44
+    },
+    {
+      "index": 9,
+      "name": "Verify dynamic restored-database evidence parser",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/009-verify-dynamic-restored-database-evidence-parser.sh",
+      "sha256": "3e48498553a66921e049229f3e67b777fb124e0698c8dff1d29accf5f19be23e",
+      "originalRunSha256": "d1f2616b9c98e8855460f263d20462634e1d971a56bc829057fcd8f599d9d790",
+      "characters": 52
+    },
+    {
+      "index": 10,
+      "name": "Verify exact release-schema compatibility comparator",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/010-verify-exact-release-schema-compatibility-comparator.sh",
+      "sha256": "d6dc1c5ec22073aa26dd6ecff1f398589d5eea159588935dfb23708abb4a8adf",
+      "originalRunSha256": "8df2f649f1cf0f1dbeb08ec4e18713f41ba3e83c1c86b67a515939e9c9658d8c",
+      "characters": 55
+    },
+    {
+      "index": 11,
+      "name": "Verify generation promotion state and plan contract",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/011-verify-generation-promotion-state-and-plan-contract.sh",
+      "sha256": "acff13869a5e6cb79f9ca33652c7ce6c977872c2ab4921dd6d484fff38bb773b",
+      "originalRunSha256": "3d0bc273988d1b97b6073580f03805845e6cdba32cd7bdc71892f74f2f8f942b",
+      "characters": 55
+    },
+    {
+      "index": 12,
+      "name": "Verify generation-control documents, journal, and host lock",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/012-verify-generation-control-documents-journal-and-host-lock.sh",
+      "sha256": "aa90b42f0090f21062568b1153d0c1f9f29e53fcb00d9d861bd92129c12fd16f",
+      "originalRunSha256": "d7b11a4a250e3deb5c0367b81fdfd7d8150fed581c6760ab1b9adb9f2cbb7720",
+      "characters": 51
+    },
+    {
+      "index": 13,
+      "name": "Verify bounded read-only Ubuntu server-fact collection",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/013-verify-bounded-read-only-ubuntu-server-fact-collection.sh",
+      "sha256": "36ae44f3800261226902637a0a5710fbc6faae507263a04f230aa145655f9ffd",
+      "originalRunSha256": "241f9d8c2be5d6fd832d5d5924652df3d6ff6daaf306bca37f5b34691eb878ed",
+      "characters": 47
+    },
+    {
+      "index": 14,
+      "name": "Parse local home-server rehearsal",
+      "shell": "pwsh",
+      "script": "scripts/ci/legacy/014-parse-local-home-server-rehearsal.ps1",
+      "sha256": "9d059f26cae5dc1eaa50ef8fa7fc72eb4fa8c2e1a221f3a84b79e7e9ef011021",
+      "originalRunSha256": "9d059f26cae5dc1eaa50ef8fa7fc72eb4fa8c2e1a221f3a84b79e7e9ef011021",
+      "characters": 433
+    },
+    {
+      "index": 15,
+      "name": "Install JSON Schema validator",
+      "script": "scripts/ci/legacy/015-install-json-schema-validator.sh",
+      "sha256": "fe583a6fd74b51f46031538aa168cdab67eca298c0cfd8e2d48bca8528e5f7e7",
+      "originalRunSha256": "28f46ae03a532a7cb02ecfe1c10de339481f98cff0a7f37433d8ee9be189421d",
+      "characters": 85
+    },
+    {
+      "index": 16,
+      "name": "Parse and check OpenAPI contract",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/016-parse-and-check-openapi-contract.sh",
+      "sha256": "6029ef05d8b6bfb7c914cd24288338a4563bf5af9cfe091e3b0629a9c6007396",
+      "originalRunSha256": "6029ef05d8b6bfb7c914cd24288338a4563bf5af9cfe091e3b0629a9c6007396",
+      "characters": 10616
+    },
+    {
+      "index": 17,
+      "name": "Guard exact SEC filing-history manifest audit API",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/017-guard-exact-sec-filing-history-manifest-audit-api.sh",
+      "sha256": "a65cee623465484f5cd21e5bbeba882f69aad888df5f0d90d90ec79db838f5fe",
+      "originalRunSha256": "a65cee623465484f5cd21e5bbeba882f69aad888df5f0d90d90ec79db838f5fe",
+      "characters": 14224
+    },
+    {
+      "index": 18,
+      "name": "Parse canonical JSON Schemas",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/018-parse-canonical-json-schemas.sh",
+      "sha256": "7acc29ea77cc4ea2a047e74309d5f394d5ac081c86d35de4865c33fb40d6bb71",
+      "originalRunSha256": "7acc29ea77cc4ea2a047e74309d5f394d5ac081c86d35de4865c33fb40d6bb71",
+      "characters": 10017
+    },
+    {
+      "index": 19,
+      "name": "Validate point-in-time context fixtures",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/019-validate-point-in-time-context-fixtures.sh",
+      "sha256": "f9b99f455afd9682920a445e91ad752ad12042028f7129888b872804c532ac46",
+      "originalRunSha256": "f9b99f455afd9682920a445e91ad752ad12042028f7129888b872804c532ac46",
+      "characters": 11877
+    },
+    {
+      "index": 20,
+      "name": "Validate versioned DEMO fixtures",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/020-validate-versioned-demo-fixtures.sh",
+      "sha256": "e920bd1920941d01e7a6140a57df1e63ee6f51e0ffae18f14c0433f76f4a1710",
+      "originalRunSha256": "e920bd1920941d01e7a6140a57df1e63ee6f51e0ffae18f14c0433f76f4a1710",
+      "characters": 283
+    },
+    {
+      "index": 21,
+      "name": "Validate master-data identity directory sources",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/021-validate-master-data-identity-directory-sources.sh",
+      "sha256": "c1cd8aa50206c2b76c7a1c4210bf4c6810767f2f2ea60a72d7637842d8a50521",
+      "originalRunSha256": "c1cd8aa50206c2b76c7a1c4210bf4c6810767f2f2ea60a72d7637842d8a50521",
+      "characters": 19319
+    },
+    {
+      "index": 22,
+      "name": "Validate multiple market-map shell fixtures",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/022-validate-multiple-market-map-shell-fixtures.sh",
+      "sha256": "9ff3395f875a340978c8847d79108ffe9391bc13634f40850288ff949529829c",
+      "originalRunSha256": "9ff3395f875a340978c8847d79108ffe9391bc13634f40850288ff949529829c",
+      "characters": 15949
+    },
+    {
+      "index": 23,
+      "name": "Validate sector and industry PRICE_CHANGE treemap fixtures",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/023-validate-sector-and-industry-price-change-treemap-fixtures.sh",
+      "sha256": "5d963dc649d5b588b48b73745d2136de058889ce126744eed5172114cc7ba1cc",
+      "originalRunSha256": "5d963dc649d5b588b48b73745d2136de058889ce126744eed5172114cc7ba1cc",
+      "characters": 24544
+    },
+    {
+      "index": 24,
+      "name": "Validate known-unavailable market-board publication state",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/024-validate-known-unavailable-market-board-publication-state.sh",
+      "sha256": "dd30d225cfbdd376e2296d6ceaa8808e00344c25e2a261d1a547a7cba35c655e",
+      "originalRunSha256": "dd30d225cfbdd376e2296d6ceaa8808e00344c25e2a261d1a547a7cba35c655e",
+      "characters": 11693
+    },
+    {
+      "index": 25,
+      "name": "Guard dashboard evidence source boundary",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/025-guard-dashboard-evidence-source-boundary.sh",
+      "sha256": "93753a3095e3e46668c35e8e8b609b895913a41b63e7bb7825e239cd9bee5691",
+      "originalRunSha256": "93753a3095e3e46668c35e8e8b609b895913a41b63e7bb7825e239cd9bee5691",
+      "characters": 1837
+    },
+    {
+      "index": 26,
+      "name": "Guard S&P 500 recorded forecast-call history projection",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/026-guard-s-p-500-recorded-forecast-call-history-projection.sh",
+      "sha256": "02edd8ce3fd0605ab845a6bdd26b9e06345817e88296620e2972817659b6ab4a",
+      "originalRunSha256": "02edd8ce3fd0605ab845a6bdd26b9e06345817e88296620e2972817659b6ab4a",
+      "characters": 8523
+    },
+    {
+      "index": 27,
+      "name": "Project exact pre-ADR-056 repository view",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/027-project-exact-pre-adr-056-repository-view.sh",
+      "sha256": "9c41868aa7a9fd046d981243ae1425430ea77910c3244b918823cfc1b84843e6",
+      "originalRunSha256": "9c41868aa7a9fd046d981243ae1425430ea77910c3244b918823cfc1b84843e6",
+      "characters": 7930
+    },
+    {
+      "index": 28,
+      "name": "Project exact pre-ADR-055 repository view",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/028-project-exact-pre-adr-055-repository-view.sh",
+      "sha256": "0fa2f87a3002e7cdc005d38fa59a3e08f7518fe46a1d9aa199fd7a18a0cbfa34",
+      "originalRunSha256": "0fa2f87a3002e7cdc005d38fa59a3e08f7518fe46a1d9aa199fd7a18a0cbfa34",
+      "characters": 8889
+    },
+    {
+      "index": 29,
+      "name": "Project exact pre-ADR-054 repository view",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/029-project-exact-pre-adr-054-repository-view.sh",
+      "sha256": "c16e295dccb4fa2ddc4dc6d0d91cf0ddff44018c9851caaafad73d5dad2c77fe",
+      "originalRunSha256": "c16e295dccb4fa2ddc4dc6d0d91cf0ddff44018c9851caaafad73d5dad2c77fe",
+      "characters": 7880
+    },
+    {
+      "index": 30,
+      "name": "Project exact pre-ADR-053 repository view",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/030-project-exact-pre-adr-053-repository-view.sh",
+      "sha256": "967fe890509891e3b44559363feb23879bf647e954b0ee55d76f883a8790aaec",
+      "originalRunSha256": "967fe890509891e3b44559363feb23879bf647e954b0ee55d76f883a8790aaec",
+      "characters": 28312
+    },
+    {
+      "index": 31,
+      "name": "Project exact pre-ADR-052 repository view",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/031-project-exact-pre-adr-052-repository-view.sh",
+      "sha256": "82a549d257eaf2becb3116caeaee401024da1b5f156aba682b8ae7de9455ac0e",
+      "originalRunSha256": "82a549d257eaf2becb3116caeaee401024da1b5f156aba682b8ae7de9455ac0e",
+      "characters": 11507
+    },
+    {
+      "index": 32,
+      "name": "Project exact pre-ADR-048 release inventory view",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/032-project-exact-pre-adr-048-release-inventory-view.sh",
+      "sha256": "6ba23ec1319918f6254330c212a756fe408f4a46cf9c4dea50d51b4b96d57519",
+      "originalRunSha256": "6ba23ec1319918f6254330c212a756fe408f4a46cf9c4dea50d51b4b96d57519",
+      "characters": 4138
+    },
+    {
+      "index": 33,
+      "name": "Project exact pre-ADR-045 historical repository view",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/033-project-exact-pre-adr-045-historical-repository-view.sh",
+      "sha256": "a65df239d0ca732f9921831957ab0faaca1918e6770619559026426ad4b4d631",
+      "originalRunSha256": "a65df239d0ca732f9921831957ab0faaca1918e6770619559026426ad4b4d631",
+      "characters": 12237
+    },
+    {
+      "index": 34,
+      "name": "Guard Korean-default bilingual SSR boundary",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/034-guard-korean-default-bilingual-ssr-boundary.sh",
+      "sha256": "5386cf5e34a41b9fbf307645d1b01314104c90d984752819217d2e1d61a18fa8",
+      "originalRunSha256": "5386cf5e34a41b9fbf307645d1b01314104c90d984752819217d2e1d61a18fa8",
+      "characters": 31056
+    },
+    {
+      "index": 35,
+      "name": "Guard coherent server-side call audit API boundary",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/035-guard-coherent-server-side-call-audit-api-boundary.sh",
+      "sha256": "78e64e26ae18b69ed318d1f0964c115afa887d9f69e6b19dc8c66a7492c1be83",
+      "originalRunSha256": "78e64e26ae18b69ed318d1f0964c115afa887d9f69e6b19dc8c66a7492c1be83",
+      "characters": 60358
+    },
+    {
+      "index": 36,
+      "name": "Guard coherent server-side call list API boundary",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/036-guard-coherent-server-side-call-list-api-boundary.sh",
+      "sha256": "99912231a1b4b72691a6ea4b9b9961b3688a16af811732bd0a652e8f70feb199",
+      "originalRunSha256": "99912231a1b4b72691a6ea4b9b9961b3688a16af811732bd0a652e8f70feb199",
+      "characters": 48019
+    },
+    {
+      "index": 37,
+      "name": "Guard application-owned screener shell boundary",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/037-guard-application-owned-screener-shell-boundary.sh",
+      "sha256": "1bd97899c1c6ab664b3b29bbcb50be07c7c2e9b0e6d6fb8f4af4abaccd3be2b2",
+      "originalRunSha256": "1bd97899c1c6ab664b3b29bbcb50be07c7c2e9b0e6d6fb8f4af4abaccd3be2b2",
+      "characters": 8946
+    },
+    {
+      "index": 38,
+      "name": "Guard pure target-hit and directional-win calculation boundary",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/038-guard-pure-target-hit-and-directional-win-calculation-boundary.sh",
+      "sha256": "15350cf784ffd29f8eaeeb1b24ac2cb7056e84b605635e4a55fe0ebaaf79a9be",
+      "originalRunSha256": "15350cf784ffd29f8eaeeb1b24ac2cb7056e84b605635e4a55fe0ebaaf79a9be",
+      "characters": 28513
+    },
+    {
+      "index": 39,
+      "name": "Guard explicit-anchor session-offset boundary",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/039-guard-explicit-anchor-session-offset-boundary.sh",
+      "sha256": "60374f1879809088268e00ece8569d8a44fb1b59f2093c8e53bbf2be1f86208a",
+      "originalRunSha256": "60374f1879809088268e00ece8569d8a44fb1b59f2093c8e53bbf2be1f86208a",
+      "characters": 23522
+    },
+    {
+      "index": 40,
+      "name": "Guard policy-neutral event/session relation boundary",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/040-guard-policy-neutral-event-session-relation-boundary.sh",
+      "sha256": "0729f9cc6b1be887d9599a2369b0381b8986f509080a911e38ae58590eaba44a",
+      "originalRunSha256": "0729f9cc6b1be887d9599a2369b0381b8986f509080a911e38ae58590eaba44a",
+      "characters": 18324
+    },
+    {
+      "index": 41,
+      "name": "Guard strict session-close horizon and forecast-basis policy",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/041-guard-strict-session-close-horizon-and-forecast-basis-policy.sh",
+      "sha256": "d3b73f98ab42a84c5213f8fdcb671b9db6b3a58840fc34d96d5ce9a20eee379e",
+      "originalRunSha256": "d3b73f98ab42a84c5213f8fdcb671b9db6b3a58840fc34d96d5ce9a20eee379e",
+      "characters": 27875
+    },
+    {
+      "index": 42,
+      "name": "Guard closed call-direction polarity policy",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/042-guard-closed-call-direction-polarity-policy.sh",
+      "sha256": "9303ed5839e5f45c51a7b4077e228d14c281adb76edc45c7c3fbef705e666c9b",
+      "originalRunSha256": "9303ed5839e5f45c51a7b4077e228d14c281adb76edc45c7c3fbef705e666c9b",
+      "characters": 25673
+    },
+    {
+      "index": 43,
+      "name": "Guard mechanical calculator-side polarity adapter",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/043-guard-mechanical-calculator-side-polarity-adapter.sh",
+      "sha256": "e8ed0fecf2c8369c14f5570c4f587c9c6f30c473655c1ed82d2617b0afca1a2c",
+      "originalRunSha256": "e8ed0fecf2c8369c14f5570c4f587c9c6f30c473655c1ed82d2617b0afca1a2c",
+      "characters": 13430
+    },
+    {
+      "index": 44,
+      "name": "Guard closed calculator-side routing evidence",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/044-guard-closed-calculator-side-routing-evidence.sh",
+      "sha256": "e48c87dd289822ed63b2edc3ef98370d90e63b58641d1f9fe878613e74e9ffd6",
+      "originalRunSha256": "e48c87dd289822ed63b2edc3ef98370d90e63b58641d1f9fe878613e74e9ffd6",
+      "characters": 36242
+    },
+    {
+      "index": 45,
+      "name": "Guard point-in-time endpoint price and target error",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/045-guard-point-in-time-endpoint-price-and-target-error.sh",
+      "sha256": "e43ff7fa4ed2b966d57c00966c4276e2baa90b70949a92a5eb0354afe4751910",
+      "originalRunSha256": "e43ff7fa4ed2b966d57c00966c4276e2baa90b70949a92a5eb0354afe4751910",
+      "characters": 50651
+    },
+    {
+      "index": 46,
+      "name": "Guard point-in-time basis price pair and signed asset return",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/046-guard-point-in-time-basis-price-pair-and-signed-asset-return.sh",
+      "sha256": "d1884cb951e8eb82ef3e6154c7ccd418137392edccd5211240fe3a9078c33d93",
+      "originalRunSha256": "d1884cb951e8eb82ef3e6154c7ccd418137392edccd5211240fe3a9078c33d93",
+      "characters": 96535
+    },
+    {
+      "index": 47,
+      "name": "Guard point-in-time explicit benchmark assignment",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/047-guard-point-in-time-explicit-benchmark-assignment.sh",
+      "sha256": "5bbf03dbf77ef289edf87fa211b5a552c0e72d36013e4e9e7d4a9ea0f4b3aa8a",
+      "originalRunSha256": "5bbf03dbf77ef289edf87fa211b5a552c0e72d36013e4e9e7d4a9ea0f4b3aa8a",
+      "characters": 57505
+    },
+    {
+      "index": 48,
+      "name": "Guard provider-neutral WSR economic-activity taxonomy V1",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/048-guard-provider-neutral-wsr-economic-activity-taxonomy-v1.sh",
+      "sha256": "d5dc7854f271335c8c28b3ff6b2276c8248947649ac264888dbac69be5c7c85d",
+      "originalRunSha256": "d5dc7854f271335c8c28b3ff6b2276c8248947649ac264888dbac69be5c7c85d",
+      "characters": 56805
+    },
+    {
+      "index": 49,
+      "name": "Guard point-in-time explicit WSR sector assignment",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/049-guard-point-in-time-explicit-wsr-sector-assignment.sh",
+      "sha256": "a154980e55d5f06730ec50da286e6fd0d8d1cfe9435b1ef35e05c05ec1fab373",
+      "originalRunSha256": "a154980e55d5f06730ec50da286e6fd0d8d1cfe9435b1ef35e05c05ec1fab373",
+      "characters": 54754
+    },
+    {
+      "index": 50,
+      "name": "Guard independent benchmark and sector reference-level pairs",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/050-guard-independent-benchmark-and-sector-reference-level-pairs.sh",
+      "sha256": "3e499a701e1956e327260e20b71017a45054e3cd31a4d43b511d6cbdd96c5ac6",
+      "originalRunSha256": "3e499a701e1956e327260e20b71017a45054e3cd31a4d43b511d6cbdd96c5ac6",
+      "characters": 71330
+    },
+    {
+      "index": 51,
+      "name": "Guard signed benchmark reference return",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/051-guard-signed-benchmark-reference-return.sh",
+      "sha256": "175c8ad31df3717f2d866879fc1c80b48cb1bfddaf893f16862e62e4eee6629b",
+      "originalRunSha256": "175c8ad31df3717f2d866879fc1c80b48cb1bfddaf893f16862e62e4eee6629b",
+      "characters": 56405
+    },
+    {
+      "index": 52,
+      "name": "Guard signed sector reference return",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/052-guard-signed-sector-reference-return.sh",
+      "sha256": "b138eb8d9f8aba2b01292a06293e8d34cbcbe6eae526af7f6742c1cfcf1772b5",
+      "originalRunSha256": "b138eb8d9f8aba2b01292a06293e8d34cbcbe6eae526af7f6742c1cfcf1772b5",
+      "characters": 55778
+    },
+    {
+      "index": 53,
+      "name": "Guard independent benchmark and sector return readiness",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/053-guard-independent-benchmark-and-sector-return-readiness.sh",
+      "sha256": "eeda16f6ec4eee92c1c5b85d57f86e0a22e4a0ef386fe965ac59746e50600c31",
+      "originalRunSha256": "eeda16f6ec4eee92c1c5b85d57f86e0a22e4a0ef386fe965ac59746e50600c31",
+      "characters": 58920
+    },
+    {
+      "index": 54,
+      "name": "Guard point-in-time raw-window coverage foundation",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/054-guard-point-in-time-raw-window-coverage-foundation.sh",
+      "sha256": "9139b74c00139c81a583cab9ed9c1724027b4fe0f43cbe30b2316ae713c5f40f",
+      "originalRunSha256": "9139b74c00139c81a583cab9ed9c1724027b4fe0f43cbe30b2316ae713c5f40f",
+      "characters": 66602
+    },
+    {
+      "index": 55,
+      "name": "Guard SEC EDGAR public-provider foundation",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/055-guard-sec-edgar-public-provider-foundation.sh",
+      "sha256": "2c350de57dda48e31d4ef641b7bfd448cdc1653c3ebcbbc50bf1939481b75109",
+      "originalRunSha256": "2c350de57dda48e31d4ef641b7bfd448cdc1653c3ebcbbc50bf1939481b75109",
+      "characters": 78987
+    },
+    {
+      "index": 56,
+      "name": "Guard SEC EDGAR single-process live-operation safety gate",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/056-guard-sec-edgar-single-process-live-operation-safety-gate.sh",
+      "sha256": "c4c3bcdc0a9e856cb2a888b6ff857b5737ccf5ca5a8f1499029f17926492a388",
+      "originalRunSha256": "c4c3bcdc0a9e856cb2a888b6ff857b5737ccf5ca5a8f1499029f17926492a388",
+      "characters": 88230
+    },
+    {
+      "index": 57,
+      "name": "Guard SEC EDGAR decoded-response receipt foundation",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/057-guard-sec-edgar-decoded-response-receipt-foundation.sh",
+      "sha256": "c6f5fb690d5a215596fff6b8f2eb08c5696438a711359ad7a9748a12464383d8",
+      "originalRunSha256": "c6f5fb690d5a215596fff6b8f2eb08c5696438a711359ad7a9748a12464383d8",
+      "characters": 77483
+    },
+    {
+      "index": 58,
+      "name": "Guard SEC EDGAR historical-segment descriptor catalog",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/058-guard-sec-edgar-historical-segment-descriptor-catalog.sh",
+      "sha256": "4c5745c8eda45c1337ffcec96867f214186879263f84a9121fbfd549c390ddb4",
+      "originalRunSha256": "4c5745c8eda45c1337ffcec96867f214186879263f84a9121fbfd549c390ddb4",
+      "characters": 45980
+    },
+    {
+      "index": 59,
+      "name": "Guard SEC EDGAR append-only capture persistence",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/059-guard-sec-edgar-append-only-capture-persistence.sh",
+      "sha256": "f9a2c6ec6a21cf77f05b1bfdac4851e769fd9551ee04aa6b03d51cce81a02476",
+      "originalRunSha256": "f9a2c6ec6a21cf77f05b1bfdac4851e769fd9551ee04aa6b03d51cce81a02476",
+      "characters": 33672
+    },
+    {
+      "index": 60,
+      "name": "Guard SEC EDGAR historical-segment append-only persistence",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/060-guard-sec-edgar-historical-segment-append-only-persistence.sh",
+      "sha256": "162e80f74c19492a08ae97c4758edaaf8e26b6f2ade5e605f5829ea9066c2a4d",
+      "originalRunSha256": "162e80f74c19492a08ae97c4758edaaf8e26b6f2ade5e605f5829ea9066c2a4d",
+      "characters": 42415
+    },
+    {
+      "index": 61,
+      "name": "Guard SEC EDGAR ordered filing-history collection manifest",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/061-guard-sec-edgar-ordered-filing-history-collection-manifest.sh",
+      "sha256": "cd913ee217f1c68c075addcb2934720780a93f4ca1e238aa56f34d4135a0aaac",
+      "originalRunSha256": "cd913ee217f1c68c075addcb2934720780a93f4ca1e238aa56f34d4135a0aaac",
+      "characters": 34860
+    },
+    {
+      "index": 62,
+      "name": "Guard SEC EDGAR operator-controlled bounded collection attempt",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/062-guard-sec-edgar-operator-controlled-bounded-collection-attempt.sh",
+      "sha256": "628adb84c36ab961fc1e0186db1e144d4ac36c5d714152154b0a5ad65e1f27df",
+      "originalRunSha256": "628adb84c36ab961fc1e0186db1e144d4ac36c5d714152154b0a5ad65e1f27df",
+      "characters": 38672
+    },
+    {
+      "index": 63,
+      "name": "Restore exact post-ADR-045 repository view",
+      "if": "always()",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/063-restore-exact-post-adr-045-repository-view.sh",
+      "sha256": "ea04d5ba6208158f7f5ff8d2f66e31e865c7e7ac22d626b548bfa14ac58fcb2a",
+      "originalRunSha256": "ea04d5ba6208158f7f5ff8d2f66e31e865c7e7ac22d626b548bfa14ac58fcb2a",
+      "characters": 1900
+    },
+    {
+      "index": 64,
+      "name": "Guard default-disabled local single-operator SEC attempt API",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/064-guard-default-disabled-local-single-operator-sec-attempt-api.sh",
+      "sha256": "93d5a3f633d215c849136c77b078f627d72c7eaec26eb2e1aa8e9bcdc5dbb97d",
+      "originalRunSha256": "93d5a3f633d215c849136c77b078f627d72c7eaec26eb2e1aa8e9bcdc5dbb97d",
+      "characters": 39693
+    },
+    {
+      "index": 65,
+      "name": "Parse disposable offline local operator API acceptance harness",
+      "shell": "pwsh",
+      "script": "scripts/ci/legacy/065-parse-disposable-offline-local-operator-api-acceptance-harness.ps1",
+      "sha256": "3cdb81ecc224f6a4fdda59352a86a79d58a922566f09cd5a72d1091073e08332",
+      "originalRunSha256": "3cdb81ecc224f6a4fdda59352a86a79d58a922566f09cd5a72d1091073e08332",
+      "characters": 354
+    },
+    {
+      "index": 66,
+      "name": "Guard disposable offline local full-stack acceptance harness",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/066-guard-disposable-offline-local-full-stack-acceptance-harness.sh",
+      "sha256": "7262fda0ced431a084b06e11f0561a4a5986096de4e09704d2a4ae2aca7ec76b",
+      "originalRunSha256": "7262fda0ced431a084b06e11f0561a4a5986096de4e09704d2a4ae2aca7ec76b",
+      "characters": 43513
+    },
+    {
+      "index": 67,
+      "name": "Parse disposable offline local full-stack acceptance harness",
+      "shell": "pwsh",
+      "script": "scripts/ci/legacy/067-parse-disposable-offline-local-full-stack-acceptance-harness.ps1",
+      "sha256": "0cc124304dbe76fd7ec6cab10edf0d68752adfc591845768c807e76e1b74c694",
+      "originalRunSha256": "0cc124304dbe76fd7ec6cab10edf0d68752adfc591845768c807e76e1b74c694",
+      "characters": 354
+    },
+    {
+      "index": 68,
+      "name": "Guard point-in-time target eligibility",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/068-guard-point-in-time-target-eligibility.sh",
+      "sha256": "151cabcb8d0e6809e9491617dedb688fa352f865c230a1460202db553b17cd79",
+      "originalRunSha256": "151cabcb8d0e6809e9491617dedb688fa352f865c230a1460202db553b17cd79",
+      "characters": 31006
+    },
+    {
+      "index": 69,
+      "name": "Guard point-in-time attested causal-window favorable extreme",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/069-guard-point-in-time-attested-causal-window-favorable-extreme.sh",
+      "sha256": "ad9e2555acbcd1b2db3a97370567068e149f489b6e1e7f795b854a0bd24357c1",
+      "originalRunSha256": "ad9e2555acbcd1b2db3a97370567068e149f489b6e1e7f795b854a0bd24357c1",
+      "characters": 32285
+    },
+    {
+      "index": 70,
+      "name": "Guard supplied-leaf target-hit orchestration",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/070-guard-supplied-leaf-target-hit-orchestration.sh",
+      "sha256": "278d5a9b8730f9a38a343ffdecc54ee85e26e6262e83e093d4c67c7a9d80f665",
+      "originalRunSha256": "278d5a9b8730f9a38a343ffdecc54ee85e26e6262e83e093d4c67c7a9d80f665",
+      "characters": 26477
+    },
+    {
+      "index": 71,
+      "name": "Guard supplied-leaf directional-win orchestration",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/071-guard-supplied-leaf-directional-win-orchestration.sh",
+      "sha256": "59f9bc5e83ef420bef753cc13c6f1bb1f88eff56ec3829122905a1f4e2606c6e",
+      "originalRunSha256": "59f9bc5e83ef420bef753cc13c6f1bb1f88eff56ec3829122905a1f4e2606c6e",
+      "characters": 23257
+    },
+    {
+      "index": 72,
+      "name": "Guard supplied-leaf directional-win readiness",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/072-guard-supplied-leaf-directional-win-readiness.sh",
+      "sha256": "9445e2da6bb3c27a504c817b779c3226431de178ed37bb6d469e0979e706fce1",
+      "originalRunSha256": "9445e2da6bb3c27a504c817b779c3226431de178ed37bb6d469e0979e706fce1",
+      "characters": 25570
+    },
+    {
+      "index": 73,
+      "name": "Guard supplied-leaf target-error readiness",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/073-guard-supplied-leaf-target-error-readiness.sh",
+      "sha256": "62827ef0a0bd37e7219dcbbf2339884f68dcfb66ac0cdb5264211c06db113b70",
+      "originalRunSha256": "62827ef0a0bd37e7219dcbbf2339884f68dcfb66ac0cdb5264211c06db113b70",
+      "characters": 19767
+    },
+    {
+      "index": 74,
+      "name": "Guard supplied-leaf target-hit readiness",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/074-guard-supplied-leaf-target-hit-readiness.sh",
+      "sha256": "9bed6775e5fcb1d2e0bfaaefca406cabedacc116a4742affc03a32ba3bda2e27",
+      "originalRunSha256": "9bed6775e5fcb1d2e0bfaaefca406cabedacc116a4742affc03a32ba3bda2e27",
+      "characters": 19995
+    },
+    {
+      "index": 75,
+      "name": "Restore exact ADR-048 release inventory view",
+      "if": "always()",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/075-restore-exact-adr-048-release-inventory-view.sh",
+      "sha256": "c157ce7b2c3d3a8969610e1e7ae720a46ff457e2e91988d98c67291c1d7f7118",
+      "originalRunSha256": "c157ce7b2c3d3a8969610e1e7ae720a46ff457e2e91988d98c67291c1d7f7118",
+      "characters": 1883
+    },
+    {
+      "index": 76,
+      "name": "Restore exact ADR-052 repository view",
+      "if": "always()",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/076-restore-exact-adr-052-repository-view.sh",
+      "sha256": "9984ef2abdffc81762d90a04415771731823e0acc24bf18b4a072ec942c8cddd",
+      "originalRunSha256": "9984ef2abdffc81762d90a04415771731823e0acc24bf18b4a072ec942c8cddd",
+      "characters": 1882
+    },
+    {
+      "index": 77,
+      "name": "Restore exact ADR-053 repository view",
+      "if": "always()",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/077-restore-exact-adr-053-repository-view.sh",
+      "sha256": "0fb5dd926560b549dc821bef90d0f61c0a5ad49e0116c9d0f32ff5a52e72a2b1",
+      "originalRunSha256": "0fb5dd926560b549dc821bef90d0f61c0a5ad49e0116c9d0f32ff5a52e72a2b1",
+      "characters": 7358
+    },
+    {
+      "index": 78,
+      "name": "Restore exact ADR-054 repository view",
+      "if": "always()",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/078-restore-exact-adr-054-repository-view.sh",
+      "sha256": "779c70ed9902d5a9ed36d1bc35ae776dbe30d13155f10d328f7b0d16c9275814",
+      "originalRunSha256": "779c70ed9902d5a9ed36d1bc35ae776dbe30d13155f10d328f7b0d16c9275814",
+      "characters": 6551
+    },
+    {
+      "index": 79,
+      "name": "Restore exact ADR-055 repository view",
+      "if": "always()",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/079-restore-exact-adr-055-repository-view.sh",
+      "sha256": "af2f266e73caa571982ff088479a1246269e460695d1e69bc0d876773e5696f3",
+      "originalRunSha256": "af2f266e73caa571982ff088479a1246269e460695d1e69bc0d876773e5696f3",
+      "characters": 11696
+    },
+    {
+      "index": 80,
+      "name": "Restore exact ADR-056 repository view",
+      "if": "always()",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/080-restore-exact-adr-056-repository-view.sh",
+      "sha256": "27d4a2d85cba11de111457d48f914fd7e72e259921bdc1709f164f11eac40e6c",
+      "originalRunSha256": "27d4a2d85cba11de111457d48f914fd7e72e259921bdc1709f164f11eac40e6c",
+      "characters": 11593
+    },
+    {
+      "index": 81,
+      "name": "Guard ADR-056 disposable offline Git Flow release-source handoff rehearsal",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/081-guard-adr-056-disposable-offline-git-flow-release-source-handoff-rehea.sh",
+      "sha256": "dbc1b3f658d6da6569e5974f54593bb76c32df5d98a008cba4a92b90b256e9ea",
+      "originalRunSha256": "dbc1b3f658d6da6569e5974f54593bb76c32df5d98a008cba4a92b90b256e9ea",
+      "characters": 30558
+    },
+    {
+      "index": 82,
+      "name": "Parse disposable offline Git Flow release-source handoff rehearsal",
+      "shell": "pwsh",
+      "script": "scripts/ci/legacy/082-parse-disposable-offline-git-flow-release-source-handoff-rehearsal.ps1",
+      "sha256": "7a26158d631b6134d63d9fdf2f305df77026327ca786955244e6b53cd6294c09",
+      "originalRunSha256": "7a26158d631b6134d63d9fdf2f305df77026327ca786955244e6b53cd6294c09",
+      "characters": 375
+    },
+    {
+      "index": 83,
+      "name": "Guard ADR-055 offline SEC manifest API-mode full-stack acceptance",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/083-guard-adr-055-offline-sec-manifest-api-mode-full-stack-acceptance.sh",
+      "sha256": "7575cc2800580833373248d2334c2d5c3e078cbe23592264abfbb25792036380",
+      "originalRunSha256": "7575cc2800580833373248d2334c2d5c3e078cbe23592264abfbb25792036380",
+      "characters": 15229
+    },
+    {
+      "index": 84,
+      "name": "Validate analyst-call revision lineage",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/084-validate-analyst-call-revision-lineage.sh",
+      "sha256": "ff2dafbe5a385903c71ac3ac15e832bc9b7316ebaed55c40e8005158a064f9f5",
+      "originalRunSha256": "ff2dafbe5a385903c71ac3ac15e832bc9b7316ebaed55c40e8005158a064f9f5",
+      "characters": 5464
+    },
+    {
+      "index": 85,
+      "name": "Validate scoring methodologies and call outcomes",
+      "shell": "bash",
+      "script": "scripts/ci/legacy/085-validate-scoring-methodologies-and-call-outcomes.sh",
+      "sha256": "cdc22d76f41ef8ec1aec3318b0e5f901323ae41b9109786ed6cbf96fd42aebe2",
+      "originalRunSha256": "cdc22d76f41ef8ec1aec3318b0e5f901323ae41b9109786ed6cbf96fd42aebe2",
+      "characters": 20107
+    }
+  ]
+}
