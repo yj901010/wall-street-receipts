@@ -7145,7 +7145,7 @@ configured origin or any network endpoint.
 - Keep the pre-existing unstaged `apps/web/next-env.d.ts` out of commits and out
   of the historical clone. Never read or publish `.env` contents.
 
-### Verification in progress
+### Verification status
 
 - Mechanical extraction: all 84 bodies and all 86 original step metadata
   entries match the digest-pinned workflow. Bash syntax (80 scripts) and
@@ -7157,7 +7157,7 @@ configured origin or any network endpoint.
   one Windows symlink-capability skip. Coverage includes extraction/body/step
   tampering, product additions/deletions/modes/types, failure at every historical
   step, all required restores, custody, read-only cleanup, timeout and
-  cancellation. Hosted Actions results are recorded below when completed.
+  cancellation.
 - Real local isolated preparation: PASS. A source-change negative correctly
   rejected final custody. Its cleanup exposed read-only Git objects on Windows;
   bounded owned-directory cleanup was fixed and the repeated cleanup passed.
@@ -7169,6 +7169,12 @@ configured origin or any network endpoint.
 - Local Docker Desktop Linux daemon is not running. Full hosted Ubuntu
   execution, rather than local static checks alone, is required before claiming
   end-to-end CI success.
+- CI refactor committed locally as `8323aad`. Upload of this new public
+  payload was denied by the execution approval boundary pending explicit user
+  permission. No workaround or alternate upload was attempted. Hosted Actions
+  for this refactor: NOT RUN; PR #7 remains unchanged and draft. The prior
+  public upload approval covered the earlier accumulated commits, not this
+  newly prepared CI payload according to that boundary.
 
 ### External inputs and next phase
 
