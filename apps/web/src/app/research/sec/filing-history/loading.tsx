@@ -6,7 +6,7 @@ export default async function SecFilingHistoryAuditLoading() {
   const messages = getSecManifestAuditMessages(await getLocale()).states;
   return (
     <main>
-      <SiteHeader />
+      <SiteHeader current="secEvidence" />
       <div className="page-shell state-page" aria-busy="true" aria-live="polite">
         <p className="eyebrow">{messages.loadingEyebrow}</p>
         <h1>{messages.loadingTitle}</h1>

@@ -114,3 +114,17 @@ binary-float rounding. Mutation tests corrupt only disposable copies.
 This is the first migration slice, not retirement of the frozen bridge. All 84
 historical bodies still run, and **no product path is unfrozen**. Other overlapping
 legacy contracts must be migrated before a related product change is admitted.
+
+## Exact SEC navigation migration (ADR-060)
+
+The bridge now also verifies `navigation_contracts.py` before the frozen-tree
+comparison. Seven runtime files must equal their exact baseline plus the reviewed
+navigation edits; nine current unit/E2E test updates are separately content-pinned.
+All 16 paths participate in custody. They are not general product exemptions.
+
+The current tests require exactly nine typed navigation IDs, both locale labels,
+bare locator URLs, active route states, no automatic evidence selection, and real
+keyboard navigation. Unlike the historical lower-case-only extraction, these
+checks cannot silently omit `secEvidence`. Existing Vitest and Playwright jobs
+continue to execute against the current checkout. Further changes to these files
+require another explicit contract review, not a broad path allowlist.

@@ -43,7 +43,7 @@ describe("Sp500HistoryPage", () => {
       name: "기록된 S&P 500 전망 콜 이벤트",
     })).toBeInTheDocument();
     const navigation = screen.getByRole("navigation", { name: "주요 탐색" });
-    expect(within(navigation).getAllByRole("link")).toHaveLength(8);
+    expect(within(navigation).getAllByRole("link")).toHaveLength(9);
     expect(within(navigation).getByRole("link", { name: "시장" })).toHaveAttribute(
       "aria-current",
       "page",

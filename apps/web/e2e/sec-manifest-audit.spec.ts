@@ -47,8 +47,24 @@ test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", as
   const browserApiRequests = collectBrowserApiRequests(page);
   await context.clearCookies();
 
-  const response = await page.goto(ROUTE);
+  const response = await page.goto("/methodology");
   expect(response?.ok()).toBe(true);
+  const primary = page.getByRole("navigation", { name: "주요 탐색" });
+  await primary.getByRole("link", { name: "방법론", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  const secLink = primary.getByRole("link", { name: "SEC 증거", exact: true });
+  await expect(secLink).toHaveAttribute("href", ROUTE);
+  await expectVisibleKeyboardFocus(secLink);
+  await expect(secLink).toBeInViewport();
+  await expectNoPageOverflow(page);
+  await page.keyboard.press("Tab");
+  await expectVisibleKeyboardFocus(page.getByRole("button", { name: "한국어" }));
+  await page.keyboard.press("Shift+Tab");
+  await expectVisibleKeyboardFocus(secLink);
+  await secLink.press("Enter");
+  await expect(page).toHaveURL(new RegExp(`${ROUTE}$`));
+  await expect(secLink).toHaveAttribute("aria-current", "page");
+  await expect(primary.locator('[aria-current="page"]')).toHaveCount(1);
   await expect(page.locator("html")).toHaveAttribute("lang", "ko");
   await expect(page.getByRole("heading", { name: "SEC 제출 이력 manifest 감사" }))
     .toBeVisible();
@@ -56,6 +72,7 @@ test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", as
   await expect(form.getByLabel("Manifest ID")).toHaveAttribute("pattern", "[0-9a-f]{64}");
   await expect(form.getByLabel("평가 기준 원본 조회 키(UTC)"))
     .toHaveAttribute("type", "text");
+  await expect(page.getByRole("table")).toHaveCount(0);
 
   if (!FIXTURE_MODE) {
     await expect(page.locator(".mode-badge")).toHaveCount(0);
@@ -137,6 +154,10 @@ test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", as
   await expect(page.getByRole("heading", { name: "SEC filing-history manifest audit" }))
     .toBeVisible();
   await expect(page.getByText("Synthetic DEMO · not observed SEC data")).toBeVisible();
+  const englishPrimary = page.getByRole("navigation", { name: "Primary navigation" });
+  await expect(englishPrimary.getByRole("link", { name: "SEC evidence" }))
+    .toHaveAttribute("aria-current", "page");
+  await expect(englishPrimary.locator('[aria-current="page"]')).toHaveCount(1);
   await expect(page.getByText(MANIFEST_ID).first()).toBeVisible();
   await expect(page.getByText("2026-08-25 12:30:00.123456 KST").first()).toBeVisible();
   await expect(page.getByText("ROOT_RECENT").first()).toBeVisible();

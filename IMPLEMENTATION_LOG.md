@@ -7327,3 +7327,90 @@ configured origin or any network endpoint.
   presentation; do not imply a latest-manifest index or live collection.
 - This candidate remains local until a separate PR upload; no new PR, merge,
   release, or deployment was performed in this step.
+
+## ADR-060 — SEC evidence primary navigation
+
+### Delivered scope
+
+- Continue the locally prepared ADR-059 commit `cb3427b` without rewriting it.
+  Rename its feature branch to `feature/p5-sec-audit-navigation`; the branch was
+  originally created from merged `develop` at `d625f18`. No direct develop/main
+  commit, upstream update, PR creation, merge, release, or deployment occurs.
+- Add `secEvidence` after the existing eight primary items: `SEC 증거` in Korean
+  and `SEC evidence` in English. The destination is the existing bare
+  `/research/sec/filing-history` locator with prefetch disabled. A menu click
+  neither selects a manifest nor calls `findExact`; the synthetic example remains
+  a separate explicit action.
+- Mark SEC as current in normal locator/result, loading, error, and not-found
+  headers. Preserve every original provider/data-mode/disclosure condition, exact
+  query key, UTC storage value, KST display value, and internal audit-tab state.
+- Preserve the existing restrained design and components. Widen only the header's
+  two-row breakpoint from 1120px to 1280px, retain its mobile horizontal scroller,
+  and draw the keyboard focus outline inside the link to avoid clipping. No
+  dependency, image, API, provider, fixture, schema, or route is added.
+- Migrate the affected current-source navigation contract in
+  `scripts/ci/navigation_contracts.py`: seven runtime files must equal the pinned
+  baseline plus exact reviewed token edits; nine existing unit/E2E files have
+  reviewed content hashes. All 16 paths are validated before frozen-tree comparison
+  and included in source custody, not added to a broad product allowlist.
+- `test_navigation_contracts.py` covers missing/duplicate/reordered/wrong-label
+  menus, query/outbound links, prefetch, active states, unrelated bytes, test
+  weakening, wrong Git objects/modes, links, and mandatory failure propagation.
+  Exact-nine checks close the historical lower-case-only regex's inability to
+  see `secEvidence`. Historical baseline/manifest/84 bodies/seven restores remain
+  unchanged; current Vitest/Playwright jobs still execute the actual new code.
+
+### Actual verification
+
+- ESLint: PASS for the current web tree; only the explicitly owned ignored
+  `.wsr-local-full-stack-*` verification copies are excluded from this local lint
+  command. No product source is omitted.
+- Focused header/catalog/SEC unit run: 24/24 PASS. The first full run correctly
+  found two pre-existing eight-item menu expectations in S&P history and screener
+  tests; those assertions now expect nine and are included in the closed migration.
+  Final full Vitest run: 50 files, 648/648 PASS, 22.82 seconds.
+- Full local Chromium suite: 78/78 PASS, retries disabled, 1.8 minutes, across
+  1440x1000, 1280x900, and 390x844. The focused SEC suite also passed 6/6 before
+  the full run. Keyboard Methodology → SEC → Korean locale → SEC → Enter reaches
+  the exact locator; locale changes retain exact query and KST/UTC evidence.
+- Separate SEC API-mode failure browser run: 1/1 PASS with a closed loopback
+  API endpoint. The menu and locator work without evidence selection; the exact
+  failed request displays the existing failure state rather than fixture fallback.
+- Additional geometry checks: 8/8 PASS for KO/EN at 1121, 1200, 1440, and 390px.
+  No document overflow, wordmark/action overlap, or clipped focused SEC link;
+  2px focus outline with -3px offset. Four local screenshots were captured;
+  Korean desktop and English mobile were visually inspected.
+- Production Next build: PASS, including TypeScript and all 12 route entries.
+  Build and development ran in separate secret-free owned source mirrors, using
+  existing installed dependencies and only synthetic fixture providers. Neither
+  root `.env` nor the original Next build/generated declaration was used as a
+  mutable build target.
+- Complete CI Python suite: 209 tests, 203 PASS, 0 failures/errors, 6 Windows
+  capability skips (two POSIX-mode tests and four symlink-capability tests),
+  34.518 seconds. New navigation suite: 13 total, 12 PASS, one POSIX skip.
+- Current DEMO fixture validation: PASS, unchanged 2 revisions / 2 methodologies /
+  4 null-metric outcomes. Workflow size: PASS, 29,069 bytes, largest run 598
+  characters. `run_contracts.py validate`: PASS for extraction, current exact
+  migrations, workflow parity, and frozen product boundaries. Diff whitespace: PASS.
+- Hosted CI, all 84 historical executions, Maven/PostgreSQL integration, and
+  actual home-server deployment were not rerun in this UI-only step. Do not reuse
+  the earlier merge's hosted results as evidence for this new commit.
+- The user's unstaged `apps/web/next-env.d.ts` remains byte-identical to its
+  starting SHA-256 `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`
+  and is excluded from the commit. No secrets were read or published.
+- Stopped only the two owned development servers and removed their verified
+  disposable source/build mirror. Four screenshots and the local geometry probe
+  remain in ignored `.cache/adr060-sec-navigation-0f822dde9fc549f4a754c58a72d97163/`.
+  The original application build and unrelated processes were not changed.
+
+### Next boundary
+
+- No additional API key, account, server fact, or domain was required. Preserve
+  the user's local-development/future-home-server plan; do not provision Sites or
+  another external hosting service.
+- The next handoff is a reviewed PR containing the current-fixture groundwork
+  and this navigation slice, followed by actual hosted CI. Both commits remain
+  local until that upload is authorized. No merge is implied by this local work.
+- Further product changes still require their own exact/current-source contract
+  migration. Navigation does not complete P3 scoring, live-data publication, SEC
+  collection automation, or the historical screener.

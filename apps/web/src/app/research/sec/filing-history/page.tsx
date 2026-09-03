@@ -41,6 +41,7 @@ export default async function SecFilingHistoryAuditPage({
   return (
     <main>
       <SiteHeader
+        current="secEvidence"
         dataMode={provider.mode === "fixture" || syntheticDemo ? "DEMO" : undefined}
       />
       <div className={`page-shell ${styles.shell}`}>

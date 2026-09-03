@@ -9,6 +9,7 @@ export const NAVIGATION_ITEMS = [
   "maps",
   "screener",
   "methodology",
+  "secEvidence",
 ] as const;
 
 export type NavigationItem = (typeof NAVIGATION_ITEMS)[number];
@@ -65,6 +66,7 @@ const ko = {
     maps: "시장 지도",
     screener: "스크리너",
     methodology: "방법론",
+    secEvidence: "SEC 증거",
   },
 } satisfies CommonMessages;
 
@@ -97,6 +99,7 @@ const en = {
     maps: "Maps",
     screener: "Screener",
     methodology: "Methodology",
+    secEvidence: "SEC evidence",
   },
 } satisfies CommonMessages;
 

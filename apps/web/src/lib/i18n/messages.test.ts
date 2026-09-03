@@ -29,6 +29,7 @@ describe("common locale messages", () => {
       "maps",
       "screener",
       "methodology",
+      "secEvidence",
     ]);
     expect(Object.keys(COMMON_MESSAGES.ko.navigation)).toEqual(NAVIGATION_ITEMS);
     expect(Object.keys(COMMON_MESSAGES.en.navigation)).toEqual(NAVIGATION_ITEMS);

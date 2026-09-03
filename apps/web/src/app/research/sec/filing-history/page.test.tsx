@@ -38,6 +38,18 @@ async function page(
   return SecFilingHistoryAuditPage({ searchParams: Promise.resolve(searchParams) });
 }
 
+function expectSecNavigation(locale: "ko" | "en" = "ko") {
+  const navigation = screen.getByRole("navigation", {
+    name: locale === "ko" ? "주요 탐색" : "Primary navigation",
+  });
+  const link = within(navigation).getByRole("link", {
+    name: locale === "ko" ? "SEC 증거" : "SEC evidence",
+  });
+  expect(link).toHaveAttribute("href", "/research/sec/filing-history");
+  expect(link).toHaveAttribute("aria-current", "page");
+  expect(navigation.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+}
+
 describe("SecFilingHistoryAuditPage", () => {
   beforeEach(() => {
     i18n.getLocale.mockReset();
@@ -48,6 +60,7 @@ describe("SecFilingHistoryAuditPage", () => {
 
   it("renders a Korean exact-ID locator and labels the generated fixture as DEMO", async () => {
     renderWithLocale(await page());
+    expectSecNavigation();
 
     expect(screen.getByRole("heading", { name: "SEC 제출 이력 manifest 감사" }))
       .toBeInTheDocument();
@@ -87,6 +100,25 @@ describe("SecFilingHistoryAuditPage", () => {
     expect(screen.queryByText("NVDA")).not.toBeInTheDocument();
   });
 
+  it.each(["fixture", "api"] as const)("opens the %s locator without reading or selecting evidence", async (mode) => {
+    const findExact = vi.fn();
+    providers.secManifestAuditProvider.mockReturnValue({
+      mode,
+      demoQuery: mode === "fixture" ? SEC_MANIFEST_AUDIT_DEMO_QUERY : null,
+      syntheticDemoManifestId: mode === "fixture" ? SEC_MANIFEST_AUDIT_DEMO_QUERY.manifestId : null,
+      findExact,
+    } satisfies SecManifestAuditProvider);
+    renderWithLocale(await page());
+    expectSecNavigation();
+    expect(findExact).not.toHaveBeenCalled();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByText("LIVE", { exact: true })).not.toBeInTheDocument();
+    if (mode === "api") {
+      expect(screen.queryByText("DEMO", { exact: true })).not.toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "합성 DEMO 요약 열기" })).not.toBeInTheDocument();
+    }
+  });
+
   it("performs exactly one selected summary read and renders immutable disclosure tokens", async () => {
     const fixture = new FixtureSecManifestAuditProvider();
     const findExact = vi.fn(fixture.findExact.bind(fixture));
@@ -98,6 +130,7 @@ describe("SecFilingHistoryAuditPage", () => {
     });
 
     renderWithLocale(await page(raw()));
+    expectSecNavigation();
     expect(findExact).toHaveBeenCalledOnce();
     expect(findExact).toHaveBeenCalledWith({
       ...SEC_MANIFEST_AUDIT_DEMO_QUERY,
@@ -184,6 +217,7 @@ describe("SecFilingHistoryAuditPage", () => {
   it("localizes the route to English while preserving exact evidence bytes and tokens", async () => {
     i18n.getLocale.mockResolvedValue("en");
     renderWithLocale(await page(raw()), "en");
+    expectSecNavigation("en");
 
     expect(screen.getByRole("heading", { name: "SEC filing-history manifest audit" }))
       .toBeInTheDocument();
@@ -229,6 +263,7 @@ describe("SecFilingHistoryAuditPage", () => {
     });
 
     const loading = renderWithLocale(await SecFilingHistoryAuditLoading());
+    expectSecNavigation();
     expect(screen.getByRole("heading", { name: "지정한 증거를 검증하는 중…" }))
       .toBeInTheDocument();
     expect(screen.queryByText("DEMO", { exact: true })).not.toBeInTheDocument();
@@ -238,6 +273,7 @@ describe("SecFilingHistoryAuditPage", () => {
     const error = renderWithLocale(
       <SecFilingHistoryAuditError error={new Error("unavailable")} reset={reset} />,
     );
+    expectSecNavigation();
     expect(screen.getByRole("alert")).toHaveTextContent(
       "합성 값 또는 다른 manifest를 대신 표시하지 않습니다",
     );
@@ -246,6 +282,7 @@ describe("SecFilingHistoryAuditPage", () => {
     error.unmount();
 
     renderWithLocale(await SecFilingHistoryAuditNotFound());
+    expectSecNavigation();
     expect(screen.getByRole("heading", { name: "이 정확한 manifest를 표시할 수 없습니다." }))
       .toBeInTheDocument();
     expect(screen.queryByText(SEC_MANIFEST_AUDIT_DEMO_QUERY.manifestId)).not.toBeInTheDocument();

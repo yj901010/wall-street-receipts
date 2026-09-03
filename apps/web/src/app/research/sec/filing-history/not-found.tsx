@@ -8,7 +8,7 @@ export default async function SecFilingHistoryAuditNotFound() {
   const messages = getSecManifestAuditMessages(await getLocale()).states;
   return (
     <main>
-      <SiteHeader />
+      <SiteHeader current="secEvidence" />
       <div className="page-shell state-page">
         <p className="eyebrow">{messages.notFoundEyebrow}</p>
         <h1>{messages.notFoundTitle}</h1>

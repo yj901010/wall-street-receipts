@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "./locale-provider";
 import { SiteHeader } from "./site-header";
+import { NAVIGATION_ITEMS } from "@/lib/i18n/messages";
 
 const actions = vi.hoisted(() => ({
   setLocaleAction: vi.fn(),
@@ -34,6 +35,7 @@ describe("SiteHeader locale foundation", () => {
       "시장 지도",
       "스크리너",
       "방법론",
+      "SEC 증거",
     ]);
     expect(within(navigation).getByRole("link", { name: "콜 기록" })).toHaveAttribute(
       "aria-current",
@@ -62,6 +64,36 @@ describe("SiteHeader locale foundation", () => {
       "aria-current",
       "page",
     );
+  });
+
+  it.each(["ko", "en"] as const)("keeps all nine navigation destinations and exact active state in %s", (locale) => {
+    const labels = locale === "ko"
+      ? ["대시보드", "시장", "콜 기록", "기관", "애널리스트", "시장 지도", "스크리너", "방법론", "SEC 증거"]
+      : ["Dashboard", "Market", "Calls", "Institutions", "Analysts", "Maps", "Screener", "Methodology", "SEC evidence"];
+    const hrefs = ["/", "/market", "/calls", "/institutions", "/analysts", "/maps/sp500", "/screener", "/methodology", "/research/sec/filing-history"];
+    for (const current of NAVIGATION_ITEMS) {
+      const view = render(
+        <LocaleProvider locale={locale}>
+          <SiteHeader current={current} />
+        </LocaleProvider>,
+      );
+      const navigation = screen.getByRole("navigation", {
+        name: locale === "ko" ? "주요 탐색" : "Primary navigation",
+      });
+      const links = within(navigation).getAllByRole("link");
+      expect(links.map((link) => link.textContent)).toEqual(labels);
+      expect(links.map((link) => link.getAttribute("href"))).toEqual(hrefs);
+      expect(links.filter((link) => link.getAttribute("aria-current") === "page"))
+        .toEqual([links[NAVIGATION_ITEMS.indexOf(current)]]);
+      expect(screen.queryByText("DEMO", { exact: true })).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
+  it("does not infer an active item or data mode when neither is supplied", () => {
+    render(<LocaleProvider locale="ko"><SiteHeader /></LocaleProvider>);
+    expect(screen.getByRole("navigation").querySelector("[aria-current]")).toBeNull();
+    expect(screen.queryByText("DEMO", { exact: true })).not.toBeInTheDocument();
   });
 
   it("submits a strict locale value through the accessible native form", async () => {

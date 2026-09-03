@@ -47,6 +47,13 @@ export function SiteHeader({ current, dataMode }: SiteHeaderProps) {
         <Link aria-current={current === "methodology" ? "page" : undefined} href="/methodology">
           {messages.navigation.methodology}
         </Link>
+        <Link
+          aria-current={current === "secEvidence" ? "page" : undefined}
+          href="/research/sec/filing-history"
+          prefetch={false}
+        >
+          {messages.navigation.secEvidence}
+        </Link>
       </nav>
       <div className="site-header-actions">
         {dataMode ? <span className="mode-badge">{dataMode}</span> : null}

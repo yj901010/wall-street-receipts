@@ -37,6 +37,7 @@ test.describe("known-deferred screener shell", () => {
       "시장 지도",
       "스크리너",
       "방법론",
+      "SEC 증거",
     ]);
     const screenerLink = navigation.getByRole("link", { name: "스크리너" });
     await expect(screenerLink).toHaveAttribute("href", "/screener");

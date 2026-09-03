@@ -16,7 +16,7 @@ export default function SecFilingHistoryAuditError({
   const messages = getSecManifestAuditMessages(locale).states;
   return (
     <main>
-      <SiteHeader />
+      <SiteHeader current="secEvidence" />
       <div className="page-shell state-page route-error" role="alert">
         <p className="eyebrow">{messages.errorEyebrow}</p>
         <h1>{messages.errorTitle}</h1>

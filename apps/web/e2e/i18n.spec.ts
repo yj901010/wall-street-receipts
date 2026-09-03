@@ -15,6 +15,7 @@ const KOREAN_NAVIGATION = [
   "시장 지도",
   "스크리너",
   "방법론",
+  "SEC 증거",
 ] as const;
 
 const ENGLISH_NAVIGATION = [
@@ -26,6 +27,7 @@ const ENGLISH_NAVIGATION = [
   "Maps",
   "Screener",
   "Methodology",
+  "SEC evidence",
 ] as const;
 
 function collectExternalRequests(page: Page) {
