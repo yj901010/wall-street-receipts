@@ -80,10 +80,9 @@ test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", as
   }
 
   if (!FIXTURE_MODE && !API_SUCCESS_MODE) {
-    await page.goto(
-      `${ROUTE}?manifestId=${MANIFEST_ID}`
-      + `&evaluationAsOf=${encodeURIComponent(CUTOFF)}&view=summary`,
-    );
+    await form.getByLabel("Manifest ID").fill(MANIFEST_ID);
+    await form.getByLabel("평가 기준 원본 조회 키(UTC)").fill(CUTOFF);
+    await form.getByLabel("평가 기준 원본 조회 키(UTC)").press("Enter");
     await expect(page.getByRole("heading", {
       name: "정확한 manifest 응답을 검증할 수 없습니다.",
     })).toBeVisible();
@@ -185,6 +184,59 @@ test("fails closed for malformed and unavailable exact SEC manifest requests", a
     "조회 주소가 닫힌 문법과 맞지 않습니다.",
   );
   await expect(page.getByText("NVDA", { exact: true })).toHaveCount(0);
+
+  const manifestInput = page.getByLabel("Manifest ID", { exact: true });
+  const cutoffInput = page.getByLabel("평가 기준 원본 조회 키(UTC)", { exact: true });
+  await expect(manifestInput).toHaveValue(MANIFEST_ID);
+  await expect(cutoffInput).toHaveValue(CUTOFF);
+  await expect(manifestInput).not.toHaveAttribute("aria-invalid");
+  await expect(cutoffInput).not.toHaveAttribute("aria-invalid");
+  const impossibleDate = "2026-02-29T03:30:00.123456Z";
+  await cutoffInput.fill(impossibleDate);
+  await cutoffInput.press("Enter");
+  await expect(page.locator('p[role="alert"]')).toBeVisible();
+  await expect(manifestInput).toHaveValue(MANIFEST_ID);
+  await expect(cutoffInput).toHaveValue(impossibleDate);
+  await expect(cutoffInput).toHaveAttribute("aria-invalid", "true");
+  await expect(cutoffInput).toHaveAccessibleDescription(/실제 달력에 존재하는 UTC Z 시각/);
+  await expect(page.getByRole("table")).toHaveCount(0);
+  expect(new URL(page.url()).searchParams.has("ticker")).toBe(false);
+  await expectNoPageOverflow(page);
+
+  const invalidSearch = new URL(page.url()).search;
+  const english = page.getByRole("button", { name: "English" });
+  await english.focus();
+  await activateEnglishLocale(context, page, english);
+  expect(new URL(page.url()).search).toBe(invalidSearch);
+  const englishCutoff = page.getByLabel("Original lookup key (UTC)", { exact: true });
+  await expect(manifestInput).toHaveValue(MANIFEST_ID);
+  await expect(englishCutoff).toHaveValue(impossibleDate);
+  await expect(englishCutoff).toHaveAccessibleDescription(/real-calendar UTC Z instant/);
+  await englishCutoff.fill(CUTOFF);
+  await englishCutoff.focus();
+  await expectVisibleKeyboardFocus(englishCutoff);
+  await englishCutoff.press("Enter");
+  await expect(page.getByText("Synthetic DEMO · not observed SEC data")).toBeVisible();
+  const repairedQuery = new URL(page.url()).searchParams;
+  expect([...repairedQuery.entries()]).toEqual([
+    ["manifestId", MANIFEST_ID], ["evaluationAsOf", CUTOFF], ["view", "summary"],
+  ]);
+  await expect(page.getByText("2026-08-25 12:30:00.123456 KST").first()).toBeVisible();
+
+  await page.goto(`${ROUTE}?manifestId=${MANIFEST_ID}&manifestId=${MANIFEST_ID}`
+    + `&evaluationAsOf=${encodeURIComponent(CUTOFF)}`);
+  await expect(manifestInput).toHaveValue("");
+  await expect(manifestInput).toHaveAccessibleDescription(/Duplicate values were not selected/);
+  await expect(englishCutoff).toHaveValue(CUTOFF);
+  await manifestInput.fill(MANIFEST_ID);
+  await englishCutoff.fill("2026-08-26T03:30:00Z");
+  await page.getByRole("link", { name: "Clear lookup inputs" }).click();
+  await expect(page).toHaveURL(new RegExp(`${ROUTE}$`));
+  await expect(manifestInput).toHaveValue("");
+  await expect(englishCutoff).toHaveValue("");
+  await expect(page.locator('p[role="alert"]')).toHaveCount(0);
+  await expectNoPageOverflow(page);
+  await context.clearCookies();
 
   await page.goto(
     `${ROUTE}?manifestId=${MANIFEST_ID}`

@@ -24,7 +24,7 @@ import yaml
 
 from validate_limits import load_workflow
 from current_contracts import TEST_PATH, verify_current_test
-from navigation_contracts import NAVIGATION_PATHS, verify_navigation
+from navigation_contracts import ADDED_PATHS, NAVIGATION_PATHS, verify_navigation
 from legacy_environment import legacy_step_environment
 from historical_guard_migrations import migrated_python_body
 
@@ -54,6 +54,7 @@ FIXED_CI_PATHS = frozenset({
     "decisions/ADR-059-current-checkout-demo-fixture-contracts.md",
     "scripts/ci/navigation_contracts.py", "scripts/ci/test_navigation_contracts.py",
     "decisions/ADR-060-sec-evidence-navigation.md",
+    "decisions/ADR-061-sec-locator-input-recovery.md",
 })
 
 
@@ -237,7 +238,8 @@ def validate_product(root, manifest):
     compare_product_trees(adjusted, current, allowed)
     changed = set(filter(None, git(root, "diff", "--name-only", "-z", "HEAD").decode().split("\0")))
     untracked = set(filter(None, git(root, "ls-files", "--others", "--exclude-standard", "-z").decode().split("\0")))
-    require(changed <= allowed | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS and untracked <= allowed,
+    require(changed <= allowed | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS
+            and untracked <= allowed | ADDED_PATHS,
             "Unexpected uncommitted product or untracked file")
     require(not git(root, "diff", "--cached", "--name-only", "--", NEXT_ENV),
             "User-owned Next declaration must not be staged")

@@ -128,3 +128,19 @@ keyboard navigation. Unlike the historical lower-case-only extraction, these
 checks cannot silently omit `secEvidence`. Existing Vitest and Playwright jobs
 continue to execute against the current checkout. Further changes to these files
 require another explicit contract review, not a broad path allowlist.
+
+## Exact locator recovery migration (ADR-061)
+
+The cumulative navigation migration now covers 21 paths: seven exact-edited
+runtime files, nine current test hashes, three additional locator source hashes,
+and two new helper/test hashes. New files must be absent from the baseline and
+present with exact reviewed working bytes. Only those two verified new paths may
+be untracked before commit; no app path enters `FIXED_CI_PATHS`.
+
+Only the three overlapping ADR-060 HEAD objects are accepted as intermediate
+committed versions; working files must always match ADR-061. This recognizes
+pre-commit development, not arbitrary old code or staged content. All 21 files
+remain in the before/after custody snapshot. Parser/provider and historical
+guards remain unchanged. Current tests cover explicit native GET correction,
+bounded verbatim inputs, no request on invalid state, bilingual errors, and
+clearing edited fields without stale uncontrolled input state.

@@ -5,6 +5,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { secManifestAuditProvider } from "@/lib/providers/sec-manifest-audit-provider.server";
 import { parseSecManifestAuditRoute } from "@/lib/providers/sec-manifest-audit-query";
 import { getSecManifestAuditMessages } from "./messages";
+import { locatorFeedback } from "./locator-feedback";
 import { SecManifestAuditLocator } from "./sec-manifest-audit-locator";
 import { SecManifestAuditView } from "./sec-manifest-audit-view";
 import styles from "./sec-manifest-audit.module.css";
@@ -82,6 +83,7 @@ export default async function SecFilingHistoryAuditPage({
             messages={messages}
             demoQuery={provider.demoQuery}
             invalid={state.kind === "invalid"}
+            feedback={locatorFeedback(state.kind === "invalid" ? raw : null)}
           />
         )}
       </div>
