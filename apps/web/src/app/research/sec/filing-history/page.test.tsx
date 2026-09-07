@@ -170,6 +170,65 @@ describe("SecFilingHistoryAuditPage", () => {
       .toHaveAttribute("href", "/research/sec/filing-history");
   });
 
+  it.each(["ko", "en"] as const)("offers explicit result refinement for every view and provider in %s", async (locale) => {
+    i18n.getLocale.mockResolvedValue(locale);
+    for (const mode of ["fixture", "api"] as const) {
+      for (const view of ["summary", "descriptors", "accessions", "occurrences"]) {
+        const fixture = new FixtureSecManifestAuditProvider();
+        const findExact = vi.fn(fixture.findExact.bind(fixture));
+        providers.secManifestAuditProvider.mockReturnValue({
+          mode, demoQuery: fixture.demoQuery, syntheticDemoManifestId: null, findExact,
+        } satisfies SecManifestAuditProvider);
+        const rendered = renderWithLocale(await page(raw(view,
+          view === "summary" ? {} : { page: "99", size: "1" })), locale);
+        const disclosure = rendered.container.querySelector("details")!;
+        expect(disclosure).not.toHaveAttribute("open");
+        const summary = within(disclosure).getByText(locale === "ko" ? "조회 조건 수정" : "Edit lookup conditions");
+        expect(summary.tagName).toBe("SUMMARY");
+        fireEvent.click(summary);
+        const form = within(disclosure).getByRole("form");
+        expect(form).toHaveAttribute("method", "get");
+        expect(form).toHaveAttribute("action", "/research/sec/filing-history");
+        expect([...new FormData(form as HTMLFormElement).entries()]).toEqual([
+          ["manifestId", SEC_MANIFEST_AUDIT_DEMO_QUERY.manifestId],
+          ["evaluationAsOf", SEC_MANIFEST_AUDIT_DEMO_QUERY.evaluationAsOf],
+          ["view", "summary"],
+        ]);
+        expect(form.querySelector('[aria-invalid="true"]')).toBeNull();
+        expect(within(disclosure).queryByRole("link")).not.toBeInTheDocument();
+        fireEvent.change(within(form).getByLabelText("Manifest ID"), { target: { value: "b".repeat(64) } });
+        expect(findExact).toHaveBeenCalledOnce();
+        expect(findExact.mock.calls[0][0]).toMatchObject({ ...SEC_MANIFEST_AUDIT_DEMO_QUERY, view });
+        expect(screen.getAllByText("2026-08-25 12:30:00.123456 KST").length).toBeGreaterThan(0);
+        rendered.unmount();
+      }
+    }
+  });
+
+  it("resets dirty refinement inputs and collapses when the exact result query changes", async () => {
+    const rendered = renderWithLocale(await page(raw()));
+    fireEvent.click(screen.getByText("조회 조건 수정"));
+    fireEvent.change(screen.getByLabelText("Manifest ID"), { target: { value: "b".repeat(64) } });
+    const nextCutoff = "2026-08-26T00:00:00.000001Z";
+    rendered.rerender(<LocaleProvider locale="ko">{await page(raw("descriptors", {
+      evaluationAsOf: nextCutoff, page: "1", size: "1",
+    }))}</LocaleProvider>);
+    expect(rendered.container.querySelector("details")).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("조회 조건 수정"));
+    expect(screen.getByLabelText("Manifest ID")).toHaveValue(SEC_MANIFEST_AUDIT_DEMO_QUERY.manifestId);
+    expect(screen.getByLabelText("평가 기준 원본 조회 키(UTC)")).toHaveValue(nextCutoff);
+  });
+
+  it("replaces dirty invalid inputs when navigation supplies different invalid lookup values", async () => {
+    const rendered = renderWithLocale(await page(raw("summary", { manifestId: "first-invalid" })));
+    fireEvent.change(screen.getByLabelText("Manifest ID"), { target: { value: "unsent-edit" } });
+    rendered.rerender(<LocaleProvider locale="ko">{await page(raw("summary", {
+      manifestId: "second-invalid", evaluationAsOf: "2026-02-29T00:00:00Z",
+    }))}</LocaleProvider>);
+    expect(screen.getByLabelText("Manifest ID")).toHaveValue("second-invalid");
+    expect(screen.getByLabelText("평가 기준 원본 조회 키(UTC)")).toHaveValue("2026-02-29T00:00:00Z");
+  });
+
   it.each(["fixture", "api"] as const)("opens the %s locator without reading or selecting evidence", async (mode) => {
     const findExact = vi.fn();
     providers.secManifestAuditProvider.mockReturnValue({

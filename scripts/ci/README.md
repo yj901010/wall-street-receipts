@@ -144,3 +144,18 @@ remain in the before/after custody snapshot. Parser/provider and historical
 guards remain unchanged. Current tests cover explicit native GET correction,
 bounded verbatim inputs, no request on invalid state, bilingual errors, and
 clearing edited fields without stale uncontrolled input state.
+
+## Exact result refinement migration (ADR-062)
+
+The same 21-path inventory now admits the exact result-page disclosure and five
+updated source/test hashes. Six additional predecessor objects are pinned to
+ADR-061 for pre-commit development only; current working bytes remain mandatory.
+Mutation tests reject automatic selection, server-clock defaults, stale input
+keys, missing focus styling, forged predecessors, and old working files. The
+provider/parser and all historical bodies remain unchanged.
+
+Current web tests verify a collapsed, keyboard-operable bilingual editor,
+unchanged evidence while editing, and a same-origin native document GET that
+discards child pagination and preserves exact UTC keys. The application retains
+its existing JavaScript-dependent Next/React result streaming; native GET does
+not imply a fully JavaScript-disabled site.

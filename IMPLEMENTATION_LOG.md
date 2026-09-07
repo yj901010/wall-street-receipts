@@ -7502,3 +7502,98 @@ configured origin or any network endpoint.
 - Next handoff: review this bounded local change, upload its feature branch only
   with authorization, and verify actual hosted CI before considering merge.
   Further product work needs its own explicit current-source migration.
+
+## ADR-062 — Explicit SEC result query refinement
+
+### Starting state and delivered scope
+
+- PR #9 is merged into `develop` at
+  `5e877693311d3dde746fa49f10df3e578fd5cc82`. Its merged CI run #30
+  (`34088468610`) passed all four jobs in the preceding handoff. Fetch that
+  develop and create `feature/p5-sec-query-refinement`; preserve the merge
+  ancestry and the user's unstaged `apps/web/next-env.d.ts`.
+- Extend the existing `/research/sec/filing-history` SSR page, locator, localized
+  messages, and CSS. All four result views, including out-of-range empty child
+  pages, have a collapsed native `details` editor. It contains exactly the
+  current validated manifest ID and original UTC cutoff; opening/editing does
+  not add a provider read or change the evidence displayed below.
+- Reuse the native GET form. Explicit submission sends only those two inputs
+  and `view=summary`, discarding the old tab/page/size. No latest/default ID,
+  clock substitution, precision rounding, provider fallback, or example link
+  is introduced. KST results and canonical UTC identity remain unchanged.
+- Key the disclosure on the full validated query and the form on its complete
+  feedback. Changing the result query closes the editor and replaces unsent
+  inputs; navigating between different invalid queries also replaces stale DOM
+  values. Keep the existing blank-locator and malformed-input recovery paths.
+- Add an explicit 2px keyboard outline to the native summary; preserve the
+  existing restrained responsive form layout. No client island, dependency,
+  route, provider/parser, API, schema, or fixture is added or changed.
+- Extend the exact page transformation and five content hashes in the existing
+  21-path current-source migration. Six exact ADR-061 predecessor Git objects
+  are recognized only for pre-commit development with mandatory current working
+  bytes. Add mutation cases for forged/stale predecessors, default opening,
+  clock/example injection, stale form keys, and removed focus styling. Keep the
+  baseline, historical chain, all 84 bodies, workflow, and source custody intact.
+
+### Actual local verification
+
+- Focused page tests: 25/25 PASS, including both locales, both provider modes,
+  all four views, exact FormData entries, one read, and dirty-input navigation.
+  Full Vitest: 51 files, 696/696 PASS, 15.93 seconds. Full ESLint PASS; only the
+  owned ignored verification mirrors were excluded. Final E2E-only lint PASS.
+- Final Next production build: PASS, including TypeScript and all 12 route
+  entries. Separate owned secret-free source mirrors were used for production
+  and development; original `.next` and generated declaration were not targets.
+- The first Chromium probe exposed a missing native-summary focus outline,
+  which was fixed. An exploratory JavaScript-disabled test also found that the
+  existing streamed result can remain behind its loading shell. Do not claim
+  full no-JavaScript support: the delivered regression checks a native document
+  GET with the existing Next/React runtime, not a new client submit handler.
+- An early production-focused run had one React #419 error in the existing
+  malformed/absence scenario; three immediate focused repetitions passed.
+  The exploratory full HTTP production run was 77/81, not a passing release
+  gate: three raw HTTP language requests did not transport the production
+  Secure cookie, and one mobile locale transition timed out. No cookie security
+  or unrelated application behavior was weakened to make that environment pass.
+- A two-worker development run was 76/81: four SEC flows recorded interrupted
+  React streams and one unrelated locale focus check produced an invalid style
+  measurement. Native-submit tests now wait for the document response to finish
+  and reach load before further navigation, rather than only its early SSR
+  shell. No arbitrary sleeps, runtime-error suppression, or automatic retries.
+- Final full development Chromium run: 81/81 PASS, one worker as in CI, retries
+  disabled, 1.5 minutes, at 1440x1000, 1280x900, and 390x844. It includes Korean
+  and English edit/correct/resubmit, unchanged evidence while editing, exact UTC
+  microseconds, native document GET, summary reset, and keyboard navigation.
+- Separate final API-failure browser case: 1/1 PASS, 1.9 seconds, with a closed
+  loopback endpoint and no provider key. A fully consumed failed SSR stream can
+  emit both its exact recoverable render error and the error-boundary diagnostic.
+  Assert exactly one matching boundary diagnostic and at most one exact known
+  streamed error, rejecting any unclassified error. This failure-only assertion
+  was finalized after the full fixture run; that fixture execution path was
+  unchanged. No fake evidence or browser-to-private-API request was observed.
+- Production geometry: 4/4 PASS for KO/EN at 1440 and 390px, no document overflow,
+  all fields contained, desktop input/button tops aligned. Four screenshots
+  captured; Korean desktop and English mobile inspected. Evidence and logs are
+  retained under ignored `.cache/adr062-query-refinement/`.
+- Full CI Python suite: 216 total, 210 PASS, 6 Windows capability skips, 33.370
+  seconds. Focused final migration tests: 20 total, 19 PASS, one POSIX-mode skip.
+  Current-source validation, workflow-size gate, and unchanged current DEMO
+  fixture contracts PASS. The initial sandboxed run could not create writable
+  temporary test directories; the authorized run used the same tests unchanged.
+- Maven/PostgreSQL integration, all 84 historical executions, hosted CI for this
+  new change, HTTPS production acceptance, and home-server deployment were not
+  run. Previous merged CI success is not reused as evidence for this candidate.
+
+### Handoff boundary
+
+- No new API key, account, contact email, domain, home-server fact, or live data
+  request was needed. No `.env` contents were read or published. Keep the future
+  Ubuntu home-server plan; this development PC is not the deployment target.
+- Preserve the user's generated declaration at SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc` and exclude it
+  from the focused feature commit. Stop only owned verification processes and
+  remove only the verified disposable mirrors; retain screenshots and logs.
+- Next: review/upload the focused feature branch and verify its actual hosted
+  CI before considering merge. No remote upload, PR, merge, release, or
+  deployment is part of this implementation slice. HTTPS acceptance and full
+  JavaScript-disabled rendering remain separate boundaries, not completed work.

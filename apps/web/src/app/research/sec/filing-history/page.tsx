@@ -72,12 +72,27 @@ export default async function SecFilingHistoryAuditPage({
         </section>
 
         {state.kind === "query" && resource ? (
-          <SecManifestAuditView
-            query={state.query}
-            resource={resource}
-            providerMode={syntheticDemo ? "fixture" : provider.mode}
-            messages={messages}
-          />
+          <>
+            <details className={styles.refinement} key={JSON.stringify(state.query)}>
+              <summary>{messages.locator.refine}</summary>
+              <p className={styles.notice}>{messages.locator.refineBody}</p>
+              <SecManifestAuditLocator
+                messages={messages}
+                demoQuery={null}
+                invalid={false}
+                feedback={locatorFeedback({
+                  manifestId: state.query.manifestId,
+                  evaluationAsOf: state.query.evaluationAsOf,
+                })}
+              />
+            </details>
+            <SecManifestAuditView
+              query={state.query}
+              resource={resource}
+              providerMode={syntheticDemo ? "fixture" : provider.mode}
+              messages={messages}
+            />
+          </>
         ) : (
           <SecManifestAuditLocator
             messages={messages}

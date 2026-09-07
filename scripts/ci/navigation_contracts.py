@@ -1,4 +1,4 @@
-"""ADR-060/061: closed current-source SEC navigation and locator migrations.
+"""ADR-060/061/062: closed current-source SEC navigation and locator migrations.
 
 Only the seven explicit runtime edits below may differ from the frozen baseline.
 Locator feedback sources and current tests are separately content-pinned;
@@ -43,6 +43,32 @@ SOURCE_EDITS = {
         ('            invalid={state.kind === "invalid"}\n',
          '            invalid={state.kind === "invalid"}\n'
          '            feedback={locatorFeedback(state.kind === "invalid" ? raw : null)}\n'),
+        ('''          <SecManifestAuditView
+            query={state.query}
+            resource={resource}
+            providerMode={syntheticDemo ? "fixture" : provider.mode}
+            messages={messages}
+          />''', '''          <>
+            <details className={styles.refinement} key={JSON.stringify(state.query)}>
+              <summary>{messages.locator.refine}</summary>
+              <p className={styles.notice}>{messages.locator.refineBody}</p>
+              <SecManifestAuditLocator
+                messages={messages}
+                demoQuery={null}
+                invalid={false}
+                feedback={locatorFeedback({
+                  manifestId: state.query.manifestId,
+                  evaluationAsOf: state.query.evaluationAsOf,
+                })}
+              />
+            </details>
+            <SecManifestAuditView
+              query={state.query}
+              resource={resource}
+              providerMode={syntheticDemo ? "fixture" : provider.mode}
+              messages={messages}
+            />
+          </>'''),
     ),
     **{SEC_DIRECTORY + filename: (('<SiteHeader />', '<SiteHeader current="secEvidence" />'),)
        for filename in ("loading.tsx", "error.tsx", "not-found.tsx")},
@@ -54,17 +80,17 @@ TEST_SHA256 = {
     "apps/web/src/app/screener/page.test.tsx": "27ae6a6872efd67eb20b23b0e17c849492b16548662438700b0b2117ce8bd184",
     "apps/web/src/lib/i18n/messages.test.ts": "149451cfb1fd45e322dfba00c62b81f46e252c618dc22292c48df305aaea1c12",
     "apps/web/src/components/site-header.test.tsx": "2ba20856c7e71aedb6a08e551e8616492aa473064cae529c1f879823ae8d0b2a",
-    SEC_DIRECTORY + "page.test.tsx": "73a3c411aaffb7455c37152bdd622943e7ba94a92bfffeefa326428c78d1d80b",
+    SEC_DIRECTORY + "page.test.tsx": "3538ec808b8463fb3177ccdb4f6916868076f3a8b4d5233d5061afb792a44d87",
     "apps/web/e2e/i18n.spec.ts": "4c9b96faf8617b91aa0ec43b42efcda1daa93adf45b0a01b82e25d287d61705d",
     "apps/web/e2e/screener.spec.ts": "02dcd45d5f9fdb5569c13ea781710306dbd7e2ae0889ccd727c500a5807c6702",
     "apps/web/e2e/sp500-history.spec.ts": "2227749f35ea3763f96e25db60cf59ce11cd42eeea244eebfb75679e0a1e5888",
-    "apps/web/e2e/sec-manifest-audit.spec.ts": "002a1149c1445a4c7303fb6b61bcb2c20a5118eae7a4dadaf2136a8de699a1bd",
+    "apps/web/e2e/sec-manifest-audit.spec.ts": "8f34762f6e3447db22f9405c3124b4a868f4e5189ab4c124dbe5ac71fc133889",
 }
 # Exact full-source custody for the reviewed SSR form, copy, and field styling.
 FEEDBACK_SOURCE_SHA256 = {
-    SEC_DIRECTORY + "sec-manifest-audit-locator.tsx": "80a488d450d0ea0b1922868ddabcc19c315a712ebab28e9969148537200811c6",
-    SEC_DIRECTORY + "messages.ts": "1c9638a5374a799b3617b792c3e9ef52a6a5feb7902c9173a662e29543451171",
-    SEC_DIRECTORY + "sec-manifest-audit.module.css": "29fe7b7be144626b352f1bb611e88d8a49b5d1f2a3db168998f76c7e6f90d167",
+    SEC_DIRECTORY + "sec-manifest-audit-locator.tsx": "ee38ab555bbbba02427091338ca01e34dbe01c916f579a0f6e138e55139099e3",
+    SEC_DIRECTORY + "messages.ts": "e609c266b490dfbd87d813d972b9d8b69ba906b3e230815a7e6be1f2834fb17a",
+    SEC_DIRECTORY + "sec-manifest-audit.module.css": "947753ee3b2400ba8f424bd87a5c02cfd8e31c82540e6b07c7be585a380cf25b",
 }
 ADDED_SHA256 = {
     SEC_DIRECTORY + "locator-feedback.ts": "d5b883468cf7b287b5a4b173110923fb0e859fd1785daf7ff221506df593f48e",
@@ -76,6 +102,16 @@ PREVIOUS_RECORDS = {
     SEC_DIRECTORY + "page.tsx": "100644 blob 98fca99914677352466b9a6eae161e6b55b1984b",
     SEC_DIRECTORY + "page.test.tsx": "100644 blob 9832d9af6f7935635f6648c8c7204c9f8801a872",
     "apps/web/e2e/sec-manifest-audit.spec.ts": "100644 blob 1a632d32beb38aacea99cf7a14e0aacfc2797b78",
+}
+# Exact ADR-061 objects permit development on its merged commit. Their working
+# bytes must still satisfy the new migration; no old tree becomes a fallback.
+REFINEMENT_PREVIOUS_RECORDS = {
+    SEC_DIRECTORY + "page.tsx": "100644 blob 331221ad2738766dd86451e6628a97528209933d",
+    SEC_DIRECTORY + "page.test.tsx": "100644 blob daecb87b64b732895507051730cb7b9128d71d7e",
+    SEC_DIRECTORY + "sec-manifest-audit-locator.tsx": "100644 blob d308008e392131942bc410cfdb10b5f3d90d007a",
+    SEC_DIRECTORY + "messages.ts": "100644 blob 1e6a800c4f933050ef34daf58ed34002e510089c",
+    SEC_DIRECTORY + "sec-manifest-audit.module.css": "100644 blob 0b13e8580e4b7e831229a0f2d8d3b42d03bf248b",
+    "apps/web/e2e/sec-manifest-audit.spec.ts": "100644 blob 8aca2e70d0a05f280a96ee54c034fb3a9f28ac9a",
 }
 CONTENT_SHA256 = TEST_SHA256 | FEEDBACK_SOURCE_SHA256 | ADDED_SHA256
 ADDED_PATHS = frozenset(ADDED_SHA256)
@@ -129,6 +165,8 @@ def verify_navigation(root: Path, git_read, baseline: dict, current: dict) -> di
         accepted = {blob_record(original) if original is not None else None, blob_record(expected)}
         if relative in PREVIOUS_RECORDS:
             accepted.add(PREVIOUS_RECORDS[relative])
+        if relative in REFINEMENT_PREVIOUS_RECORDS:
+            accepted.add(REFINEMENT_PREVIOUS_RECORDS[relative])
         if current.get(relative) not in accepted:
             raise ValueError("Unreviewed committed navigation change: " + relative)
         if relative in current:

@@ -46,7 +46,7 @@ export function SecManifestAuditLocator({
       <p className={styles.notice}>{messages.locator.description}</p>
       <div className={styles.locatorBody}>
         <form
-          key={invalid ? "invalid-lookup" : "empty-locator"}
+          key={JSON.stringify([invalid, feedback])}
           className={styles.locatorForm}
           action={SEC_MANIFEST_AUDIT_ROUTE}
           method="get"
