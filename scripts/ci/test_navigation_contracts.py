@@ -18,11 +18,12 @@ class NavigationMigrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.original = {relative: bridge.git(SOURCE, "show", f"{navigation.BASELINE}:{relative}")
-                        for relative in navigation.NAVIGATION_PATHS}
+                        for relative in navigation.NAVIGATION_PATHS - navigation.ADDED_PATHS}
         cls.expected = {
             relative: navigation.migrated_source(relative, raw) if relative in navigation.SOURCE_EDITS
             else (SOURCE / relative).read_bytes().replace(b"\r\n", b"\n")
-            for relative, raw in cls.original.items()
+            for relative in navigation.NAVIGATION_PATHS
+            for raw in [cls.original.get(relative)]
         }
 
     def setUp(self):
@@ -44,7 +45,12 @@ class NavigationMigrationTests(unittest.TestCase):
     def test_closed_inventory_and_no_general_product_path_exemption(self):
         self.assertEqual(len(navigation.SOURCE_EDITS), 7)
         self.assertEqual(len(navigation.TEST_SHA256), 9)
-        self.assertEqual(len(navigation.NAVIGATION_PATHS), 16)
+        self.assertEqual(len(navigation.FEEDBACK_SOURCE_SHA256), 3)
+        self.assertEqual(len(navigation.ADDED_PATHS), 2)
+        self.assertEqual(len(navigation.NAVIGATION_PATHS), 21)
+        self.assertEqual(set(navigation.PREVIOUS_RECORDS), {
+            navigation.SEC_DIRECTORY + "page.tsx", navigation.SEC_DIRECTORY + "page.test.tsx",
+            "apps/web/e2e/sec-manifest-audit.spec.ts"})
         self.assertFalse(navigation.NAVIGATION_PATHS & bridge.FIXED_CI_PATHS)
         self.assertFalse(any(path.startswith(("fixtures/", "schemas/", "apps/api/"))
                              for path in navigation.NAVIGATION_PATHS))
@@ -83,7 +89,10 @@ class NavigationMigrationTests(unittest.TestCase):
             expected = self.expected[relative]
             self.assertEqual(expected.count(b'current="secEvidence"'), 1)
             self.assertEqual(expected.replace(b'        current="secEvidence"\n', b'')
-                             .replace(b' current="secEvidence"', b''), self.original[relative])
+                             .replace(b' current="secEvidence"', b'')
+                             .replace(b'import { locatorFeedback } from "./locator-feedback";\n', b'')
+                             .replace(b'            feedback={locatorFeedback(state.kind === "invalid" ? raw : null)}\n', b''),
+                             self.original[relative])
 
     def test_missing_duplicate_reordered_or_forged_menu_fields_are_rejected(self):
         header = "apps/web/src/components/site-header.tsx"
@@ -113,7 +122,7 @@ class NavigationMigrationTests(unittest.TestCase):
         for relative, raw in self.expected.items():
             with self.subTest(relative=relative):
                 path = self.root / relative
-                for candidate in (raw + b"\n// unrelated change\n", self.original[relative]):
+                for candidate in (raw + b"\n// unrelated change\n", self.original.get(relative, b"")):
                     path.write_bytes(candidate)
                     with self.assertRaisesRegex(ValueError, "Unreviewed current|behavioral tests changed"):
                         self.verify()
@@ -124,6 +133,8 @@ class NavigationMigrationTests(unittest.TestCase):
             for record in (None, "100755 blob " + "0" * 40, "120000 blob " + "0" * 40,
                            "160000 commit " + "0" * 40, blob_record(b"unreviewed")):
                 with self.subTest(relative=relative, record=record):
+                    if relative in navigation.ADDED_PATHS and record is None:
+                        continue  # A pre-commit HEAD lacks the exact new file; its working bytes are still mandatory.
                     head = {**self.current, relative: record}
                     with self.assertRaisesRegex(ValueError, "Unreviewed committed navigation"):
                         self.verify(head)
@@ -139,6 +150,78 @@ class NavigationMigrationTests(unittest.TestCase):
         for raw in (b"no insertion point", self.original[relative] * 2):
             with self.assertRaisesRegex(ValueError, "insertion point changed"):
                 navigation.migrated_source(relative, raw)
+
+    def test_only_exact_three_adr060_predecessors_are_admitted_with_current_working_bytes(self):
+        head = {**self.current, **navigation.PREVIOUS_RECORDS}
+        self.assertEqual(self.verify(head), head)
+        for relative, record in navigation.PREVIOUS_RECORDS.items():
+            with self.subTest(relative=relative):
+                with self.assertRaisesRegex(ValueError, "Unreviewed committed"):
+                    self.verify(head={**head, relative: record[:-1] + ("0" if record[-1] != "0" else "1")})
+                path = self.root / relative
+                prior = bridge.git(SOURCE, "show", f"99d90aff2c19744f763fa816b3ee7d5c4cc03358:{relative}")
+                self.assertEqual(blob_record(prior), record)
+                path.write_bytes(prior)
+                with self.assertRaisesRegex(ValueError, "Unreviewed current"):
+                    self.verify(head)
+                path.write_bytes(self.expected[relative])
+
+    def test_added_sources_must_be_absent_from_baseline_and_present_in_working_tree(self):
+        for relative in navigation.ADDED_PATHS:
+            with self.subTest(relative=relative):
+                with self.assertRaisesRegex(ValueError, "already exists in baseline"):
+                    self.verify(baseline={**self.baseline, relative: blob_record(self.expected[relative])})
+                path = self.root / relative
+                path.unlink()
+                with self.assertRaisesRegex(ValueError, "missing or linked"):
+                    self.verify()
+                path.write_bytes(self.expected[relative])
+        self.verify()
+        for call in self.git.call_args_list:
+            self.assertNotIn(call.args[2].split(":", 1)[1], navigation.ADDED_PATHS)
+
+    def test_locator_normalization_validation_or_provider_activation_mutations_fail(self):
+        cases = (
+            ("locator-feedback.ts", b"value.length > LOCATOR_INPUT_LIMIT", b"value.length >= LOCATOR_INPUT_LIMIT"),
+            ("locator-feedback.ts", b"return { value, error:", b"return { value: value.trim(), error:"),
+            ("sec-manifest-audit-locator.tsx", b'method="get"', b'method="post"'),
+            ("sec-manifest-audit-locator.tsx", b'aria-invalid={manifestError ? true : undefined}', b'aria-invalid={undefined}'),
+            ("sec-manifest-audit-locator.tsx", b'name="view" value="summary"', b'name="view" value="latest"'),
+            ("page.tsx", b'state.kind === "query"\n    ? await provider.findExact', b'state.kind !== "query"\n    ? await provider.findExact'),
+        )
+        for name, before, after in cases:
+            relative = navigation.SEC_DIRECTORY + name
+            with self.subTest(relative=relative, token=before):
+                self.assertEqual(self.expected[relative].count(before), 1)
+                (self.root / relative).write_bytes(self.expected[relative].replace(before, after, 1))
+                with self.assertRaisesRegex(ValueError, "Unreviewed current"):
+                    self.verify()
+                (self.root / relative).write_bytes(self.expected[relative])
+
+    def test_new_sources_and_all_migrated_paths_remain_in_custody(self):
+        with patch.object(bridge, "git", return_value=b""):
+            before = bridge.snapshot(self.root, {"steps": []})
+            self.assertTrue(navigation.NAVIGATION_PATHS <= before["files"].keys())
+            for relative in navigation.ADDED_PATHS:
+                self.assertEqual(before["files"][relative], hashlib.sha256(self.expected[relative]).hexdigest())
+            relative = next(iter(navigation.ADDED_PATHS))
+            (self.root / relative).write_bytes(b"changed during historical run")
+            self.assertNotEqual(bridge.snapshot(self.root, {"steps": []}), before)
+
+    def test_untracked_exception_is_exact_and_only_checked_after_required_migration(self):
+        manifest = bridge.expected_manifest(bridge.baseline_workflow(SOURCE))
+        for relative in navigation.ADDED_PATHS:
+            with patch.object(bridge, "git", side_effect=[b"", b"", b"", relative.encode() + b"\0", b""]), \
+                    patch.object(bridge, "verify_current_test", return_value={}), \
+                    patch.object(bridge, "verify_navigation", return_value={}) as verify:
+                bridge.validate_product(SOURCE, manifest)
+                verify.assert_called_once()
+        for relative in (navigation.SEC_DIRECTORY + "unreviewed.ts", "apps/web/src/lib/providers/sec-manifest-audit-query.ts"):
+            with patch.object(bridge, "git", side_effect=[b"", b"", b"", relative.encode() + b"\0"]), \
+                    patch.object(bridge, "verify_current_test", return_value={}), \
+                    patch.object(bridge, "verify_navigation", return_value={}):
+                with self.assertRaisesRegex(ValueError, "Unexpected uncommitted"):
+                    bridge.validate_product(SOURCE, manifest)
 
     def test_crlf_checkout_is_supported_without_changing_git_blob_identity(self):
         for relative, raw in self.expected.items():

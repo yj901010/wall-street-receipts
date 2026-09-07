@@ -7414,3 +7414,91 @@ configured origin or any network endpoint.
 - Further product changes still require their own exact/current-source contract
   migration. Navigation does not complete P3 scoring, live-data publication, SEC
   collection automation, or the historical screener.
+
+## ADR-061 — SEC locator input recovery
+
+### Starting state and delivered scope
+
+- PR #8 was merged into `develop` as
+  `aee500774e5915d6931f6a658e22b69dc11e74c2`; PR CI run #27 (`33733030183`) and
+  merged run #28 (`33733630372`) each passed all four jobs. Preserve both feature
+  commits and the merge ancestry. No main/release/deployment update occurred.
+- Create `feature/p5-sec-locator-feedback` from that merged develop. Preserve the
+  user's unstaged `apps/web/next-env.d.ts`, starting SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Improve the existing `/research/sec/filing-history` SSR native GET locator;
+  no new route, client island, dependency, API, provider, schema, or fixture.
+  `locator-feedback.ts` creates presentation-only field state from invalid raw
+  parameters. Existing strict parser/provider code remains unchanged.
+- Retain only single strings up to 64 printable ASCII characters, verbatim.
+  Do not trim, choose duplicate values, truncate, convert timezones, or round
+  microseconds. Arrays, controls, non-ASCII, and overlong values are not echoed;
+  localized explanations require re-entry. Missing fields have no invented default.
+- Add Korean/English field explanations, associated accessible descriptions,
+  `aria-invalid`, a clearly explained summary-only explicit resubmission, and
+  clear-input navigation. Invalid URLs still issue zero evidence reads. The
+  untouched form stays empty; the fixed DEMO example remains an explicit choice.
+- Preserve KST display and exact UTC query identity, no latest/company selector,
+  no clock-derived defaults, and no API-to-fixture fallback. Keep existing theme
+  and semantic controls; align desktop input/button tops despite unequal errors.
+- Extend the cumulative current-source migration to 21 exact paths. Three
+  overlapping ADR-060 HEAD objects are recognized only as pre-commit versions;
+  working bytes must always match ADR-061. Two exact new helper/test paths must
+  be absent from the baseline and present in the working tree, and only those
+  verified new paths may be untracked. All 21 remain in source custody.
+- Keep the frozen baseline, manifest, 84 historical bodies, seven restores,
+  workflow, and current application jobs unchanged. Add mutation tests for new
+  file absence/modes, predecessor forgery, normalization/provider activation,
+  mandatory validation, exact untracked scope, and before/after source custody.
+
+### Actual local verification
+
+- Initial focused tests found a test-data construction mistake: array rows in
+  `it.each` were being spread as arguments instead of passed as duplicate query
+  values. Wrap them in named cases; the intended duplicate rejection tests pass.
+- Independent review found a real dirty-input clear regression. Reproduced it
+  in Chromium: after editing invalid inputs, client clear navigation removed the
+  query but kept the uncontrolled DOM values. Key the form on invalid/untouched
+  state; a unit rerender and actual edit-then-clear browser regression now pass.
+  The first rerender test also exposed its missing locale wrapper, which was
+  restored without changing production locale behavior.
+- Final full Vitest: 51 files, 692/692 PASS, 17.96 seconds. ESLint PASS for all
+  original web sources, excluding only owned ignored verification mirrors.
+- Final Next production build: PASS, including TypeScript and all 12 route
+  entries. Separate secret-free owned source mirrors keep development and build
+  artifacts away from the original working tree and generated declaration.
+- Focused SEC Chromium: 6/6 PASS across 1440x1000, 1280x900, and 390x844,
+  including bilingual native GET correction, exact microseconds, invalid-calendar
+  retention, duplicate nonselection, dirty-field clearing, and keyboard focus.
+- Separate native-form API failure boundary: 1/1 PASS against a closed loopback
+  API address; no provider credentials, external service, or fixture fallback.
+- A final full browser attempt stopped at 67 passes when the owned development
+  server exited; all 11 remaining failures were ERR_CONNECTION_REFUSED. Do not
+  count that interrupted attempt as success. Restart the same isolated fixture
+  server and rerun the entire suite without retries: final 78/78 PASS, 1.3 minutes.
+- Visual geometry: 4/4 PASS for KO/EN at 1440 and 390px, no page overflow or
+  field containment failure. Desktop ID/cutoff/button tops match exactly.
+  Four screenshots captured; Korean desktop and English mobile inspected.
+  Evidence remains in ignored `.cache/adr061-locator-feedback/`.
+- Final Python CI suite: 214 total, 208 PASS, 0 failures/errors, 6 Windows
+  capability skips (two POSIX and four symlink checks), 45.114 seconds. The
+  navigation/locator suite contains 18 tests. Workflow limits PASS: 29,069 bytes,
+  largest run 598 characters. Current DEMO fixture gate PASS: 2 revisions,
+  2 MODEL_ONLY methodologies, 4 null-metric outcomes. `run_contracts.py validate`
+  PASS, including current migrations and unchanged frozen product boundaries.
+- No `.env` was read, API key used, remote branch uploaded, new PR created,
+  production provider activated, or home server deployed in this local slice.
+  Hosted CI, all 84 historical executions, and Maven/PostgreSQL integration were
+  not rerun; predecessor hosted success is not reused for this candidate.
+- Shut down only owned test servers and remove the two verified disposable
+  source/build mirrors. The original source/build and user Next declaration stay
+  unchanged; four screenshots, the visual probe, and interrupted-run metadata
+  remain in ignored `.cache/adr061-locator-feedback/`. Diff whitespace PASS.
+
+### Next boundary
+
+- No additional API key, account, domain, or home-server fact was required.
+  Keep the user's local-first plan; do not provision Sites or other hosting.
+- Next handoff: review this bounded local change, upload its feature branch only
+  with authorization, and verify actual hosted CI before considering merge.
+  Further product work needs its own explicit current-source migration.

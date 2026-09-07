@@ -1,5 +1,6 @@
 import { fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/components/locale-provider";
 import {
   FixtureSecManifestAuditProvider,
   SEC_MANIFEST_AUDIT_DEMO_QUERY,
@@ -98,6 +99,75 @@ describe("SecFilingHistoryAuditPage", () => {
     );
     expect(findExact).not.toHaveBeenCalled();
     expect(screen.queryByText("NVDA")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Manifest ID")).toHaveValue(SEC_MANIFEST_AUDIT_DEMO_QUERY.manifestId);
+    expect(screen.getByLabelText("평가 기준 원본 조회 키(UTC)"))
+      .toHaveValue(SEC_MANIFEST_AUDIT_DEMO_QUERY.evaluationAsOf);
+    expect(screen.getByLabelText("Manifest ID")).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByLabelText("평가 기준 원본 조회 키(UTC)"))
+      .not.toHaveAttribute("aria-invalid");
+    expect(screen.getByRole("link", { name: "입력 초기화" }))
+      .toHaveAttribute("href", "/research/sec/filing-history");
+  });
+
+  it.each(["fixture", "api"] as const)("retains invalid calendar input in %s mode without reading evidence", async (mode) => {
+    const findExact = vi.fn();
+    providers.secManifestAuditProvider.mockReturnValue({
+      mode, demoQuery: null, syntheticDemoManifestId: null, findExact,
+    } satisfies SecManifestAuditProvider);
+    const invalidCutoff = "2026-02-29T03:30:00.123456Z";
+    const rendered = renderWithLocale(await page(raw("summary", { evaluationAsOf: invalidCutoff })));
+    expect(findExact).not.toHaveBeenCalled();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Manifest ID")).toHaveValue(SEC_MANIFEST_AUDIT_DEMO_QUERY.manifestId);
+    const cutoff = screen.getByLabelText("평가 기준 원본 조회 키(UTC)");
+    expect(cutoff).toHaveValue(invalidCutoff);
+    expect(cutoff).toHaveAttribute("aria-invalid", "true");
+    expect(cutoff).toHaveAccessibleDescription(/실제 달력에 존재하는 UTC Z 시각/);
+    expect(screen.getByRole("alert")).toHaveTextContent("자동 재조회는 하지 않습니다.");
+    expect(screen.queryByText("LIVE", { exact: true })).not.toBeInTheDocument();
+    rendered.unmount();
+    const fixture = new FixtureSecManifestAuditProvider();
+    findExact.mockImplementation(fixture.findExact.bind(fixture));
+    renderWithLocale(await page(raw()));
+    expect(findExact).toHaveBeenCalledOnce();
+    expect(findExact).toHaveBeenCalledWith({ ...SEC_MANIFEST_AUDIT_DEMO_QUERY, view: "summary", page: 0, size: 25 });
+  });
+
+  it.each([
+    ["duplicate", { manifestId: ["a".repeat(64), "b".repeat(64)] }, /값이 중복/],
+    ["overlong", { manifestId: "a".repeat(65) }, /값을 남기지 않았습니다/],
+    ["line break", { manifestId: "a\nb" }, /값을 남기지 않았습니다/],
+    ["missing", { manifestId: undefined }, /이 값을 입력하세요/],
+  ] as const)("explains %s values without choosing or altering them", async (_name, values, message) => {
+    const findExact = vi.fn();
+    providers.secManifestAuditProvider.mockReturnValue({ mode: "api", demoQuery: null, syntheticDemoManifestId: null, findExact });
+    renderWithLocale(await page(raw("summary", { ...values, manifestId: Array.isArray(values.manifestId) ? [...values.manifestId] : values.manifestId })));
+    expect(screen.getByLabelText("Manifest ID")).toHaveValue("");
+    expect(screen.getByLabelText("Manifest ID")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Manifest ID")).toHaveAccessibleDescription(message);
+    expect(findExact).not.toHaveBeenCalled();
+  });
+
+  it("clears edited uncontrolled inputs when navigating back to the empty locator", async () => {
+    const rendered = renderWithLocale(await page(raw("summary", { ticker: "NVDA" })));
+    fireEvent.change(screen.getByLabelText("Manifest ID"), { target: { value: "b".repeat(64) } });
+    fireEvent.change(screen.getByLabelText("평가 기준 원본 조회 키(UTC)"), { target: { value: "2026-08-26T00:00:00Z" } });
+    rendered.rerender(<LocaleProvider locale="ko">{await page()}</LocaleProvider>);
+    expect(screen.getByLabelText("Manifest ID")).toHaveValue("");
+    expect(screen.getByLabelText("평가 기준 원본 조회 키(UTC)")).toHaveValue("");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("escapes retained text and localizes field recovery instructions in English", async () => {
+    i18n.getLocale.mockResolvedValue("en");
+    const value = '<script>alert("not executed")</script>';
+    const { container } = renderWithLocale(await page(raw("summary", { manifestId: value })), "en");
+    expect(screen.getByLabelText("Manifest ID")).toHaveValue(value);
+    expect(container.querySelector("script")).toBeNull();
+    expect(screen.getByLabelText("Manifest ID")).toHaveAccessibleDescription(/not been corrected automatically/);
+    expect(screen.getByRole("alert")).toHaveTextContent("No automatic retry occurs.");
+    expect(screen.getByRole("link", { name: "Clear lookup inputs" }))
+      .toHaveAttribute("href", "/research/sec/filing-history");
   });
 
   it.each(["fixture", "api"] as const)("opens the %s locator without reading or selecting evidence", async (mode) => {
@@ -112,6 +182,9 @@ describe("SecFilingHistoryAuditPage", () => {
     expectSecNavigation();
     expect(findExact).not.toHaveBeenCalled();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Manifest ID")).toHaveValue("");
+    expect(screen.getByLabelText("평가 기준 원본 조회 키(UTC)")).toHaveValue("");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByText("LIVE", { exact: true })).not.toBeInTheDocument();
     if (mode === "api") {
       expect(screen.queryByText("DEMO", { exact: true })).not.toBeInTheDocument();

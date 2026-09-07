@@ -19,6 +19,11 @@ export type SecManifestAuditMessages = {
     submit: string;
     invalidTitle: string;
     invalidBody: string;
+    recoveryBody: string;
+    clear: string;
+    manifestInvalid: string;
+    evaluationInvalid: string;
+    fieldErrors: { required: string; duplicate: string; notRetained: string };
     demoEyebrow: string;
     demoTitle: string;
     demoBody: string;
@@ -156,6 +161,16 @@ const ko: SecManifestAuditMessages = {
     invalidTitle: "조회 주소가 닫힌 문법과 맞지 않습니다.",
     invalidBody:
       "중복·알 수 없는 값, 잘못된 SHA-256, UTC가 아닌 시각 또는 비정규 페이지 값은 API를 호출하지 않고 거부합니다.",
+    recoveryBody:
+      "아래 값은 조회된 증거가 아닌 수정용 입력입니다. 값을 고쳐 제출하면 요약만 조회하며, 기존 주소의 다른 설정은 보내지 않습니다. 자동 재조회는 하지 않습니다.",
+    clear: "입력 초기화",
+    manifestInvalid: "소문자 a–f와 숫자로 된 64자리 ID를 입력하세요. 값을 자동 수정하지 않았습니다.",
+    evaluationInvalid: "실제 달력에 존재하는 UTC Z 시각을 입력하세요. 소수점은 최대 6자리이며 시간대·공백을 자동 수정하지 않습니다.",
+    fieldErrors: {
+      required: "이 값을 입력하세요. 기본값은 자동 선택하지 않습니다.",
+      duplicate: "값이 중복되어 어느 것도 선택하지 않았습니다. 하나의 값을 다시 입력하세요.",
+      notRetained: "64자 초과 또는 지원하지 않는 문자가 있어 값을 남기지 않았습니다. 원본을 확인하고 다시 입력하세요.",
+    },
     demoEyebrow: "합성 DEMO 예시",
     demoTitle: "Java 조립 경로로 생성한 감사 응답",
     demoBody:
@@ -306,6 +321,16 @@ const en: SecManifestAuditMessages = {
     invalidTitle: "The lookup URL does not match the closed grammar.",
     invalidBody:
       "Duplicate or unknown values, malformed SHA-256, non-UTC instants, and non-canonical page values are rejected before any API request.",
+    recoveryBody:
+      "These are editable inputs, not retrieved evidence. Correct and submit them to request a summary only; other settings in the old URL are not sent. No automatic retry occurs.",
+    clear: "Clear lookup inputs",
+    manifestInvalid: "Enter 64 lowercase a–f characters and digits. The value has not been corrected automatically.",
+    evaluationInvalid: "Enter a real-calendar UTC Z instant with at most six fractional digits. Timezone and whitespace are not corrected automatically.",
+    fieldErrors: {
+      required: "Enter this value. No default is selected automatically.",
+      duplicate: "Duplicate values were not selected. Enter one value again.",
+      notRetained: "The value was not retained because it exceeds 64 characters or contains unsupported characters. Check the original and enter it again.",
+    },
     demoEyebrow: "Synthetic DEMO example",
     demoTitle: "Audit response generated through the Java assembly path",
     demoBody:

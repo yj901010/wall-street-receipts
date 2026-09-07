@@ -6,17 +6,25 @@ import {
   secManifestAuditHref,
 } from "@/lib/providers/sec-manifest-audit-query";
 import type { SecManifestAuditMessages } from "./messages";
+import { LOCATOR_INPUT_LIMIT, type LocatorFeedback, type LocatorInputError } from "./locator-feedback";
 import styles from "./sec-manifest-audit.module.css";
 
 export function SecManifestAuditLocator({
   messages,
   demoQuery,
   invalid,
+  feedback,
 }: {
   messages: SecManifestAuditMessages;
   demoQuery: SecManifestAuditDemoQuery | null;
   invalid: boolean;
+  feedback: LocatorFeedback;
 }) {
+  function errorText(error: LocatorInputError | null, format: string) {
+    return error === "format" ? format : error === null ? null : messages.locator.fieldErrors[error];
+  }
+  const manifestError = errorText(feedback.manifestId.error, messages.locator.manifestInvalid);
+  const evaluationError = errorText(feedback.evaluationAsOf.error, messages.locator.evaluationInvalid);
   return (
     <section className={styles.locator} aria-labelledby="sec-manifest-locator-title">
       <div className="section-heading">
@@ -29,11 +37,16 @@ export function SecManifestAuditLocator({
         <p className={styles.invalid} role="alert">
           <strong>{messages.locator.invalidTitle}</strong>
           {messages.locator.invalidBody}
+          <span className={styles.recovery}>{messages.locator.recoveryBody}</span>
+          <Link className={styles.textAction} href={SEC_MANIFEST_AUDIT_ROUTE} prefetch={false}>
+            {messages.locator.clear}
+          </Link>
         </p>
       ) : null}
       <p className={styles.notice}>{messages.locator.description}</p>
       <div className={styles.locatorBody}>
         <form
+          key={invalid ? "invalid-lookup" : "empty-locator"}
           className={styles.locatorForm}
           action={SEC_MANIFEST_AUDIT_ROUTE}
           method="get"
@@ -52,9 +65,15 @@ export function SecManifestAuditLocator({
               minLength={64}
               maxLength={64}
               pattern="[0-9a-f]{64}"
-              aria-describedby="sec-manifest-id-hint"
+              defaultValue={feedback.manifestId.value}
+              aria-invalid={manifestError ? true : undefined}
+              aria-describedby={manifestError
+                ? "sec-manifest-id-hint sec-manifest-id-error" : "sec-manifest-id-hint"}
             />
             <small id="sec-manifest-id-hint">{messages.locator.manifestHint}</small>
+            {manifestError ? (
+              <small id="sec-manifest-id-error" className={styles.fieldError}>{manifestError}</small>
+            ) : null}
           </div>
           <div className={styles.field}>
             <label htmlFor="sec-evaluation-as-of">{messages.locator.evaluationAsOf}</label>
@@ -66,11 +85,18 @@ export function SecManifestAuditLocator({
               autoComplete="off"
               spellCheck={false}
               required
+              maxLength={LOCATOR_INPUT_LIMIT}
               placeholder="2026-08-25T03:30:00.123456Z"
               pattern="[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]{1,6})?Z"
-              aria-describedby="sec-evaluation-as-of-hint"
+              defaultValue={feedback.evaluationAsOf.value}
+              aria-invalid={evaluationError ? true : undefined}
+              aria-describedby={evaluationError
+                ? "sec-evaluation-as-of-hint sec-evaluation-as-of-error" : "sec-evaluation-as-of-hint"}
             />
             <small id="sec-evaluation-as-of-hint">{messages.locator.evaluationHint}</small>
+            {evaluationError ? (
+              <small id="sec-evaluation-as-of-error" className={styles.fieldError}>{evaluationError}</small>
+            ) : null}
           </div>
           <input type="hidden" name="view" value="summary" />
           <button className={styles.submit} type="submit">
