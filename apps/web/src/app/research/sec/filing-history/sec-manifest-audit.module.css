@@ -8,6 +8,35 @@
   align-items: start;
 }
 
+.refinement {
+  min-width: 0;
+  border-block: 1px solid var(--color-line);
+}
+
+.refinement > summary {
+  padding: var(--space-4);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.refinement > summary:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -3px;
+}
+
+.refinement .locator {
+  border-top: 0;
+}
+
+.refinement .locatorBody {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.refinement .locatorForm {
+  border-right: 0;
+}
+
 .heading p:last-child {
   max-width: 820px;
   margin: var(--space-3) 0 0;

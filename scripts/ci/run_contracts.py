@@ -55,6 +55,7 @@ FIXED_CI_PATHS = frozenset({
     "scripts/ci/navigation_contracts.py", "scripts/ci/test_navigation_contracts.py",
     "decisions/ADR-060-sec-evidence-navigation.md",
     "decisions/ADR-061-sec-locator-input-recovery.md",
+    "decisions/ADR-062-sec-result-query-refinement.md",
 })
 
 

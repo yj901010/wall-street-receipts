@@ -20,6 +20,8 @@ export type SecManifestAuditMessages = {
     invalidTitle: string;
     invalidBody: string;
     recoveryBody: string;
+    refine: string;
+    refineBody: string;
     clear: string;
     manifestInvalid: string;
     evaluationInvalid: string;
@@ -164,6 +166,8 @@ const ko: SecManifestAuditMessages = {
     recoveryBody:
       "아래 값은 조회된 증거가 아닌 수정용 입력입니다. 값을 고쳐 제출하면 요약만 조회하며, 기존 주소의 다른 설정은 보내지 않습니다. 자동 재조회는 하지 않습니다.",
     clear: "입력 초기화",
+    refine: "조회 조건 수정",
+    refineBody: "현재 조회의 ID와 원본 UTC 시각입니다. 입력만 바꾸어도 아래 결과가 바뀌지는 않습니다. 제출하면 입력한 두 값으로 요약을 조회하며, 기존 탭과 페이지 설정은 보내지 않습니다.",
     manifestInvalid: "소문자 a–f와 숫자로 된 64자리 ID를 입력하세요. 값을 자동 수정하지 않았습니다.",
     evaluationInvalid: "실제 달력에 존재하는 UTC Z 시각을 입력하세요. 소수점은 최대 6자리이며 시간대·공백을 자동 수정하지 않습니다.",
     fieldErrors: {
@@ -324,6 +328,8 @@ const en: SecManifestAuditMessages = {
     recoveryBody:
       "These are editable inputs, not retrieved evidence. Correct and submit them to request a summary only; other settings in the old URL are not sent. No automatic retry occurs.",
     clear: "Clear lookup inputs",
+    refine: "Edit lookup conditions",
+    refineBody: "These are the current lookup ID and original UTC instant. Editing alone does not change the result below. Submit to request a summary for the two entered values; the previous tab and pagination are not sent.",
     manifestInvalid: "Enter 64 lowercase a–f characters and digits. The value has not been corrected automatically.",
     evaluationInvalid: "Enter a real-calendar UTC Z instant with at most six fractional digits. Timezone and whitespace are not corrected automatically.",
     fieldErrors: {
