@@ -7864,3 +7864,127 @@ configured origin or any network endpoint.
 - See ADR-065 for later explicit worker startup and its DB/Flyway warning.
   Future home-server worker container/network/secret integration, supervision,
   alerting, capacity monitoring and backup acceptance remain separate work.
+
+## 2026-09-08 — P5 / ADR-066: Isolated CPI worker Docker acceptance
+
+### Scope and modules
+
+- Confirm user-merged PR #13 at develop
+  `f583d3ec7d8d2568deb2fb146ed9d47119b399c4`; its PR CI #37
+  (`34188716341`) passed all four jobs. Start
+  `feature/p5-cpi-worker-container` from that commit. Prior CI is not this
+  candidate's hosted verification.
+- Add `deploy/cpi-worker/compose.yaml`: a separate, explicitly selected
+  `cpi-worker` profile using the reviewed API image and existing daily 23:00
+  Asia/Seoul command. It does not override the public API/web or change their
+  egress. Require image, DB, network and secret-file selections; no public
+  ports, implicit pull, persistent volume, production defaults or auto-restart.
+- Use UID 10001, read-only root, dropped capabilities, no-new-privileges, init,
+  40-second graceful stop, 512 MiB / 0.5 CPU / 128 PIDs and bounded local logs.
+  Mount only the two key/password files through Spring configtree. ADR-066
+  explains actual Linux host-file ownership requirements; Compose file secrets
+  do not remap permissions or provide an encrypted secret vault.
+- Add `scripts/verify-cpi-worker.py` and test-only
+  `scripts/cpi-worker-fixture.py`. Export only committed API build inputs into
+  an owned context and use a private Docker CLI configuration without registry
+  credentials. Reject remote Docker endpoints, untracked/dirty build inputs,
+  linked/special/traversal archive entries, oversized inputs and unsafe cleanup.
+- Build the actual Java 21 API image, then run a synthetic HTTPS origin and
+  tmpfs PostgreSQL on two labelled internal networks with no host ports. Trust
+  the ephemeral test certificate only inside the worker override; no real BLS
+  origin request, actual key, host certificate change or client endpoint override.
+  Image/dependency preparation may access public registries; only the test
+  container runtime is offline. No fixture is presented as observed CPI.
+- Assert the next 23:00 KST slot, zero startup/restart requests, graceful stop,
+  exact raw receipt/hash, durable cooldown, a 48-hour Retry-After and malformed
+  response rejection. Negative cases must fail for the expected reason, not an
+  unrelated startup crash. The final PostgreSQL TCP server must be ready before
+  setup; the temporary initialization server is not accepted as readiness.
+- Add 17 offline worker safety tests. Extend CPI custody by exactly the model,
+  harness and fixture to 41 paths (six baseline replacements, 35 additions).
+  No workflow/historical body changes, permissive product wildcard, Java/Web
+  source, schema, default Compose or route change. Existing routes remain
+  `/market/cpi` and `/v1/macro/cpi`.
+
+### Verification and corrections
+
+- Initial exploratory executions were not passes. One failed before runtime
+  acceptance with insufficient diagnostics; failures now save redacted output.
+  Another exposed missing Compose plugin discovery under the sanitized child
+  environment. Use a private CLI config with the installed plugin directory.
+- The legacy builder ignored the Dockerfile-specific ignore rules and sent a
+  1.423 GB repository-root build context to the local Docker daemon. Do not
+  claim actual key files were excluded from that initial build input. Nothing
+  was pushed to a registry or remote daemon; the Dockerfile copies only API
+  sources and named fixtures into the image. The final harness never supplies
+  the root directory: its committed-only context was 3.62 MB, with root ignore
+  rules copied for legacy-builder compatibility. Existing `.env` was not edited
+  or staged. No actual secret value is copied into test configuration or documentation.
+- An intermediate Docker run passed, but the next verification exposed the
+  temporary-PostgreSQL-server race. Fix TCP readiness and add a regression test;
+  do not suppress the failure or use an automatic retry to obtain a pass.
+- Final Docker acceptance PASS, report
+  `.cache/adr066-c93e6aa2b02431a053584763.json` and matching diagnostic log.
+  Actual packaged client/parser, configtree secrets, Flyway V1–V10, four owned
+  databases, expected HTTP/error paths and inspected isolation all passed.
+  Three requests reached only the DEMO fixture, zero reached the real provider.
+  All enumerated test containers, networks, runtime image and temporary test
+  secrets were removed after ownership checks. Public base images/build cache
+  and sanitized reports remain; existing DBs and volumes were not removed.
+- Final current Python suite: 244 total, 238 PASS, six Windows capability skips,
+  zero failures/errors (42.766s). Log: `.cache/adr066-ci-tests-final.log`.
+  Current-source custody, workflow limits, DEMO fixture validation and whitespace
+  checks PASS. Historical baseline and all 84 bodies remain unchanged.
+- Docker Java compile/package passed; no Java source changed and this slice did
+  not rerun the full Maven JUnit suite. Web lint/unit/build/responsive checks
+  were not rerun because no web source or layout changed. Hosted CI and the full
+  historical Linux execution for this candidate remain outstanding. No real
+  wall-clock scheduled collection or home-server acceptance is claimed.
+
+### Handoff and next step
+
+- This development PC is not the future home server. Do not leave a scheduler
+  running, activate production collection, modify current CPI preview data, or
+  alter root `.env`. Preserve the user's `apps/web/next-env.d.ts` unchanged at
+  SHA-256 `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- No additional API key/account is needed for these synthetic checks. Before
+  actual server startup, obtain the exact host/image/DB/network and protected
+  secret-file paths, integrate release/operation-lock/backup/egress acceptance,
+  and address supervision and alerts. Details are in ADR-066.
+- Finish as a focused local Conventional Commit, excluding user-owned generated
+  changes and ignored reports. Remote push, PR creation, merge and deployment
+  are not included. Next: review/PR and hosted CI, then separately approved
+  worker supervision/status work; server activation waits for the actual host.
+
+## 2026-09-08 — PR #14 / CI #39: Python 3.13 archive-fixture compatibility
+
+- User reported one failed CI job for `cc8968d`. Inspect PR #14 and CI #39
+  (`34196298382`): Web, API and Call audit integration passed; Repository
+  contracts failed in the current Python test step before historical execution.
+  Job `101964665755` reports `ValueError: fileobj not provided for non zero-size
+  regular file` while constructing the `large` archive test fixture.
+- The development interpreter is Python 3.12.14, while hosted CI uses 3.13.15.
+  The old test passed only a header with size 8,000,001 to `TarFile.addfile`;
+  Python 3.13 requires the corresponding payload. Failure occurs during test
+  setup, not inside the production archive size guard or CPI collection.
+- Reproduce the same failure with the cached Linux Python 3.13 image, no
+  network, a read-only root, non-root UID, bounded tmpfs, and only the specific
+  test/module/model/PyYAML inputs mounted read-only. No repository root, `.env`,
+  Docker socket or existing database is mounted into that diagnostic container.
+- Change only `scripts/ci/test_cpi_worker_contracts.py`: provide the full bounded
+  synthetic payload through BytesIO. Require each specific size/path/type
+  rejection message and an empty output directory. Do not catch setup errors
+  as a successful guard check, skip the case, downgrade CI Python, loosen size
+  limits, modify runtime code or change current-source hashes.
+- The same Linux/Python 3.13 focused run now passes 17/17 tests (0.025s).
+  Windows/Python 3.12 full current suite: 244 total, 238 PASS / six existing
+  capability skips, zero failures/errors (38.007s); log
+  `.cache/adr066-ci39-fix-tests.log`. CI size limits, current product custody and
+  whitespace checks pass. No Web/API/runtime change, so those builds, responsive
+  checks and the Docker worker integration were not repeated locally.
+- Preserve the user's `apps/web/next-env.d.ts` at SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  Only the test correction and this record go into the follow-up commit on
+  `feature/p5-cpi-worker-container` / PR #14. Updated hosted CI still needs
+  confirmation after push; do not infer a full pass from the three prior jobs.
+  No actual key use, collection activation, deployment or merge is included.

@@ -197,3 +197,12 @@ bytes. Daily Asia/Seoul 23:00 scheduling, injected Clock, no startup/catch-up
 fetch, shutdown cancellation, sanitized failures, append-only repeated captures
 and durable Retry-After are covered by current Java tests, including PostgreSQL.
 No workflow, historical body, provider endpoint, schema or web file is changed.
+
+ADR-066 adds exactly three pinned files (41 total paths): the standalone worker
+Compose model, disposable Docker harness and test-only HTTPS fixture. The
+`test_cpi_worker_contracts.py` suite runs without Docker and checks model limits,
+network/secret isolation, actual-inspection rejection paths, environment and
+endpoint safety, committed-only archive extraction, log sanitation, final DB
+readiness, exact negative-case reasons, calendar boundaries and owner-only cleanup.
+The runtime acceptance remains an explicitly invoked local test; no provider
+key or host scheduling is introduced into CI.

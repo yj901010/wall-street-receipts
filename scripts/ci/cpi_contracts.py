@@ -1,4 +1,4 @@
-"""ADR-064/065: exact CPI retrieval, display and opt-in daily worker custody."""
+"""ADR-064/065/066: exact CPI retrieval, display and isolated worker custody."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,9 @@ from current_contracts import BASELINE, blob_record
 from navigation_contracts import _current_bytes
 
 CONTENT_SHA256 = {
+    "deploy/cpi-worker/compose.yaml": "05ca8d239100456b3c28e4dc58926818a22543627923b779307fbc76d20d58b9",
+    "scripts/verify-cpi-worker.py": "51df921714635cddfa898f1edf3f7ba6ead58ac235a195e66de976edad6f52f4",
+    "scripts/cpi-worker-fixture.py": "80a06bb134dfd662ac491cad74f064cc7a2c149e819034ff166938ecec11c3a7",
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/cpi/CpiSchedulePostgreSqlTest.java": "1ab4ca44bbb5d44e59d95a6300280a4f966408f446a4a6122fdfb3a156fbb726",
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/cpi/CpiCollectionJobTest.java": "54b772c75fe62186c9c0283f07bba83d6078ce3f0460d1916d9bcb33ac5f5a98",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/cpi/ScheduleCpiCommand.java": "4913224ce82ebb6269781f1216566d42c611c260a7bfd5da4245096ab42e4d75",
