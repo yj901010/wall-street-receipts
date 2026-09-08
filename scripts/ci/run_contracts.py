@@ -63,6 +63,8 @@ FIXED_CI_PATHS = frozenset({
     "decisions/ADR-065-opt-in-kst-cpi-schedule.md",
     "decisions/ADR-066-isolated-cpi-worker-container.md",
     "scripts/ci/test_cpi_worker_contracts.py",
+    "decisions/ADR-067-read-only-cpi-worker-status.md",
+    "scripts/ci/test_cpi_worker_status.py",
 })
 
 
