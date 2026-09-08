@@ -8073,3 +8073,85 @@ configured origin or any network endpoint.
   supervision remain separate decisions. Obtain the user's channel or real host
   details before those require credentials or activation; do not confuse this
   passive log inspector with completed production health monitoring.
+
+## 2026-09-08 — P5 / ADR-068: Durable CPI collection attempt ledger
+
+### Starting point and scope
+
+- Verify user-merged PR #15 at `7f2d5422315bfaf292fac972a90b5afcb43d5252`.
+  Its head `17d4c9c` passed hosted CI #42 (`34200020088`). Branch
+  `feature/p5-cpi-attempt-ledger` from merged develop for the user's next step.
+- Implement DB-backed attempt evidence, not automatic supervision/notification.
+  No new key/account, real provider request, deployment or actual host needed.
+  This PC remains the development machine; preserve the existing CPI preview,
+  development databases, root `.env` and user-owned `apps/web/next-env.d.ts`.
+
+### Modules, decisions and boundaries
+
+- Add the typed `domain/cpi/CpiCollectionAttempt` model and V11 start/result
+  tables. Closed MANUAL/SCHEDULED origins; SAVED/SKIPPED/FAILED/RATE_LIMITED
+  terminal shapes; only FETCH/PARSE failure codes. No raw exception or secret
+  enters ledger fields. Microsecond UTC storage; KST presentation requirement
+  remains. No result is UNKNOWN, not an asserted currently RUNNING process.
+- Extend `CpiCollectionJob`, `CpiRepository` and `JdbcCpiRepository`: commit the
+  start and gate decision before the single HTTP invocation. Repository-owned
+  REQUIRES_NEW transactions do not span HTTP. Concurrent invocations share the
+  locked durable gate. Missing gate is failure, never cooldown evidence.
+- Receipt and SAVED result commit together with exact ID/time foreign keys;
+  capture/result uniqueness prevents duplicate assignment. Rate-limit result
+  and monotonic gate extension also commit together. Failed acknowledgement of
+  receipt persistence never triggers a fabricated FAILED record or retry.
+- Insert-only repository API, not DB-owner tamper protection. Preserve V1-V10
+  migration bytes, all existing receipts/gate and no synthetic historical
+  backfill. Update exact packaged release inventory and affected current
+  migration tests to V11. No migration is run against an existing dev DB.
+- Scheduler passes explicit SCHEDULED origin; its daily 23:00 KST timing,
+  startup/restart/no-catch-up behavior and closed log protocol stay unchanged.
+  ADR-067 inspector remains UNVERIFIED/log-only, not silently DB-verified.
+  No new API/UI route: `/market/cpi` and `/v1/macro/cpi` remain unchanged.
+- New model and PostgreSQL tests cover chronology/shapes, upgrade preservation,
+  missing gates, concurrency, caller rollback, duplicate admission/completion,
+  exact receipt linkage, transactional rollback and unknown evidence after a
+  simulated process loss. Extend existing job/scheduler tests and the explicit
+  DEMO Docker rehearsal to check actual packaged V11 command result rows.
+- Closed CPI custody now has 47 paths (six baseline replacements, 41 additions).
+  Four new files and twelve changed hashes reviewed; only exact merged ADR-067
+  predecessors are admitted before commit. New mutation test rejects forged
+  predecessors/stale working bytes. No historical body, workflow or general
+  product exception changes. Detailed semantics and references: ADR-068.
+
+### Verification and handoff
+
+- Initial focused Java/PostgreSQL run: 34/34 PASS, no skips (43.899s).
+- Full API `mvn verify`: 2,459 PASS, no failures/errors/skips, package build PASS
+  (1m41s), `.cache/adr068-api-full.log`. Then add explicit missing-backoff-gate
+  rollback coverage and rerun the final full suite.
+- Final full API `mvn verify`: 2,460/2,460 PASS, no failures/errors/skips,
+  packaged executable JAR build PASS (1m47s),
+  `.cache/adr068-api-full-final.log`.
+- Python 3.12 current suite: 271 total, 265 PASS, six existing Windows skips,
+  zero failures/errors (71.126s), `.cache/adr068-ci-tests.log`. Current product
+  custody, CI size limits, current DEMO fixtures and whitespace checks PASS.
+- Packaged Docker acceptance PASS, report
+  `.cache/adr066-94a6e2216fc055fd7a1738de.json` and matching log. Build used
+  reviewed local source commit `91914ab3d84cd6e9eb89dbc008b5eb74e3bcb92e`;
+  only this documentation is amended afterward, with runtime input unchanged.
+  Actual packaged client/parser/configtree/Flyway V1-V11/PostgreSQL execution
+  produced exactly the expected SAVED/SKIPPED/RATE_LIMITED/FAILED ledger rows,
+  exact saved receipt link, closed PARSE error, durable 48-hour gate and zero
+  startup/restart attempts. Three HTTPS requests reached only the isolated
+  DEMO fixture; zero reached the real provider. Owned test containers,
+  networks, runtime image and temporary test DB/secrets were removed;
+  sanitized reports and shared public base images/build cache remain.
+- Post-commit current product custody PASS. User-owned `next-env.d.ts` remains
+  at SHA-256 `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  Known local secret scan PASS with values suppressed; `.env`, keys, ignored
+  reports and unrelated generated changes are excluded from the 22-file commit.
+- No web/layout change; Web lint/unit/build/responsive checks are not repeated
+  locally for this slice. New-feature hosted CI remains pending, not inferred
+  from the prior PR's green run.
+- Finish as one focused local Conventional Commit on the feature branch. No
+  remote push, new PR, merge or deployment in this implementation slice.
+- Next after review/PR/CI: a separately scoped protected read-only operator
+  query/presentation. Heartbeat, retention, alert channel and real host startup
+  remain separate decisions requiring user details before activation.

@@ -105,12 +105,12 @@ class ScheduleCpiCommandTest {
     @Test void scheduledResultsAreDistinctAndNoErrorTextIsLogged(CapturedOutput output) {
         var job = mock(CpiCollectionJob.class);
         var saved = new BlsCpiParser().parse(CpiTestFixture.bytes(), UUID.randomUUID(), NOW, 2023, 2026);
-        when(job.collect()).thenReturn(Optional.of(saved)).thenReturn(Optional.empty())
+        when(job.collect(com.wallstreetreceipts.api.domain.cpi.CpiCollectionAttempt.Trigger.SCHEDULED)).thenReturn(Optional.of(saved)).thenReturn(Optional.empty())
                 .thenThrow(new BlsCpiClient.RateLimited(NOW.plusSeconds(172800)))
                 .thenThrow(new IllegalStateException("SECRET_PROVIDER_BODY", new RuntimeException("SECRET_KEY")))
                 .thenReturn(Optional.of(saved));
         for (int i = 0; i < 5; i++) ScheduleCpiCommand.attempt(job, CLOCK);
-        verify(job, times(5)).collect();
+        verify(job, times(5)).collect(com.wallstreetreceipts.api.domain.cpi.CpiCollectionAttempt.Trigger.SCHEDULED);
         verifyNoMoreInteractions(job);
         assertThat(output.getAll()).contains("BLS_CPI_CAPTURE_SAVED", saved.captureId().toString(),
                 "2026-09-08 21:00:00 KST", "BLS_CPI_SCHEDULE_SKIPPED", "BLS_CPI_SCHEDULE_RATE_LIMITED",

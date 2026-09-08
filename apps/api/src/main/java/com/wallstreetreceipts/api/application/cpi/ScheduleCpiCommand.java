@@ -69,7 +69,7 @@ public final class ScheduleCpiCommand {
 
     static void attempt(CpiCollectionJob job, Clock clock) {
         try {
-            var snapshot = job.collect();
+            var snapshot = job.collect(com.wallstreetreceipts.api.domain.cpi.CpiCollectionAttempt.Trigger.SCHEDULED);
             if (snapshot.isEmpty()) {
                 LOG.info("BLS_CPI_SCHEDULE_SKIPPED reason=durable_cooldown at={}", KST.format(clock.instant()));
             } else {

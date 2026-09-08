@@ -368,6 +368,7 @@ class Rehearsal:
         require("next=" + expected_kst in self.logs(worker), "Unexpected next KST slot")
         require(self.requests() == 0, "Scheduler fetched immediately at startup")
         require(self.sql("schedule_test", "SELECT count(*) FROM bls_cpi_captures") == "0", "Startup wrote a receipt")
+        require(self.sql("schedule_test", "SELECT count(*) FROM bls_cpi_collection_attempts") == "0", "Startup invented an attempt")
         self.docker("stop", "--time", "40", worker)
         require(self.inspect("container", worker)["State"]["ExitCode"] in (0, 143), "Worker needed a forced kill")
         future_slot(datetime.now(timezone.utc))
@@ -406,6 +407,16 @@ class Rehearsal:
         require(self.sql("malformed_test", "SELECT count(*) FROM bls_cpi_captures") == "0", "Malformed response saved a false receipt")
         self.manual("malformed-again", "malformed_test", False, 3, cooldown)
         self.stage("429/48-hour gate, malformed response and no immediate retry verified")
+        for database, expected in (("wsr", "SAVED,SKIPPED"), ("limited_test", "RATE_LIMITED,SKIPPED"),
+                                   ("malformed_test", "FAILED,SKIPPED")):
+            statuses = self.sql(database, "SELECT string_agg(r.status, ',' ORDER BY a.started_at, a.attempt_id) FROM bls_cpi_collection_attempts a JOIN bls_cpi_collection_results r USING (attempt_id)")
+            require(statuses == expected, "Durable attempt result sequence differs")
+            require(self.sql(database, "SELECT count(*) FROM bls_cpi_collection_attempts WHERE trigger_kind = 'MANUAL'") == "2", "Attempt origin/count differs")
+            require(self.sql(database, "SELECT count(*) FROM bls_cpi_collection_attempts a LEFT JOIN bls_cpi_collection_results r USING (attempt_id) WHERE r.attempt_id IS NULL") == "0", "Manual result missing")
+        require(self.sql("wsr", "SELECT count(*) FROM bls_cpi_collection_results r JOIN bls_cpi_captures c USING (capture_id, captured_at) WHERE r.status = 'SAVED'") == "1", "SAVED lacks exact receipt")
+        require(self.sql("malformed_test", "SELECT failure_code FROM bls_cpi_collection_results WHERE status = 'FAILED'") == "PARSE", "Malformed result lost closed failure stage")
+        require(self.sql("schedule_test", "SELECT count(*) FROM bls_cpi_collection_attempts") == "0", "Restart invented an attempt")
+        self.stage("V11 durable manual SAVED/SKIPPED/RATE_LIMITED/FAILED evidence and zero startup attempts verified")
         for name in self.containers:
             info = self.inspect("container", name)
             require(not info["HostConfig"].get("PortBindings"), "Test published a host port")
