@@ -188,9 +188,16 @@ class HarnessSafetyTests(unittest.TestCase):
                 with tarfile.open(archive, "w") as bundle:
                     item = tarfile.TarInfo(name)
                     item.type, item.size = kind, size
-                    bundle.addfile(item)
-                with self.assertRaises(ValueError):
+                    # Python 3.13 requires a payload for a nonempty regular
+                    # file. Exercise our size guard with a complete archive.
+                    with io.BytesIO(b"\0" * size) as content:
+                        bundle.addfile(item, content)
+                reason = ("Build archive size exceeded" if size else
+                          "Linked or special build archive entry" if kind != tarfile.REGTYPE else
+                          "Unsafe build archive path")
+                with self.assertRaisesRegex(ValueError, reason):
                     worker.export_build_context(archive, root / "context")
+                self.assertEqual(list((root / "context").iterdir()), [])
 
     def test_build_context_exports_exact_git_archive_bytes_not_neighbor_files(self):
         with tempfile.TemporaryDirectory(prefix="wsr-cpi-export-test-") as temp:

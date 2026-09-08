@@ -7955,3 +7955,36 @@ configured origin or any network endpoint.
   changes and ignored reports. Remote push, PR creation, merge and deployment
   are not included. Next: review/PR and hosted CI, then separately approved
   worker supervision/status work; server activation waits for the actual host.
+
+## 2026-09-08 — PR #14 / CI #39: Python 3.13 archive-fixture compatibility
+
+- User reported one failed CI job for `cc8968d`. Inspect PR #14 and CI #39
+  (`34196298382`): Web, API and Call audit integration passed; Repository
+  contracts failed in the current Python test step before historical execution.
+  Job `101964665755` reports `ValueError: fileobj not provided for non zero-size
+  regular file` while constructing the `large` archive test fixture.
+- The development interpreter is Python 3.12.14, while hosted CI uses 3.13.15.
+  The old test passed only a header with size 8,000,001 to `TarFile.addfile`;
+  Python 3.13 requires the corresponding payload. Failure occurs during test
+  setup, not inside the production archive size guard or CPI collection.
+- Reproduce the same failure with the cached Linux Python 3.13 image, no
+  network, a read-only root, non-root UID, bounded tmpfs, and only the specific
+  test/module/model/PyYAML inputs mounted read-only. No repository root, `.env`,
+  Docker socket or existing database is mounted into that diagnostic container.
+- Change only `scripts/ci/test_cpi_worker_contracts.py`: provide the full bounded
+  synthetic payload through BytesIO. Require each specific size/path/type
+  rejection message and an empty output directory. Do not catch setup errors
+  as a successful guard check, skip the case, downgrade CI Python, loosen size
+  limits, modify runtime code or change current-source hashes.
+- The same Linux/Python 3.13 focused run now passes 17/17 tests (0.025s).
+  Windows/Python 3.12 full current suite: 244 total, 238 PASS / six existing
+  capability skips, zero failures/errors (38.007s); log
+  `.cache/adr066-ci39-fix-tests.log`. CI size limits, current product custody and
+  whitespace checks pass. No Web/API/runtime change, so those builds, responsive
+  checks and the Docker worker integration were not repeated locally.
+- Preserve the user's `apps/web/next-env.d.ts` at SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  Only the test correction and this record go into the follow-up commit on
+  `feature/p5-cpi-worker-container` / PR #14. Updated hosted CI still needs
+  confirmation after push; do not infer a full pass from the three prior jobs.
+  No actual key use, collection activation, deployment or merge is included.
