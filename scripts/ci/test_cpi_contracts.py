@@ -34,8 +34,8 @@ class CpiCustodyTests(unittest.TestCase):
                               self.current if current is None else current)
 
     def test_closed_inventory_without_general_product_exceptions(self):
-        self.assertEqual(len(cpi.CPI_PATHS), 31)
-        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 25)
+        self.assertEqual(len(cpi.CPI_PATHS), 38)
+        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 32)
         self.assertFalse(cpi.CPI_PATHS & bridge.FIXED_CI_PATHS)
         self.assertFalse(cpi.CPI_PATHS & bridge.NAVIGATION_PATHS)
         self.assertNotIn(bridge.NEXT_ENV, cpi.CPI_PATHS)
@@ -55,6 +55,21 @@ class CpiCustodyTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Unreviewed committed CPI"):
                     self.verify({**self.current, relative: "100755 blob " + "0" * 40})
 
+    def test_only_exact_adr064_committed_predecessors_are_accepted(self):
+        self.assertEqual(len(cpi.PREVIOUS_RECORDS), 2)
+        previous = {**self.current, **cpi.PREVIOUS_RECORDS}
+        self.assertEqual(self.verify(previous), previous)
+        for relative, record in cpi.PREVIOUS_RECORDS.items():
+            with self.subTest(path=relative):
+                old = bridge.git(SOURCE, "show", "dc55eda73cacf437cde9a27417326df99f923687:" + relative)
+                self.assertEqual(blob_record(old), record)
+                with self.assertRaisesRegex(ValueError, "Unreviewed committed CPI"):
+                    self.verify({**self.current, relative: "100644 blob " + "f" * 40})
+                (self.root / relative).write_bytes(old)
+                with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
+                    self.verify(previous)
+                (self.root / relative).write_bytes(self.expected[relative])
+
     def test_missing_source_and_stale_working_bytes_never_fall_back(self):
         for relative in cpi.CPI_PATHS:
             path = self.root / relative
@@ -70,6 +85,13 @@ class CpiCustodyTests(unittest.TestCase):
         for relative in cpi.CPI_PATHS:
             with self.assertRaisesRegex(ValueError, "CPI baseline"):
                 self.verify(baseline={**self.baseline, relative: "120000 blob " + "1" * 40})
+
+    def test_predecessor_support_does_not_allow_deleted_baseline_paths(self):
+        for relative in cpi.BASELINE_RECORDS:
+            current = dict(self.current)
+            current.pop(relative)
+            with self.assertRaisesRegex(ValueError, "Unreviewed committed CPI"):
+                self.verify(current)
 
     def test_crlf_and_custody_snapshot(self):
         for relative, raw in self.expected.items():

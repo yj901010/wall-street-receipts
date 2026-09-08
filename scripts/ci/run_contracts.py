@@ -60,6 +60,7 @@ FIXED_CI_PATHS = frozenset({
     "decisions/ADR-063-sec-failed-query-recovery.md",
     "scripts/ci/cpi_contracts.py", "scripts/ci/test_cpi_contracts.py",
     "decisions/ADR-064-bls-cpi-retrieval-dashboard.md",
+    "decisions/ADR-065-opt-in-kst-cpi-schedule.md",
 })
 
 
