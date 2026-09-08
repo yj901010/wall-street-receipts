@@ -1,0 +1,57 @@
+# Standalone, opt-in worker. Never merge this into the public API/web model.
+services:
+  cpi-worker:
+    image: ${WSR_CPI_IMAGE:?Select a locally built reviewed API image}
+    pull_policy: never
+    profiles: [cpi-worker]
+    entrypoint: [java, -jar, /opt/wsr/application.jar]
+    command: [--wsr-schedule-bls-cpi]
+    user: "10001:10001"
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: "no"
+    stop_grace_period: 40s
+    mem_limit: 512m
+    cpus: 0.5
+    pids_limit: 128
+    tmpfs:
+      - /tmp:size=64m,uid=10001,gid=10001,mode=1770
+    environment:
+      POSTGRES_HOST: ${WSR_CPI_DB_HOST:?Select the database hostname on the private network}
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${WSR_CPI_DB_NAME:?Select the intended database}
+      POSTGRES_USER: ${WSR_CPI_DB_USER:?Select the database user}
+      SPRING_CONFIG_LOCATION: classpath:/
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      SPRING_MAIN_WEB_APPLICATION_TYPE: none
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8 -Duser.timezone=UTC
+      TZ: UTC
+    secrets:
+      - source: bls_key
+        target: BLS_REGISTRATION_KEY
+      - source: database_password
+        target: spring.datasource.password
+    networks: [database, provider]
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+secrets:
+  bls_key:
+    file: ${WSR_CPI_BLS_KEY_FILE:?Select an absolute BLS key file path}
+  database_password:
+    file: ${WSR_CPI_DB_PASSWORD_FILE:?Select an absolute database password file path}
+
+# The operator must verify both existing networks. The local rehearsal creates
+# two internal networks; this file itself creates none and publishes no ports.
+networks:
+  database:
+    external: true
+    name: ${WSR_CPI_DB_NETWORK:?Select the existing private database network}
+  provider:
+    external: true
+    name: ${WSR_CPI_PROVIDER_NETWORK:?Select the separately approved provider network}

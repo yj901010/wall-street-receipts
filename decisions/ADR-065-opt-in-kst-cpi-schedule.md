@@ -119,3 +119,7 @@ pinned ADR-064 committed predecessor objects are accepted before committing;
 current reviewed working bytes remain mandatory. The baseline, historical
 workflow, 84 historical script bodies and web sources remain unchanged.
 Actual results and remaining verification boundaries belong in IMPLEMENTATION_LOG.md.
+
+Follow-up: [ADR-066](ADR-066-isolated-cpi-worker-container.md) adds the standalone
+opt-in Docker model and a disposable synthetic HTTPS/PostgreSQL rehearsal.
+It does not activate the worker on this PC or the future home server.
