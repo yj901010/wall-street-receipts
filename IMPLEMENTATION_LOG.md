@@ -7988,3 +7988,88 @@ configured origin or any network endpoint.
   `feature/p5-cpi-worker-container` / PR #14. Updated hosted CI still needs
   confirmation after push; do not infer a full pass from the three prior jobs.
   No actual key use, collection activation, deployment or merge is included.
+
+## 2026-09-08 — P5 / ADR-067: Read-only CPI worker status inspection
+
+### Starting point and scope
+
+- Verify PR #14 was user-merged at
+  `276db2263146ec29966401786c829814c453bbe8`. Corrected head `87bcc23` passed
+  CI #40 (`34197096507`), all four jobs, including the formerly failing Python
+  step and full Repository contracts job. Start
+  `feature/p5-cpi-worker-status` from that merged develop revision.
+- User requested the next implementation. Select a one-shot, read-only worker
+  inspection command; no additional API key, notification account or actual
+  home server is needed to implement and test it. This development PC remains
+  distinct from the future deployment host.
+
+### Modules and behavior
+
+- `scripts/inspect-cpi-worker.py`: standard-library Python 3.12+ CLI, accepting
+  an explicit local container selector and optional JSON output. Read selected
+  Docker identity/state fields, then bounded timestamped logs for the current
+  start; inspect the pinned full container ID again to reject restart/replacement
+  races. No container listing, exec, state mutation, DB query, provider fetch,
+  secret-file read, schedule registration or external notification.
+- Separate container state, recorded next KST plan, latest retained result,
+  last retained SAVED marker and logged Retry-After deadline. Never calculate a
+  replacement plan, turn a cooldown skip into success, or imply a retained log
+  proves current DB contents/CPI freshness. Missing evidence remains unknown.
+  Reports explicitly say UNVERIFIED / RETAINED_LOGS_NOT_DB_VERIFIED and no
+  heartbeat, DB check or complete history. All visible timestamps use KST.
+- Bound log reads to 500 lines / 1 MiB across both pipes and explicit start/end
+  UTC timestamps. Process deadline is ten seconds plus bounded teardown. Read
+  both pipes concurrently and terminate only the owned CLI process on overflow
+  or timeout. Inspect selects fields at the daemon, excluding Env, mounts,
+  labels, State.Error and health output; no raw command/log/error echo.
+- Require the exact scheduled command/entrypoint and a local Docker endpoint;
+  strip inherited key, proxy, Java/Spring and Compose overrides. Recognize only
+  the current logger and closed event formats. Sort exact nanoseconds across
+  stdout/stderr, reject conflicting ties, and flag unknown/malformed/future or
+  pre-start result records. No arbitrary exception becomes a success result.
+- Five-minute observation grace after a logged plan is DUE_WITHIN_GRACE, not
+  proof that a call began. Stopped workers are INACTIVE. Exit 0 means no observed
+  attention flags, not proof of health; 1 means attention; 2 means inspection
+  unavailable. ADR-067 documents this boundary and exact usage.
+- `scripts/ci/test_cpi_worker_status.py`: 26 offline tests covering evidence
+  states, KST rollover, restart races, wrong/secret-bearing input, endpoint and
+  command restrictions, redaction, hard output bounds and deadlines.
+- `scripts/verify-cpi-worker-status.py`: explicit disposable DEMO acceptance
+  reusing ADR-066's committed-input image build, internal networks, tmpfs DB,
+  synthetic secrets, temporary TLS fixture and owner-checked cleanup. Exercise
+  the actual inspector CLI for running/stopped/restarted states and reject an
+  unrelated fixture container; assert zero provider requests and zero captures.
+- Add exactly the two new command/harness paths to closed CPI custody (43 paths,
+  six baseline replacements, 37 additions). No old hash/predecessor exception,
+  historical script, workflow, runtime Java, migration, Compose or web source
+  changed. Existing routes remain `/market/cpi` and `/v1/macro/cpi`.
+
+### Verification and handoff
+
+- Final Windows/Python 3.12 suite: 270 total, 264 PASS, six existing Windows
+  capability skips, zero failures/errors (33.748s). Log:
+  `.cache/adr067-ci-tests-final.log`.
+- Linux/Python 3.13 non-root/offline container: all 26 new tests PASS (0.603s),
+  with only the two required test/inspector files mounted read-only. This
+  explicitly checks the interpreter family that exposed the previous CI issue.
+- Actual Docker acceptance passed before and after the final evidence/output
+  refinements. Final report `.cache/adr067-c872d1e7310805d50ab799fa.json` and
+  matching diagnostic log: running plan recognized, stopped state INACTIVE,
+  restarted incarnation refreshed, wrong target rejected, zero synthetic/real
+  provider HTTP requests, zero captures. Only owned test resources removed;
+  sanitized DEMO reports and shared public image/build cache remain.
+- Current product custody, CI size limits, current DEMO fixtures and whitespace
+  checks PASS. Docker API image build uses unchanged reviewed source. No Web/API
+  code/layout change, so full Maven/Web/responsive suites were not rerun locally.
+  This candidate's hosted CI/full historical Linux execution remains pending;
+  prior CI #40 is not counted as a pass for this new feature.
+- Existing development DBs, preview processes, root `.env` and user-owned
+  `apps/web/next-env.d.ts` are preserved. The latter stays at SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  No production worker, actual collection, external alert, server configuration,
+  remote push, new PR or merge is activated by this local implementation slice.
+- Next: review/PR/hosted CI for the focused commit. Durable attempt/heartbeat
+  records, protected operator presentation, alert delivery and actual home-server
+  supervision remain separate decisions. Obtain the user's channel or real host
+  details before those require credentials or activation; do not confuse this
+  passive log inspector with completed production health monitoring.

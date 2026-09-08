@@ -150,3 +150,7 @@ Actual execution results and limits are recorded in IMPLEMENTATION_LOG.md.
 - [Docker Compose services and file-backed secret permissions](https://docs.docker.com/reference/compose-file/services/)
 - [Compose external/internal network definitions](https://docs.docker.com/reference/compose-file/networks/)
 - [Compose secret file delivery](https://docs.docker.com/compose/how-tos/use-secrets/)
+
+Follow-up: [ADR-067](ADR-067-read-only-cpi-worker-status.md) adds a bounded,
+read-only local Docker status inspector. It distinguishes retained log evidence
+from DB verification and does not activate collection or supervision.

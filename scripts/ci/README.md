@@ -206,3 +206,10 @@ endpoint safety, committed-only archive extraction, log sanitation, final DB
 readiness, exact negative-case reasons, calendar boundaries and owner-only cleanup.
 The runtime acceptance remains an explicitly invoked local test; no provider
 key or host scheduling is introduced into CI.
+
+ADR-067 adds two exact pinned paths for the read-only status inspector and its
+disposable Docker acceptance (43 CPI paths total, 37 additions). The current
+offline tests cover retained-log versus DB evidence, KST dates, incarnation
+races, fixed read-only commands, safe endpoint selection, redacted errors and
+hard stdout/stderr byte/deadline limits. No runtime source or historical body is
+changed; the Docker acceptance is still explicit local work, not a CI daemon.

@@ -34,8 +34,8 @@ class CpiCustodyTests(unittest.TestCase):
                               self.current if current is None else current)
 
     def test_closed_inventory_without_general_product_exceptions(self):
-        self.assertEqual(len(cpi.CPI_PATHS), 41)
-        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 35)
+        self.assertEqual(len(cpi.CPI_PATHS), 43)
+        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 37)
         self.assertFalse(cpi.CPI_PATHS & bridge.FIXED_CI_PATHS)
         self.assertFalse(cpi.CPI_PATHS & bridge.NAVIGATION_PATHS)
         self.assertNotIn(bridge.NEXT_ENV, cpi.CPI_PATHS)
