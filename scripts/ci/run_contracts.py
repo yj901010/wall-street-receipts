@@ -25,6 +25,7 @@ import yaml
 from validate_limits import load_workflow
 from current_contracts import TEST_PATH, verify_current_test
 from navigation_contracts import ADDED_PATHS, NAVIGATION_PATHS, verify_navigation
+from cpi_contracts import CPI_ADDED_PATHS, CPI_PATHS, verify_cpi
 from legacy_environment import legacy_step_environment
 from historical_guard_migrations import migrated_python_body
 
@@ -57,6 +58,8 @@ FIXED_CI_PATHS = frozenset({
     "decisions/ADR-061-sec-locator-input-recovery.md",
     "decisions/ADR-062-sec-result-query-refinement.md",
     "decisions/ADR-063-sec-failed-query-recovery.md",
+    "scripts/ci/cpi_contracts.py", "scripts/ci/test_cpi_contracts.py",
+    "decisions/ADR-064-bls-cpi-retrieval-dashboard.md",
 })
 
 
@@ -237,11 +240,12 @@ def validate_product(root, manifest):
     current = tree_records(git(root, "ls-tree", "-rz", "HEAD"))
     adjusted = verify_current_test(root, git, baseline, current)
     adjusted = verify_navigation(root, git, adjusted, current)
+    adjusted = verify_cpi(root, git, adjusted, current)
     compare_product_trees(adjusted, current, allowed)
     changed = set(filter(None, git(root, "diff", "--name-only", "-z", "HEAD").decode().split("\0")))
     untracked = set(filter(None, git(root, "ls-files", "--others", "--exclude-standard", "-z").decode().split("\0")))
-    require(changed <= allowed | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS
-            and untracked <= allowed | ADDED_PATHS,
+    require(changed <= allowed | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS | CPI_PATHS
+            and untracked <= allowed | ADDED_PATHS | CPI_ADDED_PATHS,
             "Unexpected uncommitted product or untracked file")
     require(not git(root, "diff", "--cached", "--name-only", "--", NEXT_ENV),
             "User-owned Next declaration must not be staged")
@@ -249,7 +253,7 @@ def validate_product(root, manifest):
 
 def snapshot(root, manifest):
     files = {}
-    for relative in sorted(permitted_paths(manifest) | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS):
+    for relative in sorted(permitted_paths(manifest) | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS | CPI_PATHS):
         path = root / relative
         require(not path.is_symlink(), "Source custody path must not be linked")
         files[relative] = digest(path.read_bytes()) if path.is_file() else None

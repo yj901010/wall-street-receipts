@@ -171,3 +171,19 @@ clock defaults, DEMO substitution, verified-evidence copy, and automatic fetch.
 The historical baseline, 84 bodies, workflow, and general product exclusions
 remain unchanged. Current Vitest/Playwright exercise the new boundary behavior;
 the historical checkout is not evidence that this feature works.
+
+## Exact CPI retrieval migration (ADR-064)
+
+`cpi_contracts.py` adds a separate closed inventory of 31 paths: six exact
+baseline-file replacements and 25 additions. It pins the collector, parser,
+decimal calculation, repository, read API, V10 migration, web route and tests.
+No CPI path overlaps the SEC navigation inventory or enters `FIXED_CI_PATHS`.
+Current bytes are mandatory even before commit; only exact baseline or reviewed
+committed blobs are accepted. Missing/stale/modified/renamed/executable content
+cannot become an exemption. All paths participate in custody snapshots.
+
+Current Java and Vitest tests validate missing-month behavior, fixed-origin
+bounded transport, conservative 429 backoff, atomic PostgreSQL cooldown/replay,
+non-PIT metadata, server-only reads and explicit disabled/empty/error states.
+The new browser test preserves the existing market evidence keyboard order.
+Synthetic CPI data is test-only; CI does not call BLS or need a BLS key.
