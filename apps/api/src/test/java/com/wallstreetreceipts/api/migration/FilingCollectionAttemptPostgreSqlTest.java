@@ -60,7 +60,7 @@ class FilingCollectionAttemptPostgreSqlTest {
             new PostgreSQLContainer<>("postgres:17-alpine");
 
     @Test
-    void upgradesV8AndAppliesFreshV9WithFourAttemptTables() {
+    void upgradesV8AndAppliesFreshV10WithFourAttemptTables() {
         String upgradeSchema = "filing_attempt_upgrade_v9";
         Flyway throughV8 = flyway(upgradeSchema, "8");
         throughV8.migrate();
@@ -70,7 +70,7 @@ class FilingCollectionAttemptPostgreSqlTest {
         Flyway upgraded = flyway(upgradeSchema, null);
         upgraded.migrate();
         assertThat(upgraded.info().current().getVersion().getVersion())
-                .isEqualTo("9");
+                .isEqualTo("10");
         assertThat(attemptTableCount(jdbc(scopedDataSource(upgradeSchema)), upgradeSchema))
                 .isEqualTo(4);
 
@@ -78,7 +78,7 @@ class FilingCollectionAttemptPostgreSqlTest {
         Flyway fresh = flyway(freshSchema, null);
         fresh.migrate();
         assertThat(fresh.info().current().getVersion().getVersion())
-                .isEqualTo("9");
+                .isEqualTo("10");
         assertThat(attemptTableCount(jdbc(scopedDataSource(freshSchema)), freshSchema))
                 .isEqualTo(4);
     }
@@ -536,7 +536,7 @@ class FilingCollectionAttemptPostgreSqlTest {
         Flyway latest = flyway(schema, null);
         latest.migrate();
         assertThat(latest.info().current().getVersion().getVersion())
-                .isEqualTo("9");
+                .isEqualTo("10");
         DriverManagerDataSource dataSource = scopedDataSource(schema);
         NamedParameterJdbcTemplate jdbc = jdbc(dataSource);
         JdbcFilingCatalogCaptureRepository rootRepository =

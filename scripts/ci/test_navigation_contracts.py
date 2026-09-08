@@ -295,12 +295,14 @@ class NavigationMigrationTests(unittest.TestCase):
         for relative in navigation.ADDED_PATHS:
             with patch.object(bridge, "git", side_effect=[b"", b"", b"", relative.encode() + b"\0", b""]), \
                     patch.object(bridge, "verify_current_test", return_value={}), \
+                    patch.object(bridge, "verify_cpi", return_value={}), \
                     patch.object(bridge, "verify_navigation", return_value={}) as verify:
                 bridge.validate_product(SOURCE, manifest)
                 verify.assert_called_once()
         for relative in (navigation.SEC_DIRECTORY + "unreviewed.ts", "apps/web/src/lib/providers/sec-manifest-audit-query.ts"):
             with patch.object(bridge, "git", side_effect=[b"", b"", b"", relative.encode() + b"\0"]), \
                     patch.object(bridge, "verify_current_test", return_value={}), \
+                    patch.object(bridge, "verify_cpi", return_value={}), \
                     patch.object(bridge, "verify_navigation", return_value={}):
                 with self.assertRaisesRegex(ValueError, "Unexpected uncommitted"):
                     bridge.validate_product(SOURCE, manifest)

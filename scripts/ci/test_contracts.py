@@ -305,6 +305,7 @@ class ProductTreeTests(unittest.TestCase):
             with self.subTest(changed=changed, untracked=untracked):
                 with patch.object(bridge, "git", side_effect=[b"", b"", changed, untracked]), \
                         patch.object(bridge, "verify_current_test", return_value={}), \
+                        patch.object(bridge, "verify_cpi", return_value={}), \
                         patch.object(bridge, "verify_navigation", return_value={}):
                     with self.assertRaisesRegex(ValueError, "Unexpected uncommitted"):
                         bridge.validate_product(SOURCE, manifest)
@@ -314,10 +315,12 @@ class ProductTreeTests(unittest.TestCase):
         changed = (bridge.NEXT_ENV + "\0").encode()
         with patch.object(bridge, "git", side_effect=[b"", b"", changed, b"", b""]), \
                 patch.object(bridge, "verify_current_test", return_value={}), \
+                patch.object(bridge, "verify_cpi", return_value={}), \
                 patch.object(bridge, "verify_navigation", return_value={}):
             bridge.validate_product(SOURCE, manifest)
         with patch.object(bridge, "git", side_effect=[b"", b"", changed, b"", changed]), \
                 patch.object(bridge, "verify_current_test", return_value={}), \
+                patch.object(bridge, "verify_cpi", return_value={}), \
                 patch.object(bridge, "verify_navigation", return_value={}):
             with self.assertRaisesRegex(ValueError, "must not be staged"):
                 bridge.validate_product(SOURCE, manifest)

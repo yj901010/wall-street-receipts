@@ -7678,3 +7678,108 @@ configured origin or any network endpoint.
 - Next: review/upload this focused branch and verify its actual hosted CI before
   considering merge. No remote upload, PR creation, merge, release, or deployment
   is included in this implementation slice.
+
+## 2026-09-08 — P5 / ADR-064: Stored BLS CPI and core CPI
+
+### Scope and implementation
+
+- User approved CPI/core CPI first, then started Docker Desktop when asked.
+  Branch `feature/p5-bls-cpi-dashboard` starts at merged `origin/develop`
+  `4f996c553f740d9aefb7e6e6d1e511715a9145dd`. This PC is not the home server.
+- Add `/market/cpi` and a link after the existing `/market` publication surface,
+  preserving its keyboard order. Korean/English SSR shows two latest monthly
+  indices/YoY values, 24 calendar rows with visible gaps, footnotes, KST retrieval
+  time, source links, response hash and receipt ID. Other surfaces remain DEMO.
+- New modules: `domain/cpi/CpiSnapshot` for decimal YoY; `application/cpi` for
+  the repository port and explicit collector CLI; `infrastructure/provider/bls`
+  for fixed-origin bounded HTTP and strict parsing; `JdbcCpiRepository` for raw
+  append/replay plus durable collection gate; `web/cpi/CpiController` for stored
+  reads. Web `lib/cpi*` supplies strict server-only transport/model and
+  `app/market/cpi/*` supplies view/loading/error/bilingual copy.
+- New Flyway V10 adds CPI receipts and the singleton collection gate. Earlier
+  migrations and their packaged inventory checksums/hashes are unchanged.
+  Update only current-latest version/count assertions and append exact V10
+  inventory identity; V9-to-V10 PostgreSQL upgrade is tested.
+- Explicit one-shot `--wsr-collect-bls-cpi`, no web server and no scheduler.
+  One fixed BLS HTTPS POST, no redirects/retries, 20-second deadline, 1 MiB
+  streaming limit. Atomic 15-minute DB gate persists after failure/restarts;
+  429 honors Retry-After before body reads with a 24-hour minimum. Strict UTF-8,
+  duplicate-key, source-shape, period, series and numeric validation fail closed.
+- `GET /v1/macro/cpi` is opt-in (`APP_CPI_ENABLED=true`), rejects query input,
+  serves only stored data and uses no-store. `CPI_PROVIDER=disabled|api` defaults
+  off; API mode requires `API_BASE_URL`, has a 5-second/256 KiB bound, and has no
+  fixture fallback. Synthetic CPI fixtures exist only in tests and render DEMO.
+- Monthly NSA retrievals are not real-time quotes, release-time snapshots or
+  original-release vintages. Missing indices and prior-year months remain null.
+  BigDecimal rounds the exact YoY calculation once, HALF_UP to one decimal.
+  See ADR-064 for source policy, operator commands and remaining decisions.
+
+### Actual BLS and PostgreSQL evidence
+
+- Existing ignored root `.env` BLS key was used privately for an initial official
+  API probe and one actual collector request; no key was printed or copied to
+  another file. No BEA/EIA/stock/option/futures request was made.
+- Created isolated loopback PostgreSQL container `wsr-adr064-cpi-owned`, labelled
+  `wsr.owner=adr064-cpi`; existing `wall-street-receipts-postgres-1` was untouched.
+  Actual CLI saved receipt `a54e7e6f-5a2c-44d7-8794-30bb8b4da919`, captured
+  `2026-09-08T01:58:22.086607Z` / `2026-09-08 10:58:22.086607 KST`.
+- Stored query API HTTP 200, Cache-Control no-store, exact receipt identity,
+  `OBSERVED_MONTHLY`, 43 rows per series, latest month `2026-07`. Retrieved indices:
+  all-items `333.918`, core `337.133`; calculated YoY `3.4%` and `2.5%`.
+  These describe this saved retrieval, not a promise of current/live values.
+- Six final production-browser checks PASS: Korean/English × 1440/1280/390px,
+  24 rows, exact receipt/hash/index/YoY match, KST, no DEMO substitution, visible
+  keyboard outline, contained horizontal table scroll and no document overflow,
+  browser error/warning or browser-to-provider request. Screenshots under
+  `.cache/adr064-cpi-*.png`; inspect Korean desktop and mobile renders.
+
+### Verification results and limitations
+
+- API: final 2,421 tests PASS, zero failures/errors/skips, including real
+  PostgreSQL V9→V10, concurrent gate claims, replay/hash mismatch, missing values,
+  decimal rounding, query rejection and body-independent 429 handling.
+  Packaging PASS after stopping the owned API process to release Windows' JAR
+  lock. The preceding verify invocation completed all tests but could not rename
+  the running JAR; do not report that invocation as an end-to-end verify PASS.
+- Web: final full ESLint PASS; Vitest 55 files / 760 tests PASS (16.58s).
+  Final default Next/Turbopack production build and TypeScript PASS, 13 routes.
+  Secret-free source mirrors preserve the original `.next` and user declaration.
+  An exploratory webpack build found a pre-existing layout helper export that
+  webpack's generated validator rejects; webpack support is not claimed.
+- Final full Playwright: 84/84 PASS, one worker, retries disabled, 2.0 minutes,
+  across 1440x1000, 1280x900 and 390x844, on CI-equivalent development server.
+  Earlier production-HTTP run passed 81 and failed three existing Secure-cookie
+  language tests; no cookie-security setting was weakened. Initial development
+  run found the inserted link consuming the existing keyboard traversal budget;
+  put it after the existing publication surface and rerun the entire suite.
+  One initial cold-development focus style timing failure did not recur in the
+  final single-worker full run; no assertion was suppressed or retried.
+- Current CI contracts: 225 tests, 219 PASS / six Windows capability skips;
+  final run 48.897s. Workflow limit guard, current DEMO fixture validation and
+  baseline/current-source parity PASS. Closed CPI custody covers 31 exact paths,
+  including six replacements and 25 additions; 84 historical bodies unchanged.
+- Full historical execution is NOT a pass: initial local attempts selected WSL
+  bash and rejected Windows script paths. A local-only explicit Git Bash launcher
+  progressed through steps 1, 3–12, then failed the bounded step-13 host-fact
+  verification run. Always-restore steps ran and owned checkouts were removed;
+  a late child PASS message is not evidence of complete execution. Remaining
+  historical steps, Linux-only runtime checks and this candidate's hosted CI
+  remain unverified. Do not treat prior merged CI as this candidate's result.
+- Exact known-local-credential scan found no matches in changed source files
+  or browser build assets. `.env` stays ignored. User-owned `apps/web/next-env.d.ts`
+  remains unchanged at SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+
+### Handoff and next work
+
+- Keep the isolated local CPI preview available at
+  `http://127.0.0.1:3065/market/cpi`, API loopback port 8064 and the labelled test
+  PostgreSQL only for viewing this result. These are development verification
+  processes, not an installed service or a home-server deployment. Stop the
+  separate regression development server after checks; keep logs/screenshots.
+- Local startup/key locations are documented in ADR-064. No additional key is
+  needed for this slice. Collection is manual, not scheduled; data does not
+  refresh when visitors open the page. Later work: Linux/hosted CI and review,
+  operator-approved periodic collection/retention, then separate home-server
+  runtime/backup/release acceptance. No remote push, PR creation, merge or
+  production/public-data configuration change is included in this slice.

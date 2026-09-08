@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { KstTimestamp } from "@/components/kst-timestamp";
 import { getLocale } from "@/lib/i18n/server";
@@ -50,6 +51,7 @@ export default async function MarketPage() {
         </section>
 
         <MarketBoard snapshot={snapshot} locale={locale} />
+        <p><Link href="/market/cpi" prefetch={false}>{locale === "en" ? "US CPI · stored monthly observations →" : "미국 CPI · 저장된 월간 관측자료 →"}</Link></p>
       </div>
     </main>
   );
