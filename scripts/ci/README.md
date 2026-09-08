@@ -159,3 +159,15 @@ unchanged evidence while editing, and a same-origin native document GET that
 discards child pagination and preserves exact UTC keys. The application retains
 its existing JavaScript-dependent Next/React result streaming; native GET does
 not imply a fully JavaScript-disabled site.
+
+## Exact failed-query recovery migration (ADR-063)
+
+The cumulative inventory is now 23 paths: the same seven exact runtime edits,
+nine test hashes, three locator source hashes, and four added helper/test hashes.
+Error and not-found boundaries add only the reviewed recovery island. Five exact
+ADR-062 predecessor objects are admitted for development, never stale working
+bytes. New mutation tests reject duplicate selection, parser bypass, stale keys,
+clock defaults, DEMO substitution, verified-evidence copy, and automatic fetch.
+The historical baseline, 84 bodies, workflow, and general product exclusions
+remain unchanged. Current Vitest/Playwright exercise the new boundary behavior;
+the historical checkout is not evidence that this feature works.

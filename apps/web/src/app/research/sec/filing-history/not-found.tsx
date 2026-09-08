@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import { getLocale } from "@/lib/i18n/server";
 import { SEC_MANIFEST_AUDIT_ROUTE } from "@/lib/providers/sec-manifest-audit-query";
 import { getSecManifestAuditMessages } from "./messages";
+import { FailedQueryRecovery } from "./failed-query-recovery";
 
 export default async function SecFilingHistoryAuditNotFound() {
   const messages = getSecManifestAuditMessages(await getLocale()).states;
@@ -16,6 +17,7 @@ export default async function SecFilingHistoryAuditNotFound() {
         <Link className="text-action" href={SEC_MANIFEST_AUDIT_ROUTE}>
           {messages.returnLocator}
         </Link>
+        <FailedQueryRecovery />
       </div>
     </main>
   );

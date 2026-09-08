@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { useLocale } from "@/components/locale-provider";
 import { SEC_MANIFEST_AUDIT_ROUTE } from "@/lib/providers/sec-manifest-audit-query";
 import { getSecManifestAuditMessages } from "./messages";
+import { FailedQueryRecovery } from "./failed-query-recovery";
 
 export default function SecFilingHistoryAuditError({
   reset,
@@ -27,6 +28,7 @@ export default function SecFilingHistoryAuditError({
             {messages.returnLocator}
           </Link>
         </div>
+        <FailedQueryRecovery />
       </div>
     </main>
   );

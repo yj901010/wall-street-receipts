@@ -7597,3 +7597,84 @@ configured origin or any network endpoint.
   CI before considering merge. No remote upload, PR, merge, release, or
   deployment is part of this implementation slice. HTTPS acceptance and full
   JavaScript-disabled rendering remain separate boundaries, not completed work.
+
+## 2026-09-08 — ADR-063: Recover failed SEC lookup inputs
+
+### Scope and implementation
+
+- User reported the prior MR merged. Read-only remote checks confirmed PR #10
+  merged into `develop` at `d3679821be13b957fb6c0688f06c8cceb0d0b7e6` and its
+  merged push CI #32 (`34103508328`) completed all four jobs successfully.
+  Branch `feature/p5-sec-failed-query-recovery` from that fetched develop;
+  preserve the user's unstaged generated declaration and the historical chain.
+- At the existing `/research/sec/filing-history` error/not-found boundaries,
+  add `failed-query-recovery.tsx`, localized copy, and single-column failure
+  panel styles. No route, dependency, API, fixture, schema, or provider changes.
+- The narrow client island reads the current URL because these Next boundaries
+  do not receive page search parameters. Wrap the route hook in Suspense. Keep
+  duplicates as arrays and run the unchanged strict parser: absent, incomplete,
+  malformed, duplicate, and unknown-key queries do not select a recovery query.
+- A valid complete query shows a collapsed disclosure with the attempted ID
+  and original UTC instant, including microseconds. Explicitly distinguish
+  inputs from verified evidence and do not imply the ID exists. Visual review
+  caught the reused "Known evidence identity" eyebrow; override it only in this
+  island with "Attempted lookup keys" and its Korean equivalent.
+- Reuse the native GET locator, no DEMO example. Opening/editing makes no read.
+  Submission sends exactly `manifestId`, `evaluationAsOf`, and `view=summary`;
+  child view/page/size are discarded. A full-query key discards unsent edits on
+  URL navigation. KST evidence display and exact UTC input identity are intact.
+- Preserve error reset/return controls, not-found/noindex handling, and strict
+  validation. No inferred result, synthetic fallback, auto retry, clock default,
+  fetch, persistence, or live-data claim. The recovery island needs JavaScript;
+  the existing return link remains. No full no-JavaScript site claim is made.
+- Extend the current-source migration to 23 exact paths: seven runtime edits,
+  nine test hashes, three locator source hashes, and four added helper/test
+  hashes. Five exact ADR-062 predecessor objects support pre-commit development
+  only; current working bytes are mandatory. Add stale/forged predecessor and
+  duplicate/parser/default/fetch/evidence-copy mutation checks. Keep all 84
+  historical bodies, baseline, workflow, and custody rules unchanged.
+
+### Actual local verification
+
+- Focused recovery/page unit checks: 46/46 PASS. The first run found only a test
+  label mismatch (`Retry` versus existing `Try again`); correct the assertion,
+  not the existing control. Final full Vitest: 52 files, 717/717 PASS, 15.03s.
+- Final full ESLint PASS, excluding only owned ignored verification mirrors.
+  Final Next production build with TypeScript and all 12 routes PASS. Use two
+  secret-free disposable source mirrors, never copying `.env`, original `.next`,
+  or the user's generated declaration; no dependency installation was needed.
+- Final full Chromium fixture regression (also passed before the eyebrow copy
+  adjustment): 81/81 PASS in 2.0 minutes, one worker, retries disabled, across 1440x1000,
+  1280x900, and 390x844. Covers Korean/English absence-to-evidence correction,
+  native GET, dropped child pagination, keyboard focus, noindex, exact UTC
+  microseconds, KST results, and no browser-to-private-API calls.
+- Final isolated closed-loopback API failure regression: 3/3 PASS, 7.5s, all
+  three responsive projects. Failure retains editable inputs without displaying
+  evidence; submitting an impossible calendar instant reaches the strict invalid
+  locator. Existing expected boundary/stream error classification is unchanged;
+  no arbitrary error suppression, fixture fallback, or live request is used.
+- Final visual geometry: 8/8 PASS for Korean/English at 1440px and 390px, four
+  production not-found and four development API-failure screenshots. No document
+  overflow, all fields contained, and vertically separated inputs/buttons. Inspect
+  Korean desktop and English mobile images for both states. The development
+  failure badge reflects the deliberately closed API, not a production widget.
+  Screenshots and owned-server logs remain in `.cache/adr063-failed-query-recovery/`.
+- Final Python CI suite: 218 total, 212 PASS, six Windows capability skips,
+  52.979s. Current-source validation, workflow-size gate, and unchanged current
+  DEMO fixture contracts PASS. No general product-path exemption was added.
+- Maven/PostgreSQL integration, all 84 historical executions, this candidate's
+  hosted CI, HTTPS production acceptance, release, and deployment were not run.
+  Prior merged CI success is not evidence for this new candidate.
+
+### Handoff boundary
+
+- No new API key, account, contact email, domain, home-server information, or
+  real provider request was needed. No `.env` content was read or published.
+  This development PC remains separate from the future Ubuntu home server.
+- Preserve unstaged `apps/web/next-env.d.ts` at SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`; exclude it
+  from the focused local feature commit. Clean up only owned test process trees
+  and verified disposable mirrors; retain screenshots/logs.
+- Next: review/upload this focused branch and verify its actual hosted CI before
+  considering merge. No remote upload, PR creation, merge, release, or deployment
+  is included in this implementation slice.
