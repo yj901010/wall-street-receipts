@@ -66,6 +66,7 @@ FIXED_CI_PATHS = frozenset({
     "decisions/ADR-067-read-only-cpi-worker-status.md",
     "scripts/ci/test_cpi_worker_status.py",
     "decisions/ADR-068-durable-cpi-attempt-ledger.md",
+    "decisions/ADR-069-protected-cpi-attempt-query.md",
 })
 
 

@@ -20,6 +20,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.http.HttpMethod;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wallstreetreceipts.api.web.security.ApiRequestRejectedHandler;
@@ -33,7 +35,8 @@ public class OperatorApiSecurityConfiguration {
 
     public static final String OPERATOR_AUTHORITY = "OPERATOR";
     private static final RequestMatcher OPERATOR_API =
-            PathPatternRequestMatcher.withDefaults().matcher("/internal/v1/sec/**");
+            new OrRequestMatcher(PathPatternRequestMatcher.withDefaults().matcher("/internal/v1/sec/**"),
+                    PathPatternRequestMatcher.withDefaults().matcher("/internal/v1/cpi/**"));
 
     @Bean
     AuthenticationProvider operatorBearerTokenAuthenticationProvider(
@@ -92,6 +95,9 @@ public class OperatorApiSecurityConfiguration {
                         .accessDeniedHandler(problemWriter))
                 .authenticationProvider(operatorBearerTokenAuthenticationProvider)
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.GET, "/internal/v1/cpi/**").hasAuthority(OPERATOR_AUTHORITY)
+                        .requestMatchers(HttpMethod.HEAD, "/internal/v1/cpi/**").hasAuthority(OPERATOR_AUTHORITY)
+                        .requestMatchers("/internal/v1/cpi/**").denyAll()
                         .anyRequest().hasAuthority(OPERATOR_AUTHORITY))
                 .addFilterBefore(
                         new OperatorBearerTokenAuthenticationFilter(

@@ -46,7 +46,9 @@ public final class ApiRequestRejectedHandler implements RequestRejectedHandler {
         problem.setTitle("Invalid query parameters");
         problem.setInstance(SAFE_INSTANCE);
         problem.setProperty("code", "INVALID_QUERY");
-        problem.setProperty("timestamp", clock.instant());
+        boolean cpi = request.getRequestURI() != null && request.getRequestURI().startsWith("/internal/v1/cpi/");
+        problem.setProperty("timestamp", cpi ? java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME
+                .format(clock.instant().atZone(java.time.ZoneId.of("Asia/Seoul"))) : clock.instant());
         problem.setProperty("requestId", requestId);
         problem.setProperty("violations", List.of());
 
@@ -64,6 +66,7 @@ public final class ApiRequestRejectedHandler implements RequestRejectedHandler {
         String requestUri = request.getRequestURI();
         return requestUri != null
                 && (requestUri.startsWith(OPERATOR_API_PREFIX)
+                || requestUri.startsWith("/internal/v1/cpi/")
                 || requestUri.startsWith(MANIFEST_AUDIT_API_PREFIX));
     }
 

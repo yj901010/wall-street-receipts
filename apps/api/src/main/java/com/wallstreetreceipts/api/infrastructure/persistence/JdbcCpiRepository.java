@@ -7,6 +7,8 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.Objects;
+import java.util.List;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Repository;
@@ -77,14 +79,20 @@ public class JdbcCpiRepository implements CpiRepository {
                 timestamp(result.capturedAt()), result.failure() == null ? null : result.failure().name(), timestamp(result.retryNotBefore()));
     }
     @Override public Optional<CpiCollectionAttempt> findAttempt(UUID id) {
-        return jdbc.query("SELECT a.attempt_id, a.trigger_kind, a.started_at, a.permitted, r.completed_at, r.status, r.capture_id, r.captured_at, r.failure_code, r.retry_not_before FROM bls_cpi_collection_attempts a LEFT JOIN bls_cpi_collection_results r ON a.attempt_id = r.attempt_id WHERE a.attempt_id = ?",
+        return jdbc.query(ATTEMPT_SELECT + " WHERE a.attempt_id = ?", ATTEMPT_ROW, id.toString()).stream().findFirst();
+    }
+    @Override public List<CpiCollectionAttempt> recentAttempts() {
+        // One statement snapshot, fixed bound, no count(*) or raw receipt query.
+        return jdbc.query(ATTEMPT_SELECT + " ORDER BY a.started_at DESC, a.attempt_id DESC LIMIT 21", ATTEMPT_ROW);
+    }
+    private static final String ATTEMPT_SELECT = "SELECT a.attempt_id, a.trigger_kind, a.started_at, a.permitted, r.completed_at, r.status, r.capture_id, r.captured_at, r.failure_code, r.retry_not_before FROM bls_cpi_collection_attempts a LEFT JOIN bls_cpi_collection_results r ON a.attempt_id = r.attempt_id";
+    private static final RowMapper<CpiCollectionAttempt> ATTEMPT_ROW =
                 (rs, row) -> new CpiCollectionAttempt(UUID.fromString(rs.getString("attempt_id")),
                         Trigger.valueOf(rs.getString("trigger_kind")), rs.getTimestamp("started_at").toInstant(), rs.getBoolean("permitted"),
                         rs.getString("status") == null ? null : new Result(rs.getTimestamp("completed_at").toInstant(),
                                 Status.valueOf(rs.getString("status")), rs.getString("capture_id") == null ? null : UUID.fromString(rs.getString("capture_id")),
                                 instant(rs.getTimestamp("captured_at")), rs.getString("failure_code") == null ? null : Failure.valueOf(rs.getString("failure_code")),
-                                instant(rs.getTimestamp("retry_not_before")))), id.toString()).stream().findFirst();
-    }
+                                instant(rs.getTimestamp("retry_not_before"))));
     private static Timestamp timestamp(Instant value) { return value == null ? null : Timestamp.from(value); }
     private static Instant instant(Timestamp value) { return value == null ? null : value.toInstant(); }
     @Override public boolean claimCollection(Instant now) {
