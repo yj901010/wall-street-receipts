@@ -34,8 +34,8 @@ class CpiCustodyTests(unittest.TestCase):
                               self.current if current is None else current)
 
     def test_closed_inventory_without_general_product_exceptions(self):
-        self.assertEqual(len(cpi.CPI_PATHS), 43)
-        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 37)
+        self.assertEqual(len(cpi.CPI_PATHS), 47)
+        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 41)
         self.assertFalse(cpi.CPI_PATHS & bridge.FIXED_CI_PATHS)
         self.assertFalse(cpi.CPI_PATHS & bridge.NAVIGATION_PATHS)
         self.assertNotIn(bridge.NEXT_ENV, cpi.CPI_PATHS)
@@ -62,6 +62,21 @@ class CpiCustodyTests(unittest.TestCase):
         for relative, record in cpi.PREVIOUS_RECORDS.items():
             with self.subTest(path=relative):
                 old = bridge.git(SOURCE, "show", "dc55eda73cacf437cde9a27417326df99f923687:" + relative)
+                self.assertEqual(blob_record(old), record)
+                with self.assertRaisesRegex(ValueError, "Unreviewed committed CPI"):
+                    self.verify({**self.current, relative: "100644 blob " + "f" * 40})
+                (self.root / relative).write_bytes(old)
+                with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
+                    self.verify(previous)
+                (self.root / relative).write_bytes(self.expected[relative])
+
+    def test_only_exact_merged_ledger_predecessors_allow_precommit_work(self):
+        self.assertEqual(len(cpi.LEDGER_PREVIOUS_RECORDS), 12)
+        previous = {**self.current, **cpi.LEDGER_PREVIOUS_RECORDS}
+        self.assertEqual(self.verify(previous), previous)
+        for relative, record in cpi.LEDGER_PREVIOUS_RECORDS.items():
+            with self.subTest(path=relative):
+                old = bridge.git(SOURCE, "show", cpi.LEDGER_BASE + ":" + relative)
                 self.assertEqual(blob_record(old), record)
                 with self.assertRaisesRegex(ValueError, "Unreviewed committed CPI"):
                     self.verify({**self.current, relative: "100644 blob " + "f" * 40})

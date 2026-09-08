@@ -213,3 +213,14 @@ offline tests cover retained-log versus DB evidence, KST dates, incarnation
 races, fixed read-only commands, safe endpoint selection, redacted errors and
 hard stdout/stderr byte/deadline limits. No runtime source or historical body is
 changed; the Docker acceptance is still explicit local work, not a CI daemon.
+
+ADR-068 adds four pinned CPI attempt model/schema/test paths (47 total, 41
+additions) and updates twelve existing runtime/test/rehearsal paths. Only their
+exact merged ADR-067 objects are admitted as pre-commit predecessors; current
+working hashes remain mandatory. Tests reject forged predecessors and stale
+working bytes. No workflow, historical baseline/body or broad exception changes.
+Current Java/PostgreSQL tests cover durable admission, atomic receipt/results,
+unknown terminal evidence, closed failure stages, monotonic rate-limit gating,
+concurrency and V10-to-V11 preservation without backfill. The explicit offline
+Docker rehearsal also asserts actual packaged command ledger rows. CI still
+does not call BLS or require a provider key.

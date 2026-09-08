@@ -321,7 +321,7 @@ class FilingHistoryCollectionManifestPostgreSqlTest {
         Flyway latest = flyway(schema, null);
         latest.migrate();
         assertThat(latest.info().current().getVersion().getVersion())
-                .isEqualTo("10");
+                .isEqualTo("11");
         DriverManagerDataSource dataSource = scopedDataSource(schema);
         NamedParameterJdbcTemplate jdbc = jdbc(dataSource);
         JdbcFilingCatalogCaptureRepository rootRepository =

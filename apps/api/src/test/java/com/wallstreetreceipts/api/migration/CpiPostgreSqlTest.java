@@ -22,7 +22,7 @@ class CpiPostgreSqlTest {
         var ds = new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
         Flyway.configure().dataSource(ds).target("9").load().migrate();
         var flyway = Flyway.configure().dataSource(ds).load(); flyway.migrate();
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("11");
         var jdbc = new JdbcTemplate(ds); var parser = new BlsCpiParser(); var repo = new JdbcCpiRepository(jdbc, parser);
         var at = Instant.parse("2026-09-08T01:00:00.123456Z");
         assertThat(repo.latest(at)).isEmpty();
