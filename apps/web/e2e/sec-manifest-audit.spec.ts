@@ -90,6 +90,37 @@ async function refineFromResult(page: Page, locale: "ko" | "en") {
   await expect(page.getByText("2026-08-25 12:30:00.123456 KST").first()).toBeVisible();
 }
 
+async function openFailedInputs(page: Page, locale: "ko" | "en", id: string, instant: string) {
+  const disclosure = page.locator("details");
+  await expect(disclosure).not.toHaveAttribute("open");
+  const toggle = disclosure.locator("summary");
+  await expect(toggle).toHaveText(locale === "ko"
+    ? "실패한 조회의 입력값 확인·수정" : "Review or edit the failed lookup inputs");
+  const before = page.url();
+  await toggle.focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expectVisibleKeyboardFocus(toggle);
+  await toggle.press("Enter");
+  await expect(disclosure).toContainText(locale === "ko" ? "확인된 증거가 아닙니다" : "not verified evidence");
+  await expect(disclosure).toContainText(locale === "ko" ? "입력한 조회 키" : "Attempted lookup keys");
+  await expect(disclosure).not.toContainText(locale === "ko" ? "알려진 증거 식별자" : "Known evidence identity");
+  await page.keyboard.press("Tab");
+  const manifest = disclosure.getByLabel("Manifest ID", { exact: true });
+  const cutoff = disclosure.getByLabel(locale === "ko" ? "평가 기준 원본 조회 키(UTC)" : "Original lookup key (UTC)");
+  await expectVisibleKeyboardFocus(manifest);
+  await expect(manifest).toHaveValue(id);
+  await expect(cutoff).toHaveValue(instant);
+  await manifest.fill("b".repeat(64));
+  expect(page.url()).toBe(before);
+  await expect(page.getByText(id, { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(page.locator(".mode-badge")).toHaveCount(0);
+  await expectNoPageOverflow(page);
+  await manifest.fill(id);
+  return { manifest, cutoff };
+}
+
 test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", async ({
   context,
   page,
@@ -139,6 +170,14 @@ test("keeps exact SEC manifest evidence SSR-only, bilingual, and responsive", as
     })).toBeVisible();
     await expect(page.getByText("합성 DEMO · 실제 SEC 자료 아님")).toHaveCount(0);
     await expect(page.getByText(MANIFEST_ID, { exact: true })).toHaveCount(0);
+    const failed = await openFailedInputs(page, "ko", MANIFEST_ID, CUTOFF);
+    await failed.cutoff.fill("2026-02-29T03:30:00.123456Z");
+    await submitLookup(page, failed.cutoff);
+    await expect(page.locator('p[role="alert"]')).toBeVisible();
+    await expect(page.locator("details")).toHaveCount(0);
+    await expect(page.getByLabel("Manifest ID", { exact: true })).toHaveValue(MANIFEST_ID);
+    await expect(page.getByLabel("평가 기준 원본 조회 키(UTC)")).toHaveAttribute("aria-invalid", "true");
+    expect([...new URL(page.url()).searchParams.keys()]).toEqual(["manifestId", "evaluationAsOf", "view"]);
     await expectNoPageOverflow(page);
     expect(browserApiRequests).toEqual([]);
     const boundaryErrors = runtimeErrors.filter((error) => error.startsWith("console error:")
@@ -338,6 +377,27 @@ test("fails closed for malformed and unavailable exact SEC manifest requests", a
     elements.map((element) => element.getAttribute("content")));
   expect(robots.length).toBeGreaterThan(0);
   expect(robots.every((value) => /noindex/i.test(value ?? ""))).toBe(true);
+
+  const missing = await openFailedInputs(page, "ko", MANIFEST_ID, "2026-08-25T03:30:00.123455Z");
+  await missing.cutoff.fill(CUTOFF);
+  await submitLookup(page, missing.cutoff);
+  await expect(page.getByText("합성 DEMO · 실제 SEC 자료 아님")).toBeVisible();
+  expect([...new URL(page.url()).searchParams.entries()]).toEqual([
+    ["manifestId", MANIFEST_ID], ["evaluationAsOf", CUTOFF], ["view", "summary"],
+  ]);
+  await expect(page.getByText("2026-08-25 12:30:00.123456 KST").first()).toBeVisible();
+  await activateEnglishLocale(context, page, page.getByRole("button", { name: "English" }));
+  const missingId = "a".repeat(64);
+  await page.goto(`${ROUTE}?manifestId=${missingId}&evaluationAsOf=${encodeURIComponent(CUTOFF)}`
+    + "&view=occurrences&page=99&size=1");
+  const missingEnglish = await openFailedInputs(page, "en", missingId, CUTOFF);
+  await missingEnglish.manifest.fill(MANIFEST_ID);
+  await submitLookup(page, missingEnglish.manifest);
+  await expect(page.getByText("Synthetic DEMO · not observed SEC data")).toBeVisible();
+  expect([...new URL(page.url()).searchParams.entries()]).toEqual([
+    ["manifestId", MANIFEST_ID], ["evaluationAsOf", CUTOFF], ["view", "summary"],
+  ]);
+  await expect(page.locator("details")).not.toHaveAttribute("open");
 
   await expectNoPageOverflow(page);
   expect(browserApiRequests).toEqual([]);

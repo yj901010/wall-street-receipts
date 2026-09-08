@@ -56,6 +56,7 @@ FIXED_CI_PATHS = frozenset({
     "decisions/ADR-060-sec-evidence-navigation.md",
     "decisions/ADR-061-sec-locator-input-recovery.md",
     "decisions/ADR-062-sec-result-query-refinement.md",
+    "decisions/ADR-063-sec-failed-query-recovery.md",
 })
 
 

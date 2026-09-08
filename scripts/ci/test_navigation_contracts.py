@@ -46,8 +46,8 @@ class NavigationMigrationTests(unittest.TestCase):
         self.assertEqual(len(navigation.SOURCE_EDITS), 7)
         self.assertEqual(len(navigation.TEST_SHA256), 9)
         self.assertEqual(len(navigation.FEEDBACK_SOURCE_SHA256), 3)
-        self.assertEqual(len(navigation.ADDED_PATHS), 2)
-        self.assertEqual(len(navigation.NAVIGATION_PATHS), 21)
+        self.assertEqual(len(navigation.ADDED_PATHS), 4)
+        self.assertEqual(len(navigation.NAVIGATION_PATHS), 23)
         self.assertEqual(set(navigation.PREVIOUS_RECORDS), {
             navigation.SEC_DIRECTORY + "page.tsx", navigation.SEC_DIRECTORY + "page.test.tsx",
             "apps/web/e2e/sec-manifest-audit.spec.ts"})
@@ -57,6 +57,10 @@ class NavigationMigrationTests(unittest.TestCase):
                 "messages.ts", "sec-manifest-audit.module.css")
         } | {"apps/web/e2e/sec-manifest-audit.spec.ts"})
         self.assertFalse(navigation.NAVIGATION_PATHS & bridge.FIXED_CI_PATHS)
+        self.assertEqual(set(navigation.FAILURE_PREVIOUS_RECORDS), {
+            navigation.SEC_DIRECTORY + name for name in (
+                "error.tsx", "not-found.tsx", "messages.ts", "sec-manifest-audit.module.css")
+        } | {"apps/web/e2e/sec-manifest-audit.spec.ts"})
         self.assertFalse(any(path.startswith(("fixtures/", "schemas/", "apps/api/"))
                              for path in navigation.NAVIGATION_PATHS))
 
@@ -97,6 +101,10 @@ class NavigationMigrationTests(unittest.TestCase):
                 before, after = navigation.SOURCE_EDITS[relative][-1]
                 self.assertEqual(expected.count(after.encode()), 1)
                 expected = expected.replace(after.encode(), before.encode(), 1)
+            if name in ("error.tsx", "not-found.tsx"):
+                for before, after in reversed(navigation.SOURCE_EDITS[relative][1:]):
+                    self.assertEqual(expected.count(after.encode()), 1)
+                    expected = expected.replace(after.encode(), before.encode(), 1)
             self.assertEqual(expected.replace(b'        current="secEvidence"\n', b'')
                              .replace(b' current="secEvidence"', b'')
                              .replace(b'import { locatorFeedback } from "./locator-feedback";\n', b'')
@@ -202,6 +210,39 @@ class NavigationMigrationTests(unittest.TestCase):
                 (self.root / relative).write_bytes(self.expected[relative])
                 with self.assertRaisesRegex(ValueError, "Unreviewed committed"):
                     self.verify({**head, relative: blob_record(b"forged predecessor")})
+
+    def test_exact_adr062_predecessors_never_admit_stale_working_bytes(self):
+        head = {**self.current, **navigation.FAILURE_PREVIOUS_RECORDS}
+        self.assertEqual(self.verify(head), head)
+        for relative, record in navigation.FAILURE_PREVIOUS_RECORDS.items():
+            with self.subTest(relative=relative):
+                prior = bridge.git(SOURCE, "show", f"6d122dd307d76c32b3bf6ab925d2b3996907b298:{relative}")
+                self.assertEqual(blob_record(prior), record)
+                (self.root / relative).write_bytes(prior)
+                with self.assertRaisesRegex(ValueError, "Unreviewed current"):
+                    self.verify(head)
+                (self.root / relative).write_bytes(self.expected[relative])
+                with self.assertRaisesRegex(ValueError, "Unreviewed committed"):
+                    self.verify({**head, relative: blob_record(b"forged predecessor")})
+
+    def test_failure_recovery_cannot_select_duplicates_default_time_or_assert_evidence(self):
+        relative = navigation.SEC_DIRECTORY + "failed-query-recovery.tsx"
+        cases = (
+            (b'values.length === 1 ? values[0] : values', b'values[0]'),
+            (b'if (state.kind !== "query") return null;', b'// validation removed'),
+            (b'key={JSON.stringify(state.query)}', b'key="stale-query"'),
+            (b'evaluationAsOf: state.query.evaluationAsOf,', b'evaluationAsOf: new Date().toISOString(),'),
+            (b'demoQuery={null}', b'demoQuery={state.query}'),
+            (b'{messages.locator.recoverFailedBody}', b'Verified evidence'),
+            (b'  const search = useSearchParams();', b'  fetch("/api/auto-retry");\n  const search = useSearchParams();'),
+        )
+        for before, after in cases:
+            with self.subTest(token=before):
+                self.assertEqual(self.expected[relative].count(before), 1)
+                (self.root / relative).write_bytes(self.expected[relative].replace(before, after, 1))
+                with self.assertRaisesRegex(ValueError, "Unreviewed current"):
+                    self.verify()
+                (self.root / relative).write_bytes(self.expected[relative])
 
     def test_refinement_cannot_auto_select_normalize_or_leak_stale_form_state(self):
         cases = (

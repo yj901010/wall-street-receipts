@@ -1,4 +1,4 @@
-"""ADR-060/061/062: closed current-source SEC navigation and locator migrations.
+"""ADR-060/061/062/063: closed current-source SEC navigation and locator migrations.
 
 Only the seven explicit runtime edits below may differ from the frozen baseline.
 Locator feedback sources and current tests are separately content-pinned;
@@ -71,6 +71,12 @@ SOURCE_EDITS = {
           </>'''),
     ),
     **{SEC_DIRECTORY + filename: (('<SiteHeader />', '<SiteHeader current="secEvidence" />'),)
+       + (() if filename == "loading.tsx" else (
+           ('import { getSecManifestAuditMessages } from "./messages";\n',
+            'import { getSecManifestAuditMessages } from "./messages";\n'
+            'import { FailedQueryRecovery } from "./failed-query-recovery";\n'),
+           ('      </div>\n    </main>', '        <FailedQueryRecovery />\n      </div>\n    </main>'),
+       ))
        for filename in ("loading.tsx", "error.tsx", "not-found.tsx")},
 }
 
@@ -84,17 +90,19 @@ TEST_SHA256 = {
     "apps/web/e2e/i18n.spec.ts": "4c9b96faf8617b91aa0ec43b42efcda1daa93adf45b0a01b82e25d287d61705d",
     "apps/web/e2e/screener.spec.ts": "02dcd45d5f9fdb5569c13ea781710306dbd7e2ae0889ccd727c500a5807c6702",
     "apps/web/e2e/sp500-history.spec.ts": "2227749f35ea3763f96e25db60cf59ce11cd42eeea244eebfb75679e0a1e5888",
-    "apps/web/e2e/sec-manifest-audit.spec.ts": "8f34762f6e3447db22f9405c3124b4a868f4e5189ab4c124dbe5ac71fc133889",
+    "apps/web/e2e/sec-manifest-audit.spec.ts": "0f164c2de35e27766a0ef24d919d8a088fc9518ff9223a08030f9cc1d311fecc",
 }
 # Exact full-source custody for the reviewed SSR form, copy, and field styling.
 FEEDBACK_SOURCE_SHA256 = {
     SEC_DIRECTORY + "sec-manifest-audit-locator.tsx": "ee38ab555bbbba02427091338ca01e34dbe01c916f579a0f6e138e55139099e3",
-    SEC_DIRECTORY + "messages.ts": "e609c266b490dfbd87d813d972b9d8b69ba906b3e230815a7e6be1f2834fb17a",
-    SEC_DIRECTORY + "sec-manifest-audit.module.css": "947753ee3b2400ba8f424bd87a5c02cfd8e31c82540e6b07c7be585a380cf25b",
+    SEC_DIRECTORY + "messages.ts": "67ceeb6bcfb5f5277575a06375e7c9c8108f3b98068e6844c936972b30e03579",
+    SEC_DIRECTORY + "sec-manifest-audit.module.css": "f50c537bcd61baf449acefca92cb646054822a1e7ef1f0cd423f4b22d3b0f4c9",
 }
 ADDED_SHA256 = {
     SEC_DIRECTORY + "locator-feedback.ts": "d5b883468cf7b287b5a4b173110923fb0e859fd1785daf7ff221506df593f48e",
     SEC_DIRECTORY + "locator-feedback.test.ts": "fa24f08d6d9e29064093738c0110480caa4e9692db118a889989ad2c39ffeba9",
+    SEC_DIRECTORY + "failed-query-recovery.tsx": "2c4873e3f5e5db2e260bdf23e38b635e80094417ea529506c2712b616150b1d4",
+    SEC_DIRECTORY + "failed-query-recovery.test.tsx": "298d8ccc6d53348b27b2d97217dc25aa87f8266a8acb5f7ca206266c0c597c3c",
 }
 # Only these three files had an ADR-060 intermediate version. This admits the
 # exact pre-commit HEAD, never old working-tree source or an arbitrary predecessor.
@@ -112,6 +120,14 @@ REFINEMENT_PREVIOUS_RECORDS = {
     SEC_DIRECTORY + "messages.ts": "100644 blob 1e6a800c4f933050ef34daf58ed34002e510089c",
     SEC_DIRECTORY + "sec-manifest-audit.module.css": "100644 blob 0b13e8580e4b7e831229a0f2d8d3b42d03bf248b",
     "apps/web/e2e/sec-manifest-audit.spec.ts": "100644 blob 8aca2e70d0a05f280a96ee54c034fb3a9f28ac9a",
+}
+# Exact ADR-062 objects only; current recovery source is mandatory even before commit.
+FAILURE_PREVIOUS_RECORDS = {
+    SEC_DIRECTORY + "error.tsx": "100644 blob eb0a7ee975cbb4f6c3ffccca4dbe85f2b4ac5518",
+    SEC_DIRECTORY + "not-found.tsx": "100644 blob a34eb29ba6d8922b4c59656f9c66ed72fb97991c",
+    SEC_DIRECTORY + "messages.ts": "100644 blob 161e2c5b20f1aa92390d2c6710b3a4720c3f96a2",
+    SEC_DIRECTORY + "sec-manifest-audit.module.css": "100644 blob 71d6a5718d3d3e9af563f0e5171fd94375c8828e",
+    "apps/web/e2e/sec-manifest-audit.spec.ts": "100644 blob 6413747484f7e47d31c315c759c7083306bd3e79",
 }
 CONTENT_SHA256 = TEST_SHA256 | FEEDBACK_SOURCE_SHA256 | ADDED_SHA256
 ADDED_PATHS = frozenset(ADDED_SHA256)
@@ -167,6 +183,8 @@ def verify_navigation(root: Path, git_read, baseline: dict, current: dict) -> di
             accepted.add(PREVIOUS_RECORDS[relative])
         if relative in REFINEMENT_PREVIOUS_RECORDS:
             accepted.add(REFINEMENT_PREVIOUS_RECORDS[relative])
+        if relative in FAILURE_PREVIOUS_RECORDS:
+            accepted.add(FAILURE_PREVIOUS_RECORDS[relative])
         if current.get(relative) not in accepted:
             raise ValueError("Unreviewed committed navigation change: " + relative)
         if relative in current:
