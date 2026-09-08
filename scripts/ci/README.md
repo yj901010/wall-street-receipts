@@ -187,3 +187,13 @@ bounded transport, conservative 429 backoff, atomic PostgreSQL cooldown/replay,
 non-PIT metadata, server-only reads and explicit disabled/empty/error states.
 The new browser test preserves the existing market evidence keyboard order.
 Synthetic CPI data is test-only; CI does not call BLS or need a BLS key.
+
+ADR-065 expands this inventory to 38 paths (six baseline replacements, 32
+additions). It adds a shared one-attempt job, headless-only configuration,
+explicit scheduled command and four Java test files. Only the exact two prior
+ADR-064 main/collector blobs are allowed during pre-commit development; current
+working bytes are always mandatory. Test wrong predecessor IDs and stale working
+bytes. Daily Asia/Seoul 23:00 scheduling, injected Clock, no startup/catch-up
+fetch, shutdown cancellation, sanitized failures, append-only repeated captures
+and durable Retry-After are covered by current Java tests, including PostgreSQL.
+No workflow, historical body, provider endpoint, schema or web file is changed.

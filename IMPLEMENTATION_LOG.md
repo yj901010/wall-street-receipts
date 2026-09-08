@@ -7783,3 +7783,84 @@ configured origin or any network endpoint.
   operator-approved periodic collection/retention, then separate home-server
   runtime/backup/release acceptance. No remote push, PR creation, merge or
   production/public-data configuration change is included in this slice.
+
+## 2026-09-08 — P5 / ADR-065: Explicit daily CPI worker at 23:00 KST
+
+### Scope and implementation
+
+- Confirm PR #12 merged into develop at
+  `ec699a504906f049195752bca22973ccb5b08219`; start
+  `feature/p5-cpi-collection-schedule` there. Its preceding PR CI #35
+  (`34180815890`) passed all four jobs, including 84 historical executions.
+  That closes ADR-064's hosted/Linux verification gap, not this new candidate's.
+- User delegated the collection time after approving code/test preparation
+  without activating a job on this development PC. Choose daily 23:00
+  Asia/Seoul (14:00 UTC), after the currently scheduled CPI 08:30 Eastern
+  release in both US DST seasons. The BLS API's historical one-day-lag notice
+  prevents an immediate-availability promise; no exact modern-v2 lag is inferred.
+- New `CpiCollectionJob` shares the unchanged single bounded BLS attempt,
+  parser, immutable receipt append and durable DB cooldown between manual and
+  scheduled entrypoints. `CpiCollectorConfiguration` validates the key without
+  echoing it and refuses a web context. Manual context now closes on cooldown
+  as well as success/provider failure.
+- `--wsr-schedule-bls-cpi` is a sole-argument, separate headless worker command;
+  reject mixed modes, suffixes and extra arguments before Spring initialization.
+  No normal API startup, Spring-profile-only change or browser visit registers
+  recurring work. The existing manual command remains explicit and one-shot.
+- One ThreadPoolTaskScheduler uses injected Clock and explicit Asia/Seoul cron
+  `0 0 23 * * *`, regardless of the host timezone. No startup fetch or missed-slot
+  replay; wait for the next future slot and skip downtime. Shutdown cancels
+  queued tasks and gives an in-flight attempt up to 30 seconds to finish.
+- Logs distinguish SAVED, SKIPPED, RATE_LIMITED and FAILED with KST timestamps;
+  never log worker exception messages/causes. A separate WAITING event reports
+  the actual executor trigger calculation to avoid an estimate/registration
+  clock-boundary race. Failure does not trigger an immediate retry or suppress
+  tomorrow's scheduled task. Existing 15-minute gate and 24-hour-minimum
+  Retry-After remain authoritative across restarts and manual/scheduled jobs.
+- Keep every successful receipt, even identical responses; no automatic
+  deletion/deduplication or new migration. Routes, web files, existing source
+  values, production Compose and API/web internet-egress restrictions unchanged.
+- Extend exact CPI custody to 38 paths, including seven additions (three
+  runtime classes and four test files) and the two revised entrypoint files.
+  Accept only two exact ADR-064 committed predecessors with mandatory new
+  working bytes. Reject deleted baseline paths; no null/predecessor wildcard.
+  The historical baseline, workflow and 84 bodies remain unchanged.
+
+### Verification
+
+- Initial focused run found two test-construction mistakes (Mockito restubbing
+  an already-throwing method, and a zoned-date test string missing an offset).
+  Correct the tests; the repeated focused run passed 38/38 without retries.
+- Initial full API verify passed 2,445 tests with zero failures/errors/skips,
+  including actual PostgreSQL headless-context wiring, no startup collection,
+  repeated immutable receipts and persisted backoff after a new job instance.
+  Java 21 compilation and packaged Spring Boot JAR also passed. Use isolated
+  ignored `.cache/adr065-api-target` to preserve the running CPI preview's JAR.
+- Initial Python suite passed 226 tests (220 pass, six Windows capability skips,
+  35.745s). A sandboxed focused attempt was blocked by Windows temporary-folder
+  permissions; the unchanged tests ran with authorized filesystem access.
+  CI limits, current DEMO fixture validation and current product custody passed.
+- Final reruns after the registration-log and deleted-baseline guard refinements:
+  full API verify/package PASS, 2,445 tests, zero failures/errors/skips, 1m33s;
+  full Python suite 227 total, 221 PASS / six Windows capability skips, 60.693s.
+  No assertion disabled, no automatic retry used to obtain a pass. Final
+  source-custody and whitespace checks PASS. Logs retained in ignored
+  `.cache/adr065-api-verify-final.log` and `.cache/adr065-ci-tests-final.log`.
+- Web source and layouts were not changed; web lint/unit/build/responsive checks
+  were not rerun for this headless API-only slice. The current API read and
+  default-application boot regression tests passed as part of full verify.
+  This candidate's hosted CI, full 84 historical Linux executions, long-running
+  wall-clock collection and future home-server activation are not verified here.
+  Simulated Clock and synthetic transport tests are not real BLS data evidence.
+
+### Handoff boundary
+
+- No BLS/BEA/EIA/stock/derivatives request, secret read, persistent scheduler,
+  scheduled Codex task, home-server operation, DB change to the existing local
+  preview, remote push, PR, merge, release or deployment in this slice.
+- Existing root `.env` remains ignored. Preserve the user's unstaged generated
+  declaration `apps/web/next-env.d.ts` at SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- See ADR-065 for later explicit worker startup and its DB/Flyway warning.
+  Future home-server worker container/network/secret integration, supervision,
+  alerting, capacity monitoring and backup acceptance remain separate work.

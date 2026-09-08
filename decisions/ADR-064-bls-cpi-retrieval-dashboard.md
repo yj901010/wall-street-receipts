@@ -110,3 +110,9 @@ in before/after custody. No general application-path exemption is added. The
 Vitest and Playwright jobs exercise the changed checkout.
 
 Actual local results and any limitations are recorded in `IMPLEMENTATION_LOG.md`.
+
+Follow-up: [ADR-065](ADR-065-opt-in-kst-cpi-schedule.md) adds an explicitly
+started, separate daily 23:00 KST worker. It does not enable collection in the
+ordinary API/web process, install a scheduler, change the existing deployment
+network, or make a release-time availability guarantee. This ADR's one-shot
+command and source/persistence boundaries remain applicable.
