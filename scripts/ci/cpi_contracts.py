@@ -1,4 +1,4 @@
-"""ADR-064 through 071: exact CPI retrieval, operator view and tooling custody."""
+"""ADR-064 through 072: exact CPI retrieval, operator view and tooling custody."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,13 @@ from current_contracts import BASELINE, blob_record
 from navigation_contracts import _current_bytes
 
 CONTENT_SHA256 = {
+    "deploy/cpi-operator/Dockerfile": "fb311640bfea8c95b052a30a2b378b8276f21ffc3bbe988bd9ffa9b8ab22f413",
+    "deploy/cpi-operator/Dockerfile.dockerignore": "5161cae2d5ecc88632a65011da1805858dfc9153ec60cfac6dbc453e30aab81f",
+    "scripts/cpi_operator_lifecycle.py": "2b88eaefbb2a497a405d3f5af4439db522f2ef8f9da4a567d58e9060795756cc",
+    "scripts/verify-cpi-operator-lifecycle.py": "f9ce5bfd44f5a3dbb0cd2b1d103ac5f34f8797e62de2a725d6110cab8c33f1e8",
+    "scripts/cpi-operator-lifecycle-probe.mjs": "df2a816070b86361d56335137575948562070a55db51596109b057e26f737689",
+    "apps/web/operator/tests/next-start-fixture.mjs": "1e6d8303443e1fd242f5bda8516c2edc7ed7f3657e902f846d54d0c01e664795",
+    "apps/web/src/lib/operator-start.test.ts": "c1a79469f9e01d5c23e4f1479d2b83cf49026b1c399d021b9688083d338e8109",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiBrowserEvidence.java": "3423fee8295d01c8479657aa01f572e572b87defda7f67184bdc608ef1ffd0b7",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiBrowserProcess.java": "f4d1bc10513ba32ba6eff5c77d5eb2d05870ba84603808193bfbef57b0702eba",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiBrowserProcessTest.java": "b61338d959384a8e57c1f93fe845c844469fe6ab2df80ff966d4d3184cb297b3",
@@ -19,7 +26,7 @@ CONTENT_SHA256 = {
     "apps/web/operator/demo-server.mjs": "5fc82b6d2feb6eb099841c2e3df8f1efcd1503dac1cf669cf605807f86b096e5",
     "apps/web/operator/gateway.ts": "16c92fbae9b0cbfd1f5744c0c52f36bff1fe4a4365d4a60ebe23dff602fd8de1",
     "apps/web/operator/playwright.config.ts": "a9071fa03c0f432f751321dfa88f6300516d3e4225eccf8ce5bf6aeabc98d4fd",
-    "apps/web/operator/start.mjs": "dda59a59b06d34f968e8edbcedcf9fa808db91c7a65b387085868621972f5693",
+    "apps/web/operator/start.mjs": "8884f71d145a9e7d18ecf8d67ef21c8f1a9c481a4b17d43e552ddfdcfe4a8d06",
     "apps/web/operator/tests/view.spec.ts": "c74159ef927766715bdfb918e07e7ca35fe790a939c3461be01838f378c91338",
     "apps/web/src/app/operator/cpi/page.test.tsx": "d4ddd25473b040f375ab828a9a6dc7760676d9999ccf216b70dad11896c99d72",
     "apps/web/src/app/operator/cpi/page.tsx": "6a1432bb3b7cfd14d310f7879549aade7ac764ed917fff91f62f81030840779f",
@@ -129,6 +136,11 @@ QUERY_PREVIOUS_RECORDS = {
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/cpi/CpiRepository.java": "100644 blob f30f82838f301607523f34e10798b7bd3d21c353",
     "apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcCpiRepository.java": "100644 blob 199be96b95af36129e6951fa011ed30b9217fa2f",
 }
+# Exact merged ADR-071 launcher predecessor; current failure-exit fix is mandatory.
+LIFECYCLE_BASE = "825369a8d75c2f5608d6782620ebc06b072ffb42"
+LIFECYCLE_PREVIOUS_RECORDS = {
+    "apps/web/operator/start.mjs": "100644 blob 37c4e835fc92b7b54acff5b1bfff0a9197f4a5e9",
+}
 CPI_PATHS = frozenset(CONTENT_SHA256)
 CPI_ADDED_PATHS = CPI_PATHS - frozenset(BASELINE_RECORDS)
 
@@ -153,6 +165,8 @@ def verify_cpi(root: Path, git_read, baseline: dict, current: dict) -> dict:
             accepted_records.add(LEDGER_PREVIOUS_RECORDS[relative])
         if relative in QUERY_PREVIOUS_RECORDS:
             accepted_records.add(QUERY_PREVIOUS_RECORDS[relative])
+        if relative in LIFECYCLE_PREVIOUS_RECORDS:
+            accepted_records.add(LIFECYCLE_PREVIOUS_RECORDS[relative])
         if current.get(relative) not in accepted_records:
             raise ValueError("Unreviewed committed CPI source change: " + relative)
         if relative in current:

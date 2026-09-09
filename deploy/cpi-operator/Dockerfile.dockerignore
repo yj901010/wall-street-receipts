@@ -1,0 +1,6 @@
+**
+!apps/web/operator/
+!apps/web/operator/start.mjs
+!apps/web/operator/gateway.ts
+!apps/web/src/lib/
+!apps/web/src/lib/operator-cpi.ts

@@ -255,3 +255,16 @@ seeded, permission failure and recovery at three widths, complete unchanged
 ledger/capture/gate snapshots and real authentication. No default test skip,
 workflow job, fake HTTP API, provider request or existing DB activation is added.
 See ADR-071 for prerequisites, a secret-free mirror and the explicit invocation.
+
+ADR-072 adds seven exact packaging/lifecycle/test paths (89 CPI paths, nine baseline
+replacements, 80 additions), pins the launcher failure-exit fix, and accepts only
+its exact ADR-071 committed predecessor with mandatory fixed working bytes.
+The new offline Python safety tests exercise runtime
+inspection rejection, signal-exit evidence, owner-only cleanup, input/output/time
+limits, environment stripping and explicit confirmation. The separate Docker
+acceptance builds actual API/Web/operator images from isolated inputs, runs only
+owned internal networks and proves normal stop/restart, duplicate-bind refusal,
+API-loss error behavior and unchanged CPI tables. No automatic CI job, default
+skip, public route, provider key or real home-server activation is added. Four
+Node process tests cover duplicate bind, prepare failure and bounded/sanitized
+cleanup failure; the test-only Next stub is never copied into the runtime image.

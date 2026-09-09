@@ -8433,3 +8433,113 @@ configured origin or any network endpoint.
   in this slice. Next: push/review/PR/hosted CI, then separately scope packaged
   operator lifecycle/host rehearsal or real activation, with required host and
   credential information requested before that step.
+
+## P5 / ADR-072 — Packaged CPI operator lifecycle (2026-09-09 KST)
+
+- Start from user-merged PR #19 / develop `825369a8d75c2f5608d6782620ebc06b072ffb42`.
+  PR head `8288ded` passed all four jobs in CI #50 (`34318957553`). Work on
+  `feature/p5-cpi-operator-lifecycle`; this development PC is not the home server.
+  Docker was initially unavailable; request it before execution, then proceed
+  after the user's "켰어 친구" confirmation. No real key or domain is needed.
+- Add `deploy/cpi-operator/Dockerfile` and its closed ignore file, extending the
+  existing reviewed Web runtime with exactly the operator launcher, gateway and
+  DTO adapter. Keep public Web/API Dockerfiles and home-server Compose unchanged.
+  No new route, public bind option, dependency, migration, collection schedule or
+  access scheme. Existing `/operator/cpi` and CPI-only gateway remain manual and
+  loopback-only; the ordinary public server remains denied for operator routes.
+- Add explicit `scripts/verify-cpi-operator-lifecycle.py`, shared ownership/build
+  helper `scripts/cpi_operator_lifecycle.py` and test-only Linux Node probe.
+  Require `--confirm-disposable-demo`, a local Linux Docker endpoint, committed
+  application inputs and a fresh owned scratch context. Never build from root
+  `.env`, host dependencies, generated assets or the user's dirty next-env file.
+  Record application commit, recipe/input SHA-256 and immutable runtime image
+  IDs; freeze the five rehearsal inputs across execution. Fail on input drift.
+- Run actual Java 21 packaged API and Node 24 runtime images, not an in-process
+  substitute. A temporary owner migrates a tmpfs PostgreSQL database, then stops.
+  The real API uses SELECT-only ledger access, with reader identity and actual
+  rejection of DELETE/raw-capture reads checked. Disable fixture bootstrap, CPI
+  collector and SEC provider. Seed three explicitly synthetic 2020 ledger rows.
+- API and UI retain literal loopback listeners inside an owned internal network
+  namespace. No host port, persistent volume, Docker socket or privileged/host
+  network. Inspect actual sockets and runtime hardening; non-root API/UI have
+  read-only roots, capability drops, init, finite memory/CPU/PID/log limits and
+  no automatic restart. DEMO secrets use read-only files or probe stdin, not
+  command-line credentials or runtime secret environment variables.
+- Verify reads/authentication/KST precision, duplicate-port rejection, clean UI
+  SIGTERM/port release, UI restart, API loss, ordered API/UI restart and final
+  shutdown. Require distinct process start timestamps and identical evidence;
+  compare complete attempts/results/captures/gate snapshots across the sequence.
+  Check no synthetic credential in runtime logs. Capture bounded sanitized
+  diagnostics before label-verified cleanup, including on unsuccessful runs.
+- Add nine offline Python safety tests and seven exact CPI paths: 89 total,
+  nine baseline replacements and 80 additions. Pin the changed launcher and its
+  exact ADR-071 predecessor, with fixed current bytes always mandatory. Add one
+  predecessor rejection test. No broad product exception, historical workflow
+  body change, new hosted job or default skipped test is introduced.
+
+### Findings and measured verification
+
+- The initial harness incorrectly started the normal servlet API as headless.
+  Actual Flyway migrations succeeded, but its security chain requires servlet
+  HttpSecurity. Correct only the rehearsal to use normal loopback startup/health
+  and graceful stop with operator/collectors disabled; do not relax production
+  security or add a migration endpoint. Java's `/proc/net/tcp6` representation of
+  IPv4-mapped 127.0.0.1 also needed exact normalization in the probe; wildcard and
+  unrelated IPv6 addresses remain rejected. Exploratory failed runs are retained
+  as failed reports, not claimed as completed acceptance.
+- The actual packaged duplicate bind exposed a production launcher defect:
+  EADDRINUSE was logged but Next's exception handlers allowed exit **0**. Fix
+  startup failure to emit a sanitized marker and exit **1**, with bounded cleanup
+  and no readiness/success marker. Allow natural exit after cleanup rather than
+  forcing immediate exit during Node's Windows startup callbacks. A five-second
+  deadline covers hung cleanup or leftover handles. Four real Node subprocess
+  tests use a test-only Next stub reproducing exception swallowing; duplicate
+  bind, prepare failure, rejected cleanup and hung cleanup all pass. Local fix
+  commit: `c99c61b9abbe1fd9177878ab5bb09efa12eb9fe7`.
+- After the fix, Linux duplicate failure and clean UI restart passed. The API-loss
+  probe could issue its next query less than one second after the preceding auth
+  check. Pace test queries by 1.1 seconds, as the browser rehearsal already does;
+  do not weaken the production limiter or add a production retry. Rerun the whole
+  sequence with frozen final probe bytes and status-only failure diagnostics.
+- Final packaged lifecycle **PASS**, `.cache/adr072-lifecycle-paced.log` and
+  `.cache/adr072-4b1aac80d0186312f7fdfb2b.json` (`passed: true`). Application source
+  is fix commit `c99c61b`; packaging SHA-256 starts `fb311640bfea`. The report
+  records full image IDs and all five final input hashes. UI exits **0**, duplicate
+  exits **1 / EADDRINUSE**, API exits **143** with completed graceful shutdown;
+  no OOM/137 accepted. API loss yields exact sanitized **503**, ordered restart
+  returns identical evidence and all four CPI tables remain unchanged.
+- Web ESLint **PASS** (`.cache/adr072-web-lint.log`). Full Vitest **61 files /
+  805 tests PASS**, 25.09s (`.cache/adr072-web-tests.log`). This includes all four
+  new startup process tests. No public UI source changed; the separate public
+  87-check browser suite was not repeated for this launcher/package slice.
+- Rerun the explicit ADR-071 real Spring/PostgreSQL/browser selection against a
+  verified secret-free source mirror containing the final launcher: **7/7 Java
+  tests PASS**, zero skips, 1m44s (`.cache/adr072-browser.log`), including **12/12
+  browser checks** at 1440/1280/390px. Empty, seeded, permission failure/recovery,
+  actual auth, KST nanoseconds/microseconds, credential clearing, no external
+  requests and unchanged persisted data all pass. Next production build and
+  generated TypeScript checks pass, 14 routes plus proxy. Evidence/build logs:
+  `.cache/adr071-evidence-14508846978402225368/`. Visually inspect recovered desktop
+  and mobile screenshots: the dense table scrolls within its region; the page
+  does not overflow. No API Java source changed, so a new full Maven suite result
+  is not claimed; packaged JAR compilation and the explicit integration pass are
+  the API-side verification in this slice.
+- Final Python CI contracts **282 total / 276 PASS / six existing Windows
+  capability skips**, zero failures/errors, 54.530s
+  (`.cache/adr072-ci-paced-final.log`). Includes nine new lifecycle safety tests
+  and 12 CPI custody tests. Current product custody, CI size limits, current DEMO
+  fixture contracts and whitespace checks pass. No new-candidate hosted CI or
+  full historical execution result is claimed.
+- Preserve the user's `next-env.d.ts` exact SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  Cleanup inspection finds no lifecycle-labelled container/network/image,
+  browser-rehearsal container or owned Node/Java process. Only the pre-existing
+  development PostgreSQL remains healthy at `127.0.0.1:5432`. Disposable DBs and
+  owned scratch contexts were removed and can be regenerated; ignored diagnostic
+  reports, source mirror and screenshots remain. No existing persisted data was
+  deleted and no real key was used, printed or staged.
+- Finish focused local Conventional Commits only; no push, PR, merge or deployment
+  in this slice. Next is push/review/hosted CI. Real Ubuntu startup, reboot/service
+  recovery, backups and operator access remain separate, untested activation
+  work. The shared API bearer is still not CPI-only; request actual host/access
+  and credential details before activating against real persisted data.
