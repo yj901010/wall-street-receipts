@@ -34,8 +34,8 @@ class CpiCustodyTests(unittest.TestCase):
                               self.current if current is None else current)
 
     def test_closed_inventory_without_general_product_exceptions(self):
-        self.assertEqual(len(cpi.CPI_PATHS), 82)
-        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 73)
+        self.assertEqual(len(cpi.CPI_PATHS), 89)
+        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 80)
         self.assertFalse(cpi.CPI_PATHS & bridge.FIXED_CI_PATHS)
         self.assertFalse(cpi.CPI_PATHS & bridge.NAVIGATION_PATHS)
         self.assertNotIn(bridge.NEXT_ENV, cpi.CPI_PATHS)
@@ -99,6 +99,19 @@ class CpiCustodyTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
                 self.verify(previous)
             (self.root / relative).write_bytes(self.expected[relative])
+
+    def test_lifecycle_accepts_only_exact_launcher_predecessor_with_fixed_working_bytes(self):
+        self.assertEqual(set(cpi.LIFECYCLE_PREVIOUS_RECORDS), {"apps/web/operator/start.mjs"})
+        previous = {**self.current, **cpi.LIFECYCLE_PREVIOUS_RECORDS}
+        self.assertEqual(self.verify(previous), previous)
+        for relative, record in cpi.LIFECYCLE_PREVIOUS_RECORDS.items():
+            old = bridge.git(SOURCE, "show", cpi.LIFECYCLE_BASE + ":" + relative)
+            self.assertEqual(blob_record(old), record)
+            with self.assertRaisesRegex(ValueError, "Unreviewed committed CPI"):
+                self.verify({**self.current, relative: "100644 blob " + "e" * 40})
+            (self.root / relative).write_bytes(old)
+            with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
+                self.verify(previous)
 
     def test_missing_source_and_stale_working_bytes_never_fall_back(self):
         for relative in cpi.CPI_PATHS:
