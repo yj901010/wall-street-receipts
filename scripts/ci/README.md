@@ -224,3 +224,14 @@ unknown terminal evidence, closed failure stages, monotonic rate-limit gating,
 concurrency and V10-to-V11 preservation without backfill. The explicit offline
 Docker rehearsal also asserts actual packaged command ledger rows. CI still
 does not call BLS or require a provider key.
+
+ADR-069 expands CPI custody to 58 exact paths (nine baseline replacements, 49
+additions): three shared security files with pinned baseline identities and
+eight new read-only query/API/test files. Two exact merged ADR-068 repository
+objects are the only new pre-commit predecessors. Current hashes, mutation
+checks and before/after custody stay mandatory. No historical body, workflow or
+general product exemption changes. Current Java/MVC/real-loopback HTTP and
+PostgreSQL tests cover default-disabled routes, bearer/verb restrictions,
+KST/error sanitation, bounded recent records, unknown evidence and unchanged
+DB contents; a disposable SELECT-only role proves no raw receipt/gate access
+is required. No provider key, host activation or web layout change is involved.

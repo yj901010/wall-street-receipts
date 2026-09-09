@@ -76,9 +76,11 @@ public final class OperatorApiSecurityProblemWriter
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setType(URI.create("https://wall-street-receipts.invalid/problems/" + type));
         problem.setTitle(title);
-        problem.setInstance(URI.create(request.getRequestURI()));
+        boolean cpi = request.getRequestURI().startsWith("/internal/v1/cpi/") || request.getRequestURI().equals("/internal/v1/cpi");
+        problem.setInstance(URI.create(cpi ? "/internal/v1/cpi/collection-attempts" : request.getRequestURI()));
         problem.setProperty("code", code);
-        problem.setProperty("timestamp", clock.instant());
+        problem.setProperty("timestamp", cpi ? java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME
+                .format(clock.instant().atZone(java.time.ZoneId.of("Asia/Seoul"))) : clock.instant());
         problem.setProperty("requestId", requestId);
         problem.setProperty("violations", List.of());
 

@@ -8155,3 +8155,87 @@ configured origin or any network endpoint.
 - Next after review/PR/CI: a separately scoped protected read-only operator
   query/presentation. Heartbeat, retention, alert channel and real host startup
   remain separate decisions requiring user details before activation.
+
+## 2026-09-08 — P5 / ADR-069: Protected read-only CPI attempt query API
+
+### Starting point and scope
+
+- Verify PR #16 was user-merged at `e66669d27cf120c9b79d737abb91ca37cace8d32`.
+  Its head `0faf0d3` passed hosted CI #44 (`34203090304`). Start
+  `feature/p5-cpi-operator-query` from merged develop for the user's next step.
+- Add a default-disabled local operator query API. No new BLS key, external
+  account, provider request, deployment, actual token or operator activation.
+  Preserve existing dev databases/preview, `.env`, and the user's generated
+  `apps/web/next-env.d.ts`. This PC is not the future home server.
+
+### Routes, modules and security decisions
+
+- New GET/HEAD routes: `/internal/v1/cpi/collection-attempts` (recent 20) and
+  `/internal/v1/cpi/collection-attempts/{canonical-lowercase-UUID}` (explicit
+  selection). Query parameters, custom limits, pagination, as-of and token
+  query input are rejected before DB access. No CPI collection/retry mutation.
+- `CpiAttemptReader` provides a narrow read port. `CpiRepository` inherits it;
+  `JdbcCpiRepository` reuses the typed explicit-column mapper and queries at
+  most 21 rows in one statement with deterministic start/UUID ordering. The
+  21st row indicates hasMore, not an inferred total or automatic next fetch.
+  Neither query reads raw receipts, the mutable gate, or an external provider.
+- `CpiAttemptQueryService` checks strict selection, bounds, order, duplicates,
+  future processing timestamps and exact selected identity. SQL/parser errors
+  become sanitized unavailable evidence, never cached success or fixture
+  fallback. Missing UUID is 404; empty recent is an empty list, not dummy data.
+- `OperatorCpiAttemptController`/exception handler emit KST (+09:00) timestamps,
+  no-store responses and a bounded closed DTO. Null terminal means UNKNOWN,
+  not RUNNING/FAILED/SAVED inferred from age. Explicit UNVERIFIED /
+  PERSISTED_ATTEMPT_RECORDS metadata disclaims heartbeat, CPI freshness, PIT
+  history, raw-receipt replay, provider-request proof and complete history.
+- Extend the existing stateless operator bearer chain to `/internal/v1/cpi/**`;
+  allow only authenticated GET/HEAD with OPERATOR authority, deny other verbs.
+  Missing/wrong/ambiguous credentials and forwarded identity cannot read.
+  CPI-specific shared security/firewall errors use KST, fixed safe instances,
+  no-store and no reflected path/query/credential. Existing SEC/public behavior
+  remains unchanged. Do not imply the whole operator API is read-only: the
+  shared switch still enables the existing SEC operator endpoints too.
+- `OPERATOR_API_ENABLED` remains false by default and forces the entire enabled
+  API process onto loopback. No property/secret/Compose change or new migration.
+  Public `/market/cpi` and `/v1/macro/cpi` remain unchanged. No web/UI additions.
+- CPI custody expands to 58 exact paths: nine baseline replacements and 49
+  additions. Three shared security files retain exact baseline identities;
+  eight new source/test files and two updated repository files are pinned.
+  Only the two exact merged ADR-068 repository predecessors are newly admitted
+  before commit. Current bytes, mutation tests and before/after custody remain
+  mandatory; no historical body, workflow or broad product exemption changes.
+
+### Verification and handoff
+
+- Initial focused run: 25 tests, one failure because MockMvc retains rendered
+  HEAD bytes and the test incorrectly asserted wire-body suppression there.
+  Keep MVC authorization/read/no-store checks, move the empty HEAD-body assertion
+  to the actual Tomcat HTTP test. Do not suppress that transport requirement.
+- Corrected focused run: 26/26 PASS, zero skips (29.099s),
+  `.cache/adr069-focused-final.log`. Covers query/MVC/default-disabled behavior,
+  existing operator security and real loopback HTTP with disposable PostgreSQL.
+- Real HTTP/PostgreSQL integration verifies loopback overrides wildcard config,
+  20-of-24 bounded/tied ordering, exact selection outside the recent window,
+  UNKNOWN/SAVED distinction, KST rollover, no-store, 401/403/400/404 behavior,
+  empty HEAD wire body and unchanged CPI tables after all requests. A disposable
+  SELECT-only role reads the two ledger tables but cannot read raw captures.
+  Only DEMO rows and a synthetic bearer credential are used; no collector bean
+  or real provider request. The role/DB/server exist only in the test lifecycle.
+- Full API `mvn verify`: 2,476 PASS, zero failures/errors/skips; executable JAR
+  package PASS (1m32s), `.cache/adr069-api-full.log`. This reruns existing SEC,
+  public API, security, H2/PostgreSQL migration and domain regressions too.
+- Python 3.12 current suite: 272 total, 266 PASS, six existing Windows capability
+  skips, zero failures/errors (36.840s), `.cache/adr069-ci-tests.log`.
+  Current product custody, CI size limits, current DEMO fixture contracts and
+  whitespace checks PASS. No web/layout change, so Web lint/unit/build/responsive
+  checks were not repeated locally. No separate packaged worker Docker rehearsal
+  was run in this API-only slice. New-candidate hosted CI remains outstanding.
+- Preserve `next-env.d.ts` SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  Finish as a focused local Conventional Commit, excluding `.env`, ignored
+  reports and user-owned generated changes. No remote push, PR, merge or
+  deployment is included. ADR-069 records usage, evidence and activation limits.
+- Next: review/PR/hosted CI, then separately scoped protected operator
+  presentation. Token handling must not enter public web pages. Heartbeat,
+  notifications, retention and real server startup still need separate decisions;
+  ask for actual credentials/host details before any step needs activation.
