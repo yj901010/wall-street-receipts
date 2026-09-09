@@ -8339,3 +8339,97 @@ configured origin or any network endpoint.
   approved disposable Spring/PostgreSQL/operator-browser rehearsal before any
   actual operator activation. Ask for real host/process/credential details only
   when that activation step is in scope.
+
+## 2026-09-09 — P5 / ADR-071: Disposable real-stack CPI operator rehearsal
+
+### Starting point and implementation scope
+
+- User-merged PR #18: `39a0ae4db395afb804b6306645d25832bc0c8d3d` on develop;
+  its head passed all four jobs of PR CI #48 (`34312743649`). Start
+  `feature/p5-cpi-operator-rehearsal` from that merge. Preserve the existing
+  dirty `apps/web/next-env.d.ts`, root `.env`, developer build and existing DB.
+  Docker Desktop is available on this development PC, not the future home server.
+- Add explicit `CpiOperatorBrowserIT` plus test-only process/evidence helpers
+  under the API operator test package, and `operator/full-stack.config.ts` /
+  `operator/full-stack-tests/evidence.spec.ts`. No production code, dependency,
+  schema, public route, worker activation or provider configuration changes.
+  Exercise the existing `/operator/cpi` and its bounded query gateway against
+  actual Spring/Tomcat `/internal/v1/cpi/collection-attempts` reads.
+- Require disposable confirmation and an exact, secret-free source/fixture
+  mirror under repository `.cache`; build current Next source before execution.
+  Node children get an allowlisted OS environment and bounded logs/deadlines.
+  Track exact owned child descendants and close listeners, context and container;
+  no broad process-name/port cleanup. No real operator credential or provider key.
+- Testcontainers creates a non-reused labelled PostgreSQL 17 database with an
+  inspected literal-loopback port. Owner migrates/seeds; Spring uses SELECT-only
+  access to two ledger tables, with deletion and raw-capture access denied.
+  Disable the fixture importer, CPI collector and SEC public data. Assert the
+  actual reader identity, missing collector/importer beans and operator-forced
+  loopback binding. Only random in-memory DEMO bearer and synthetic rows are used.
+- Run empty, seeded, permission-revoked and permission-restored phases. Compare
+  complete ordered snapshots of attempts/results/captures/gate around all reads.
+  No mocked HTTP API, product fault endpoint, existing DB mutation or fake read
+  result. Fixed Clock nanoseconds and stored microseconds retain their distinct
+  KST representations. UNKNOWN is not inferred RUNNING/FAILED; SAVED is a receipt
+  reference, retry-not-before is only a lower bound, not a next-run guarantee.
+- Add six exact custody paths: 82 total, nine baseline replacements and 73
+  additions. No predecessor exemption, historical workflow/body edit or default
+  skipped test. Six helper unit tests run ordinarily; the browser IT is selected
+  explicitly. ADR-071 documents Windows source-mirror setup, prerequisites,
+  cleanup ownership and the limits of this non-deployed rehearsal.
+
+### Verification, corrections and limits
+
+- Initial full-stack startup correctly failed when the default fixture analyst
+  importer tried to write as the SELECT-only role. Disable that importer in the
+  test context, rather than granting writes. Its class is package-private; use
+  the bean-name absence assertion without altering production visibility.
+- The next run passed empty/seeded phases but its error-body assertion failed:
+  the real UI intentionally cancels non-200 bodies. Keep that behavior; assert
+  browser 503/honest empty error state and use another real bounded request to
+  check the exact sanitized wire envelope. Do not mock a response or weaken the
+  production limiter. Fix only the rehearsal, then rerun all four phases.
+- Final explicit Java selection: **7/7 PASS**, zero skips, 3m14s,
+  `.cache/adr071-full-stack-final.log`. Includes six helper guards and one
+  complete Spring/PostgreSQL/browser IT; its **12/12 browser checks PASS** at
+  1440/1280/390px. Phase times: empty 48.1s, seeded 37.7s, unavailable 14.5s,
+  recovered 27.7s. Recent-20/hasMore, deterministic tied ordering, known UUID
+  outside window, saved reference, absent UUID, real 401 after prior data,
+  POST/SEC proxy denial, DB error/recovery, no-store, no automatic read, cleared
+  credential/storage/cookies, reset and no external browser request all pass.
+- Next 16.2.11/Turbopack production build and generated TypeScript checks PASS
+  in the verified mirror, 14 routes plus the existing proxy. Evidence directory:
+  `.cache/adr071-evidence-3310768826205932303/`. Trace/video off; inspect recovered
+  desktop/mobile DEMO screenshots after password clearing. The narrow table stays
+  inside its labelled horizontal-scroll region, not outside the document.
+- Full Web ESLint PASS (`.cache/adr071-web-lint-final.log`); run from `apps/web`,
+  not repository root. Full Vitest **60 files / 801 tests PASS**, 38.82s,
+  `.cache/adr071-web-tests.log`. No product Web source changed, so the separate
+  87-check public browser suite was not repeated in this test-only slice.
+- Full API `mvn verify`: **2,482 PASS**, zero failures/errors/skips, executable
+  JAR package PASS, 1m39s, `.cache/adr071-api-full.log`. Includes existing SEC,
+  public API/security, H2/PostgreSQL migration and domain regressions. The explicit
+  browser IT is not counted again in the ordinary Maven suite.
+- Python 3.12 CI contracts: **272 total / 266 PASS / six existing Windows
+  capability skips**, zero failures/errors, 174.297s, `.cache/adr071-ci-tests.log`.
+  After the final browser assertion/hash change, rerun all **11 CPI custody tests
+  PASS**, 80.437s, `.cache/adr071-cpi-contracts-final.log`. Current product custody,
+  CI size limits, DEMO fixture contracts and whitespace checks PASS. No full
+  historical execution or new-candidate hosted CI result is claimed.
+- This uses actual compiled Spring main code with a test Clock and production
+  Next assets, not a packaged API JAR deployment or live provider data. Home-server
+  startup, real keys, actual operator activation and worker health remain untested
+  here. The shared operator bearer is still not CPI-only; that activation needs
+  an explicit process/security discussion before use with real persisted data.
+- Final cleanup inspection: no ADR-071-labelled container or source-mirror Node/
+  Java process remains; only the pre-existing healthy development PostgreSQL
+  listener at `127.0.0.1:5432` is running. Temporary DEMO databases were discarded
+  by their test owners and can be regenerated by the rehearsal; no existing
+  persisted database was removed. Ignored DEMO logs/mirror screenshots remain.
+- Preserve `next-env.d.ts` SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  Finish as a focused local Conventional Commit, excluding `.env`, generated
+  mirrors, reports and the user-owned declaration. No push, PR, merge or deployment
+  in this slice. Next: push/review/PR/hosted CI, then separately scope packaged
+  operator lifecycle/host rehearsal or real activation, with required host and
+  credential information requested before that step.
