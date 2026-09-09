@@ -1,4 +1,4 @@
-"""ADR-064 through 069: exact CPI retrieval, attempt ledger and tooling custody."""
+"""ADR-064 through 070: exact CPI retrieval, operator view and tooling custody."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,24 @@ from current_contracts import BASELINE, blob_record
 from navigation_contracts import _current_bytes
 
 CONTENT_SHA256 = {
+    "apps/web/src/proxy.ts": "24901bd8556156ba4c24409068716edac6b1ab60533f83e56971b37c75535c2b",
+    "apps/web/src/lib/operator-proxy.test.ts": "08e18e947beaa8ef80c73f6ed100b4c021050aefc69a793aef020375df4f87b9",
+    "apps/web/e2e/operator-disabled.spec.ts": "1117cd38e87f8c40ee1e8b5e68ac6e5c4e0034b5a3709a4b1108b5e53a68f8e0",
+    "apps/web/operator/demo-server.mjs": "5fc82b6d2feb6eb099841c2e3df8f1efcd1503dac1cf669cf605807f86b096e5",
+    "apps/web/operator/gateway.ts": "16c92fbae9b0cbfd1f5744c0c52f36bff1fe4a4365d4a60ebe23dff602fd8de1",
+    "apps/web/operator/playwright.config.ts": "a9071fa03c0f432f751321dfa88f6300516d3e4225eccf8ce5bf6aeabc98d4fd",
+    "apps/web/operator/start.mjs": "dda59a59b06d34f968e8edbcedcf9fa808db91c7a65b387085868621972f5693",
+    "apps/web/operator/tests/view.spec.ts": "c74159ef927766715bdfb918e07e7ca35fe790a939c3461be01838f378c91338",
+    "apps/web/src/app/operator/cpi/page.test.tsx": "d4ddd25473b040f375ab828a9a6dc7760676d9999ccf216b70dad11896c99d72",
+    "apps/web/src/app/operator/cpi/page.tsx": "6a1432bb3b7cfd14d310f7879549aade7ac764ed917fff91f62f81030840779f",
+    "apps/web/src/app/operator/cpi/view.module.css": "106c269089016da115b2e241b0f7fa02b07584e6ca8994250e3d64a394f499a8",
+    "apps/web/src/app/operator/cpi/view.test.tsx": "3802e14f4cdf6870b18a593ea34aa9f19a80644a07bd8e134bf2573e7bb63950",
+    "apps/web/src/app/operator/cpi/view.tsx": "6bded4a55c968092a26ae829f4220fd519303f09017db39b66b5befb53e4e3bc",
+    "apps/web/src/lib/operator-cpi.test.ts": "a4526e8335c6838541ce168623a0c44b9a2a468f5414be002e3d9e8013e950a8",
+    "apps/web/src/lib/operator-cpi.ts": "a842f5b76414ac9a7552e4415a825d78f5e87d6f98708a03a4e86063d0dc1bd7",
+    "apps/web/src/lib/operator-gateway.test.ts": "3107aed995bae78f88f6abc91146863a7a5bfd7ab3f35b82c0af4c3aeb74b253",
+    "apps/web/src/lib/operator-mode.server.ts": "90778d96c4cf6f114d61427c109f2d6a2ce6deafc407a83e87cc01fae6ab9c5d",
+    "apps/web/src/test/operator-cpi-fixture.ts": "badd52b69b1b0c9f58db04a3b2e6141d62c38d4e25954a5563b3877a98b40171",
     "apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiSecurityConfiguration.java": "42db00bf5112f682b5c51490ec0651d840cc81bc93b8d4372742fe7053e204c3",
     "apps/api/src/main/java/com/wallstreetreceipts/api/web/security/ApiRequestRejectedHandler.java": "31ba52b87762a892b5ae6f229d1fa870a10333ca122e4e2f15334e3134112857",
     "apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorApiSecurityProblemWriter.java": "94ea76e5705a9a08100afcc42c7ef7984bf06422771c95cee59188409ed25e36",
