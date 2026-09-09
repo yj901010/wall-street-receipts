@@ -8239,3 +8239,103 @@ configured origin or any network endpoint.
   presentation. Token handling must not enter public web pages. Heartbeat,
   notifications, retention and real server startup still need separate decisions;
   ask for actual credentials/host details before any step needs activation.
+
+## 2026-09-09 — P5 / ADR-070: Isolated local CPI operator presentation
+
+### Starting point and implementation scope
+
+- User-merged PR #17: `821e4071a8de06eaa1f83f7216e20d5d65e66979` on develop.
+  Its head `3ef22a8` passed all four jobs of PR CI #46 (`34300798172`). Start
+  `feature/p5-cpi-operator-view` from that merge, preserving the existing dirty
+  `apps/web/next-env.d.ts`. No new provider key, real operator credential, API
+  activation, existing DB mutation, collector request or home-server deployment.
+- Add a Korean Next/TypeScript manual query screen at `/operator/cpi`. The
+  initial SSR shell contains no credential or protected data; the client island
+  accepts a password for each explicit recent-20 or exact-UUID read and clears it
+  on submission. Reset/pagehide abort and clear; late responses cannot restore
+  cleared results. No token in URL/cookies/browser storage or SSR, no polling,
+  automatic retry, collection or mutation controls.
+- Add `operator/start.mjs` and `operator/gateway.ts`: a separate production
+  listener bound only to literal `127.0.0.1`, two explicit numeric ports, fixed
+  local CPI GET destinations, actual socket/Host/origin checks, no forwarded
+  identity or arbitrary routes, one active query / one start per second, 429
+  with local Retry-After: 1, five-second upstream deadline and 64 KiB decoded
+  response ceiling. Strip credential/cookie/Next routing headers before render;
+  fixed errors, no-store query responses, nonce CSP, no framing/referrer or native
+  form navigation. No API/collector startup and no ambient server token.
+- Normal public Next denies the route using a process-local marker, not an
+  environment activation flag. An operator-only `src/proxy.ts` matcher returns
+  404 before SSR streaming; the page repeats the guard. No public navigation
+  change, Next query handler, remote admin account or public secret transport.
+- `operator-cpi.ts` validates the closed ADR-069 DTO in bridge and browser:
+  exact metadata/limitations, bounded ordered unique rows, exact identity,
+  terminal/gate/chronology consistency, valid KST calendar instants. Preserve
+  API Clock nanoseconds and persisted microseconds separately. Reuse shared
+  KstTimestamp rather than a page-local formatter. UNKNOWN, UNVERIFIED, empty,
+  failed query, receipt reference and retry lower-bound meanings stay explicit;
+  no heartbeat, CPI freshness, raw replay or provider-delivery inference.
+- Layout has visible keyboard focus and a labelled contained mobile table
+  scroll region. Default/public paths and all existing product source bytes
+  remain unchanged except the added narrowly matched proxy. Add exactly 18
+  source/test/tool paths to CPI custody: 76 total, nine baseline replacements
+  and 67 additions; no new predecessor exemption or historical workflow/body edit.
+- ADR-070 documents local-only usage and the prerequisite discussion before
+  real activation. The shared API switch still enables existing SEC mutation
+  endpoints; the UI exposes no SEC proxy, but the bearer itself is not CPI-only.
+
+### Verification, corrections and limits
+
+- Initial pnpm invocation attempted dependency reconciliation and aborted with
+  no TTY/network; do not reinstall/remove existing modules. Use installed Node
+  24.14.1 tool entry points directly. Sandboxed Vitest child spawn was denied;
+  retry with approved test-process permissions. First focused UI tests found a
+  malformed synthetic token literal; generate exactly 32 DEMO bytes instead.
+- Initial complete Web run: 798 PASS / one KST shared-component guard failure.
+  Replace page-local semantic time rendering with KstTimestamp without changing
+  or weakening that guard. Final Web Vitest: **60 files / 801 tests PASS**,
+  26.97s, `.cache/adr070-web-tests-final.log`. Full ESLint PASS,
+  `.cache/adr070-lint-final.log`.
+- Secret-free source mirror `.cache/adr070-web` preserves the original `.next`
+  and user declaration. Final default Next 16.2.11/Turbopack production build
+  and generated TypeScript checks PASS, 14 routes plus the operator-only proxy,
+  `.cache/adr070-build-final.log`. An exploratory tsc against the original
+  development-generated declarations reported existing test typing errors;
+  no unrelated test/declaration was edited to force that check green.
+- Offline production operator browser: **3/3 PASS**, 18.2s,
+  `.cache/adr070-operator-browser-final.log`, at 1440/1280/390px. Real browser →
+  actual Next/custom gateway → disposable DEMO HTTP API verifies no initial
+  fetch, recent 20/hasMore, known UUID outside the window, SAVED receipt reference,
+  KST rollover, no-store, empty password/storage/cookies, contained layout and
+  keyboard outline, exact missing selection with removal of old evidence, and
+  reset. No external browser request or unexpected console/page error. Trace and
+  video off; inspect desktop/mobile DEMO screenshots after credential clearing.
+  Separate ignored operator artifact directory avoids public-suite interference.
+- Browser harness corrections: scope status assertions to the combined status
+  cell and alerts to the main region (Next has its own route announcer); pace
+  synthetic tests across projects to respect the real process-wide limiter.
+  No production retry, limiter exemption or disabled assertion was introduced.
+- First public run: 83 PASS / four failures. Three correctly detected a streamed
+  not-found page returning HTTP 200; add the pre-stream operator proxy and retain
+  page denial. One existing mobile keyboard-style timing failure was not changed.
+  Final full public Playwright: **87/87 PASS**, 2.3m, one worker, retries disabled,
+  `.cache/adr070-public-browser-final.log`, including all three-width public
+  operator page/query 404 checks. Existing focus assertions remain intact.
+- Python CI contracts: initial sandbox run hit temporary-directory permissions,
+  not a passing result. Final approved Python 3.12 run: **272 total / 266 PASS /
+  six existing Windows capability skips**, 90.797s,
+  `.cache/adr070-ci-tests-final2.log`. Current product custody, CI size limits,
+  current DEMO fixture contracts and whitespace checks PASS. Historical bodies
+  and workflow remain pinned; no full historical execution or new hosted CI
+  result is claimed. API Java/PostgreSQL tests were not rerun because no API,
+  domain, persistence or migration code changed in this slice. The new browser
+  rehearsal uses a synthetic HTTP API, not a real Spring/PostgreSQL end-to-end run.
+- Temporary operator DEMO processes closed after the rehearsal. Stop only the
+  verified owned public test listener on 3471 (launcher 11332 / child 20100).
+  Preserve existing dev services/DBs, root `.env`, and next-env.d.ts SHA-256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Finish as one focused local Conventional Commit. Exclude ignored source
+  mirrors/reports, secrets and the user's generated declaration; no push, PR,
+  merge or deployment in this slice. Next: push/review/PR/CI, then a separately
+  approved disposable Spring/PostgreSQL/operator-browser rehearsal before any
+  actual operator activation. Ask for real host/process/credential details only
+  when that activation step is in scope.

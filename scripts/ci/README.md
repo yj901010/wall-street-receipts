@@ -235,3 +235,12 @@ PostgreSQL tests cover default-disabled routes, bearer/verb restrictions,
 KST/error sanitation, bounded recent records, unknown evidence and unchanged
 DB contents; a disposable SELECT-only role proves no raw receipt/gate access
 is required. No provider key, host activation or web layout change is involved.
+
+ADR-070 adds 18 exact CPI operator presentation/tool/test paths (76 total,
+nine baseline replacements and 67 additions), without changing prior product
+bytes or adding predecessor exemptions. The ordinary Web job runs adapter,
+React, real local HTTP gateway and public-route-denial tests. The explicit
+production browser rehearsal in `apps/web/operator/playwright.config.ts` runs
+separately with only a synthetic DEMO HTTP API and bearer; it is not silently
+added to the historical workflow and does not validate a live Spring/DB host.
+No real operator activation, provider key, migration or deployment is included.
