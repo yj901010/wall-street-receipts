@@ -1,4 +1,4 @@
-"""ADR-064 through 070: exact CPI retrieval, operator view and tooling custody."""
+"""ADR-064 through 071: exact CPI retrieval, operator view and tooling custody."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,12 @@ from current_contracts import BASELINE, blob_record
 from navigation_contracts import _current_bytes
 
 CONTENT_SHA256 = {
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiBrowserEvidence.java": "3423fee8295d01c8479657aa01f572e572b87defda7f67184bdc608ef1ffd0b7",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiBrowserProcess.java": "f4d1bc10513ba32ba6eff5c77d5eb2d05870ba84603808193bfbef57b0702eba",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiBrowserProcessTest.java": "b61338d959384a8e57c1f93fe845c844469fe6ab2df80ff966d4d3184cb297b3",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiOperatorBrowserIT.java": "e9ab1c2f78290088fdd5f01986f7e313e8393d9b922fc6246913a97064976eb4",
+    "apps/web/operator/full-stack.config.ts": "0b624c17791dc1cc71d609fe73e8a77401aa428a7e179923d44e04afee95b165",
+    "apps/web/operator/full-stack-tests/evidence.spec.ts": "605af71f7b23ac97f50592a9564651c765e735e00fd52aae21bbbe0b4f0b564c",
     "apps/web/src/proxy.ts": "24901bd8556156ba4c24409068716edac6b1ab60533f83e56971b37c75535c2b",
     "apps/web/src/lib/operator-proxy.test.ts": "08e18e947beaa8ef80c73f6ed100b4c021050aefc69a793aef020375df4f87b9",
     "apps/web/e2e/operator-disabled.spec.ts": "1117cd38e87f8c40ee1e8b5e68ac6e5c4e0034b5a3709a4b1108b5e53a68f8e0",

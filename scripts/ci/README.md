@@ -244,3 +244,14 @@ production browser rehearsal in `apps/web/operator/playwright.config.ts` runs
 separately with only a synthetic DEMO HTTP API and bearer; it is not silently
 added to the historical workflow and does not validate a live Spring/DB host.
 No real operator activation, provider key, migration or deployment is included.
+
+ADR-071 adds six pinned rehearsal/helper files (82 CPI paths, nine baseline
+replacements, 73 additions), without changing production bytes or predecessor
+exemptions. Six ordinary Java helper tests check environment isolation and
+current-source/fixture mirror rejection. `CpiOperatorBrowserIT` is explicit local
+acceptance only: a fresh production Next build, real loopback Spring API and an
+owned PostgreSQL Testcontainer with a SELECT-only reader. It covers empty,
+seeded, permission failure and recovery at three widths, complete unchanged
+ledger/capture/gate snapshots and real authentication. No default test skip,
+workflow job, fake HTTP API, provider request or existing DB activation is added.
+See ADR-071 for prerequisites, a secret-free mirror and the explicit invocation.
