@@ -268,3 +268,13 @@ API-loss error behavior and unchanged CPI tables. No automatic CI job, default
 skip, public route, provider key or real home-server activation is added. Four
 Node process tests cover duplicate bind, prepare failure and bounded/sanitized
 cleanup failure; the test-only Next stub is never copied into the runtime image.
+
+ADR-073 adds explicit CPI_READ_ONLY operator access. The closed inventory now
+has 93 CPI paths: 12 exact baseline replacements and 81 additions. Configuration,
+authorization, direct HTTP/PostgreSQL tests and the new security test are pinned;
+five exact merged ADR-072 predecessors permit pre-commit development only when
+all working bytes match the new hashes. Browser and packaged lifecycle acceptance
+select the restricted mode, and the packaged probe requires direct API denial of
+SEC reads and commands after restart. Current Maven tests cover restricted,
+legacy FULL and disabled behavior. Hosted workflow and historical bodies remain
+unchanged; runtime acceptance is still explicit local work.

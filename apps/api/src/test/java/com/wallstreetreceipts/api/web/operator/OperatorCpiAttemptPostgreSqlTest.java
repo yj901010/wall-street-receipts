@@ -42,6 +42,7 @@ import com.wallstreetreceipts.api.support.CpiTestFixture;
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "app.operator-api.enabled=true",
+        "OPERATOR_API_ACCESS=CPI_READ_ONLY",
         "app.operator-api.token-sha256=905f28def18eaac05ae6f12b2c3452744afaf626da1343d57b395b544e0519b6",
         "app.cpi.enabled=false", "server.address=0.0.0.0"})
 @ActiveProfiles("test")
@@ -112,6 +113,12 @@ class OperatorCpiAttemptPostgreSqlTest {
             assertThat(request(client, "GET", PATH + "/" + UUID.randomUUID(), true).statusCode()).isEqualTo(404);
             assertThat(request(client, "GET", PATH, false).statusCode()).isEqualTo(401);
             assertThat(request(client, "POST", PATH, true).statusCode()).isEqualTo(403);
+            for (var secPath : List.of("/internal/v1/sec/collection-attempts/root",
+                    "/internal/v1/sec/collection-attempts/exact-root")) {
+                assertThat(request(client, "POST", secPath, true).statusCode()).isEqualTo(403);
+            }
+            assertThat(request(client, "GET", "/internal/v1/sec/collection-attempts/" + new UUID(0, 1), true)
+                    .statusCode()).isEqualTo(403);
             assertThat(request(client, "GET", PATH + "?limit=1000", true).statusCode()).isEqualTo(400);
         }
         assertThat(inventory()).isEqualTo(before);

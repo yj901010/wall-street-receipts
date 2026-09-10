@@ -34,8 +34,8 @@ class CpiCustodyTests(unittest.TestCase):
                               self.current if current is None else current)
 
     def test_closed_inventory_without_general_product_exceptions(self):
-        self.assertEqual(len(cpi.CPI_PATHS), 89)
-        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 80)
+        self.assertEqual(len(cpi.CPI_PATHS), 93)
+        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 81)
         self.assertFalse(cpi.CPI_PATHS & bridge.FIXED_CI_PATHS)
         self.assertFalse(cpi.CPI_PATHS & bridge.NAVIGATION_PATHS)
         self.assertNotIn(bridge.NEXT_ENV, cpi.CPI_PATHS)
@@ -86,7 +86,7 @@ class CpiCustodyTests(unittest.TestCase):
                 (self.root / relative).write_bytes(self.expected[relative])
 
     def test_query_custody_keeps_exact_security_baseline_and_repository_predecessors(self):
-        self.assertEqual(len(cpi.BASELINE_RECORDS), 9)
+        self.assertEqual(len(cpi.BASELINE_RECORDS), 12)
         self.assertEqual(len(cpi.QUERY_PREVIOUS_RECORDS), 2)
         previous = {**self.current, **cpi.QUERY_PREVIOUS_RECORDS}
         self.assertEqual(self.verify(previous), previous)
@@ -112,6 +112,21 @@ class CpiCustodyTests(unittest.TestCase):
             (self.root / relative).write_bytes(old)
             with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
                 self.verify(previous)
+
+    def test_read_only_access_accepts_exact_merged_predecessors_but_never_stale_working_bytes(self):
+        self.assertEqual(len(cpi.READ_ONLY_PREVIOUS_RECORDS), 5)
+        previous = {**self.current, **cpi.READ_ONLY_PREVIOUS_RECORDS}
+        self.assertEqual(self.verify(previous), previous)
+        for relative, record in cpi.READ_ONLY_PREVIOUS_RECORDS.items():
+            with self.subTest(path=relative):
+                old = bridge.git(SOURCE, "show", cpi.READ_ONLY_BASE + ":" + relative)
+                self.assertEqual(blob_record(old), record)
+                with self.assertRaisesRegex(ValueError, "Unreviewed committed CPI"):
+                    self.verify({**self.current, relative: "100644 blob " + "e" * 40})
+                (self.root / relative).write_bytes(old)
+                with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
+                    self.verify(previous)
+                (self.root / relative).write_bytes(self.expected[relative])
 
     def test_missing_source_and_stale_working_bytes_never_fall_back(self):
         for relative in cpi.CPI_PATHS:

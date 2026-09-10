@@ -8543,3 +8543,86 @@ configured origin or any network endpoint.
   recovery, backups and operator access remain separate, untested activation
   work. The shared API bearer is still not CPI-only; request actual host/access
   and credential details before activating against real persisted data.
+
+## P5 / ADR-073 — CPI-only operator access (2026-09-10 KST)
+
+- Verify user-merged PR #20 at develop `0b674db887c23315eac983b88d27a301cdb2d066`.
+  PR CI #52 (`34323664250`) passed all four jobs; merge push CI #53
+  (`34326361773`) also succeeded. The merged tree equals the verified ADR-072
+  feature tree. The user confirmed the Ubuntu home server is not ready and
+  requested locally executable development. Branch from develop as
+  `feature/p5-cpi-read-only-operator`; preserve the user-owned web declaration.
+- Add `OPERATOR_API_ACCESS=CPI_READ_ONLY` to the existing API configuration.
+  An authenticated credential then receives only CPI_READ authority, allowing
+  GET/HEAD of the recent attempt list and single-attempt selector. Direct SEC
+  commands/queries and other protected CPI paths/verbs are forbidden before
+  application service invocation. Existing FULL access remains the default;
+  blank/unknown/combined access fails startup. The operator remains disabled
+  by default and retains digest validation, loopback binding and no-store errors.
+- The scope applies per API process, not per user or database transaction.
+  Reusing the same secret in another FULL process would still authorize that
+  process; use a distinct credential at future activation. SELECT-only DB
+  grants and disabled providers/import/migrations remain separate configuration.
+  No real token, provider call, persistent migration, public route or new remote
+  access is introduced. Public deployment and Web source remain unchanged.
+- Add real Spring Security tests for the exact authority, credential erasure,
+  successful CPI list/selection/HEAD, SEC execution/query rejection with zero
+  service interactions, mutation denial and missing/wrong/duplicate/forwarded
+  credentials. Real HTTP/PostgreSQL acceptance now selects CPI_READ_ONLY and
+  denies direct SEC requests while preserving all CPI tables.
+- Update the explicit browser and packaged lifecycle rehearsals to use the new
+  mode. The Linux probe now also calls SEC command/query routes directly on the
+  API, so UI gateway denial alone cannot satisfy the credential-scope check.
+  Retain normal start/stop/restart, duplicate-bind and data-invariance checks.
+- Focused Java selection: **45/45 PASS**, zero skips, 29.520s
+  (`.cache/adr073-focused.log`). Full API Maven verify/package: **2494/2494 PASS**,
+  zero failures/errors/skips, 1m40s (`.cache/adr073-api-full.log`).
+- Explicit production browser/Spring/PostgreSQL rehearsal: **7/7 Java PASS**,
+  including **12/12 browser checks** at 1440/1280/390px, 1m40s
+  (`.cache/adr073-browser.log`). A fresh secret-free Web source mirror was built;
+  Next production build/TypeScript pass with 14 routes plus proxy. Empty, seeded,
+  denied-DB-access and recovered states all pass with SELECT-only access and
+  unchanged tables. Recovered mobile/desktop screenshots were visually checked:
+  the table scrolls within its region without page overflow. Evidence:
+  `.cache/adr071-evidence-8773733642015255077/`. Web UI/source is unchanged, so
+  no repeated full Web unit/lint or public browser-suite result is claimed.
+- Extend exact current CPI custody to **93 paths / 12 baseline replacements /
+  81 additions**, with five exact merged ADR-072 predecessors and mandatory new
+  working bytes. The new custody test initially omitted restoring a temporary
+  test fixture between cases; fix that test-only isolation error and rerun the
+  Python suite. CI workflow and historical bodies are unchanged.
+- Source commit precedes the committed-input packaged acceptance. Record the
+  final Python and actual Docker acceptance results below after they complete;
+  no new-candidate hosted CI result or home-server activation is claimed here.
+- Commit application/rehearsal inputs as `98c7619555b308de42fe63b59cea8342b8fb4cbb`
+  (`feat(cpi): add read-only operator access`). The staged diff passed a
+  value-silent comparison against local secret values; .env, cache and the
+  user-owned next-env declaration were not staged.
+- Final Python CI contracts: **283 total / 277 PASS / six existing Windows
+  capability skips**, zero failures/errors, 54.475s
+  (`.cache/adr073-ci-final.log`). Current product custody passes both before and
+  after the source commit. Current DEMO fixture/revision/outcome contracts and
+  workflow parity pass. Workflow size remains 29,069 / 500,000 bytes, with a
+  largest decoded run of 598 / 21,000 characters. The new probe passes Node
+  syntax checking; no new default skipped test or workflow job was added.
+- Packaged Linux API/Web/operator lifecycle **PASS** from source commit
+  `98c7619`; output `.cache/adr073-lifecycle.log`, bounded build/runtime diagnostics
+  `.cache/adr072-2606b592187fca7e35f4c28a.log`, and successful structured report
+  `.cache/adr072-2606b592187fca7e35f4c28a.json`. The report records exact source,
+  all five input hashes and immutable image IDs. The unchanged packaging recipe
+  SHA-256 begins `fb311640bfea`; the updated direct-API probe begins `220e69cf`.
+  Initial/restarted CPI reads work, direct SEC command/query requests return 403,
+  duplicate UI startup exits 1/EADDRINUSE, normal UI shutdown exits 0 and releases
+  its port. API loss returns the exact sanitized 503; ordered restart preserves
+  all CPI tables and restricted access. Graceful API shutdown completes without
+  OOM or forced-kill acceptance. No real provider request or credential is used.
+- Cleanup inspection confirms no lifecycle-labelled container/network/image or
+  owned scratch directory remains. Disposable DBs and image/context artifacts
+  were removed and can be regenerated. Ignored reports and the browser evidence
+  mirror remain for inspection. Existing development PostgreSQL is healthy at
+  127.0.0.1:5432. The user-owned next-env SHA-256 remains exactly
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Finish the local source and verification-record commits. Next: push/review/PR
+  and hosted CI for this candidate. Actual operator activation, remote access,
+  server startup/reboot recovery and backups still require the future Ubuntu
+  host information; do not infer those results from this local acceptance.
