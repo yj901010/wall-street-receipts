@@ -1,4 +1,4 @@
-"""ADR-064 through 075: exact CPI retrieval, bounded reads and tooling custody."""
+"""ADR-064 through 076: exact CPI retrieval, bounded reads and tooling custody."""
 from __future__ import annotations
 
 import hashlib
@@ -8,7 +8,9 @@ from navigation_contracts import _current_bytes
 
 CONTENT_SHA256 = {
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/cpi/CpiAttemptQueryConcurrencyTest.java": "c94b9ccfb32bc0d06a6ff2cbe8dbd6c42b862d2397d76765bbbd8a6ad0499310",
-    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptConcurrencyPostgreSqlTest.java": "f3efead84f85e5f020047f633d0e2a993143ff076eff2ba85e1cb7748cdb8d6a",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptConcurrencyPostgreSqlTest.java": "6f3a9ba78933be8568c6754c013dd69790709ae461eea58bf71be62783251f41",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/config/CpiReadOnlyPoolConfiguration.java": "424026b6389b9125e117375793e8ab76995a06da4719a6803e93d31090ed1399",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/config/CpiReadOnlyPoolConfigurationTest.java": "2aa4b62b882a82abfa2c385e6031db64be143dc182857058135ba24d31924725",
     "apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcCpiAttemptReadTimeoutTest.java": "8f251eb30396195a0b39f790f004bb8d481c98265e4a7015785aa60d05bfdc14",
     "apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiProperties.java": "2ba3da4ed709d18db9838fdc562c7b60c0023fccb3fef85ebcddb4e94a302ca0",
     "apps/api/src/main/resources/application.yml": "46741de69b3997a43179f502d1b4c7ef671ba146a590c9635d64d66aa41e08d7",
@@ -171,6 +173,11 @@ READ_CONCURRENCY_BASE = "fbc53893f027b0212460f6e3382440e7ad732b08"
 READ_CONCURRENCY_PREVIOUS_RECORDS = {
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/cpi/CpiAttemptQueryService.java": "100644 blob c5e70556393ef32f8460c33fe1d76ff9d09e7a7f",
 }
+# Exact merged ADR-075 HTTP test; working bytes must verify pool exhaustion too.
+POOL_WAIT_BASE = "0c747940d9c8e603b6a30c325470d6442e015dcb"
+POOL_WAIT_PREVIOUS_RECORDS = {
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptConcurrencyPostgreSqlTest.java": "100644 blob b954b7a10d7d17800e2849a9f45ba3e963a1cc53",
+}
 CPI_PATHS = frozenset(CONTENT_SHA256)
 CPI_ADDED_PATHS = CPI_PATHS - frozenset(BASELINE_RECORDS)
 
@@ -203,6 +210,8 @@ def verify_cpi(root: Path, git_read, baseline: dict, current: dict) -> dict:
             accepted_records.add(READ_TIMEOUT_PREVIOUS_RECORDS[relative])
         if relative in READ_CONCURRENCY_PREVIOUS_RECORDS:
             accepted_records.add(READ_CONCURRENCY_PREVIOUS_RECORDS[relative])
+        if relative in POOL_WAIT_PREVIOUS_RECORDS:
+            accepted_records.add(POOL_WAIT_PREVIOUS_RECORDS[relative])
         if current.get(relative) not in accepted_records:
             raise ValueError("Unreviewed committed CPI source change: " + relative)
         if relative in current:

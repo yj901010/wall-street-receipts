@@ -298,3 +298,15 @@ precede mandatory new working bytes; stale unbounded admission is rejected.
 Current Maven verification runs both new tests automatically. Historical bodies,
 workflow triggers and jobs are unchanged. This per-instance budget is not a
 global pool limit, rate limit or transport deadline.
+
+ADR-076 caps the normal Hikari pool's connection-wait setting at 1,000ms only
+when the operator API is explicitly enabled with CPI_READ_ONLY access. Shorter
+settings are preserved after datasource property binding; FULL/disabled modes,
+other pools, pool capacity and validation/driver settings remain unchanged.
+Custody has 98 exact paths (12 baseline replacements, 86 additions), including
+configuration unit tests and real HTTP/PostgreSQL pool-exhaustion recovery.
+The exact merged ADR-075 HTTP test can precede mandatory current working bytes.
+Current Maven verification includes these tests without new workflow jobs or
+historical changes. This shared-pool policy is not an HTTP deadline or a bound
+on driver/network validation; packaged lifecycle acceptance is separate explicit
+local regression, not container pool-exhaustion evidence.
