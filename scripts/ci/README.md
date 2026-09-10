@@ -288,3 +288,13 @@ Current Maven tests verify settings isolation and real PostgreSQL cancellation,
 single-connection pool reuse, SELECT-only behavior and recovery after locks on
 both ledger tables. No workflow or historical-body change is made; a JDBC
 statement timeout is not an end-to-end HTTP or home-server availability claim.
+
+ADR-075 limits CPI query-service reader invocations to four concurrent calls,
+shared by list/selection and GET/HEAD, with immediate no-store 503s on overflow.
+Custody expands to 96 exact paths (12 baseline replacements, 84 additions),
+including latch-based concurrency tests and real HTTP/SELECT-only PostgreSQL
+lock/cancel/recovery acceptance. The exact merged ADR-074 service object can
+precede mandatory new working bytes; stale unbounded admission is rejected.
+Current Maven verification runs both new tests automatically. Historical bodies,
+workflow triggers and jobs are unchanged. This per-instance budget is not a
+global pool limit, rate limit or transport deadline.

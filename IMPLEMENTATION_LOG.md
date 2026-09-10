@@ -8706,3 +8706,84 @@ configured origin or any network endpoint.
   this candidate. Further pool/transport/concurrency limits remain separate
   local work, as do Ubuntu startup/reboot recovery, backups and remote operator
   access once a real host is available. No push, PR, merge or deployment here.
+
+## P5 / ADR-075 — Non-queuing CPI read admission (2026-09-10 KST)
+
+- Verify user-merged PR #22 at develop `fbc53893f027b0212460f6e3382440e7ad732b08`.
+  PR CI #56 (`34428596127`) passed all four jobs, and merge push CI #57
+  (`34428884350`) succeeded. Branch from that develop commit as
+  `feature/p5-cpi-query-concurrency`. The Ubuntu home server remains unavailable;
+  this is another local development step with no real provider or DB activation.
+- Add one four-permit, non-queuing semaphore to the singleton
+  `application/cpi/CpiAttemptQueryService`. List and selection reader invocations
+  share it, including GET and HEAD. Saturation returns the existing sanitized
+  no-store 503 before invoking the reader; no request queue, retry, empty-success
+  fallback or new overload payload is introduced. Only acquired permits are
+  released, in finally, including on null results, runtime failures or Java errors.
+- Keep authentication/authorization, canonical UUID and HTTP parameter validation
+  ahead of admission. Missing rows and evidence validation preserve their meanings
+  after the reader returns. Routes remain GET/HEAD
+  `/internal/v1/cpi/collection-attempts` and `/{attemptId}`; controller, reader
+  interface, row model, schema and Web are unchanged. The three-second JDBC read
+  limit and ten-second write transaction budget from ADR-074 are unchanged.
+- Four is a fixed conservative operator policy, not a performance measurement.
+  It applies per query-service instance, not across processes, other repositories,
+  SEC/public requests or the whole database. Admitted calls can still wait for
+  pool/transport resources; this is not a rate limit, fairness guarantee or
+  end-to-end HTTP deadline. No application dependency, executor, pool or new
+  environment setting is added.
+- Add **nine deterministic concurrency unit cases**. Hold four recent, selected
+  or mixed calls, reject repeated overflow without reader interaction or delayed
+  execution, and preserve invalid-ID validation. Refill all four slots after
+  successful, empty, null, database-failure, invalid-evidence and fatal-error
+  outcomes; subsequent saturation detects leaked or excess permits.
+- Add ordinary current-Maven HTTP/PostgreSQL acceptance using a loopback API,
+  CPI_READ_ONLY bearer, SELECT-only DB role and labelled disposable DEMO database.
+  A real table lock blocks four SQL statements from mixed GET/HEAD list/selection
+  requests. All overflow responses complete as sanitized no-store 503s while
+  PostgreSQL still reports exactly four blocked statements. Invalid credentials,
+  malformed selectors/parameters and SEC command denial retain their status codes.
+  Successful release, actual SQL timeout and a full four-request wave after
+  timeout all pass. Full snapshots of the four CPI tables stay unchanged.
+- Unit selection: **26/26 PASS**, no skips, 18.632s (`.cache/adr075-unit.log`).
+  Expanded focused selection: **33/33 PASS**, no skips, 54.489s
+  (`.cache/adr075-focused.log`), including new concurrent and prior single-pool
+  HTTP/PostgreSQL tests plus restricted-access security regression.
+- Full current API Maven verify/package: **2515/2515 PASS**, zero failures/errors/
+  skips, 2m22s (`.cache/adr075-api-full.log`). The isolated output directory
+  `.cache/adr075-api-full/` contains the executable Spring Boot JAR.
+- Extend current CPI custody to **96 exact paths / 12 baseline replacements /
+  84 additions**. Pin both new tests and the changed service, accepting only its
+  exact merged ADR-074 predecessor with mandatory current working bytes. Current
+  source custody, DEMO fixture/revision/outcome contracts, workflow parity and diff
+  whitespace checks pass. Workflow remains 29,069 / 500,000 bytes; largest decoded
+  run is 598 / 21,000 characters. No historical body, hosted job or default skip
+  was added; current ordinary API verification exercises the new behavior.
+- Explicit production browser/Spring/SELECT-only PostgreSQL regression:
+  **7/7 Java PASS**, including **12/12 browser checks** at 1440/1280/390px for
+  empty, seeded, unavailable and recovered states, 1m54s
+  (`.cache/adr075-browser.log`). Reuse the secret-free ADR-073 Web mirror only
+  after byte-for-byte verification against current source; a fresh Next build
+  and TypeScript check pass with 14 routes plus proxy. Browser logs/build evidence
+  are retained at `.cache/adr071-evidence-15818880987806077073/`; screenshots are
+  in the mirror's operator-full-stack output. These are ordinary query/error/
+  recovery UI checks, not browser overload evidence; concurrent overload is
+  proven by the actual HTTP/PostgreSQL test above.
+- Python CI contracts: **285 total / 279 PASS / six existing Windows capability
+  skips**, zero failures/errors, 120.478s (`.cache/adr075-ci.log`). Run with the
+  required access to the tests' owned temporary directories; no sandbox failure
+  workaround or weakened test was added. No test failures occurred in this slice.
+- Cleanup inspection finds no concurrency-labelled or browser-rehearsal
+  container and no owned phase Java process. Disposable test DBs were removed
+  and can be regenerated; ignored logs, Web mirror, screenshots and build outputs
+  remain. Existing development PostgreSQL is healthy at 127.0.0.1:5432. The
+  user-owned `apps/web/next-env.d.ts` hash remains exactly
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  No actual key was used, printed or staged. Web source, deployment recipes and
+  lifecycle probes are unchanged; no repeated full Web lint/unit, public browser
+  suite or packaged restart result is claimed for this backend-only slice.
+- Finish one focused local Conventional Commit. Next: push/review/hosted CI for
+  this new candidate. Pool/transport deadlines remain separate local work;
+  Ubuntu startup/reboot recovery, backups and remote access require the future
+  real host. No new-candidate push, PR, merge, provider activation or deployment
+  is performed in this development slice.
