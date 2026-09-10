@@ -1,6 +1,8 @@
 package com.wallstreetreceipts.api.infrastructure.persistence;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -22,6 +24,7 @@ import com.wallstreetreceipts.api.infrastructure.provider.bls.BlsCpiParser;
 
 @Repository
 public class JdbcCpiRepository implements CpiRepository {
+    private static final int ATTEMPT_READ_TIMEOUT_SECONDS = 3;
     private final JdbcTemplate jdbc;
     private final BlsCpiParser parser;
     private final TransactionTemplate attempts;
@@ -62,7 +65,7 @@ public class JdbcCpiRepository implements CpiRepository {
     @Override public void saveAttempt(UUID id, CpiSnapshot snapshot, byte[] raw, int start, int end, Instant completedAt) {
         var result = new Result(completedAt, Status.SAVED, snapshot.captureId(), snapshot.capturedAt(), null, null);
         attempts.executeWithoutResult(transaction -> {
-            var attempt = findAttempt(id).orElseThrow(() -> new IllegalArgumentException("CPI attempt not found"));
+            var attempt = findAttemptForWrite(id).orElseThrow(() -> new IllegalArgumentException("CPI attempt not found"));
             int requestedYear = attempt.startedAt().atZone(java.time.ZoneOffset.UTC).getYear();
             if (start != requestedYear - 3 || end != requestedYear) throw new IllegalArgumentException("CPI attempt request years differ");
             append(snapshot, raw, start, end);
@@ -70,7 +73,7 @@ public class JdbcCpiRepository implements CpiRepository {
         });
     }
     private void insertResult(UUID id, Result result) {
-        var attempt = findAttempt(id).orElseThrow(() -> new IllegalArgumentException("CPI attempt not found"));
+        var attempt = findAttemptForWrite(id).orElseThrow(() -> new IllegalArgumentException("CPI attempt not found"));
         if (attempt.result() != null) throw new IllegalStateException("CPI attempt already completed");
         new CpiCollectionAttempt(id, attempt.trigger(), attempt.startedAt(), attempt.permitted(), result);
         jdbc.update("INSERT INTO bls_cpi_collection_results (attempt_id, started_at, permitted, completed_at, status, capture_id, captured_at, failure_code, retry_not_before) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -79,11 +82,25 @@ public class JdbcCpiRepository implements CpiRepository {
                 timestamp(result.capturedAt()), result.failure() == null ? null : result.failure().name(), timestamp(result.retryNotBefore()));
     }
     @Override public Optional<CpiCollectionAttempt> findAttempt(UUID id) {
+        return jdbc.query(ATTEMPT_SELECT + " WHERE a.attempt_id = ?", statement -> {
+            boundAttemptRead(statement);
+            statement.setString(1, id.toString());
+        }, ATTEMPT_ROW).stream().findFirst();
+    }
+    private Optional<CpiCollectionAttempt> findAttemptForWrite(UUID id) {
+        // Internal validation keeps the existing ten-second write transaction budget.
         return jdbc.query(ATTEMPT_SELECT + " WHERE a.attempt_id = ?", ATTEMPT_ROW, id.toString()).stream().findFirst();
     }
     @Override public List<CpiCollectionAttempt> recentAttempts() {
         // One statement snapshot, fixed bound, no count(*) or raw receipt query.
-        return jdbc.query(ATTEMPT_SELECT + " ORDER BY a.started_at DESC, a.attempt_id DESC LIMIT 21", ATTEMPT_ROW);
+        return jdbc.query(ATTEMPT_SELECT + " ORDER BY a.started_at DESC, a.attempt_id DESC LIMIT 21",
+                JdbcCpiRepository::boundAttemptRead, ATTEMPT_ROW);
+    }
+    private static void boundAttemptRead(PreparedStatement statement) throws SQLException {
+        // Runs after JdbcTemplate applies its settings/remaining transaction timeout.
+        // Never extend a tighter limit or mutate the shared template/session settings.
+        int existing = statement.getQueryTimeout();
+        statement.setQueryTimeout(existing > 0 ? Math.min(existing, ATTEMPT_READ_TIMEOUT_SECONDS) : ATTEMPT_READ_TIMEOUT_SECONDS);
     }
     private static final String ATTEMPT_SELECT = "SELECT a.attempt_id, a.trigger_kind, a.started_at, a.permitted, r.completed_at, r.status, r.capture_id, r.captured_at, r.failure_code, r.retry_not_before FROM bls_cpi_collection_attempts a LEFT JOIN bls_cpi_collection_results r ON a.attempt_id = r.attempt_id";
     private static final RowMapper<CpiCollectionAttempt> ATTEMPT_ROW =

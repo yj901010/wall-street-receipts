@@ -278,3 +278,13 @@ select the restricted mode, and the packaged probe requires direct API denial of
 SEC reads and commands after restart. Current Maven tests cover restricted,
 legacy FULL and disabled behavior. Hosted workflow and historical bodies remain
 unchanged; runtime acceptance is still explicit local work.
+
+ADR-074 caps the two external CPI attempt read statements at three seconds,
+preserving shorter limits and the existing internal write transaction budget.
+Current custody has 94 exact paths (12 baseline replacements, 82 additions),
+including the new JDBC timeout unit test. Two exact merged ADR-073 objects are
+accepted as committed predecessors only with mandatory current working bytes.
+Current Maven tests verify settings isolation and real PostgreSQL cancellation,
+single-connection pool reuse, SELECT-only behavior and recovery after locks on
+both ledger tables. No workflow or historical-body change is made; a JDBC
+statement timeout is not an end-to-end HTTP or home-server availability claim.

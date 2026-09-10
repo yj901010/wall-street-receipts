@@ -8626,3 +8626,83 @@ configured origin or any network endpoint.
   and hosted CI for this candidate. Actual operator activation, remote access,
   server startup/reboot recovery and backups still require the future Ubuntu
   host information; do not infer those results from this local acceptance.
+
+## P5 / ADR-074 — Bounded CPI attempt read statements (2026-09-10 KST)
+
+- Verify user-merged PR #21 at develop `f98d491331b8335a16fbcffa6648353e6ab381ba`.
+  PR CI #54 (`34421801190`) passed all four jobs, and merge push CI #55
+  (`34422104579`) succeeded. Branch from that develop commit as
+  `feature/p5-cpi-query-timeout`. The home server is still not ready; continue
+  local development without touching real provider keys or persisted data.
+- Add a three-second JDBC statement timeout to external recent/exact attempt
+  reads in `infrastructure/persistence/JdbcCpiRepository`. Apply it after Spring's
+  existing settings, retaining a shorter positive statement/transaction timeout.
+  No shared JdbcTemplate mutation, PostgreSQL session setting, retry, fallback,
+  new dependency or connection pool is introduced in application code.
+- Split the two internal receipt/result-validation lookups into a private write
+  lookup. Their existing ten-second REQUIRES_NEW transaction budget is unchanged.
+  Other queries, collections, gate updates, money/time calculations and raw
+  receipt persistence retain their prior behavior. Statement cancellation does
+  not bound pool acquisition, socket/cancellation transport or total HTTP time.
+- Routes and modules remain stable: GET/HEAD
+  `/internal/v1/cpi/collection-attempts` and `/{attemptId}` still use the existing
+  controller -> query service -> reader port -> JDBC repository. Preserve UUID
+  parameter binding, immutable evidence, one-statement snapshot, deterministic
+  ordering and the 21-row lookahead. Timeout/setup exceptions use the existing
+  sanitized no-store 503; missing evidence is not turned into zero or fixtures.
+- Add **11 current JDBC unit cases** covering both reads, unlimited/shorter/equal/
+  longer limits, short/long ambient transactions, unchanged shared settings,
+  both private write lookups and fail-closed setup/resource cleanup.
+- Extend actual HTTP/PostgreSQL acceptance with locks on each ledger table and
+  both query endpoints. All four requests time out as sanitized no-store 503s
+  in the test's 2–8 second tolerance window; this is not a production SLA.
+  While each lock is still held, require no remaining server-side waiters and
+  reuse of a single-connection API pool. Authentication/invalid-ID handling is
+  unaffected. Releasing the dedicated lock connection restores both reads to
+  200; all four CPI table inventories remain equal to their pre-fault state.
+  A SELECT-only role also cancels both reads and recovers without extra grants.
+- The first focused run exposed a **test setup** issue: Flyway requires additional
+  migration connections, so using the query API's one-connection pool during
+  schema creation exhausted it. Give Flyway its own disposable-DB connections
+  and disable unrelated fixture importing in this test only. Final focused
+  selection: **34/34 PASS**, zero skips, 51.483s
+  (`.cache/adr074-focused-final.log`; initial diagnostic `.cache/adr074-focused.log`).
+- Full current API Maven verify/package: **2505/2505 PASS**, no failures/errors/
+  skips, 1m54s (`.cache/adr074-api-full.log`). Build output is isolated under
+  `.cache/adr074-api-full/`, including the executable Spring Boot JAR.
+- Explicit production browser/Spring/SELECT-only PostgreSQL regression:
+  **7/7 Java PASS**, including **12/12 browser checks** (empty, seeded,
+  unavailable and recovered at 1440/1280/390px), 1m41s
+  (`.cache/adr074-browser.log`). The existing secret-free ADR-073 Web mirror was
+  verified byte-for-byte against current source, then freshly rebuilt; Next
+  build/TypeScript passes with 14 routes plus proxy. New evidence lives at
+  `.cache/adr071-evidence-15797998172176305301/`. Recovered desktop/mobile
+  screenshots were visually inspected; the wide table scrolls within its region.
+  This existing browser fault is denied DB access, not the new lock fault; actual
+  lock cancellation is proven by the HTTP/PostgreSQL acceptance above.
+- Current CPI custody is **94 exact paths / 12 baseline replacements / 82
+  additions**, adding the unit test and two exact merged ADR-073 predecessors.
+  Mandatory current working hashes reject stale/unreviewed reads and tests.
+  Current source custody, DEMO fixture/revision/outcome contracts, workflow parity
+  and diff whitespace checks pass. Workflow size is unchanged at 29,069 / 500,000
+  bytes; largest decoded run is 598 / 21,000 characters. No historical body,
+  hosted job, default skipped test or broad product exception was added.
+- Final Python CI contracts: **284 total / 278 PASS / six existing Windows
+  capability skips**, zero failures/errors, 52.111s (`.cache/adr074-ci-final.log`).
+  The first sandboxed run could not access its own temporary test directories;
+  rerun with the required local temporary-file access, without weakening tests.
+  Resolve the 179 leftover directories exactly from that failed run's log,
+  verify each is empty, regular and directly under the expected temp directory,
+  and remove them non-recursively. They contained no files or user data.
+- Tests clean up their disposable databases and owned processes. Only the
+  pre-existing development PostgreSQL remains healthy on 127.0.0.1:5432. Ignored
+  logs, source mirror, screenshots and build outputs remain for inspection.
+  The user-owned `apps/web/next-env.d.ts` hash is unchanged:
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  No actual key was used, printed or staged. Web source/configuration, deployment
+  recipes and lifecycle probes are unchanged; no repeated full Web lint/unit,
+  public browser suite or packaged restart result is claimed for this slice.
+- Finish one focused local Conventional Commit. Next: push/review/hosted CI for
+  this candidate. Further pool/transport/concurrency limits remain separate
+  local work, as do Ubuntu startup/reboot recovery, backups and remote operator
+  access once a real host is available. No push, PR, merge or deployment here.

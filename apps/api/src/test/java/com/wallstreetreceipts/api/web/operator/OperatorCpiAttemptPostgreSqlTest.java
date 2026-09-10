@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.sql.Timestamp;
+import java.sql.Connection;
 import java.util.List;
 import java.util.UUID;
 import org.apache.coyote.AbstractProtocol;
@@ -44,6 +45,8 @@ import com.wallstreetreceipts.api.support.CpiTestFixture;
         "app.operator-api.enabled=true",
         "OPERATOR_API_ACCESS=CPI_READ_ONLY",
         "app.operator-api.token-sha256=905f28def18eaac05ae6f12b2c3452744afaf626da1343d57b395b544e0519b6",
+        "spring.datasource.hikari.maximum-pool-size=1",
+        "app.providers.analyst=disabled",
         "app.cpi.enabled=false", "server.address=0.0.0.0"})
 @ActiveProfiles("test")
 @Import(OperatorCpiAttemptPostgreSqlTest.FixedClock.class)
@@ -62,6 +65,10 @@ class OperatorCpiAttemptPostgreSqlTest {
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+        // Flyway needs its own migration connections; the single connection is the query API pool.
+        registry.add("spring.flyway.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.flyway.user", POSTGRES::getUsername);
+        registry.add("spring.flyway.password", POSTGRES::getPassword);
     }
 
     @Test void boundedActualHttpReadsPersistedEvidenceWithoutWritesOrCollectorAndWorksWithSelectOnlyRole() throws Exception {
@@ -120,6 +127,7 @@ class OperatorCpiAttemptPostgreSqlTest {
             assertThat(request(client, "GET", "/internal/v1/sec/collection-attempts/" + new UUID(0, 1), true)
                     .statusCode()).isEqualTo(403);
             assertThat(request(client, "GET", PATH + "?limit=1000", true).statusCode()).isEqualTo(400);
+            assertLockedHttpReadsCancelAndRecover(client);
         }
         assertThat(inventory()).isEqualTo(before);
 
@@ -133,7 +141,71 @@ class OperatorCpiAttemptPostgreSqlTest {
         assertThat(readOnly.findAttempt(new UUID(0, 1))).isPresent();
         assertThatThrownBy(() -> readJdbc.queryForObject("SELECT count(*) FROM bls_cpi_captures", Integer.class))
                 .isInstanceOf(org.springframework.dao.DataAccessException.class);
+        try (var blocker = lockTable("bls_cpi_collection_results")) {
+            assertThatThrownBy(readOnly::recentAttempts).isInstanceOf(org.springframework.dao.QueryTimeoutException.class);
+            assertThatThrownBy(() -> readOnly.findAttempt(new UUID(0, 1)))
+                    .isInstanceOf(org.springframework.dao.QueryTimeoutException.class);
+            assertNoBlockedQueries(blocker);
+        }
+        assertThat(readOnly.recentAttempts()).hasSize(21);
+        assertThat(readOnly.findAttempt(new UUID(0, 1))).isPresent();
         assertThat(inventory()).isEqualTo(before);
+    }
+
+    private void assertLockedHttpReadsCancelAndRecover(HttpClient client) throws Exception {
+        var paths = List.of(PATH, PATH + "/" + new UUID(0, 1));
+        var before = inventory();
+        for (var table : List.of("bls_cpi_collection_attempts", "bls_cpi_collection_results")) {
+            try (var blocker = lockTable(table)) {
+                for (var path : paths) {
+                    long started = System.nanoTime();
+                    var response = request(client, "GET", path, true);
+                    var elapsed = Duration.ofNanos(System.nanoTime() - started);
+                    assertThat(response.statusCode()).isEqualTo(503);
+                    // Scheduling tolerance, not an end-to-end SLA; SQL itself has a three-second limit.
+                    assertThat(elapsed).isBetween(Duration.ofSeconds(2), Duration.ofSeconds(8));
+                    assertThat(response.headers().firstValue("Cache-Control")).contains("no-store");
+                    var body = mapper.readTree(response.body());
+                    assertThat(body.path("code").asText()).isEqualTo("CPI_ATTEMPT_QUERY_UNAVAILABLE");
+                    assertThat(response.body()).doesNotContain(TOKEN, "SELECT", "bls_cpi", "postgres", "canceling", "SQLException");
+                    // A one-connection API pool must be reusable even while the lock remains held.
+                    // Verify actual server-side cancellation, not just a client-side HTTP timeout.
+                    assertNoBlockedQueries(blocker);
+                }
+                assertThat(request(client, "GET", PATH, false).statusCode()).isEqualTo(401);
+                assertThat(request(client, "GET", PATH + "/invalid", true).statusCode()).isEqualTo(400);
+            }
+            for (var path : paths) assertThat(request(client, "GET", path, true).statusCode()).isEqualTo(200);
+            assertThat(inventory()).isEqualTo(before);
+        }
+    }
+
+    private Connection lockTable(String table) throws Exception {
+        if (!List.of("bls_cpi_collection_attempts", "bls_cpi_collection_results").contains(table)) {
+            throw new IllegalArgumentException("Unexpected disposable lock target");
+        }
+        var blocker = new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()).getConnection();
+        try {
+            blocker.setAutoCommit(false);
+            try (var statement = blocker.createStatement()) {
+                statement.setQueryTimeout(5);
+                statement.execute("LOCK TABLE " + table + " IN ACCESS EXCLUSIVE MODE");
+            }
+            return blocker; // Closing the dedicated connection rolls back/releases only this test's lock.
+        } catch (Exception exception) {
+            blocker.close();
+            throw exception;
+        }
+    }
+
+    private void assertNoBlockedQueries(Connection blocker) throws Exception {
+        int pid;
+        try (var statement = blocker.createStatement(); var result = statement.executeQuery("SELECT pg_backend_pid()")) {
+            assertThat(result.next()).isTrue();
+            pid = result.getInt(1);
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND ? = ANY(pg_blocking_pids(pid))",
+                Integer.class, pid)).isZero();
     }
 
     private HttpResponse<String> request(HttpClient client, String method, String pathAndQuery, boolean authenticated) throws Exception {
