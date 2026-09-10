@@ -72,6 +72,7 @@ FIXED_CI_PATHS = frozenset({
     "decisions/ADR-072-packaged-cpi-operator-lifecycle.md",
     "decisions/ADR-073-cpi-read-only-operator-access.md",
     "decisions/ADR-074-cpi-attempt-read-timeout.md",
+    "decisions/ADR-075-cpi-attempt-read-concurrency.md",
     "scripts/ci/test_cpi_operator_lifecycle.py",
 })
 

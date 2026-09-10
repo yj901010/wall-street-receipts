@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 import java.util.function.Supplier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -14,10 +15,13 @@ import com.wallstreetreceipts.api.domain.cpi.CpiCollectionAttempt;
 @Service
 @ConditionalOnProperty(prefix = "app.operator-api", name = "enabled", havingValue = "true")
 public class CpiAttemptQueryService {
+    private static final int MAX_CONCURRENT_READS = 4;
     private static final Comparator<CpiCollectionAttempt> ORDER = Comparator
             .comparing(CpiCollectionAttempt::startedAt).thenComparing(row -> row.attemptId().toString()).reversed();
     private final CpiAttemptReader reader;
     private final Clock clock;
+    // One shared, non-queuing budget for list/selection reads in this singleton service.
+    private final Semaphore reads = new Semaphore(MAX_CONCURRENT_READS);
     public CpiAttemptQueryService(CpiAttemptReader reader, Clock clock) { this.reader = reader; this.clock = clock; }
 
     public Batch recent() {
@@ -47,9 +51,11 @@ public class CpiAttemptQueryService {
         if (row == null || row.startedAt().isAfter(observed)
                 || row.result() != null && row.result().completedAt().isAfter(observed)) throw new Unavailable();
     }
-    private static <T> T read(Supplier<T> action) {
+    private <T> T read(Supplier<T> action) {
+        if (!reads.tryAcquire()) throw new Unavailable();
         try { return java.util.Objects.requireNonNull(action.get()); }
         catch (RuntimeException exception) { throw new Unavailable(); } // Never expose SQL/driver/row content.
+        finally { reads.release(); }
     }
     public record Batch(Instant observedAt, List<CpiCollectionAttempt> attempts, boolean hasMore) {}
     public static final class InvalidQuery extends IllegalArgumentException {}
