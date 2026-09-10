@@ -8980,3 +8980,73 @@ configured origin or any network endpoint.
 - Record measured acceptance in a separate documentation-only local commit.
   Next handoff is explicit publication/review/hosted CI of these twelve changed
   files. No new-candidate push, PR, merge or real Ubuntu deployment was performed.
+
+## P5 / ADR-078 — Packaged Linux CPI transport-fault acceptance (2026-09-10 KST)
+
+- Verify user-merged PR #25 at develop `8cfcc74e3acf324579b93790b6743f8290840775`.
+  PR CI #62 (`34451268232`) and merge push CI #63 (`34451847870`) pass API,
+  Web, Call audit integration and Repository contracts. Branch from that develop
+  as `feature/p5-cpi-packaged-transport`. The Ubuntu home server remains unavailable.
+- Add explicit `scripts/verify-cpi-operator-transport.py`, reusing the unchanged
+  ADR-072 builder, runtime inspection, synthetic DB/SELECT-only reader, lifecycle
+  acceptance and ownership-checked cleanup. Add mounted-only Node relay/probe
+  helpers, ten Python safety tests and four actual Node loopback relay tests.
+  These are test tools, not product endpoints or packaged runtime additions.
+- Build API/Web/operator images from exact committed source; separately pin all
+  eight current rehearsal inputs by LF-normalized SHA256. The test-only relay
+  forwards real bytes to the disposable PostgreSQL container on an internal network,
+  exposes control only on its own loopback, and stores only bounded connection IDs,
+  byte counts and closure states. No payload recording, external target option,
+  public port, persistent volume, new dependency or production key is introduced.
+- Keep the application/Dockerfile/fixture/schema sources and deployment defaults
+  unchanged. A one-connection test pool identifies the faulted transport; actual
+  SQL/admission/pool/JDBC/gateway budgets remain unchanged. Routes are API GET/HEAD
+  `/internal/v1/cpi/collection-attempts` and `/{attemptId}`, and UI GET
+  `/operator/cpi/query` and `/{attemptId}`. The new tool does not expose new routes.
+- After original packaged lifecycle acceptance, exercise six fault cases. Observe
+  the actual reader SQL blocked by an identified owned table-lock session, silence
+  its established connection, explicitly cancel only that lock session, and observe
+  genuine response bytes discarded. Require sanitized no-store 503, no HEAD body,
+  continued invalid-query 400/auth 401, broken connection closure, all six reads
+  recovered without process restart, and equality of all four CPI table snapshots.
+  Black-box closure/recovery is not an invented pool-lease/internal-exception metric.
+- Initial offline attempt hits the restricted Windows temporary-directory access
+  boundary and a CP949 decode error on Node's Unicode test output. Use the ordinary
+  approved local-test permission and explicit UTF-8 subprocess decoding. Later test
+  expansion corrects the mock call's environment argument index; final new safety
+  selection passes 10/10, including the separate four-case real Node relay suite.
+- First packaged attempt builds images then fails copying a test asset to a
+  directory instead of a file (`.cache/adr078-packaged.log`, report
+  `.cache/adr078-683e1bbbd491beb37673a5c8.json`). Correct the destination and add a
+  regression test. Second attempt passes the inherited lifecycle checks but catches
+  a test probe hashing `attempts` for the actual single-item `attempt` response
+  (`.cache/adr078-packaged-repeat.log`, report
+  `.cache/adr078-4316d3fe58de451ff4d4145f.json`). Correct only that probe's hash input.
+  Both reports record failure and cleanup; neither is treated as product acceptance.
+- Third packaged attempt passes all six real transport cases and the original
+  lifecycle regression (`.cache/adr078-packaged-third.log`, report
+  `.cache/adr078-33413abc40d7aadbccf2d611.json`). Source is the exact merged develop
+  above plus separately hashed tooling. Measured 503 durations are 5,027–5,047ms;
+  each fault discards 784 bytes for list or 454 bytes for selection, closes its
+  connection and recovers all six reads with unchanged persisted tables. These are
+  observations for this run, not an SLA or total HTTP deadline. Add an explicit
+  pre-fault UI cooldown so correctness does not depend on Docker/SQL setup latency
+  to clear the unchanged gateway limiter; final committed acceptance follows below.
+- CPI custody now has **108 exact paths / 13 baseline replacements / 95 additions**.
+  Four exact test-tool paths are added; no general predecessor exceptions or
+  workflow/legacy-script changes. Full Python CI: **297 total / 291 PASS / six existing
+  Windows capability skips**, no failures/errors, 81.867s (`.cache/adr078-ci.log`).
+  Workflow limits (29,069/500,000 bytes; largest run 598/21,000 characters), current
+  source/legacy parity, DEMO fixture/revision/outcome checks and whitespace pass.
+- Preserve user-owned `apps/web/next-env.d.ts`, SHA256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`, and existing
+  development PostgreSQL. Full API Maven verify/package passes **2557/2557**, zero
+  failures/errors/skips, 2m53s (`.cache/adr078-api-full.log`), in a fresh dedicated
+  build directory. New Node/Python syntax checks pass. Responsive browser and final
+  committed packaged results follow after completion; no new-candidate hosted result
+  is claimed. Full Web lint/Vitest/public E2E are unchanged and passed in merge CI #63;
+  they are not represented as newly run local checks for these test-only changes.
+- Next: publish/review this bounded acceptance package with explicit authorization.
+  Review the remaining whole-request deadline gap as the final operations work
+  package before scoring integration. Actual Ubuntu boot, backups and operator
+  access still require the future host. No real-provider activation or deployment.
