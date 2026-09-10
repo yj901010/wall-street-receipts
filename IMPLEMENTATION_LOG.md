@@ -8846,3 +8846,25 @@ configured origin or any network endpoint.
   for this candidate. Network/driver deadlines remain separate work; real Ubuntu
   boot recovery, backups and remote operator access require the future host.
   No candidate push, PR, merge or production deployment in this development slice.
+
+### ADR-076 committed packaged acceptance
+
+- Source commit `9c4b6475c376a3ddf35659af6e48c6ca75482f0b` passes the explicit
+  Linux packaged lifecycle regression on the first run. Build API/Web/operator
+  images from that exact secret-free archive; the five existing rehearsal inputs
+  remain unchanged. Report `.cache/adr072-6a9850b6cadacd53183b2311.json` records
+  `passed=true`, `productionActivated=false` and exact source/image identities;
+  `.cache/adr076-lifecycle.log` and the matching ADR-072 diagnostic log are retained.
+- Actual reads preserve KST precision, auth and loopback-only sockets; duplicate
+  binds fail closed. UI SIGTERM exits normally, closes its port and restarts with
+  identical evidence. API loss returns sanitized 503; ordered API/UI restart and
+  final shutdown preserve all four CPI tables. This is packaged boot/read/restart
+  compatibility, not additional container pool-exhaustion timing evidence.
+- Cleanup verification finds no owned lifecycle containers, network, tagged images
+  or context, and no phase Java process. Disposable test DBs were removed and are
+  reproducible; ignored reports, build outputs and screenshots remain. Existing
+  development PostgreSQL is healthy at 127.0.0.1:5432 and the user-owned next-env
+  hash is unchanged. No real key, provider, host port or persistent test volume.
+- Record this measured result in a separate documentation-only local commit.
+  Next handoff is explicit publication/review/hosted CI of these nine changed paths;
+  no new-candidate hosted result or real Ubuntu availability is claimed.
