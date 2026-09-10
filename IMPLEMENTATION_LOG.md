@@ -9050,3 +9050,45 @@ configured origin or any network endpoint.
   Review the remaining whole-request deadline gap as the final operations work
   package before scoring integration. Actual Ubuntu boot, backups and operator
   access still require the future host. No real-provider activation or deployment.
+
+### ADR-078 responsive browser acceptance
+
+- Run the unchanged explicit browser selection alone after API/Python completion:
+  **7/7 Java PASS**, including **12/12 browser checks**, no failures/errors/skips,
+  1m31s (`.cache/adr078-browser.log`). It covers empty, seeded, unavailable and
+  recovered states at 1440/1280/390px against real Spring/SELECT-only PostgreSQL.
+  Fresh Next build and TypeScript checks pass with 14 routes plus proxy. The
+  secret-free existing mirror is verified byte-for-byte against current Web source.
+- Evidence: `.cache/adr071-evidence-1021862788983419378/`. Review recovered desktop
+  and mobile screenshots: the existing mobile table keeps its local horizontal
+  scroll, cleared credential input, DEMO warning and source/time metadata. No UI
+  source or browser-test changes, added retries or assertion weakening. ADR-077's
+  earlier Chromium body-capture failure does not reproduce here; its exact cause
+  remains unresolved, not claimed fixed by this test-tool-only phase.
+
+### ADR-078 committed packaged acceptance and handoff
+
+- Final source commit `cc70ac89f998773057336f875d2874b4f618a9e9` passes all six
+  transport faults plus the inherited lifecycle checks on its first committed run.
+  Report `.cache/adr078-8634771da8a1b900cb7f8a6c.json` records `passed=true`, exact
+  source/image identities, all eight unchanged rehearsal-input hashes,
+  `singleConnectionTestPool=true`, `endToEndDeadlineClaimed=false` and
+  `productionActivated=false`. Full log: `.cache/adr078-packaged-final.log`.
+- API GET list/selection and HEAD list/selection return 503 in respectively
+  5,045/5,034/5,029/5,034ms; UI list/selection return 503 in 5,025/5,030ms.
+  List faults discard 784 actual downstream bytes and selected faults discard 454.
+  All six broken connections close; each fault is followed by all six successful
+  reads with identical evidence hashes and unchanged snapshots of the four CPI
+  tables. The explicit UI cooldown is included; no runtime timeout is increased.
+- Read-only post-run inspection confirms no running/stopped containers, labeled
+  images, networks or owned build contexts from any of the four ADR-078 attempts.
+  Disposable test databases were removed and are reproducible from the tool;
+  ignored diagnostic reports/build outputs/screenshots are retained. Existing
+  development PostgreSQL remains healthy on 127.0.0.1:5432; no phase Java process
+  remains and the user-owned next-env SHA256 is unchanged.
+- Record final acceptance in a separate documentation-only commit. The user
+  explicitly authorizes publication of exactly these eleven test/tool/documentation
+  paths after verification, excluding real keys and existing user changes. PR
+  creation/merge is not authorized here; new-candidate hosted CI follows the user's
+  subsequent PR. No new application functionality, real data or Ubuntu deployment
+  is claimed by this acceptance phase.
