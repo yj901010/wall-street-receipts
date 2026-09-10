@@ -8957,3 +8957,26 @@ configured origin or any network endpoint.
   isolated run. Its precise underlying cause is not established; retain the original
   failure evidence rather than claiming an application or test fix. Product Web
   source, browser tests and the actual JDBC source are unchanged between runs.
+
+### ADR-077 committed packaged acceptance
+
+- Source commit `8c8ea523816fbcb3fdcd62b39acb62dcacb3c7a5` passes the unchanged
+  explicit Linux packaged lifecycle regression on its first run. Build API/Web/
+  operator images from this exact secret-free archive; all five rehearsal inputs
+  match ADR-076. The POM scope change rebuilds the dependency preparation layer
+  (2m36s); this is build work, not application request latency.
+- Report `.cache/adr072-00c2f187846eea203b0319a5.json` records `passed=true`,
+  `productionActivated=false`, the exact source commit and all image identities.
+  Retain `.cache/adr077-lifecycle.log` and the matching bounded ADR-072 diagnostic
+  log. Actual reads/auth/KST precision, duplicate-bind rejection, normal UI SIGTERM,
+  API-loss 503, ordered restart and final shutdown pass with identical evidence
+  and unchanged snapshots of all four CPI tables. This is packaged compatibility,
+  not an additional Linux transport-blackhole timing measurement.
+- Post-run inspection confirms no owned lifecycle containers/network/tagged images/
+  context, no transport-test DB and no phase Java process. Disposable databases
+  were removed and can be regenerated; ignored logs/build outputs/screenshots remain.
+  Existing development PostgreSQL stays healthy on 127.0.0.1:5432; the user-owned
+  next-env hash remains unchanged. No real key or provider was used or staged.
+- Record measured acceptance in a separate documentation-only local commit.
+  Next handoff is explicit publication/review/hosted CI of these twelve changed
+  files. No new-candidate push, PR, merge or real Ubuntu deployment was performed.
