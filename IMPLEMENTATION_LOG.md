@@ -8594,3 +8594,35 @@ configured origin or any network endpoint.
 - Source commit precedes the committed-input packaged acceptance. Record the
   final Python and actual Docker acceptance results below after they complete;
   no new-candidate hosted CI result or home-server activation is claimed here.
+- Commit application/rehearsal inputs as `98c7619555b308de42fe63b59cea8342b8fb4cbb`
+  (`feat(cpi): add read-only operator access`). The staged diff passed a
+  value-silent comparison against local secret values; .env, cache and the
+  user-owned next-env declaration were not staged.
+- Final Python CI contracts: **283 total / 277 PASS / six existing Windows
+  capability skips**, zero failures/errors, 54.475s
+  (`.cache/adr073-ci-final.log`). Current product custody passes both before and
+  after the source commit. Current DEMO fixture/revision/outcome contracts and
+  workflow parity pass. Workflow size remains 29,069 / 500,000 bytes, with a
+  largest decoded run of 598 / 21,000 characters. The new probe passes Node
+  syntax checking; no new default skipped test or workflow job was added.
+- Packaged Linux API/Web/operator lifecycle **PASS** from source commit
+  `98c7619`; output `.cache/adr073-lifecycle.log`, bounded build/runtime diagnostics
+  `.cache/adr072-2606b592187fca7e35f4c28a.log`, and successful structured report
+  `.cache/adr072-2606b592187fca7e35f4c28a.json`. The report records exact source,
+  all five input hashes and immutable image IDs. The unchanged packaging recipe
+  SHA-256 begins `fb311640bfea`; the updated direct-API probe begins `220e69cf`.
+  Initial/restarted CPI reads work, direct SEC command/query requests return 403,
+  duplicate UI startup exits 1/EADDRINUSE, normal UI shutdown exits 0 and releases
+  its port. API loss returns the exact sanitized 503; ordered restart preserves
+  all CPI tables and restricted access. Graceful API shutdown completes without
+  OOM or forced-kill acceptance. No real provider request or credential is used.
+- Cleanup inspection confirms no lifecycle-labelled container/network/image or
+  owned scratch directory remains. Disposable DBs and image/context artifacts
+  were removed and can be regenerated. Ignored reports and the browser evidence
+  mirror remain for inspection. Existing development PostgreSQL is healthy at
+  127.0.0.1:5432. The user-owned next-env SHA-256 remains exactly
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Finish the local source and verification-record commits. Next: push/review/PR
+  and hosted CI for this candidate. Actual operator activation, remote access,
+  server startup/reboot recovery and backups still require the future Ubuntu
+  host information; do not infer those results from this local acceptance.
