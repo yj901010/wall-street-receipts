@@ -310,3 +310,15 @@ Current Maven verification includes these tests without new workflow jobs or
 historical changes. This shared-pool policy is not an HTTP deadline or a bound
 on driver/network validation; packaged lifecycle acceptance is separate explicit
 local regression, not container pool-exhaustion evidence.
+
+ADR-077 adds PostgreSQL transport settings to the enabled CPI_READ_ONLY process:
+connect 2s, socket read 5s, cancellation channel 1s, and Hikari validation 750ms,
+preserving shorter effective values. It uses the existing driver's actual URL
+parser and appends fixed bounded URL properties to prevent URL precedence from
+bypassing the limits. Custody has 104 paths (13 baseline replacements, 91 additions).
+The POM's exact pinned change only promotes the existing PostgreSQL dependency
+from runtime to compile scope; no runtime dependency/version is added. Unit and
+real HTTP/PostgreSQL response-blackhole/recovery tests run in ordinary Maven.
+The test-only loopback relay retains no payload and closes its owned workers and
+sockets. These per-operation limits are not an HTTP deadline or a DNS/TLS/write
+stall guarantee. Historical scripts/workflow remain unchanged.

@@ -1,4 +1,4 @@
-"""ADR-064 through 076: exact CPI retrieval, bounded reads and tooling custody."""
+"""ADR-064 through 077: exact CPI retrieval, bounded reads and tooling custody."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,12 @@ from current_contracts import BASELINE, blob_record
 from navigation_contracts import _current_bytes
 
 CONTENT_SHA256 = {
+    "apps/api/pom.xml": "9be3a2b74dbfb6c53e7408f96053421b7c6b26c513631cd837c38c614263c83c",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/config/CpiReadOnlyJdbcConfiguration.java": "374544003a0eeebdb0ebc4d9a950c03fb9098998a6ed6e4d4be10e95fc50ffa6",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/config/CpiReadOnlyJdbcConfigurationTest.java": "9d4d7836477fb0ba7e57eca89ad0ff5bf20428031ec5b7ac6bb06edd6c923299",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiPostgresRelay.java": "cd0f37a322704044bcd0d87f6d850654495689ee6c9c5aca3d97aac9c98cc4e0",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiPostgresRelayTest.java": "784d740f8cda26b67cf1603a697548a47f3f0ba50e26bbcb08ba539645ea7861",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptTransportPostgreSqlTest.java": "57b4caf26a825845d7bbde8fe89f50966554c8369d48b71f5879b5e3c186d205",
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/cpi/CpiAttemptQueryConcurrencyTest.java": "c94b9ccfb32bc0d06a6ff2cbe8dbd6c42b862d2397d76765bbbd8a6ad0499310",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptConcurrencyPostgreSqlTest.java": "6f3a9ba78933be8568c6754c013dd69790709ae461eea58bf71be62783251f41",
     "apps/api/src/main/java/com/wallstreetreceipts/api/config/CpiReadOnlyPoolConfiguration.java": "424026b6389b9125e117375793e8ab76995a06da4719a6803e93d31090ed1399",
@@ -107,6 +113,7 @@ CONTENT_SHA256 = {
     "apps/api/src/main/resources/db/migration/V10__bls_cpi_retrievals.sql": "4c69f27eb5aab03de0be526f1718261f36e5f3f9e535a9bebf8bb814d7540664"
 }
 BASELINE_RECORDS = {
+    "apps/api/pom.xml": "100644 blob 5eafa2d3aa743f4609053a6b3d4643a9ae4b37bc",
     "apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiProperties.java": "100644 blob 199eadfbdf3ed747a72a7b98c872c75f368e577a",
     "apps/api/src/main/resources/application.yml": "100644 blob a196ec5dbddbea9e9ad9dfd4d2ab5900f4d716b3",
     "apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorApiPropertiesTest.java": "100644 blob 8e47fd15df136ce70130f3a7f81e9e16fc3d1cd7",

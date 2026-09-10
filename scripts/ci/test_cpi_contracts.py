@@ -34,8 +34,8 @@ class CpiCustodyTests(unittest.TestCase):
                               self.current if current is None else current)
 
     def test_closed_inventory_without_general_product_exceptions(self):
-        self.assertEqual(len(cpi.CPI_PATHS), 98)
-        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 86)
+        self.assertEqual(len(cpi.CPI_PATHS), 104)
+        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 91)
         self.assertFalse(cpi.CPI_PATHS & bridge.FIXED_CI_PATHS)
         self.assertFalse(cpi.CPI_PATHS & bridge.NAVIGATION_PATHS)
         self.assertNotIn(bridge.NEXT_ENV, cpi.CPI_PATHS)
@@ -86,7 +86,7 @@ class CpiCustodyTests(unittest.TestCase):
                 (self.root / relative).write_bytes(self.expected[relative])
 
     def test_query_custody_keeps_exact_security_baseline_and_repository_predecessors(self):
-        self.assertEqual(len(cpi.BASELINE_RECORDS), 12)
+        self.assertEqual(len(cpi.BASELINE_RECORDS), 13)
         self.assertEqual(len(cpi.QUERY_PREVIOUS_RECORDS), 2)
         previous = {**self.current, **cpi.QUERY_PREVIOUS_RECORDS}
         self.assertEqual(self.verify(previous), previous)
@@ -172,6 +172,19 @@ class CpiCustodyTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
                 self.verify(previous)
             (self.root / relative).write_bytes(self.expected[relative])
+
+    def test_jdbc_transport_only_promotes_existing_driver_to_compile_scope(self):
+        relative = "apps/api/pom.xml"
+        old = self.original[relative]
+        scope = b"            <artifactId>postgresql</artifactId>\n            <scope>runtime</scope>\n"
+        self.assertEqual(old.count(scope), 1)
+        self.assertEqual(self.expected[relative], old.replace(scope, b"            <artifactId>postgresql</artifactId>\n"))
+        self.assertEqual(blob_record(old), cpi.BASELINE_RECORDS[relative])
+        previous = {**self.current, relative: cpi.BASELINE_RECORDS[relative]}
+        self.assertEqual(self.verify(previous), previous)
+        (self.root / relative).write_bytes(old)
+        with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
+            self.verify(previous)
 
     def test_missing_source_and_stale_working_bytes_never_fall_back(self):
         for relative in cpi.CPI_PATHS:
