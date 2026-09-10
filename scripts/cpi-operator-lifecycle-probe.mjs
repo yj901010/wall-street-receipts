@@ -66,6 +66,19 @@ try {
         await new Promise(resolve => setTimeout(resolve, 1100));
         assert.equal((await request("/operator/cpi/query", Buffer.alloc(32, 255).toString("base64"))).status, 401);
         assert.equal((await request("/internal/v1/sec/collection-attempts")).status, 404);
+        step = "api-cpi-only-authority";
+        // Test the API directly: the UI's closed proxy alone cannot prove bearer scope.
+        for (const [method, path] of [["POST", "root"], ["POST", "exact-root"],
+          ["GET", "00000000-0000-0000-0000-000000000001"]]) {
+          const denied = await fetch(`http://127.0.0.1:8080/internal/v1/sec/collection-attempts/${path}`, {
+            method, redirect: "error", signal: AbortSignal.timeout(7000),
+            headers: { Authorization: `Bearer ${input.token}` },
+          });
+          try {
+            assert.equal(denied.status, 403);
+            assert.equal(denied.headers.get("cache-control"), "no-store");
+          } finally { await denied.body?.cancel(); }
+        }
         console.log(JSON.stringify({ mode: "read", evidenceHash: createHash("sha256").update(JSON.stringify(value.attempts)).digest("hex"),
           observedAtKst: evidence.observedAtKst, attempts: evidence.attempts.length }));
       }

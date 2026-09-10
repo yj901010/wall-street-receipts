@@ -112,7 +112,8 @@ class Rehearsal(Runtime):
         digest = hashlib.sha256(self.bearer.encode()).hexdigest()
         self.api = self.run_app("api", self.images["api"], self.network, "10001:10001", [],
                                 {**common, "POSTGRES_USER": "cpi_lifecycle_reader", "SPRING_FLYWAY_ENABLED": "false",
-                                 "OPERATOR_API_ENABLED": "true", "SERVER_ADDRESS": "0.0.0.0", "SERVER_PORT": "8080"},
+                                 "OPERATOR_API_ENABLED": "true", "OPERATOR_API_ACCESS": "CPI_READ_ONLY",
+                                 "SERVER_ADDRESS": "0.0.0.0", "SERVER_PORT": "8080"},
                                 self.secret("reader", {"spring.datasource.password": READER_PASSWORD, "app.operator-api.token-sha256": digest}))
         self.api_ready()
         require(self.sql("SELECT DISTINCT usename FROM pg_stat_activity WHERE application_name='PostgreSQL JDBC Driver'")

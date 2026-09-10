@@ -28,6 +28,7 @@ class OperatorApiPropertiesTest {
         contextRunner.run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context.getBean(OperatorApiProperties.class).enabled()).isFalse();
+            assertThat(context.getBean(OperatorApiProperties.class).access()).isEqualTo("FULL");
         });
     }
 
@@ -79,11 +80,39 @@ class OperatorApiPropertiesTest {
 
     @Test
     void propertiesStringRepresentationRedactsDigest() {
-        OperatorApiProperties properties = new OperatorApiProperties(true, TOKEN_SHA_256);
+        OperatorApiProperties properties = new OperatorApiProperties(true, TOKEN_SHA_256, "FULL");
 
         assertThat(properties.toString())
                 .doesNotContain(TOKEN_SHA_256)
                 .contains("tokenSha256=<redacted>");
+    }
+
+    @Test
+    void cpiReadOnlyAccessRequiresTheExistingValidCredentialAndExplicitEnablement() {
+        contextRunner.withPropertyValues("app.operator-api.access=CPI_READ_ONLY").run(context -> {
+            assertThat(context).hasNotFailed();
+            var properties = context.getBean(OperatorApiProperties.class);
+            assertThat(properties.enabled()).isFalse();
+            assertThat(properties.cpiReadOnly()).isTrue();
+        });
+        contextRunner.withPropertyValues("app.operator-api.access=CPI_READ_ONLY", "app.operator-api.enabled=true")
+                .run(context -> assertThat(context).hasFailed());
+        contextRunner.withPropertyValues("app.operator-api.access=CPI_READ_ONLY", "app.operator-api.enabled=true",
+                        "app.operator-api.token-sha256=" + TOKEN_SHA_256)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(OperatorApiProperties.class).cpiReadOnly()).isTrue();
+                });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", " ", "cpi_read_only", "CPI_READONLY", "ALL", "CPI_READ_ONLY,FULL"})
+    void invalidAccessFailsStartupInsteadOfFallingBackToFullAuthority(String access) {
+        contextRunner.withPropertyValues("app.operator-api.access=" + access).run(context -> {
+            assertThat(context).hasFailed();
+            assertThat(context.getStartupFailure())
+                    .hasRootCauseMessage("OPERATOR_API_ACCESS must be FULL or CPI_READ_ONLY");
+        });
     }
 
     @Test

@@ -44,6 +44,7 @@ app:
   operator-api:
     enabled: ${OPERATOR_API_ENABLED:false}
     token-sha256: ${OPERATOR_API_TOKEN_SHA256:}
+    access: ${OPERATOR_API_ACCESS:FULL}
   providers:
     market: ${MARKET_PROVIDER:fixture}
     analyst: ${ANALYST_PROVIDER:fixture}

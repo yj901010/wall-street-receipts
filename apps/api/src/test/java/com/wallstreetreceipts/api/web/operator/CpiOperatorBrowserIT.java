@@ -69,6 +69,7 @@ class CpiOperatorBrowserIT {
                     "--spring.datasource.url=" + postgres.getJdbcUrl(), "--spring.datasource.driver-class-name=org.postgresql.Driver",
                     "--spring.datasource.username=cpi_browser_reader", "--spring.datasource.password=DisposableReaderOnly",
                     "--app.operator-api.enabled=true", "--app.operator-api.token-sha256=" + digest,
+                    "--app.operator-api.access=CPI_READ_ONLY",
                     "--app.cpi.enabled=false", "--app.public-data.sec.enabled=false",
                     "--app.providers.market=fixture", "--app.providers.analyst=disabled",
                     "--server.address=0.0.0.0", "--server.port=0", "--server.shutdown=immediate")) {

@@ -1,4 +1,4 @@
-"""ADR-064 through 072: exact CPI retrieval, operator view and tooling custody."""
+"""ADR-064 through 073: exact CPI retrieval, operator access and tooling custody."""
 from __future__ import annotations
 
 import hashlib
@@ -7,17 +7,21 @@ from current_contracts import BASELINE, blob_record
 from navigation_contracts import _current_bytes
 
 CONTENT_SHA256 = {
+    "apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiProperties.java": "2ba3da4ed709d18db9838fdc562c7b60c0023fccb3fef85ebcddb4e94a302ca0",
+    "apps/api/src/main/resources/application.yml": "46741de69b3997a43179f502d1b4c7ef671ba146a590c9635d64d66aa41e08d7",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorApiPropertiesTest.java": "4371b7906a5a9bf694adf1e7082e83d6827e761f1bea70541ec6edf66a2c1d5d",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/security/CpiReadOnlyOperatorSecurityTest.java": "26e5a4db537bd44a796be6f41e7814ab91d60b6ebd72cab10c62c8f18649f50a",
     "deploy/cpi-operator/Dockerfile": "fb311640bfea8c95b052a30a2b378b8276f21ffc3bbe988bd9ffa9b8ab22f413",
     "deploy/cpi-operator/Dockerfile.dockerignore": "5161cae2d5ecc88632a65011da1805858dfc9153ec60cfac6dbc453e30aab81f",
     "scripts/cpi_operator_lifecycle.py": "2b88eaefbb2a497a405d3f5af4439db522f2ef8f9da4a567d58e9060795756cc",
-    "scripts/verify-cpi-operator-lifecycle.py": "f9ce5bfd44f5a3dbb0cd2b1d103ac5f34f8797e62de2a725d6110cab8c33f1e8",
-    "scripts/cpi-operator-lifecycle-probe.mjs": "df2a816070b86361d56335137575948562070a55db51596109b057e26f737689",
+    "scripts/verify-cpi-operator-lifecycle.py": "66e922c3a8897bda8248d7840028268920cbbc510114a020ff6fd88c0d552423",
+    "scripts/cpi-operator-lifecycle-probe.mjs": "220e69cf3d782b0b08da60cc3149d6d765f546cb22d90a2ab7ca31fa7654316e",
     "apps/web/operator/tests/next-start-fixture.mjs": "1e6d8303443e1fd242f5bda8516c2edc7ed7f3657e902f846d54d0c01e664795",
     "apps/web/src/lib/operator-start.test.ts": "c1a79469f9e01d5c23e4f1479d2b83cf49026b1c399d021b9688083d338e8109",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiBrowserEvidence.java": "3423fee8295d01c8479657aa01f572e572b87defda7f67184bdc608ef1ffd0b7",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiBrowserProcess.java": "f4d1bc10513ba32ba6eff5c77d5eb2d05870ba84603808193bfbef57b0702eba",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiBrowserProcessTest.java": "b61338d959384a8e57c1f93fe845c844469fe6ab2df80ff966d4d3184cb297b3",
-    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiOperatorBrowserIT.java": "e9ab1c2f78290088fdd5f01986f7e313e8393d9b922fc6246913a97064976eb4",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiOperatorBrowserIT.java": "91cacb28ce6d985757125cdd71a22e0a7f0937cc2e7cca2919c82d5aab0f876b",
     "apps/web/operator/full-stack.config.ts": "0b624c17791dc1cc71d609fe73e8a77401aa428a7e179923d44e04afee95b165",
     "apps/web/operator/full-stack-tests/evidence.spec.ts": "605af71f7b23ac97f50592a9564651c765e735e00fd52aae21bbbe0b4f0b564c",
     "apps/web/src/proxy.ts": "24901bd8556156ba4c24409068716edac6b1ab60533f83e56971b37c75535c2b",
@@ -38,7 +42,7 @@ CONTENT_SHA256 = {
     "apps/web/src/lib/operator-gateway.test.ts": "3107aed995bae78f88f6abc91146863a7a5bfd7ab3f35b82c0af4c3aeb74b253",
     "apps/web/src/lib/operator-mode.server.ts": "90778d96c4cf6f114d61427c109f2d6a2ce6deafc407a83e87cc01fae6ab9c5d",
     "apps/web/src/test/operator-cpi-fixture.ts": "badd52b69b1b0c9f58db04a3b2e6141d62c38d4e25954a5563b3877a98b40171",
-    "apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiSecurityConfiguration.java": "42db00bf5112f682b5c51490ec0651d840cc81bc93b8d4372742fe7053e204c3",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiSecurityConfiguration.java": "01958a8d168b4519f1be03f5ef6809f981d6946f191015660c39991a18d7b08b",
     "apps/api/src/main/java/com/wallstreetreceipts/api/web/security/ApiRequestRejectedHandler.java": "31ba52b87762a892b5ae6f229d1fa870a10333ca122e4e2f15334e3134112857",
     "apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorApiSecurityProblemWriter.java": "94ea76e5705a9a08100afcc42c7ef7984bf06422771c95cee59188409ed25e36",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/cpi/CpiAttemptQueryService.java": "f4eab30f59e46dff090b682d35f3c56c106d16816b81e4e378b99fdb46ae304e",
@@ -48,7 +52,7 @@ CONTENT_SHA256 = {
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/cpi/CpiAttemptQueryServiceTest.java": "85cdd6b82125cd26ccf7a3fc6a37143d4df1d1a832323fb86ff6579e147af6bb",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptApiTest.java": "2b902ea7540d52f353478102d80b680d857e882a34a5ca6d2e2ea77a0f38162e",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptDisabledTest.java": "7bbf58c6cefd92ba676cbbd9d8398d8a9769fbbd9ad5981fb6bda87fefd8bd8f",
-    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptPostgreSqlTest.java": "d7b034176639e24ac9a00da4c07eef0a5aa959ca7ef0dbca921026bd907669d4",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptPostgreSqlTest.java": "8f5684b5fa613278a4538e5f0dcc69e391d7cdcaaa2e113ca68ac6e495ef7573",
     "apps/api/src/main/java/com/wallstreetreceipts/api/domain/cpi/CpiCollectionAttempt.java": "9fc23740760a1f4bf3a46b5fcb7dd40a6ea57acdca76df89e1a52fa3653e80d6",
     "apps/api/src/main/resources/db/migration/V11__bls_cpi_collection_attempts.sql": "1fdf642b5f474a4a8181916de482f54d418b512abcf4d319c1d904c604085ed6",
     "apps/api/src/test/java/com/wallstreetreceipts/api/domain/cpi/CpiCollectionAttemptTest.java": "67a372d593255cd59cf955d64b5d9c8f99e169b0277d5c12ab7f9577b15c1418",
@@ -98,6 +102,9 @@ CONTENT_SHA256 = {
     "apps/api/src/main/resources/db/migration/V10__bls_cpi_retrievals.sql": "4c69f27eb5aab03de0be526f1718261f36e5f3f9e535a9bebf8bb814d7540664"
 }
 BASELINE_RECORDS = {
+    "apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiProperties.java": "100644 blob 199eadfbdf3ed747a72a7b98c872c75f368e577a",
+    "apps/api/src/main/resources/application.yml": "100644 blob a196ec5dbddbea9e9ad9dfd4d2ab5900f4d716b3",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorApiPropertiesTest.java": "100644 blob 8e47fd15df136ce70130f3a7f81e9e16fc3d1cd7",
     "apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiSecurityConfiguration.java": "100644 blob b25bc959179c613b8ab28f248080318a61478a66",
     "apps/api/src/main/java/com/wallstreetreceipts/api/web/security/ApiRequestRejectedHandler.java": "100644 blob 7bd5f457963bf95c4b75f0da079f746d0f579260",
     "apps/api/src/main/java/com/wallstreetreceipts/api/web/security/OperatorApiSecurityProblemWriter.java": "100644 blob e5b65e300d85834ca3d503dc0ddd42ef5ab794e7",
@@ -141,6 +148,15 @@ LIFECYCLE_BASE = "825369a8d75c2f5608d6782620ebc06b072ffb42"
 LIFECYCLE_PREVIOUS_RECORDS = {
     "apps/web/operator/start.mjs": "100644 blob 37c4e835fc92b7b54acff5b1bfff0a9197f4a5e9",
 }
+# Exact merged ADR-072 objects allow pre-commit work, never stale working bytes.
+READ_ONLY_BASE = "0b674db887c23315eac983b88d27a301cdb2d066"
+READ_ONLY_PREVIOUS_RECORDS = {
+    "apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiSecurityConfiguration.java": "100644 blob 15f56127067591ee3fbaa56f5c489d63b89232fa",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiOperatorBrowserIT.java": "100644 blob 1815b1cdf0fd7f9b7e8ce2bed679bf366e3745cb",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptPostgreSqlTest.java": "100644 blob 85ab3b4ff1d8b2cb56d59bef40455e292e9b8a3b",
+    "scripts/cpi-operator-lifecycle-probe.mjs": "100644 blob 483291cf4e1d99b1540f7bc3598c4deacd625f4f",
+    "scripts/verify-cpi-operator-lifecycle.py": "100644 blob b2462884931e9a7e5ecbe6ca3baa9c7a2bfb227a",
+}
 CPI_PATHS = frozenset(CONTENT_SHA256)
 CPI_ADDED_PATHS = CPI_PATHS - frozenset(BASELINE_RECORDS)
 
@@ -167,6 +183,8 @@ def verify_cpi(root: Path, git_read, baseline: dict, current: dict) -> dict:
             accepted_records.add(QUERY_PREVIOUS_RECORDS[relative])
         if relative in LIFECYCLE_PREVIOUS_RECORDS:
             accepted_records.add(LIFECYCLE_PREVIOUS_RECORDS[relative])
+        if relative in READ_ONLY_PREVIOUS_RECORDS:
+            accepted_records.add(READ_ONLY_PREVIOUS_RECORDS[relative])
         if current.get(relative) not in accepted_records:
             raise ValueError("Unreviewed committed CPI source change: " + relative)
         if relative in current:

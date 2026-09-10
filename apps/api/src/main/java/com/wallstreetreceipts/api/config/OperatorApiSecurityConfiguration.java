@@ -34,6 +34,8 @@ import com.wallstreetreceipts.api.web.security.OperatorBearerTokenAuthentication
 public class OperatorApiSecurityConfiguration {
 
     public static final String OPERATOR_AUTHORITY = "OPERATOR";
+    private static final String CPI_READ_AUTHORITY = "CPI_READ";
+    private static final String CPI_ATTEMPTS = "/internal/v1/cpi/collection-attempts";
     private static final RequestMatcher OPERATOR_API =
             new OrRequestMatcher(PathPatternRequestMatcher.withDefaults().matcher("/internal/v1/sec/**"),
                     PathPatternRequestMatcher.withDefaults().matcher("/internal/v1/cpi/**"));
@@ -41,7 +43,8 @@ public class OperatorApiSecurityConfiguration {
     @Bean
     AuthenticationProvider operatorBearerTokenAuthenticationProvider(
             OperatorApiProperties properties) {
-        return new OperatorBearerTokenAuthenticationProvider(properties, OPERATOR_AUTHORITY);
+        return new OperatorBearerTokenAuthenticationProvider(properties,
+                properties.cpiReadOnly() ? CPI_READ_AUTHORITY : OPERATOR_AUTHORITY);
     }
 
     @Bean
@@ -95,6 +98,10 @@ public class OperatorApiSecurityConfiguration {
                         .accessDeniedHandler(problemWriter))
                 .authenticationProvider(operatorBearerTokenAuthenticationProvider)
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.GET, CPI_ATTEMPTS, CPI_ATTEMPTS + "/*")
+                            .hasAnyAuthority(OPERATOR_AUTHORITY, CPI_READ_AUTHORITY)
+                        .requestMatchers(HttpMethod.HEAD, CPI_ATTEMPTS, CPI_ATTEMPTS + "/*")
+                            .hasAnyAuthority(OPERATOR_AUTHORITY, CPI_READ_AUTHORITY)
                         .requestMatchers(HttpMethod.GET, "/internal/v1/cpi/**").hasAuthority(OPERATOR_AUTHORITY)
                         .requestMatchers(HttpMethod.HEAD, "/internal/v1/cpi/**").hasAuthority(OPERATOR_AUTHORITY)
                         .requestMatchers("/internal/v1/cpi/**").denyAll()
