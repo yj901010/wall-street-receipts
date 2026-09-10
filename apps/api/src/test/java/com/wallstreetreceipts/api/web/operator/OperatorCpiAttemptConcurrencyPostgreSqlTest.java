@@ -29,6 +29,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zaxxer.hikari.HikariDataSource;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.api.model.Ports;
@@ -73,6 +74,7 @@ class OperatorCpiAttemptConcurrencyPostgreSqlTest {
                     "--spring.datasource.url=" + postgres.getJdbcUrl(), "--spring.datasource.driver-class-name=org.postgresql.Driver",
                     "--spring.datasource.username=cpi_concurrency_reader", "--spring.datasource.password=DisposableReaderOnly",
                     "--spring.datasource.hikari.maximum-pool-size=4", "--spring.datasource.hikari.minimum-idle=4",
+                    "--spring.datasource.hikari.connection-timeout=9000",
                     "--app.operator-api.enabled=true", "--app.operator-api.access=CPI_READ_ONLY",
                     "--app.operator-api.token-sha256=905f28def18eaac05ae6f12b2c3452744afaf626da1343d57b395b544e0519b6",
                     "--app.cpi.enabled=false", "--app.public-data.sec.enabled=false",
@@ -90,6 +92,11 @@ class OperatorCpiAttemptConcurrencyPostgreSqlTest {
                         .isInstanceOf(org.springframework.dao.DataAccessException.class);
                 var base = new URI("http", null, protocol.getAddress().getHostAddress(), server.getPort(), null, null, null);
                 for (var read : READS) assertResponse(send(client, base, read, 5, true), read, 200);
+                var pool = context.getBean(HikariDataSource.class);
+                assertThat(pool.getConnectionTimeout()).isEqualTo(1000);
+                exhaustedPool(client, base, pool);
+                for (var read : READS) assertResponse(send(client, base, read, 5, true), read, 200);
+                assertThat(CpiBrowserEvidence.inventory(owner)).isEqualTo(before);
                 // Normal completion, actual SQL cancellation, then full-capacity recovery after cancellation.
                 for (boolean cancel : List.of(false, true, false)) {
                     wave(client, base, datasource, owner, cancel);
@@ -99,6 +106,27 @@ class OperatorCpiAttemptConcurrencyPostgreSqlTest {
             }
             assertThat(CpiBrowserEvidence.inventory(owner)).isEqualTo(before);
         }
+    }
+
+    private void exhaustedPool(HttpClient client, URI base, HikariDataSource pool) throws Exception {
+        // Real leases exhaust the API's own pool; no SQL lock, fake datasource or product fault endpoint.
+        try (var first = pool.getConnection(); var second = pool.getConnection();
+             var third = pool.getConnection(); var fourth = pool.getConnection()) {
+            assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isEqualTo(4);
+            assertThat(pool.getHikariPoolMXBean().getIdleConnections()).isZero();
+            for (var read : READS) {
+                long start = System.nanoTime();
+                assertResponse(send(client, base, read, 4, true), read, 503);
+                assertThat(Duration.ofNanos(System.nanoTime() - start))
+                        .isBetween(Duration.ofMillis(500), Duration.ofSeconds(3)); // Test tolerance, not an HTTP SLA.
+                assertThat(pool.getHikariPoolMXBean().getThreadsAwaitingConnection()).isZero();
+                assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isEqualTo(4);
+            }
+            assertThat(send(client, base, new Read("GET", PATH), 1, false).statusCode()).isEqualTo(401);
+            assertThat(send(client, base, new Read("GET", PATH + "/invalid"), 1, true).statusCode()).isEqualTo(400);
+        }
+        assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isZero();
+        assertThat(pool.getHikariPoolMXBean().getThreadsAwaitingConnection()).isZero();
     }
 
     private void wave(HttpClient client, URI base, DriverManagerDataSource datasource, JdbcTemplate owner, boolean cancel) throws Exception {

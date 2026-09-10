@@ -34,8 +34,8 @@ class CpiCustodyTests(unittest.TestCase):
                               self.current if current is None else current)
 
     def test_closed_inventory_without_general_product_exceptions(self):
-        self.assertEqual(len(cpi.CPI_PATHS), 96)
-        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 84)
+        self.assertEqual(len(cpi.CPI_PATHS), 98)
+        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 86)
         self.assertFalse(cpi.CPI_PATHS & bridge.FIXED_CI_PATHS)
         self.assertFalse(cpi.CPI_PATHS & bridge.NAVIGATION_PATHS)
         self.assertNotIn(bridge.NEXT_ENV, cpi.CPI_PATHS)
@@ -150,6 +150,21 @@ class CpiCustodyTests(unittest.TestCase):
         self.assertEqual(self.verify(previous), previous)
         for relative, record in cpi.READ_CONCURRENCY_PREVIOUS_RECORDS.items():
             old = bridge.git(SOURCE, "show", cpi.READ_CONCURRENCY_BASE + ":" + relative)
+            self.assertEqual(blob_record(old), record)
+            with self.assertRaisesRegex(ValueError, "Unreviewed committed CPI"):
+                self.verify({**self.current, relative: "100644 blob " + "e" * 40})
+            (self.root / relative).write_bytes(old)
+            with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
+                self.verify(previous)
+            (self.root / relative).write_bytes(self.expected[relative])
+
+    def test_pool_wait_requires_current_configuration_and_exhaustion_test(self):
+        self.assertEqual(set(cpi.POOL_WAIT_PREVIOUS_RECORDS), {
+            "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptConcurrencyPostgreSqlTest.java"})
+        previous = {**self.current, **cpi.POOL_WAIT_PREVIOUS_RECORDS}
+        self.assertEqual(self.verify(previous), previous)
+        for relative, record in cpi.POOL_WAIT_PREVIOUS_RECORDS.items():
+            old = bridge.git(SOURCE, "show", cpi.POOL_WAIT_BASE + ":" + relative)
             self.assertEqual(blob_record(old), record)
             with self.assertRaisesRegex(ValueError, "Unreviewed committed CPI"):
                 self.verify({**self.current, relative: "100644 blob " + "e" * 40})

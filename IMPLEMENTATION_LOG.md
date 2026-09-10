@@ -8787,3 +8787,62 @@ configured origin or any network endpoint.
   Ubuntu startup/reboot recovery, backups and remote access require the future
   real host. No new-candidate push, PR, merge, provider activation or deployment
   is performed in this development slice.
+
+## P5 / ADR-076 — Read-only CPI pool-wait budget (2026-09-10 KST)
+
+- Verify user-merged PR #23 at develop `0c747940d9c8e603b6a30c325470d6442e015dcb`.
+  PR CI #58 (`34438801906`) and merge push CI #59 (`34439195811`) succeeded.
+  Branch from that commit as `feature/p5-cpi-pool-wait`. The Ubuntu home server
+  remains unavailable; no real provider, credential or existing DB is activated.
+- Add `config/CpiReadOnlyPoolConfiguration`: only explicitly enabled CPI_READ_ONLY
+  processes cap the normal named Hikari `dataSource` connectionTimeout at 1,000ms.
+  The static BeanPostProcessor runs after property binding and preserves shorter
+  settings. Hikari's zero/unlimited setting becomes bounded. FULL/disabled/default
+  modes, auxiliary/non-Hikari pools, capacity, validation and driver properties
+  remain unchanged. No new dependency, pool, schema or environment setting.
+- This affects every borrower of that pool in the selected process, not only CPI
+  routes. It bounds waiting for an exhausted pool, not connection validation,
+  driver/socket activity or an end-to-end HTTP deadline. Retain ADR-074 SQL/write
+  timeouts and ADR-075 four-reader admission. HTTP read-only access remains
+  distinct from database SELECT-only grants. Routes stay GET/HEAD
+  `/internal/v1/cpi/collection-attempts` and `/{attemptId}`. Controller, security,
+  query evidence, source provenance, Web and deployment/lifecycle inputs unchanged.
+- Add **14 configuration unit cases** for mode isolation, six timeout values,
+  unchanged unrelated settings, actual application.yml aliases and other datasource
+  types/names. Configuration remains lazy and opens no connection.
+- Extend the real HTTP/PostgreSQL concurrency test: deliberately configure 9,000ms,
+  assert the actual API pool uses 1,000ms, and hold all four real pool connections.
+  GET/HEAD list/selection return existing sanitized no-store 503s with no remaining
+  connection waiters; authentication and malformed-ID rejection remain available.
+  Release the leases and verify ordinary reads plus the original three full-capacity
+  lock/release, SQL-cancel and recovery waves. The SELECT-only role cannot write;
+  all four CPI tables retain their initial disposable DEMO snapshots.
+- Focused Java selection: **48/48 PASS**, zero failures/errors/skips, 1m11s
+  (`.cache/adr076-focused.log`). Full current API Maven verify/package:
+  **2529/2529 PASS**, zero failures/errors/skips, 2m45s
+  (`.cache/adr076-api-full.log`), including a fresh executable Spring Boot JAR.
+- Explicit production browser/Spring/SELECT-only PostgreSQL regression:
+  **7/7 Java PASS**, including **12/12 browser checks** at 1440/1280/390px for
+  empty, seeded, unavailable and recovered states, 2m05s (`.cache/adr076-browser.log`).
+  Reuse the secret-free ADR-073 mirror only after byte-for-byte source verification;
+  fresh Next build/TypeScript checks pass with 14 routes plus proxy. Evidence logs:
+  `.cache/adr071-evidence-6294346456384517291/`. Recovered desktop/mobile screenshots
+  were visually checked; mobile keeps the existing bounded horizontal table scroll.
+  These checks cover ordinary query/error/recovery UI, not browser pool exhaustion.
+- Extend CPI custody to **98 exact paths / 12 baseline replacements / 86 additions**.
+  Pin the new configuration/unit test and changed HTTP test; accept only its exact
+  merged ADR-075 predecessor with mandatory current working bytes. Python CI
+  contracts: **286 total / 280 PASS / six existing Windows capability skips**, no
+  failures/errors, 69.631s (`.cache/adr076-ci.log`). Current source custody, DEMO
+  fixtures/revisions/outcomes, workflow parity and whitespace checks pass. Workflow
+  stays 29,069 / 500,000 bytes; largest run 598 / 21,000 characters. Historical
+  bodies and hosted jobs unchanged. No test failures occurred in this selection.
+- Preserve user-owned `apps/web/next-env.d.ts`, SHA256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  No actual key is printed or staged. Full Web lint/unit and public browser suites
+  are not rerun for this backend-only slice. Packaged Linux lifecycle acceptance
+  must use committed runtime inputs; its measured result will be recorded separately.
+- Next: packaged boot/read/restart regression, then explicit push/review/hosted CI
+  for this candidate. Network/driver deadlines remain separate work; real Ubuntu
+  boot recovery, backups and remote operator access require the future host.
+  No candidate push, PR, merge or production deployment in this development slice.
