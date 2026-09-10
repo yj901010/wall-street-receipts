@@ -1,4 +1,4 @@
-"""ADR-064 through 077: exact CPI retrieval, bounded reads and tooling custody."""
+"""ADR-064 through 078: exact CPI retrieval, bounded reads and tooling custody."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,10 @@ from current_contracts import BASELINE, blob_record
 from navigation_contracts import _current_bytes
 
 CONTENT_SHA256 = {
+    "scripts/verify-cpi-operator-transport.py": "3a002dc18632416e18d0b6007b209c02546460d04f23d14e58a47ac32932e90a",
+    "scripts/cpi-transport-relay.mjs": "902aab14e811827c8f7c3750b51599b3a26752d236628d92e842b640bef0c1ce",
+    "scripts/cpi-transport-probe.mjs": "9f1f965f48d9311957b7e0f0cf30973f7630f52886f2fa210d0169349ced9a50",
+    "scripts/ci/cpi-transport-relay.test.mjs": "eacaaa36c17c05163b31aeee67ec0fca5bab4b5fa4d5e2b59599c1994ee7fbd6",
     "apps/api/pom.xml": "9be3a2b74dbfb6c53e7408f96053421b7c6b26c513631cd837c38c614263c83c",
     "apps/api/src/main/java/com/wallstreetreceipts/api/config/CpiReadOnlyJdbcConfiguration.java": "374544003a0eeebdb0ebc4d9a950c03fb9098998a6ed6e4d4be10e95fc50ffa6",
     "apps/api/src/test/java/com/wallstreetreceipts/api/config/CpiReadOnlyJdbcConfigurationTest.java": "9d4d7836477fb0ba7e57eca89ad0ff5bf20428031ec5b7ac6bb06edd6c923299",

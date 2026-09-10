@@ -322,3 +322,23 @@ real HTTP/PostgreSQL response-blackhole/recovery tests run in ordinary Maven.
 The test-only loopback relay retains no payload and closes its owned workers and
 sockets. These per-operation limits are not an HTTP deadline or a DNS/TLS/write
 stall guarantee. Historical scripts/workflow remain unchanged.
+
+ADR-078 adds explicit packaged Linux transport-fault acceptance:
+
+```sh
+python scripts/verify-cpi-operator-transport.py --confirm-disposable-demo
+```
+
+This reuses the unchanged ADR-072 image builder and lifecycle checks, and mounts
+a test-only byte relay on the owned internal Docker network. For API GET/HEAD
+list/selection and both UI GET queries, it observes real SQL blocked by an owned
+lock, discards the established connection's actual response bytes, requires a
+sanitized no-store 503, observes connection closure, then recovers all six reads
+and compares all four CPI tables. A single-connection test pool identifies the
+faulted transport; product budgets and runtime source stay unchanged. No real
+keys/providers, host ports or persistent volumes are used. Only owned resources
+are removed; sanitized DEMO reports retain exact source/image/input identities.
+The ordinary Python suite includes safety checks and four actual Node loopback
+relay tests. Custody has 108 exact CPI paths (13 baseline replacements, 95 additions),
+without new general predecessor exceptions or workflow jobs. The full Docker
+acceptance is opt-in, not a claimed total HTTP deadline, load test or real-host gate.
