@@ -8868,3 +8868,92 @@ configured origin or any network endpoint.
 - Record this measured result in a separate documentation-only local commit.
   Next handoff is explicit publication/review/hosted CI of these nine changed paths;
   no new-candidate hosted result or real Ubuntu availability is claimed.
+
+## P5 / ADR-077 — Read-only CPI JDBC transport budgets (2026-09-10 KST)
+
+- Verify user-merged PR #24 at develop `d8a08f908fa8f1ba80b741c97e30f19407f51ecd`.
+  PR CI #60 (`34448162395`) passes API, Web, Call audit integration and Repository
+  contracts. Merge push CI #61 (`34448597617`) was initially running; all four
+  jobs subsequently pass. Branch as `feature/p5-cpi-jdbc-transport`. Continue local
+  work; the Ubuntu home server is still unavailable and no real provider/DB is used.
+- Add `config/CpiReadOnlyJdbcConfiguration` for explicitly enabled CPI_READ_ONLY
+  processes. After binding, cap the normal driver-based PostgreSQL Hikari datasource
+  at connectTimeout=2s, socketTimeout=5s, cancelSignalTimeout=1s and
+  validationTimeout=750ms, retaining shorter positive effective settings. Defaults
+  and zero/unlimited driver values receive caps; invalid values fail startup with
+  fixed setting-specific errors that exclude the values, URL and credentials.
+- Use the existing pgJDBC parser for effective URL/property precedence, including
+  duplicate and encoded parameters. Preserve original URL bytes and append only
+  fixed bounded timeout parameters; add matching datasource properties. The parser
+  placeholder prevents implicit .pgpass lookup and is never applied to the pool.
+  Explicit service-file behavior is still the driver's own. No connection is opened
+  to configure budgets. Promote the existing PostgreSQL dependency from runtime to
+  compile scope for this adapter, without changing its managed 42.7.11 version.
+  Fresh executable JARs before/after have identical inventories of **47 runtime
+  library JARs**. No new runtime library, schema or environment variable is added.
+- Keep FULL/disabled/default modes, non-PostgreSQL URLs, other named pools and
+  custom datasource instances/classes untouched. The selected pool's other borrowers
+  share this policy. Individual socket/connect/cancel/validation settings are not an
+  end-to-end HTTP deadline, DNS/TLS/blocked-write guarantee or global time budget
+  over repeated/multi-host attempts. Retain existing SQL/write timeouts, four-reader
+  admission, no-store errors and SELECT-only deployment role. Routes remain GET/HEAD
+  `/internal/v1/cpi/collection-attempts` and `/{attemptId}`. No controller/security,
+  evidence/provenance, Web source or deployment/lifecycle recipe changes.
+- Add **25 configuration unit cases**, including actual binding/aliases, URL
+  precedence, zero/shorter/invalid settings, credential isolation and alternate pools.
+  Add a test-only loopback byte relay and **two unit cases** for transparent forwarding,
+  targeted response discarding, remote-target rejection and owned thread/socket cleanup.
+  The relay stores only discarded byte counts, never protocol payloads or credentials.
+- Add ordinary Maven actual HTTP/SELECT-only PostgreSQL transport acceptance.
+  Disable statement cancellation on a direct pg_sleep call and observe actual
+  SocketTimeoutException plus connection closure. For GET/HEAD list/selection, first
+  observe genuine SQL blocked by a test-owned lock, silence that established transport,
+  and release the lock. Genuine response bytes are discarded; each request returns
+  sanitized no-store 503 with no active lease/waiter. Auth/invalid-ID checks remain
+  available, the connection is replaced, and all four read shapes recover after each
+  fault. Full snapshots of all four CPI tables stay equal; reader writes are denied.
+- Initial unit attempt stops at test compilation due to an unavailable AssertJ
+  convenience method (`.cache/adr077-unit.log`); replace it with JDK stack-trace
+  capture plus the same non-disclosure assertion. Focused selection then passes
+  **57/57**, zero failures/errors/skips, 1m05s (`.cache/adr077-focused.log`). Add
+  three additional non-string property checks before final verification.
+- Full API Maven verify/package: **2557/2557 PASS**, no failures/errors/skips,
+  3m27s (`.cache/adr077-api-full.log`). This includes the 25 final configuration
+  tests, real transport faults, prior pool-exhaustion/concurrency/SQL-timeout tests
+  and existing security/persistence regressions.
+- CPI custody: **104 exact paths / 13 baseline replacements / 91 additions**.
+  Pin all five new Java files and the POM, whose only permitted difference from
+  its exact baseline is the existing driver's scope promotion. Python CI contracts:
+  **287 total / 281 PASS / six existing Windows capability skips**, no failures/errors,
+  110.482s (`.cache/adr077-ci.log`). Source custody, DEMO fixtures/revisions/outcomes,
+  workflow parity and whitespace pass. Workflow remains 29,069 / 500,000 bytes;
+  largest run 598 / 21,000 characters. No historical script or hosted job changes.
+- Initial explicit browser regression: empty state passes 3/3, seeded desktop
+  checks pass 2/2, but seeded 390px fails while re-reading a 200 response body with
+  Chromium `Network.getResponseBody: No data found for resource with given identifier`.
+  Its error snapshot already shows the correct saved receipt; this is not evidence
+  of a JDBC failure. Preserve `.cache/adr077-browser.log` and
+  `.cache/adr071-evidence-6720530528113546185/`. Re-run the unchanged full browser
+  selection alone after API/Python completion; no retry policy or weakened test added.
+- Preserve user-owned `apps/web/next-env.d.ts`, SHA256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  Full Web lint/unit and public browser suites are not rerun for this backend slice.
+  Browser-repeat and committed packaged lifecycle results are recorded below.
+- Next: finish the explicit regressions, then local commit and explicit publication/
+  review/hosted CI. End-to-end deadlines and packaged transport-fault acceptance
+  remain distinct follow-ups. Real Ubuntu boot/recovery, backups and remote operator
+  access require the future host. No new-candidate push, PR, merge or activation here.
+
+### ADR-077 isolated browser repeat
+
+- Unchanged source and test, with ordinary retry settings still disabled:
+  **7/7 Java PASS**, including **12/12 browser checks** for all four states at
+  1440/1280/390px, 1m47s (`.cache/adr077-browser-repeat.log`). Fresh Next build and
+  TypeScript pass with 14 routes plus proxy; the secret-free ADR-073 mirror was
+  byte-for-byte verified against current Web sources before building. Evidence:
+  `.cache/adr071-evidence-656864612299923015/`. Recovered desktop/mobile screenshots
+  were visually checked; mobile retains the existing horizontal table scroll.
+- The initial Chromium response-body retrieval failure did not reproduce in the
+  isolated run. Its precise underlying cause is not established; retain the original
+  failure evidence rather than claiming an application or test fix. Product Web
+  source, browser tests and the actual JDBC source are unchanged between runs.
