@@ -1,4 +1,4 @@
-"""ADR-064 through 073: exact CPI retrieval, operator access and tooling custody."""
+"""ADR-064 through 074: exact CPI retrieval, bounded reads and tooling custody."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,7 @@ from current_contracts import BASELINE, blob_record
 from navigation_contracts import _current_bytes
 
 CONTENT_SHA256 = {
+    "apps/api/src/test/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcCpiAttemptReadTimeoutTest.java": "8f251eb30396195a0b39f790f004bb8d481c98265e4a7015785aa60d05bfdc14",
     "apps/api/src/main/java/com/wallstreetreceipts/api/config/OperatorApiProperties.java": "2ba3da4ed709d18db9838fdc562c7b60c0023fccb3fef85ebcddb4e94a302ca0",
     "apps/api/src/main/resources/application.yml": "46741de69b3997a43179f502d1b4c7ef671ba146a590c9635d64d66aa41e08d7",
     "apps/api/src/test/java/com/wallstreetreceipts/api/config/OperatorApiPropertiesTest.java": "4371b7906a5a9bf694adf1e7082e83d6827e761f1bea70541ec6edf66a2c1d5d",
@@ -52,7 +53,7 @@ CONTENT_SHA256 = {
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/cpi/CpiAttemptQueryServiceTest.java": "85cdd6b82125cd26ccf7a3fc6a37143d4df1d1a832323fb86ff6579e147af6bb",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptApiTest.java": "2b902ea7540d52f353478102d80b680d857e882a34a5ca6d2e2ea77a0f38162e",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptDisabledTest.java": "7bbf58c6cefd92ba676cbbd9d8398d8a9769fbbd9ad5981fb6bda87fefd8bd8f",
-    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptPostgreSqlTest.java": "8f5684b5fa613278a4538e5f0dcc69e391d7cdcaaa2e113ca68ac6e495ef7573",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptPostgreSqlTest.java": "13e2b7e64b1523986443a0abf95d33071160e88ca3a92efb1db92c0814885423",
     "apps/api/src/main/java/com/wallstreetreceipts/api/domain/cpi/CpiCollectionAttempt.java": "9fc23740760a1f4bf3a46b5fcb7dd40a6ea57acdca76df89e1a52fa3653e80d6",
     "apps/api/src/main/resources/db/migration/V11__bls_cpi_collection_attempts.sql": "1fdf642b5f474a4a8181916de482f54d418b512abcf4d319c1d904c604085ed6",
     "apps/api/src/test/java/com/wallstreetreceipts/api/domain/cpi/CpiCollectionAttemptTest.java": "67a372d593255cd59cf955d64b5d9c8f99e169b0277d5c12ab7f9577b15c1418",
@@ -79,7 +80,7 @@ CONTENT_SHA256 = {
     "apps/web/src/app/market/cpi/cpi-view.tsx": "5d2d1155a8a4326248d9a2bbcd386db90b3d6b8d9217403b0842c85b3db369e7",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/cpi/CpiControllerTest.java": "c08eec286bbda485820eef9e20546253d9d264156f3b1773d5adc8feff7185d8",
     "apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/provider/bls/BlsCpiClient.java": "1bb9b432fcb6c9176140ded8b648c526ee5d9fcfc3a025b15a2d25c4f4dcfbce",
-    "apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcCpiRepository.java": "1fcd509c5500ef4792a55fdf89d66c6fd74d49b2183a8887317765b3e404b1f8",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcCpiRepository.java": "9e973bfde5e46c10893c96150004e67095b5b1cf0787fc4e9aa3d4b64a06e7c6",
     "apps/web/src/app/market/page.tsx": "ec4b868b3e97b42170bc22bf894bd2ce8f693e210d364767af4b8c2b2e05e12c",
     "apps/web/src/app/market/cpi/cpi.module.css": "33053a4c3904f0abe0fd01ff2b9987ccbd41e09338a3129c1a8fa6c05bbc1040",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/cpi/CpiRepository.java": "fb8a86dfa18989ad4acc21140b22bbdbf141d614e45a9c3c8b20b65ad0b0f048",
@@ -157,6 +158,12 @@ READ_ONLY_PREVIOUS_RECORDS = {
     "scripts/cpi-operator-lifecycle-probe.mjs": "100644 blob 483291cf4e1d99b1540f7bc3598c4deacd625f4f",
     "scripts/verify-cpi-operator-lifecycle.py": "100644 blob b2462884931e9a7e5ecbe6ca3baa9c7a2bfb227a",
 }
+# Exact merged ADR-073 objects permit pre-commit work with mandatory bounded reads.
+READ_TIMEOUT_BASE = "f98d491331b8335a16fbcffa6648353e6ab381ba"
+READ_TIMEOUT_PREVIOUS_RECORDS = {
+    "apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcCpiRepository.java": "100644 blob a296a82293e696f7731eea2652f9db482fe429ec",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptPostgreSqlTest.java": "100644 blob 80ef20bf848a1d1e013e6a0cb8fe71dd2e8bdcc2",
+}
 CPI_PATHS = frozenset(CONTENT_SHA256)
 CPI_ADDED_PATHS = CPI_PATHS - frozenset(BASELINE_RECORDS)
 
@@ -185,6 +192,8 @@ def verify_cpi(root: Path, git_read, baseline: dict, current: dict) -> dict:
             accepted_records.add(LIFECYCLE_PREVIOUS_RECORDS[relative])
         if relative in READ_ONLY_PREVIOUS_RECORDS:
             accepted_records.add(READ_ONLY_PREVIOUS_RECORDS[relative])
+        if relative in READ_TIMEOUT_PREVIOUS_RECORDS:
+            accepted_records.add(READ_TIMEOUT_PREVIOUS_RECORDS[relative])
         if current.get(relative) not in accepted_records:
             raise ValueError("Unreviewed committed CPI source change: " + relative)
         if relative in current:
