@@ -9521,3 +9521,68 @@ configured origin or any network endpoint.
   private-value exclusion and the preserved next-env before publishing. Provide
   a title/body-prefilled PR creation link against develop; do not create or merge
   the PR and do not claim new hosted CI success.
+
+## ADR-083 — DEMO comparative scoring input and replay (2026-09-11)
+
+- PR #30 is merged at `d9d69b266cdbc03f0ef0201037847bd02f64798f`. The first merge
+  CI #73 attempt timed out in an existing CPI CLI guard; user-triggered attempt 2
+  passes all four jobs without a source change. Start
+  `feature/p3-comparative-scoring-input` from that verified develop commit.
+- Add four production types under `application/scoring`: `ComparativeScoringInput`
+  (including separate typed bundles), methodology, canonical codec and evaluator.
+  Invoke the unchanged endpoint evaluator once, preserve all three metric meanings,
+  and share its exact endpoint receipt with independently executed benchmark and
+  sector assignment/pair/return/readiness chains. No source-result input shortcuts.
+- The separately versioned `wsr-demo-comparative-preview/1.0.0` covers five metric
+  meanings/four readiness owners, always `dataComplete=false`. Input enforces
+  exact basis/correction, asset and as-of correlation; thirteen candidate lists
+  preserve all future/rejected members, with missing/ambiguity and N/A conflicts
+  owned by the original selectors. No price/zero/proxy fallback or full score.
+- Canonical format embeds old ADR-080 bytes without alteration, accepts only a
+  closed record/enum set, and rejects malformed/noncanonical/oversized payloads.
+  Limits are 4096/list, 65536 UTF-16 units/string, 1 MiB total, 24 decode depth.
+  Generic list evidence types are checked at construction, not just Java erasure.
+  Old method/input goldens remain unchanged; new goldens are documented in ADR-083.
+- Three new test classes and one synthetic test-only fixture exercise actual
+  selectors from raw input, shared-object identity, old-result parity, all thirteen
+  list PIT/missing/duplicate cases, independent legs, exact timestamp/revision,
+  N/A conflict, anchor failure, correction, codec replay/limits and method rejection.
+  Initial test diagnostics correctly reject an inconsistent intermediate correction
+  and an N/A classification with a conflicting equity assignment. Fix only new
+  test construction; existing domain rules stay unchanged.
+- Routes, public contract, CLI, resources, Flyway V12 and all Web files are
+  unchanged. The new profile is not accepted by the old receipt writer/reader.
+  Scoring custody adds exactly eight Java paths to the old forty, plus one explicit
+  new ADR allowlist path. Existing calculators and historic CI remain frozen.
+- Next: versioned comparative receipt persistence/ledger verification, then read-only
+  API and audit presentation. MFE/MAE remain blocked by ADR-034 raw tick coverage
+  and rights evidence; target-hit, alpha, canonical lifecycle and aggregates remain
+  separate. No real provider, paid call, actual DB or Ubuntu service is touched.
+- Public push requires this phase's exact-file approval. Do not create or merge
+  a PR, expose ignored keys or stage the user's next-env file.
+
+### ADR-083 final local acceptance
+
+- Full Java 21 Maven `verify` passes **2813/2813**, zero failures/errors/skips,
+  including **127 new cases** (79 evaluator, 28 input, 20 codec), all old scoring
+  goldens, PostgreSQL Testcontainers, V12 migration/receipt and HTTP security tests.
+  Executable Spring Boot packaging passes in **2m17s**. Evidence:
+  `.cache/adr083-api-full.log` and `.cache/adr083-api/` reports/artifact.
+- Full CI tooling passes **301/307**, six existing Windows capability skips,
+  no failures/errors, **44.328s** (`.cache/adr083-ci.log`). Current/legacy product
+  parity, all 48 scoring pins, DEMO fixture contracts, workflow size limits and
+  `git diff --check` pass. Workflow stays 29,069 bytes; largest run stays 598 chars.
+- No Web route, public response shape, runtime configuration, dependency,
+  existing domain source or database migration changed. Responsive/browser and
+  Web lint/build are not rerun for this backend-only additive profile; the
+  unchanged surfaces retain the verified merged CI #73 attempt-2 acceptance.
+  The current API regression confirms the old reader and writer still work.
+- Preserve the user's only pre-existing change, `apps/web/next-env.d.ts`, at SHA256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  Request approval for **14 exact files** (four production, four Java test,
+  three CI Python, two Markdown guide/log, one ADR). Hosted CI for this new
+  feature has not run; no new PR is created or merged by this task.
+- User approves the verified **14-file** commit/push to
+  `feature/p3-comparative-scoring-input`. Final current custody, exact staged
+  paths, private-value exclusion and next-env preservation precede publication.
+  Return only a title/body-prefilled PR creation link against develop.

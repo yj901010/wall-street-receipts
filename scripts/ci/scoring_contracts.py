@@ -1,4 +1,4 @@
-"""ADR-080/081/082: exact scoring custody; old calculators and one link predecessor stay frozen."""
+"""ADR-080 through 083: exact scoring custody; old calculators and link predecessor stay frozen."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,14 @@ import stat
 from current_contracts import blob_record
 
 CONTENT_SHA256 = {
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringEvaluator.java": "5468dc0b1cf29a7669c84856a8c530b8f6f90f2a5a491f47e39661a297b087e1",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringInput.java": "4ffd5a7c27fa83e92d4c396be052a01556b38a302e63f5c7ced28bbf81ec59f5",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringInputCodec.java": "f10b1bffc8fc93de2e43086e9cef01f7245c9972e744365a48a0ff4d6b9ec583",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringMethodology.java": "514e09a4fd1bba085796f740538bc06c3c96e6833796abc34607fe9f71585c8e",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringEvaluatorTest.java": "f9055fe20020335f58eaaa94fd203752532900f8e9714c65034a1b64c21e48bd",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringFixture.java": "8c0652d19f4dd2e7f0873231b6b0b9eec52512d127575a0faae9d15ceb0ca9d3",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringInputCodecTest.java": "54e1e178833d4d3553f2e81092e0fab188f860c0a03eb896fc2c5cd23de153fa",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringInputTest.java": "03a53ad7a2b12869f93079d77cc3ffe938658e7c859879e03cb1dd53f910932b",
     "apps/web/scoring/public.config.ts": "58e18c0799db38fe3d185e3d22b89f46c11889b60470294e038bfd589dc27d7f",
     "SCORING_RECEIPTS.md": "1f1089c892e6ab946c4504f47319944811bb226225936392324dd7dd980c4559",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/DemoScoringReceiptCommand.java": "f18745ba189bfb7b179d24433aa5a3d03f730f823fecce0b68035001519f0bfb",
