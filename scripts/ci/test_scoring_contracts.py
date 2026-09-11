@@ -3,6 +3,8 @@ import hashlib
 from pathlib import Path
 import tempfile
 import unittest
+import yaml
+from jsonschema import Draft202012Validator
 import scoring_contracts as scoring
 import run_contracts as bridge
 from current_contracts import blob_record
@@ -22,11 +24,12 @@ class ScoringCustodyTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
 
-    def test_exact_seven_additions_no_legacy_or_general_exception(self):
-        self.assertEqual(len(scoring.SCORING_PATHS), 7)
+    def test_exact_twenty_additions_no_legacy_or_general_exception(self):
+        self.assertEqual(len(scoring.SCORING_PATHS), 20)
         self.assertFalse(scoring.SCORING_PATHS & (bridge.FIXED_CI_PATHS | bridge.CPI_PATHS | bridge.NAVIGATION_PATHS))
-        for path in scoring.SCORING_PATHS:
-            self.assertIn("/application/scoring/", path)
+        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 14)
+        self.assertIn("contracts/scoring-receipts.openapi.yaml", scoring.SCORING_PATHS)
+        self.assertIn("apps/api/src/main/resources/db/migration/V12__demo_scoring_receipts.sql", scoring.SCORING_PATHS)
         self.assertEqual(scoring.verify_scoring(SOURCE, {}, self.current), self.current)
         self.assertEqual(scoring.verify_scoring(self.root, {}, {}), {})
 
@@ -66,3 +69,34 @@ class ScoringCustodyTests(unittest.TestCase):
         (self.root / relative).write_bytes(b"\xef\xbb\xbf" + self.raw[relative])
         with self.assertRaisesRegex(ValueError, "Unreviewed current"):
             scoring.verify_scoring(self.root, {}, self.current)
+
+    def test_additive_contract_has_only_two_reads_and_explicit_partial_scope(self):
+        contract = yaml.safe_load((SOURCE / "contracts/scoring-receipts.openapi.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(contract["openapi"], "3.1.0")
+        self.assertEqual(set(contract["paths"]), {
+            "/v1/calls/{callId}/scoring-receipts", "/v1/calls/{callId}/scoring-receipts/{receiptId}"})
+        for operation in contract["paths"].values():
+            self.assertEqual(set(operation), {"parameters", "get"})
+            self.assertEqual(set(operation["get"]["responses"]), {"200", "400", "404", "503"})
+        for schema in contract["components"]["schemas"].values():
+            Draft202012Validator.check_schema(schema)
+        receipt = contract["components"]["schemas"]["Receipt"]
+        self.assertEqual(set(receipt["required"]), set(receipt["properties"]))
+        self.assertFalse(receipt["additionalProperties"])
+        for name, value in {"dataMode": "DEMO", "scope": "PARTIAL_ENDPOINT", "dataComplete": False,
+                            "snapshotRole": "ORIGINAL_CALL_CONTEXT_ONLY_NOT_PRICE_SOURCE"}.items():
+            self.assertEqual(receipt["properties"][name], {"const": value})
+
+    def test_metric_contract_rejects_missing_as_zero_and_ambiguous_value_types(self):
+        contract = yaml.safe_load((SOURCE / "contracts/scoring-receipts.openapi.yaml").read_text(encoding="utf-8"))
+        validator = Draft202012Validator(contract["components"]["schemas"]["Metric"])
+        available = {"state": "AVAILABLE", "decimalValue": "0.200000000000", "booleanValue": None, "reasons": []}
+        validator.validate(available)
+        validator.validate({**available, "decimalValue": None, "booleanValue": False})
+        for state in ("PENDING", "UNAVAILABLE", "NOT_APPLICABLE"):
+            missing = {"state": state, "decimalValue": None, "booleanValue": None, "reasons": ["EVIDENCE_MISSING"]}
+            validator.validate(missing)
+            self.assertFalse(validator.is_valid({**missing, "decimalValue": "0.000000000000"}))
+            self.assertFalse(validator.is_valid({**missing, "booleanValue": False}))
+        for mutation in ({"booleanValue": True}, {"decimalValue": None}, {"decimalValue": 0}, {"reasons": ["MISSING"]}):
+            self.assertFalse(validator.is_valid({**available, **mutation}))
