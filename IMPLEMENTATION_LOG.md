@@ -9181,3 +9181,36 @@ configured origin or any network endpoint.
   authorized API/test/CI/documentation paths for source-identical packaged
   acceptance; publication waits for that final verification. PR creation/merge
   remains outside this phase's authorization.
+
+### ADR-079 committed packaged acceptance and handoff (2026-09-11 KST)
+
+- Source commit `d185fee5e155af0218b01e71e50b11b5793f46fd` passes unchanged ADR-078
+  Linux packaged transport/lifecycle acceptance on its first committed run.
+  Report `.cache/adr078-8297bcb43754abca215a6525.json` records `passed=true`, exact
+  source/image identities, all eight unchanged rehearsal-input hashes,
+  `singleConnectionTestPool=true`, `endToEndDeadlineClaimed=false` and
+  `productionActivated=false`. Console log: `.cache/adr079-packaged.log`.
+- All six actual PostgreSQL response-silence faults return sanitized 503: API GET
+  list/selection take 4,029/4,032ms, API HEAD list/selection 4,034/4,028ms, and UI
+  list/selection 4,035/4,030ms in this run. These are observed test timings, not a
+  whole-network SLA. List faults discard 784 actual downstream bytes and selected
+  faults 454. The independent JDBC cleanup is still observed separately after
+  caller timeout; all six broken connections must actually close.
+- Every fault is followed by all six successful read shapes with identical evidence
+  hashes and unchanged snapshots of all four CPI tables. Inherited packaged
+  boot/auth/KST/loopback, duplicate-bind rejection, UI SIGTERM/restart, API loss,
+  ordered recovery and final shutdown checks also pass. No runtime defaults or
+  test-tool assertions are changed to obtain this result.
+- Post-run read-only inspection confirms no owned running/stopped containers,
+  networks, labeled images, build context or browser rehearsal container remains.
+  Disposable test databases were removed and can be reproduced by the unchanged
+  tools; ignored reports/logs/build outputs/screenshots are retained. Existing
+  development PostgreSQL remains healthy on 127.0.0.1:5432 and user-owned next-env
+  SHA256 remains `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Record final acceptance in a separate documentation-only commit. Publish only
+  the explicitly approved twelve paths after rechecking both outgoing commit
+  diffs for actual local secret values and confirming the exact branch/remote.
+  The feature push does not trigger this repository's PR-only feature CI: no
+  new-candidate hosted success or PR creation/merge is claimed. Next product work
+  is scoring input/methodology and persistence/API integration, not another
+  implicit operations prerequisite. Real providers and Ubuntu deployment remain off.
