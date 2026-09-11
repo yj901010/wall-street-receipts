@@ -9407,3 +9407,117 @@ configured origin or any network endpoint.
   merging a PR or claiming new-candidate hosted CI success. Next: explicit DEMO
   receipt creation and audit-screen integration, with remaining metrics and
   real-data/host prerequisites separately scoped.
+
+## 2026-09-11 - ADR-082 explicit DEMO receipt command and read-only audit
+
+- User reports PR/CI/merge complete. Confirm PR #29
+  `feat(scoring): persist and replay demo scoring receipts` merged into develop
+  at `c26a8d011e1ebb683a80ba3bc26950411320cc04`; PR CI #70 and merge CI #71 both
+  complete successfully. Branch `feature/p3-scoring-receipt-audit` starts there.
+  Preserve the user-owned next-env file and ignored actual keys. No Ubuntu host,
+  actual DB migration/receipt creation, production provider or paid call is used.
+- Add `DemoScoringReceiptCommand` as a separately invoked packaged Java main.
+  Require exact confirmation, bounded canonical input, explicit snapshot and a
+  dedicated loopback `wsr_scoring_demo` JDBC URL/role/password. No env-file loader,
+  credential default, Flyway/importer, Spring startup, HTTP writer or scheduler.
+  Compose existing verified append service inside a transaction; identical retry
+  keeps UUID/time. Exit 69 means unconfirmed, not proof of rollback at commit.
+  No credentials/input/driver exception is echoed. `SCORING_RECEIPTS.md` documents
+  prerequisites, least-privilege role needs, explicit invocation and retry limits.
+- Add server-rendered `/calls/[id]/scoring-receipts`, linked only from DEMO call
+  detail (three-line existing-page delta). Five-second, 256 KiB server-only GET
+  transport is explicitly opt-in; disabled, invalid locator, absent call/receipt,
+  verified empty, unavailable and ready are distinct. No fixture/zero fallback,
+  credential forwarding, redirects, browser upload or financial calculation.
+  Validate exact wire fields, call/receipt/method identity, UTC/KST microseconds,
+  deterministic order and metric/null states. Display exact twelve-place ratio
+  strings, reasons, partial scope, correction/source/snapshot identity and hashes.
+  Snapshot remains original-call context, hashes remain non-signature checks.
+- Web module split: `src/lib/scoring-receipts{,.server}.ts` owns validation/read
+  transport; nested route owns SSR/view/messages/CSS/loading; test-only fixture
+  supports adapter/transport/presentation tests. Native GET and latest-list reset,
+  visible keyboard focus, KO/EN and table-local scrolling support
+  desktop/mobile. `scoring/` contains explicit production rehearsal configs/tests;
+  `e2e/scoring-receipts.spec.ts` joins normal public CI without enabling creation.
+- Pin all new runtime/test/guide bytes, including the public browser rehearsal;
+  scoring custody now covers 39 additions and one exact existing call-page edit.
+  Check the old call-page blob and the three-line link delta independently; reject
+  deletion, neighboring paths, modes and unreviewed bytes. Existing scoring,
+  calculators, migrations, fixture files and historical workflow bodies stay frozen.
+- Full API verify/package passes **2686/2686**, zero failures/errors/skips, 3m02s
+  (`.cache/adr082-api-full.log`), including 11 command guard tests. Initial full
+  Web unit run passes **853/853 across 64 files**, 19.14s. Focused CI custody/schema
+  tests pass **8/8**, including exact link predecessor/delta checks. Final current
+  checks, updated Web suite and full browser acceptance are recorded below.
+- First full-stack rehearsal successfully builds/types the 15-route Next app,
+  migrates an owned disposable PostgreSQL to existing V12 and executes the actual
+  packaged command/retry plus four partial receipt variants. It exposes an older
+  domain-only test document's placeholder hash rejected by the public detail
+  validator. Fix only that owned rehearsal ledger's synthetic document SHA-256;
+  retain public validation and old test/fixture bytes. The failed run cleans its
+  owned processes/container and retains diagnostics. Re-run all acceptance checks.
+- The no-JavaScript rehearsal exposes the existing Next streaming boundary: the
+  loaded response cannot be revealed without client script. Keep global rendering
+  unchanged and explicitly scope this limitation rather than claim script-free UI
+  operation. Add a bilingual noscript notice and regression; verify English native
+  GET selection in a normal browser. A later global accessibility/rendering change
+  would need its own scope. During diagnostics, updated test bytes intentionally
+  invalidate the concurrent custody run; final checks must use settled exact pins.
+- The public-suite harness must replace, not concatenate, the inherited Playwright
+  webServer config. Use one explicit owned dev server matching ordinary public CI,
+  with actual locale actions (no production-HTTP preference injection). Receipt
+  full-stack acceptance remains a separate production-build test. No current user
+  browser/server is reused, and the child process owner cleans its own descendants.
+- Two pre-existing CI unit files construct an empty fake product tree to test
+  unrelated CPI/navigation untracked-path checks. Mock the scoring verifier in
+  those isolated tests like the other unrelated verifiers; production validation
+  still requires the exact real call-page predecessor. Scoring's eight direct
+  tests retain deletion/baseline/mode/byte/neighbor rejection coverage. Phase scope
+  expands from 25 to 27 files solely for these unit-test isolation updates.
+- Next scope remains explicit: other deterministic metrics and prerequisites,
+  canonical outcome lifecycle/publication and aggregates, then separately authorized
+  real-data/Ubuntu deployment. This delivery exposes usable partial DEMO auditing,
+  not a complete score, observed prices or a deployed production service. Public
+  push needs this phase's exact-file approval; no PR creation or merge is performed.
+
+### ADR-082 final regression acceptance
+
+- Settled current source passes Web lint, **853/853 Vitest cases in 64 files**
+  (20.49s, `.cache/adr082-web-unit-final.log`) and a fresh production Next build/
+  TypeScript check with 15 routes plus proxy. Later changes affect only rehearsal
+  orchestration and CI test isolation; final lint also passes
+  (`.cache/adr082-web-lint-complete.log`).
+- Full Python CI tooling passes **301/307 with six existing Windows capability
+  skips**, no failures/errors, 111.103s (`.cache/adr082-ci-accepted.log`). Current
+  product/legacy parity, all exact pins, workflow limits, DEMO fixture contracts
+  and whitespace pass. Existing user next-env SHA256 stays
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Production receipt-specific acceptance passes all **12/12 browser cases**
+  across empty/ready/unavailable/recovered states and 1440/1280/390 widths. Inspect
+  full desktop/mobile screenshots: complete exact ratios, provenance/hash metadata,
+  lowercase UUIDs and local-only table overflow. Packaged append and identical
+  retry produce four DEMO records; parent tables and all read-phase inventories
+  remain unchanged. The SELECT-only API cannot delete receipts. Owned DB cleanup
+  runs even when a subsequent unrelated public browser assertion fails.
+- Full public production-over-HTTP diagnostic is not accepted: the secure locale
+  cookie does not reach Playwright's raw HTTP request context (three old i18n
+  assertions), and an existing mobile navigation assertion times out. The public
+  CI-equivalent dev suite fixes that environment mismatch but exposes one transient
+  pre-existing locale focus assertion under parallel verification. Keep its
+  expectations and zero-retry setting; rerun the full suite alone before delivery.
+- Isolated full rehearsal passes **1/1 Java acceptance, 12/12 production receipt
+  browser checks and 93/93 standard public browser cases**, zero retries/skips,
+  3m18s (`.cache/adr082-browser-isolated.log`). Evidence:
+  `.cache/adr082-evidence-14291288979479569965/`; public suite takes 2.1m and includes
+  the six new default-disabled/query-guard cases plus all original locale/action/
+  navigation checks. The earlier focus assertion passes unchanged at every width.
+  No current-source or historical expectation is weakened to obtain this result.
+- Request revised approval for **27 exact files**, excluding private values and
+  pre-existing user changes. Final whitespace/custody/private-value checks precede
+  any approved commit/push. No ADR-082 hosted CI success is claimed; a future
+  feature push alone does not run PR CI, and no PR is created or merged here.
+- User explicitly approves the verified **27-file** commit/push to
+  `feature/p3-scoring-receipt-audit`. Recheck exact source custody, staged paths,
+  private-value exclusion and the preserved next-env before publishing. Provide
+  a title/body-prefilled PR creation link against develop; do not create or merge
+  the PR and do not claim new hosted CI success.

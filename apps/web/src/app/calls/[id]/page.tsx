@@ -108,6 +108,9 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
       <SiteHeader current="calls" dataMode={call.dataMode} />
       <div className="page-shell call-detail-shell">
         <Link className="back-link" href="/calls">{messages.back}</Link>
+        {call.dataMode === "DEMO" && <p><Link href={`/calls/${encodeURIComponent(call.callId)}/scoring-receipts`} prefetch={false}>
+          {locale === "ko" ? "DEMO 평가 기록" : "DEMO scoring receipts"}
+        </Link></p>}
 
         <section className="detail-heading" aria-labelledby="call-title">
           <div>
