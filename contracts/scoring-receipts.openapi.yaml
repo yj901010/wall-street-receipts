@@ -1,0 +1,176 @@
+openapi: 3.1.0
+info:
+  title: DEMO partial scoring receipt reads
+  version: 1.0.0
+  description: >-
+    ADR-081 additive API. Replays preserved ADR-080 canonical inputs against their
+    pinned methodology and persisted DEMO call/source/snapshot binding. Not a
+    canonical outcome, live price attestation, aggregate, or complete score.
+    No HTTP append operation. Unknown query parameters are rejected.
+paths:
+  /v1/calls/{callId}/scoring-receipts:
+    parameters:
+      - $ref: '#/components/parameters/CallId'
+    get:
+      operationId: recentDemoScoringReceipts
+      description: >-
+        Up to 20 verified records, ordered by recordedAt descending then receiptId
+        descending. hasMore indicates omitted older records; no automatic winner
+        selection or pagination cursor. A broken published row fails the whole
+        page. Empty known DEMO call returns an empty list. HEAD also supported.
+      responses:
+        '200':
+          description: Verified DEMO page; Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [dataMode, source, limit, hasMore, items]
+                properties:
+                  dataMode: {const: DEMO}
+                  source: {const: PERSISTED_DEMO_INPUT_REPLAY}
+                  limit: {const: 20}
+                  hasMore: {type: boolean}
+                  items:
+                    type: array
+                    maxItems: 20
+                    items: {$ref: '#/components/schemas/Receipt'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '404': {$ref: '#/components/responses/Missing'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /v1/calls/{callId}/scoring-receipts/{receiptId}:
+    parameters:
+      - $ref: '#/components/parameters/CallId'
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    get:
+      operationId: selectedDemoScoringReceipt
+      description: Exact call-scoped record; never falls back to another receipt. HEAD also supported.
+      responses:
+        '200':
+          description: Verified DEMO receipt; Cache-Control no-store.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Receipt'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '404': {$ref: '#/components/responses/Missing'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+components:
+  parameters:
+    CallId:
+      name: callId
+      in: path
+      required: true
+      schema: {type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'}
+  responses:
+    Invalid:
+      description: Invalid identifier or any query parameter; no-store, sanitized.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Missing:
+      description: Unknown/non-DEMO call, unknown receipt or receipt belonging to another call; no-store.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Unavailable:
+      description: Storage/transaction/integrity/replay failure; no-store, no input or driver details.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, dataMode]
+      properties:
+        code: {enum: [INVALID_SCORING_QUERY, SCORING_RECEIPT_NOT_FOUND, SCORING_RECEIPT_UNAVAILABLE]}
+        dataMode: {const: DEMO}
+    Metric:
+      type: object
+      additionalProperties: false
+      required: [state, decimalValue, booleanValue, reasons]
+      description: >-
+        Only AVAILABLE has a value: scale-12 decimal string for returns/errors,
+        Boolean for directionalWin. Ratios, not percentage points. Other states
+        have two null values and preserve the nested reason chain. Neutral
+        direction is NOT_APPLICABLE independently of asset-return readiness.
+      properties:
+        state: {enum: [AVAILABLE, PENDING, UNAVAILABLE, NOT_APPLICABLE]}
+        decimalValue: {type: [string, 'null'], pattern: '^-?[0-9]+\.[0-9]{12}$'}
+        booleanValue: {type: [boolean, 'null']}
+        reasons: {type: array, items: {type: string}}
+      oneOf:
+        - properties:
+            state: {const: AVAILABLE}
+            reasons: {maxItems: 0}
+          oneOf:
+            - properties: {decimalValue: {type: string}, booleanValue: {type: 'null'}}
+            - properties: {decimalValue: {type: 'null'}, booleanValue: {type: boolean}}
+        - properties:
+            state: {enum: [PENDING, UNAVAILABLE, NOT_APPLICABLE]}
+            decimalValue: {type: 'null'}
+            booleanValue: {type: 'null'}
+            reasons: {minItems: 1}
+    Receipt:
+      type: object
+      additionalProperties: false
+      required:
+        - receiptId
+        - callId
+        - snapshotId
+        - snapshotProvenanceId
+        - snapshotRole
+        - basisRevisionId
+        - basisRevisionSequence
+        - basisEventTimeUtc
+        - methodologyId
+        - methodologyVersion
+        - methodologyDefinitionHash
+        - inputFingerprint
+        - ledgerFingerprint
+        - evaluationAsOfUtc
+        - evaluationAsOfKst
+        - recordedAtUtc
+        - recordedAtKst
+        - dataMode
+        - scope
+        - dataComplete
+        - source
+        - termsProvenanceId
+        - horizon
+        - assetReturn
+        - directionalWin
+        - targetError
+      properties:
+        receiptId: {type: string, format: uuid}
+        callId: {type: string}
+        snapshotId: {type: string}
+        snapshotProvenanceId: {type: string}
+        snapshotRole: {const: ORIGINAL_CALL_CONTEXT_ONLY_NOT_PRICE_SOURCE}
+        basisRevisionId: {type: [string, 'null']}
+        basisRevisionSequence: {type: [integer, 'null'], minimum: 1}
+        basisEventTimeUtc: {type: string, format: date-time}
+        methodologyId: {const: wsr-demo-endpoint-preview}
+        methodologyVersion: {const: 1.0.0}
+        methodologyDefinitionHash: {const: 91abc0fcbc986b47e505bbddba346977911c9977664621e4c88cb8a2cbf8ea27}
+        inputFingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        ledgerFingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        evaluationAsOfUtc: {type: string, format: date-time}
+        evaluationAsOfKst: {type: string, description: 'ISO offset date-time, +09:00; zero seconds may be omitted.'}
+        recordedAtUtc: {type: string, format: date-time}
+        recordedAtKst: {type: string, description: 'ISO offset date-time, +09:00; zero seconds may be omitted.'}
+        dataMode: {const: DEMO}
+        scope: {const: PARTIAL_ENDPOINT}
+        dataComplete: {const: false}
+        source: {const: PERSISTED_DEMO_INPUT_REPLAY}
+        termsProvenanceId: {type: string}
+        horizon: {type: string}
+        assetReturn: {$ref: '#/components/schemas/Metric'}
+        directionalWin: {$ref: '#/components/schemas/Metric'}
+        targetError: {$ref: '#/components/schemas/Metric'}

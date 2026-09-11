@@ -70,7 +70,7 @@ class FilingCollectionAttemptPostgreSqlTest {
         Flyway upgraded = flyway(upgradeSchema, null);
         upgraded.migrate();
         assertThat(upgraded.info().current().getVersion().getVersion())
-                .isEqualTo("11");
+                .isEqualTo("12");
         assertThat(attemptTableCount(jdbc(scopedDataSource(upgradeSchema)), upgradeSchema))
                 .isEqualTo(4);
 
@@ -78,7 +78,7 @@ class FilingCollectionAttemptPostgreSqlTest {
         Flyway fresh = flyway(freshSchema, null);
         fresh.migrate();
         assertThat(fresh.info().current().getVersion().getVersion())
-                .isEqualTo("11");
+                .isEqualTo("12");
         assertThat(attemptTableCount(jdbc(scopedDataSource(freshSchema)), freshSchema))
                 .isEqualTo(4);
     }
@@ -536,7 +536,7 @@ class FilingCollectionAttemptPostgreSqlTest {
         Flyway latest = flyway(schema, null);
         latest.migrate();
         assertThat(latest.info().current().getVersion().getVersion())
-                .isEqualTo("11");
+                .isEqualTo("12");
         DriverManagerDataSource dataSource = scopedDataSource(schema);
         NamedParameterJdbcTemplate jdbc = jdbc(dataSource);
         JdbcFilingCatalogCaptureRepository rootRepository =

@@ -55,7 +55,7 @@ class CpiAttemptPostgreSqlTest {
         var latest = Flyway.configure().dataSource(ds).schemas(schema).defaultSchema(schema).load();
         latest.migrate();
         latest.validate();
-        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("11");
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("12");
         assertThat(old.latest(NOW)).contains(receipt);
         assertThat(new JdbcTemplate(ds).queryForObject("SELECT count(*) FROM bls_cpi_collection_attempts", Integer.class)).isZero();
         assertThat(old.claimCollection(NOW)).isFalse();

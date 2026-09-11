@@ -55,6 +55,25 @@ class CpiCustodyTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Unreviewed committed CPI"):
                     self.verify({**self.current, relative: "100755 blob " + "0" * 40})
 
+    def test_scoring_receipt_changes_only_version_assertions_and_additive_inventory(self):
+        self.assertEqual(len(cpi.SCORING_RECEIPT_PREVIOUS_RECORDS), 6)
+        previous = {**self.current, **cpi.SCORING_RECEIPT_PREVIOUS_RECORDS}
+        self.assertEqual(self.verify(previous), previous)
+        for relative, record in cpi.SCORING_RECEIPT_PREVIOUS_RECORDS.items():
+            old = bridge.git(SOURCE, "show", cpi.SCORING_RECEIPT_BASE + ":" + relative)
+            self.assertEqual(blob_record(old), record)
+            expected = old.replace(b'.isEqualTo("11")', b'.isEqualTo("12")').replace(b'.hasSize(11)', b'.hasSize(12)')
+            if relative.endswith("ReleaseSchemaInventoryCommandTest.java"):
+                inventory = b'migration|12|12|64656d6f2073636f72696e67207265636569707473|SQL|5631325f5f64656d6f5f73636f72696e675f72656365697074732e73716c|-1200703752|V12__demo_scoring_receipts.sql|a2aa377a582b041f9bd2542b81c86cdd734fc14c4b588521761f8dc04b23d81b|2291'
+                last = next(line for line in old.splitlines() if b'migration|11|11|' in line)
+                expected = expected.replace(last, last.replace(b'\");', b'\",') + b'\n            \"' + inventory + b'\");')
+                expected = expected.replace(b'emitsTheExactPackagedV1ThroughV11Inventory', b'emitsTheExactPackagedV1ThroughV12Inventory')
+            self.assertNotEqual(expected, old)
+            self.assertEqual(self.expected[relative], expected)
+            (self.root / relative).write_bytes(old)
+            with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
+                self.verify(previous)
+
     def test_only_exact_adr064_committed_predecessors_are_accepted(self):
         self.assertEqual(len(cpi.PREVIOUS_RECORDS), 2)
         previous = {**self.current, **cpi.PREVIOUS_RECORDS}

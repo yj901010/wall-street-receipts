@@ -9302,3 +9302,108 @@ configured origin or any network endpoint.
   new-candidate hosted CI success, persisted scoring record or displayed score is
   claimed. Next delivery is DEMO immutable call/snapshot binding and append-only
   scoring receipt persistence/read API, followed by the audit screen.
+
+## 2026-09-11 - ADR-081 DEMO scoring receipt persistence and verified reads
+
+- User reports PR/CI/merge complete and requests the next phase. Confirm PR #28
+  `feat(scoring): compose reproducible demo endpoint evaluations` merged from
+  `feature/p3-scoring-input-methodology` into develop at
+  `099599e6e7fa1f5508d0e66642b548b21d22754b`. PR CI #68 and merge CI #69 are
+  completed/success. Branch `feature/p3-scoring-receipt-persistence` starts from
+  that merge. Preserve user-owned `apps/web/next-env.d.ts` and ignored actual keys.
+- Add application scoring codec/verifier/service, insert/select-only repository
+  port/JDBC adapter, V12 migration, public read controller/partial metric projection
+  and additive `contracts/scoring-receipts.openapi.yaml`. Routes:
+  `/v1/calls/{callId}/scoring-receipts` and exact `/{receiptId}` (GET/HEAD).
+  Existing outcomes and UI routes are unchanged. No public writer, fixture seed,
+  provider activation, existing DB migration, live data call or deployment.
+- Persist exact ADR-080 canonical inputs, pinned method identity/definition,
+  separate source-ledger fingerprint and UTC-microsecond as-of/recording time.
+  Verify stored same-call snapshot and original/correction source terms. Recompute
+  metrics on every read; do not persist or trust supplied metric numbers. Original
+  snapshot is context only, never an inferred adjusted basis-price source.
+  Bound bytes/decoder/types, reject corruption/parent drift and unsupported method,
+  retain explicit null/neutral/readiness reasons and DEMO/PARTIAL_ENDPOINT labels.
+  All receipts remain dataComplete=false, distinct from canonical outcomes.
+- Duplicate appends serialize under a call row lock and retain original UUID/time;
+  changed input/as-of appends. REPEATABLE_READ queries publish at most 20 verified
+  rows with deterministic order/hasMore and exact scoped selection, no fallback.
+  No-store success/400/404/503 responses omit raw input and database failure detail.
+  Three-second JDBC statement timeout is not claimed as a full HTTP SLA. SQL
+  owner remains an administrative trust boundary; no trigger/role deployment is
+  claimed. Hashes are reproducibility/integrity checks, not signatures or live
+  provider truth attestations. Detailed boundaries are recorded in ADR-081.
+- Production compilation passes (12.558s). Initial focused run finds two test
+  harness mistakes (record component name and MockMvc HEAD body expectation);
+  correct those, while real HTTP still asserts an empty HEAD body. Focused codec/
+  H2/API/PostgreSQL selection then passes **50/50**, no failures/errors/skips,
+  36.048s (`.cache/adr081-focused-final.log`). Add twelve more PIT/missing-target
+  checks before full-suite verification; final full results follow below.
+- Real PostgreSQL acceptance migrates a populated disposable V11 database to V12,
+  compares all pre-existing table rows and confirms idempotent re-migration. Six
+  concurrent submissions create one receipt; changed as-of and correction append
+  separately. Restart under a SELECT-only role reproduces HTTP values without any
+  table mutation. Verify foreign keys, partial/time/size checks, restricted role
+  update/delete rejection, corrupted bytes and changed snapshot 503s. Loopback
+  random-port test database is removed at completion and is reproducible.
+- Preserve all seven ADR-080 scoring files and old calculator/fixture/migration
+  bytes. Exact new scoring custody adds thirteen product/test/contract paths
+  (twenty total); existing migration/release regressions change only exact latest
+  version/count assertions and the additive V12 inventory under exact custody.
+  No general product exemption or historical CI
+  workflow/script-body edits. Add API contract/metric-null and migration-count
+  mutation tests. Focused Python scoring custody/schema tests pass **6/6** after
+  rerunning with Windows temporary-directory access (0.588s).
+- User explicitly authorizes push after all verification of exactly twenty-one
+  API/migration/test/contract/CI/documentation files. Exclude actual keys and
+  pre-existing user changes; no PR creation or merge. Full acceptance follows.
+  Next: a separately scoped DEMO receipt creation/audit-screen workflow. Other
+  metrics, lifecycle, aggregates, raw/live-data prerequisites and Ubuntu host
+  preparation remain separate; no persisted user-facing score is claimed here.
+
+### ADR-081 full regression acceptance
+
+- First full run identifies stale V11 expectations in six existing migration/
+  release test files, plus four new test inputs using nonexistent DataMode LIVE.
+  Update only exact latest-version assertions and append the V12 inventory line;
+  use valid non-DEMO REALTIME to exercise the new verifier's rejection. Do not
+  weaken any constraints, change existing migrations or skip failing tests.
+  Exact custody additionally checks these six files against the merge predecessor.
+- User approves the revised **26-file** push scope (five additional existing
+  migration/release test files only), still after all verification, with no PR
+  creation/merge and no actual keys or pre-existing user edits.
+- Full API Maven verify/package rerun passes **2675/2675**, zero failures/errors/
+  skips, 2m57s (`.cache/adr081-api-full-final.log`), including **62 new receipt
+  cases** and all prior calculator, PostgreSQL, release, public API and CPI
+  transport/deadline regressions. Fresh package is a build artifact, not deployment.
+- Current-source/legacy parity, workflow limits, unchanged DEMO fixture contracts
+  and whitespace checks pass. Actual user next-env SHA256 remains
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  Full Python and responsive browser acceptance follow after completion.
+- Full Python CI tooling passes **299/305 with six existing Windows capability
+  skips**, no failures/errors, 73.856s (`.cache/adr081-ci.log`). The new schema/
+  null-state and exact six-file migration delta checks pass. Workflow remains
+  29,069/500,000 bytes with largest run 598/21,000 characters. Full Web lint/Vitest/
+  public E2E passed in merge CI #69; these are unchanged-Web hosted results, not
+  newly executed local lint/Vitest. Separate fresh responsive verification follows.
+- After full API completion, read-only Docker inspection shows only the original
+  healthy development PostgreSQL on 127.0.0.1:5432. No actual server migration or
+  receipt creation is performed there. Browser acceptance uses its own database.
+- Responsive regression passes **7/7 Java and 12/12 browser checks**, no failures/
+  errors/skips, 1m42s (`.cache/adr081-browser.log`). Fresh Next production build and
+  TypeScript check produce 14 routes plus proxy using the verified secret-free
+  current Web mirror. Empty/seeded/unavailable/recovered states pass at
+  1440/1280/390px through real Spring and SELECT-only PostgreSQL without CPI table
+  changes. Evidence: `.cache/adr071-evidence-10208713198263172289/`. This verifies
+  unchanged existing screens, not a new scoring UI.
+- Inspect recovered desktop/mobile screenshots: DEMO/UNVERIFIED, source/time
+  disclosure, cleared credential input and table-local mobile scrolling remain.
+  Read-only Docker inspection confirms test database cleanup; only the original
+  healthy development PostgreSQL remains. Temporary databases can be recreated by
+  the tests; ignored local diagnostic artifacts are retained.
+- Final exact-path/current-tree/whitespace and private-value exclusion checks
+  precede the approved 26-file commit/push. Feature push itself does not trigger
+  PR CI. Provide a title/body-prefilled PR creation link, without creating or
+  merging a PR or claiming new-candidate hosted CI success. Next: explicit DEMO
+  receipt creation and audit-screen integration, with remaining metrics and
+  real-data/host prerequisites separately scoped.
