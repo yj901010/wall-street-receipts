@@ -19,19 +19,24 @@ class ScoringCustodyTests(unittest.TestCase):
         self.root = Path(directory.name)
         self.raw = {p: (SOURCE / p).read_bytes().replace(b"\r\n", b"\n") for p in scoring.SCORING_PATHS}
         self.current = {p: blob_record(raw) for p, raw in self.raw.items()}
+        self.baseline = dict(scoring.EDITED_BASELINE_RECORDS)
         for relative, raw in self.raw.items():
             path = self.root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
 
-    def test_exact_twenty_additions_no_legacy_or_general_exception(self):
-        self.assertEqual(len(scoring.SCORING_PATHS), 20)
+    def test_exact_thirty_nine_additions_and_one_closed_link_edit(self):
+        self.assertEqual(len(scoring.SCORING_PATHS), 40)
         self.assertFalse(scoring.SCORING_PATHS & (bridge.FIXED_CI_PATHS | bridge.CPI_PATHS | bridge.NAVIGATION_PATHS))
-        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 14)
+        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 17)
         self.assertIn("contracts/scoring-receipts.openapi.yaml", scoring.SCORING_PATHS)
         self.assertIn("apps/api/src/main/resources/db/migration/V12__demo_scoring_receipts.sql", scoring.SCORING_PATHS)
-        self.assertEqual(scoring.verify_scoring(SOURCE, {}, self.current), self.current)
-        self.assertEqual(scoring.verify_scoring(self.root, {}, {}), {})
+        self.assertEqual(scoring.verify_scoring(SOURCE, self.baseline, self.current), self.current)
+        self.assertEqual(scoring.verify_scoring(self.root, self.baseline, self.baseline), self.baseline)
+        self.assertEqual(set(self.baseline), {"apps/web/src/app/calls/[id]/page.tsx"})
+        for path in ("SCORING_RECEIPTS.md", "apps/web/e2e/scoring-receipts.spec.ts",
+                     "apps/web/scoring/tests/receipts.spec.ts", "apps/web/src/lib/scoring-receipts.server.ts"):
+            self.assertIn(path, scoring.SCORING_PATHS)
 
     def test_each_current_byte_and_committed_mode_type_object_is_required(self):
         for relative, raw in self.raw.items():
@@ -40,35 +45,58 @@ class ScoringCustodyTests(unittest.TestCase):
                 for wrong in ("100644 blob " + "f" * 40, self.current[relative].replace("100644", "100755"),
                               self.current[relative].replace("100644", "120000")):
                     with self.assertRaisesRegex(ValueError, "Unreviewed committed"):
-                        scoring.verify_scoring(self.root, {}, {**self.current, relative: wrong})
+                        scoring.verify_scoring(self.root, self.baseline, {**self.current, relative: wrong})
                 path = self.root / relative
                 path.write_bytes(raw + b"// altered\n")
                 with self.assertRaisesRegex(ValueError, "Unreviewed current"):
-                    scoring.verify_scoring(self.root, {}, self.current)
+                    scoring.verify_scoring(self.root, self.baseline, self.current)
                 path.unlink()
                 with self.assertRaisesRegex(ValueError, "missing or linked"):
-                    scoring.verify_scoring(self.root, {}, self.current)
+                    scoring.verify_scoring(self.root, self.baseline, self.current)
                 path.write_bytes(raw)
 
     def test_additions_cannot_hide_existing_or_neighboring_product_paths(self):
-        relative = next(iter(scoring.SCORING_PATHS))
+        relative = next(iter(scoring.SCORING_PATHS - self.baseline.keys()))
         with self.assertRaisesRegex(ValueError, "frozen baseline"):
-            scoring.verify_scoring(self.root, {relative: self.current[relative]}, self.current)
+            scoring.verify_scoring(self.root, {**self.baseline, relative: self.current[relative]}, self.current)
         for neighbor in ("apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/Unreviewed.java",
                          "apps/api/src/main/java/com/wallstreetreceipts/api/domain/outcome/CallOutcome.java"):
             current = {**self.current, neighbor: "100644 blob " + "a" * 40}
-            adjusted = scoring.verify_scoring(self.root, {}, current)
+            adjusted = scoring.verify_scoring(self.root, self.baseline, current)
             with self.assertRaisesRegex(ValueError, "Product tree differs"):
                 bridge.compare_product_trees(adjusted, current, frozenset())
 
     def test_crlf_is_normalized_but_bom_is_not_accepted(self):
         for relative, raw in self.raw.items():
             (self.root / relative).write_bytes(raw.replace(b"\n", b"\r\n"))
-        self.assertEqual(scoring.verify_scoring(self.root, {}, self.current), self.current)
+        self.assertEqual(scoring.verify_scoring(self.root, self.baseline, self.current), self.current)
         relative = next(iter(self.raw))
         (self.root / relative).write_bytes(b"\xef\xbb\xbf" + self.raw[relative])
         with self.assertRaisesRegex(ValueError, "Unreviewed current"):
+            scoring.verify_scoring(self.root, self.baseline, self.current)
+
+    def test_existing_call_page_cannot_be_deleted_or_change_its_predecessor(self):
+        relative = next(iter(self.baseline))
+        deleted = dict(self.current)
+        del deleted[relative]
+        with self.assertRaisesRegex(ValueError, "Unreviewed committed"):
+            scoring.verify_scoring(self.root, self.baseline, deleted)
+        with self.assertRaisesRegex(ValueError, "frozen baseline"):
+            scoring.verify_scoring(self.root, {relative: self.current[relative]}, self.current)
+        with self.assertRaisesRegex(ValueError, "frozen baseline"):
             scoring.verify_scoring(self.root, {}, self.current)
+
+    def test_existing_call_page_is_only_the_explicit_demo_receipt_link(self):
+        relative = next(iter(self.baseline))
+        old = bridge.git(SOURCE, "show", bridge.BASELINE + ":" + relative)
+        self.assertEqual(blob_record(old), self.baseline[relative])
+        new = self.raw[relative]
+        added = b'''        {call.dataMode === "DEMO" && <p><Link href={`/calls/${encodeURIComponent(call.callId)}/scoring-receipts`} prefetch={false}>
+          {locale === "ko" ? "DEMO \xed\x8f\x89\xea\xb0\x80 \xea\xb8\xb0\xeb\xa1\x9d" : "DEMO scoring receipts"}
+        </Link></p>}
+'''
+        self.assertEqual(new.count(added), 1)
+        self.assertEqual(new.replace(added, b""), old)
 
     def test_additive_contract_has_only_two_reads_and_explicit_partial_scope(self):
         contract = yaml.safe_load((SOURCE / "contracts/scoring-receipts.openapi.yaml").read_text(encoding="utf-8"))

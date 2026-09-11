@@ -267,6 +267,7 @@ class CpiCustodyTests(unittest.TestCase):
             with patch.object(bridge, "git", side_effect=[b"", b"", b"", relative.encode() + b"\0", b""]), \
                     patch.object(bridge, "verify_current_test", return_value={}), \
                     patch.object(bridge, "verify_navigation", return_value={}), \
+                    patch.object(bridge, "verify_scoring", return_value={}), \
                     patch.object(bridge, "verify_cpi", return_value={}) as verify:
                 if relative in cpi.CPI_ADDED_PATHS:
                     bridge.validate_product(SOURCE, {"steps": []})
