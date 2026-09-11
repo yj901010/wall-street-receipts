@@ -129,6 +129,11 @@ class OperatorCpiAttemptTransportPostgreSqlTest {
                         assertResponse(pending.get(9, TimeUnit.SECONDS), read, 503);
                         assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(9));
                         assertThat(silenced.getFirst().discardedBytes()).isPositive();
+                        // ADR-079 returns the HTTP failure before the driver's independent socket cleanup.
+                        // Do not confuse a cancelled caller wait with released JDBC resources.
+                        long cleanupDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(6);
+                        while ((!silenced.getFirst().closed() || pool.getHikariPoolMXBean().getActiveConnections() != 0)
+                                && System.nanoTime() < cleanupDeadline) Thread.sleep(10);
                         assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isZero();
                         assertThat(pool.getHikariPoolMXBean().getThreadsAwaitingConnection()).isZero();
                         for (var recovered : READS) assertResponse(send(client, base, recovered, true), recovered, 200);

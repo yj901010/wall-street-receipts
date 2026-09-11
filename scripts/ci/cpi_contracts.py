@@ -1,4 +1,4 @@
-"""ADR-064 through 078: exact CPI retrieval, bounded reads and tooling custody."""
+"""ADR-064 through 079: exact CPI retrieval, bounded reads and tooling custody."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,11 @@ from current_contracts import BASELINE, blob_record
 from navigation_contracts import _current_bytes
 
 CONTENT_SHA256 = {
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/cpi/CpiDeadlineReader.java": "ad92fb854b7f5408f56ad45ee532be427412447bda945eb00cb3e134a49beb73",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/config/CpiReadOnlyQueryConfiguration.java": "c1485ce084a3dc22c80b04892529011d3ad2af0f21a345ed65a6757aa185edca",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/cpi/CpiDeadlineReaderTest.java": "e5fbc75870fb6df9acbb03f81aa77b735691093d820129c9512db3edc02c872c",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/config/CpiReadOnlyQueryConfigurationTest.java": "d41ccfc89df3dcc85db2f4a0e9ce52ac16f958b98595480c782ecbbfbdb54bff",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptDeadlineTest.java": "13d768450d32eaef3e41d75add7d1a1e1f6505855954ad7126377d0eb06fd86a",
     "scripts/verify-cpi-operator-transport.py": "3a002dc18632416e18d0b6007b209c02546460d04f23d14e58a47ac32932e90a",
     "scripts/cpi-transport-relay.mjs": "902aab14e811827c8f7c3750b51599b3a26752d236628d92e842b640bef0c1ce",
     "scripts/cpi-transport-probe.mjs": "9f1f965f48d9311957b7e0f0cf30973f7630f52886f2fa210d0169349ced9a50",
@@ -16,7 +21,7 @@ CONTENT_SHA256 = {
     "apps/api/src/test/java/com/wallstreetreceipts/api/config/CpiReadOnlyJdbcConfigurationTest.java": "9d4d7836477fb0ba7e57eca89ad0ff5bf20428031ec5b7ac6bb06edd6c923299",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiPostgresRelay.java": "cd0f37a322704044bcd0d87f6d850654495689ee6c9c5aca3d97aac9c98cc4e0",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/CpiPostgresRelayTest.java": "784d740f8cda26b67cf1603a697548a47f3f0ba50e26bbcb08ba539645ea7861",
-    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptTransportPostgreSqlTest.java": "57b4caf26a825845d7bbde8fe89f50966554c8369d48b71f5879b5e3c186d205",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptTransportPostgreSqlTest.java": "85ecfde5bf895e892bd1c05baa19ea8f453893a17857e0d951a7e06e5dd47cdc",
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/cpi/CpiAttemptQueryConcurrencyTest.java": "c94b9ccfb32bc0d06a6ff2cbe8dbd6c42b862d2397d76765bbbd8a6ad0499310",
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptConcurrencyPostgreSqlTest.java": "6f3a9ba78933be8568c6754c013dd69790709ae461eea58bf71be62783251f41",
     "apps/api/src/main/java/com/wallstreetreceipts/api/config/CpiReadOnlyPoolConfiguration.java": "424026b6389b9125e117375793e8ab76995a06da4719a6803e93d31090ed1399",
@@ -189,6 +194,11 @@ POOL_WAIT_BASE = "0c747940d9c8e603b6a30c325470d6442e015dcb"
 POOL_WAIT_PREVIOUS_RECORDS = {
     "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptConcurrencyPostgreSqlTest.java": "100644 blob b954b7a10d7d17800e2849a9f45ba3e963a1cc53",
 }
+# Exact merged ADR-078 test; HTTP completion and driver cleanup are now distinct observations.
+READ_DEADLINE_BASE = "7fa51c29bd60cc975465ce31c805c915a6578884"
+READ_DEADLINE_PREVIOUS_RECORDS = {
+    "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptTransportPostgreSqlTest.java": "100644 blob 62cec1ea2b8fb86380581899f9ee5ffcfc994142",
+}
 CPI_PATHS = frozenset(CONTENT_SHA256)
 CPI_ADDED_PATHS = CPI_PATHS - frozenset(BASELINE_RECORDS)
 
@@ -223,6 +233,8 @@ def verify_cpi(root: Path, git_read, baseline: dict, current: dict) -> dict:
             accepted_records.add(READ_CONCURRENCY_PREVIOUS_RECORDS[relative])
         if relative in POOL_WAIT_PREVIOUS_RECORDS:
             accepted_records.add(POOL_WAIT_PREVIOUS_RECORDS[relative])
+        if relative in READ_DEADLINE_PREVIOUS_RECORDS:
+            accepted_records.add(READ_DEADLINE_PREVIOUS_RECORDS[relative])
         if current.get(relative) not in accepted_records:
             raise ValueError("Unreviewed committed CPI source change: " + relative)
         if relative in current:
