@@ -356,3 +356,16 @@ the earlier 503. Custody has 113 exact paths (13 baseline replacements, 100 addi
 with one exact merged transport-test predecessor and mandatory current working bytes.
 The unchanged ADR-078 packaged and existing responsive browser tools remain explicit
 acceptance. No workflow, runtime dependency, schema, fixture or Web source change.
+
+## ADR-080 scoring integration custody
+
+`scoring_contracts.py` pins exactly seven added Java application/test files for the
+DEMO endpoint scoring profile. `run_contracts.py validate` verifies their current
+LF-normalized bytes and exact committed mode/type/object (or absence before the
+first commit), then includes those exact paths in source custody snapshots.
+Unknown neighboring scoring files and edits to historical calculators remain
+rejected. No historical test is substituted for the current API golden tests.
+`test_scoring_contracts.py` checks source/commit mutation, missing files, baseline
+collisions, nearby unreviewed files and CRLF/BOM behavior. Existing CPI and fixture
+contracts remain unchanged. See ADR-080 and IMPLEMENTATION_LOG.md for the partial,
+explicit DEMO scope; this does not authorize calculated canonical outcomes.

@@ -26,6 +26,7 @@ from validate_limits import load_workflow
 from current_contracts import TEST_PATH, verify_current_test
 from navigation_contracts import ADDED_PATHS, NAVIGATION_PATHS, verify_navigation
 from cpi_contracts import CPI_ADDED_PATHS, CPI_PATHS, verify_cpi
+from scoring_contracts import SCORING_PATHS, verify_scoring
 from legacy_environment import legacy_step_environment
 from historical_guard_migrations import migrated_python_body
 
@@ -77,6 +78,8 @@ FIXED_CI_PATHS = frozenset({
     "decisions/ADR-077-cpi-read-only-jdbc-transport.md",
     "decisions/ADR-078-packaged-cpi-transport-acceptance.md",
     "decisions/ADR-079-cpi-read-wait-deadline.md",
+    "decisions/ADR-080-demo-endpoint-scoring-input-methodology.md",
+    "scripts/ci/scoring_contracts.py", "scripts/ci/test_scoring_contracts.py",
     "scripts/ci/test_cpi_operator_transport.py",
     "scripts/ci/test_cpi_operator_lifecycle.py",
 })
@@ -260,11 +263,12 @@ def validate_product(root, manifest):
     adjusted = verify_current_test(root, git, baseline, current)
     adjusted = verify_navigation(root, git, adjusted, current)
     adjusted = verify_cpi(root, git, adjusted, current)
+    adjusted = verify_scoring(root, adjusted, current)
     compare_product_trees(adjusted, current, allowed)
     changed = set(filter(None, git(root, "diff", "--name-only", "-z", "HEAD").decode().split("\0")))
     untracked = set(filter(None, git(root, "ls-files", "--others", "--exclude-standard", "-z").decode().split("\0")))
-    require(changed <= allowed | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS | CPI_PATHS
-            and untracked <= allowed | ADDED_PATHS | CPI_ADDED_PATHS,
+    require(changed <= allowed | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS | CPI_PATHS | SCORING_PATHS
+            and untracked <= allowed | ADDED_PATHS | CPI_ADDED_PATHS | SCORING_PATHS,
             "Unexpected uncommitted product or untracked file")
     require(not git(root, "diff", "--cached", "--name-only", "--", NEXT_ENV),
             "User-owned Next declaration must not be staged")
@@ -272,7 +276,7 @@ def validate_product(root, manifest):
 
 def snapshot(root, manifest):
     files = {}
-    for relative in sorted(permitted_paths(manifest) | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS | CPI_PATHS):
+    for relative in sorted(permitted_paths(manifest) | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS | CPI_PATHS | SCORING_PATHS):
         path = root / relative
         require(not path.is_symlink(), "Source custody path must not be linked")
         files[relative] = digest(path.read_bytes()) if path.is_file() else None
