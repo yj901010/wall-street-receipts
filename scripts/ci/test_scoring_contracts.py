@@ -25,10 +25,10 @@ class ScoringCustodyTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
 
-    def test_exact_thirty_nine_additions_and_one_closed_link_edit(self):
-        self.assertEqual(len(scoring.SCORING_PATHS), 40)
+    def test_exact_forty_seven_additions_and_one_closed_link_edit(self):
+        self.assertEqual(len(scoring.SCORING_PATHS), 48)
         self.assertFalse(scoring.SCORING_PATHS & (bridge.FIXED_CI_PATHS | bridge.CPI_PATHS | bridge.NAVIGATION_PATHS))
-        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 17)
+        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 25)
         self.assertIn("contracts/scoring-receipts.openapi.yaml", scoring.SCORING_PATHS)
         self.assertIn("apps/api/src/main/resources/db/migration/V12__demo_scoring_receipts.sql", scoring.SCORING_PATHS)
         self.assertEqual(scoring.verify_scoring(SOURCE, self.baseline, self.current), self.current)

@@ -369,3 +369,15 @@ rejected. No historical test is substituted for the current API golden tests.
 collisions, nearby unreviewed files and CRLF/BOM behavior. Existing CPI and fixture
 contracts remain unchanged. See ADR-080 and IMPLEMENTATION_LOG.md for the partial,
 explicit DEMO scope; this does not authorize calculated canonical outcomes.
+
+## ADR-083 comparative input composition
+
+The current scoring registry now pins 48 exact paths: 47 additions and the one
+reviewed call-page link edit. ADR-083 adds four pure Java application types and
+four test sources; the old forty hashes stay unchanged. The separate DEMO profile
+composes the existing endpoint receipt with independent benchmark/sector returns,
+closed canonical input replay and an always-false completeness flag. Its new ADR
+is the only added documentation allowlist path. Existing runtime, DB migration,
+provider, public API/Web and historical workflow bodies are unchanged. Run the
+ordinary API suite and `test_scoring_contracts.py` against these exact bytes; do
+not substitute a historical test projection for the current composition tests.
