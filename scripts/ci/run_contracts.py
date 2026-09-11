@@ -76,6 +76,7 @@ FIXED_CI_PATHS = frozenset({
     "decisions/ADR-076-cpi-read-only-pool-wait.md",
     "decisions/ADR-077-cpi-read-only-jdbc-transport.md",
     "decisions/ADR-078-packaged-cpi-transport-acceptance.md",
+    "decisions/ADR-079-cpi-read-wait-deadline.md",
     "scripts/ci/test_cpi_operator_transport.py",
     "scripts/ci/test_cpi_operator_lifecycle.py",
 })

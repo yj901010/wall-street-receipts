@@ -9092,3 +9092,92 @@ configured origin or any network endpoint.
   creation/merge is not authorized here; new-candidate hosted CI follows the user's
   subsequent PR. No new application functionality, real data or Ubuntu deployment
   is claimed by this acceptance phase.
+
+## P5 / ADR-079 — CPI read-wait deadline and bounded background work (2026-09-10 KST)
+
+- Verify user-merged PR #26 at develop `7fa51c29bd60cc975465ce31c805c915a6578884`.
+  PR CI #64 (`34454468870`) and merge CI #65 (`34456925180`) pass all four jobs.
+  Branch as `feature/p5-cpi-query-deadline`; continue locally while Ubuntu is absent.
+- Add `application/cpi/CpiDeadlineReader` and `config/CpiReadOnlyQueryConfiguration`.
+  Only explicitly enabled CPI_READ_ONLY mode decorates the primary read-only
+  `CpiAttemptReader` port; direct CpiRepository consumers, public reads/collection,
+  FULL/disabled modes, controllers, security, evidence validation and injected
+  business Clock are unchanged. No schema, dependency, environment variable,
+  provider, fixture, Web source or deployment recipe changes.
+- The complete reader call has a fixed four-second caller-wait budget measured
+  from before worker submission with monotonic time, subtracting submission time
+  and rejecting a completed result observed at/beyond the deadline. A fixed four-
+  worker executor with SynchronousQueue/AbortPolicy has no buffered queue, caller-
+  runs fallback or retry. A timed-out but still-running driver continues to occupy
+  its worker; cancellation never creates replacement capacity by itself.
+- Workers do not inherit request thread locals or receive HTTP credentials/objects.
+  Preserve caller interruption and existing sanitized Unavailable/503 handling;
+  discard late results. Daemon workers receive best-effort shutdown interruption
+  without an unbounded close/join. This bounds caller waiting and background work,
+  not actual JDBC termination, servlet scheduling, response writes or a hard HTTP SLA.
+  Existing SQL 3s / pool 1s / JDBC transport budgets and UI upstream 5s remain.
+- Add nine reader unit cases, seven configuration/mode/lifecycle cases and one
+  real Spring HTTP case with a deliberately stubborn synthetic reader. The latter
+  is explicitly not PostgreSQL evidence: all four GET/HEAD list/selection shapes
+  time out while the four underlying tasks still occupy workers, repeated overflow
+  never queues, invalid input/auth still returns 400/401, and every shape recovers
+  after releasing only the owned test gate. Unit checks also prove interruption,
+  late-result rejection across monotonic counter wraparound, request-local isolation,
+  worker retention, sanitized failures and non-blocking close.
+- Keep actual PostgreSQL transport, concurrency and pool-wait acceptance. The
+  transport test now observes driver cleanup separately after the earlier HTTP 503,
+  still requiring discarded bytes, zero active leases/waiters, connection closure,
+  recovered reads and unchanged tables. No resource assertion is removed.
+- Initial focused attempt stops at test compilation because a recovery polling
+  lambda inferred Runnable while throwing InterruptedException
+  (`.cache/adr079-focused.log`). Return a value to select Callable; no production
+  change or test assertion weakening. Focused repeat passes **19/19**, zero
+  failures/errors/skips, 1m14s (`.cache/adr079-focused-repeat.log`).
+- CPI custody has **113 exact paths / 13 baseline replacements / 100 additions**.
+  Five new Java files and the revised existing transport test are pinned; only
+  that test's exact merged ADR-078 object is accepted as a pre-commit predecessor.
+  Its new current working bytes are mandatory. Full API Maven verify/package passes
+  **2574/2574**, zero failures/errors/skips, 3m03s
+  (`.cache/adr079-api-full.log`, completed 2026-09-10 KST). Full Python CI checks pass
+  **292/298 with six existing Windows capability skips**, no failures/errors,
+  109.697s (`.cache/adr079-ci.log`). Workflow limits (29,069/500,000 bytes; largest
+  run 598/21,000 characters), current-source/legacy parity, DEMO fixture/revision/
+  lineage/methodology/outcome checks and whitespace pass. Full Web lint/Vitest/
+  public E2E are unchanged and passed in merge CI #65, not newly run local checks.
+  Responsive browser and committed Linux results follow after completion; no
+  new-candidate hosted result is claimed.
+- Routes remain API GET/HEAD `/internal/v1/cpi/collection-attempts` and `/{attemptId}`
+  and UI GET `/operator/cpi/query` and `/{attemptId}`. Preserve user-owned next-env
+  SHA256 `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc` and the
+  existing development database. Actual credentials/providers are never activated.
+- After this local application-wait containment package passes acceptance, move
+  to scoring input/methodology and persistence/API integration. Whole-network SLA,
+  broad load matrices and real-host provisioning are not silently added as further
+  prerequisites for every feature. Real Ubuntu boot/backup/access remains host-gated.
+
+### ADR-079 responsive browser acceptance (2026-09-11 KST)
+
+- Resume after the overnight pause. The first explicit browser attempt completes
+  a fresh Next build/TypeScript check, then stops before browser execution because
+  the Docker engine is not running: **6/7 Java PASS, one environment error**,
+  22.360s (`.cache/adr079-browser.log`). Read-only diagnosis confirms the local
+  Docker Linux named pipe is absent and Docker Desktop is stopped. Start the
+  installed Docker Desktop in the background; it restores the existing development
+  PostgreSQL healthy on 127.0.0.1:5432 without a configuration/data change.
+  Rerun the identical test selection and source with no assertion changes.
+- The repeat passes **7/7 Java and 12/12 browser checks**, zero failures/errors/
+  skips, 1m19s (`.cache/adr079-browser-repeat.log`). Empty, seeded, unavailable and
+  recovered states pass at 1440/1280/390px through real Spring/SELECT-only
+  PostgreSQL; all four CPI tables remain unchanged by reads. The byte-verified,
+  secret-free Web mirror receives a fresh Next build/TypeScript check (14 routes
+  plus proxy). Evidence: `.cache/adr071-evidence-7625234740275444255/`.
+- Inspect recovered desktop/mobile screenshots: credential input is cleared,
+  DEMO/UNVERIFIED and source/time metadata remain visible; the mobile table retains
+  its existing local horizontal scrolling. No Web source/test changes, added
+  retries or weaker assertions. The prior ADR-077 Chromium body-capture issue does
+  not reproduce and is not claimed fixed. User-owned next-env SHA256 is unchanged.
+- Recheck workflow limits, exact current-source/legacy parity and DEMO fixture
+  contracts after the documentation update: all pass. Commit exactly the twelve
+  authorized API/test/CI/documentation paths for source-identical packaged
+  acceptance; publication waits for that final verification. PR creation/merge
+  remains outside this phase's authorization.

@@ -34,8 +34,8 @@ class CpiCustodyTests(unittest.TestCase):
                               self.current if current is None else current)
 
     def test_closed_inventory_without_general_product_exceptions(self):
-        self.assertEqual(len(cpi.CPI_PATHS), 108)
-        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 95)
+        self.assertEqual(len(cpi.CPI_PATHS), 113)
+        self.assertEqual(len(cpi.CPI_ADDED_PATHS), 100)
         self.assertFalse(cpi.CPI_PATHS & bridge.FIXED_CI_PATHS)
         self.assertFalse(cpi.CPI_PATHS & bridge.NAVIGATION_PATHS)
         self.assertNotIn(bridge.NEXT_ENV, cpi.CPI_PATHS)
@@ -185,6 +185,21 @@ class CpiCustodyTests(unittest.TestCase):
         (self.root / relative).write_bytes(old)
         with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
             self.verify(previous)
+
+    def test_deadline_requires_current_transport_cleanup_and_exact_predecessor(self):
+        self.assertEqual(set(cpi.READ_DEADLINE_PREVIOUS_RECORDS), {
+            "apps/api/src/test/java/com/wallstreetreceipts/api/web/operator/OperatorCpiAttemptTransportPostgreSqlTest.java"})
+        previous = {**self.current, **cpi.READ_DEADLINE_PREVIOUS_RECORDS}
+        self.assertEqual(self.verify(previous), previous)
+        for relative, record in cpi.READ_DEADLINE_PREVIOUS_RECORDS.items():
+            old = bridge.git(SOURCE, "show", cpi.READ_DEADLINE_BASE + ":" + relative)
+            self.assertEqual(blob_record(old), record)
+            with self.assertRaisesRegex(ValueError, "Unreviewed committed CPI"):
+                self.verify({**self.current, relative: "100644 blob " + "e" * 40})
+            (self.root / relative).write_bytes(old)
+            with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
+                self.verify(previous)
+            (self.root / relative).write_bytes(self.expected[relative])
 
     def test_missing_source_and_stale_working_bytes_never_fall_back(self):
         for relative in cpi.CPI_PATHS:

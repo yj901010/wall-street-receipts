@@ -342,3 +342,17 @@ The ordinary Python suite includes safety checks and four actual Node loopback
 relay tests. Custody has 108 exact CPI paths (13 baseline replacements, 95 additions),
 without new general predecessor exceptions or workflow jobs. The full Docker
 acceptance is opt-in, not a claimed total HTTP deadline, load test or real-host gate.
+
+ADR-079 bounds caller waiting for the complete CPI reader invocation at four
+seconds only in explicitly enabled CPI_READ_ONLY mode. A primary query-port
+decorator uses four workers and zero buffered queue; a timed-out but still-running
+driver continues to occupy its worker. Overflow never runs on the caller or queues
+for later execution. Preserve interruption, discard late results and retain all
+existing SQL/pool/JDBC budgets. FULL/disabled/public/collection paths are unchanged.
+This is an application read-wait boundary, not an end-to-end HTTP SLA or a guarantee
+of database cancellation. Unit and real HTTP stubborn-reader tests supplement
+actual PostgreSQL transport recovery; the latter observes cleanup separately after
+the earlier 503. Custody has 113 exact paths (13 baseline replacements, 100 additions),
+with one exact merged transport-test predecessor and mandatory current working bytes.
+The unchanged ADR-078 packaged and existing responsive browser tools remain explicit
+acceptance. No workflow, runtime dependency, schema, fixture or Web source change.
