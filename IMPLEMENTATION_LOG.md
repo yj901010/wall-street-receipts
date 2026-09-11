@@ -9214,3 +9214,91 @@ configured origin or any network endpoint.
   new-candidate hosted success or PR creation/merge is claimed. Next product work
   is scoring input/methodology and persistence/API integration, not another
   implicit operations prerequisite. Real providers and Ubuntu deployment remain off.
+
+## P3 / ADR-080 — DEMO endpoint scoring input/methodology integration (2026-09-11 KST)
+
+- Verify merged PR #27 at develop `8206c3467fa87f3a026af4ddde60c4e120a67b33`.
+  PR CI #66 (`34545375620`) and merge CI #67 (`34545886896`) completed successfully.
+  Branch `feature/p3-scoring-input-methodology` from that exact integration commit;
+  keep the user-owned `apps/web/next-env.d.ts` unchanged and out of staging.
+- Add four application classes under `application/scoring`: immutable DEMO-only
+  `EndpointScoringInput`, a fixed `EndpointScoringMethodology`, closed canonical
+  `EndpointScoringFingerprint`, and side-effect-free `EndpointScoringEvaluator`.
+  The evaluator consumes actual supplied schedule/candidate inputs, invokes the
+  existing strict-close/endpoint/price-pair/return/direction/target-error leaves,
+  and returns a private-constructor receipt preserving every input and whole
+  readiness objects. One endpoint is shared and ADR-022 owns both return/direction
+  meanings once. No separate competing asset-return readiness is introduced.
+- Connect three metric meanings only: asset return, directional win and target
+  error. Preserve missing/ambiguous/future evidence, neutral non-applicability and
+  incomplete schedules without invented prices/zeroes/false Booleans. A missing
+  schedule executes no metric leaf. Require correlated PIT-visible source terms;
+  target conversion is limited to explicit identity normalization. Synthetic
+  correction membership is not represented as authenticated database lineage.
+- Profile `wsr-demo-endpoint-preview/1.0.0` pins nine existing policy hashes and
+  has definition SHA256 `91abc0fcbc986b47e505bbddba346977911c9977664621e4c88cb8a2cbf8ea27`.
+  Explicit replay rejects an unsupported id/version/hash. Type-tagged, length-
+  prefixed UTF-8 encoding includes full ordered inputs, all candidate metadata,
+  as-of and profile identity; canonical decimals ignore presentation scale only.
+  Reject malformed Unicode and oversized input. Golden synthetic input SHA256:
+  `c538a04a0eb74074c0d3e50af94aa4ca965b025ab20ec1df182fdc22e4df760b`.
+- This partial receipt always has `dataComplete=false`; it is not a canonical
+  CallOutcome or an ACTIVE registry entry. No old calculators, public/collection
+  services, Web code, dependency, schema, migration, fixture or deployment changes.
+  There is no Spring bean, clock read, external request, persisted result or new
+  route. Existing API `/v1/calls/{id}/outcomes` and all UI routes remain unchanged.
+- Production compilation passes (11.827s). First focused evaluation tests pass
+  **23/23** (16.831s); the expanded evaluation/fingerprint selection passes
+  **39/39**, zero failures/errors/skips, 25.907s
+  (`.cache/adr080-focused-final.log`). Golden cases cover signs/flat/rounding and
+  directions, shared endpoint identity, missing/future/ambiguous inputs, schedules,
+  synthetic corrections, typed neutral, identity mismatch, immutable input copies,
+  concurrent replay, locale/timezone stability, fingerprint metadata mutations and
+  length/Unicode limits. Full regression results follow after completion.
+- Add exact custody for seven new Java source/test paths. The current API suite
+  executes them; historical tests are not substituted for current verification.
+  Preserve all existing CPI/navigation/fixture and frozen calculator contracts;
+  reject nearby unreviewed files rather than creating a general scoring exemption.
+- User explicitly authorizes push after verification of exactly fourteen API/
+  test/CI/documentation paths, excluding actual local keys and existing user changes.
+  No PR creation or merge is authorized. Next: bind partial receipts to immutable
+  DEMO call/snapshot evidence, append-only persistence/read API, then audit UI.
+  Full lifecycle/completeness, other metrics and aggregates remain separately
+  scoped; raw-window/real-provider prerequisites and future Ubuntu host are unchanged.
+
+### ADR-080 full regression acceptance
+
+- Full API Maven verify/package passes **2613/2613**, zero failures/errors/skips,
+  3m21s (`.cache/adr080-api-full.log`). This includes the final 39 new scoring
+  cases plus unchanged PostgreSQL/Flyway, public API and CPI deadline/transport
+  regressions. The fresh packaged JAR is an API build result, not a new deployment.
+- Full Python CI tooling passes **296/302 with six existing Windows capability
+  skips**, no failures/errors, 95.646s (`.cache/adr080-ci.log`). The four new exact-
+  custody tests pass. Workflow limits remain 29,069/500,000 bytes with largest
+  run 598/21,000 characters. Current-source/legacy parity, unchanged DEMO revision/
+  outcome/methodology fixtures and whitespace pass. No historical scripts/workflow
+  bodies are modified. Full Web lint/Vitest/public E2E passed in merge CI #67 and
+  are not claimed as newly executed local checks in this application-only phase.
+- After full API completion, read-only Docker inspection shows only the existing
+  healthy development PostgreSQL on 127.0.0.1:5432. Explicit responsive browser
+  regression runs serially after the Python suite; its results follow below.
+- The unchanged responsive browser selection passes **7/7 Java and 12/12 browser
+  checks**, zero failures/errors/skips, 1m53s (`.cache/adr080-browser.log`). A fresh
+  Next production build/TypeScript check (14 routes plus proxy) uses the verified
+  secret-free current Web mirror. Empty, seeded, unavailable and recovered states
+  pass at 1440/1280/390px through real Spring/SELECT-only PostgreSQL, with all CPI
+  tables unchanged. Evidence: `.cache/adr071-evidence-15797822082286984422/`.
+  These are regressions of existing screens, not a newly added scoring UI.
+- Inspect recovered desktop/mobile images: existing DEMO/UNVERIFIED, source/time
+  metadata, cleared credential input and mobile table-local scrolling remain.
+  No browser assertion/retry changes. Read-only Docker inspection confirms the
+  browser test database was removed; it can be reproduced by the existing tool.
+  Only the original healthy development PostgreSQL remains running. Ignored
+  diagnostic artifacts are retained. User-owned next-env SHA256 remains
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Final current-tree custody/whitespace and private-value exclusion checks precede
+  the exact fourteen-path commit/push. Feature push itself does not run PR CI;
+  provide a title/body-prefilled PR link without creating or merging a PR. No
+  new-candidate hosted CI success, persisted scoring record or displayed score is
+  claimed. Next delivery is DEMO immutable call/snapshot binding and append-only
+  scoring receipt persistence/read API, followed by the audit screen.
