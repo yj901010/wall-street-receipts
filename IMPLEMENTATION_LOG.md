@@ -9654,3 +9654,98 @@ configured origin or any network endpoint.
   current source custody and private-value exclusion before publication; preserve
   next-env.d.ts. Return a title/body-prefilled compare link against develop,
   without creating or merging the PR.
+
+## ADR-085 — Explicit comparative DEMO command and audit screen (2026-09-14)
+
+- PR #32 `feat(scoring): persist comparative demo receipts` merged at
+  `a2deca96386f5c8d0e38e263a8a493db4af16e77`. PR CI #76/run 34793253615
+  succeeded. Merge CI #77/run 34793748945 was initially running and subsequently
+  succeeded. Branch `feature/p3-comparative-receipt-command-audit` starts there.
+- Added packaged DemoComparativeScoringReceiptCommand with its own explicit
+  confirmation and WSR_DEMO_COMPARATIVE_SCORING_* environment. Only canonical
+  ADR-083 bytes and loopback wsr_comparative_scoring_demo are allowed; no Spring,
+  Flyway, importer, main DB fallback or HTTP writer. Direct bounded transaction,
+  sanitized rejection/unconfirmed status and identical-input retry. No real
+  user DB was touched. The old endpoint command and all V1-V13 migrations stay
+  byte-identical.
+- Added server-rendered `/calls/[id]/comparative-scoring-receipts` and one
+  additive DEMO call-detail link. Default-disabled independent provider setting,
+  optional exact call-scoped UUID, no-store bounded server-only GET, strict wire
+  shape/method/scope/time/decimal/reference checks. No fixture fallback, browser
+  financial calculation, canonical latest winner, auto-creation or live claim.
+- Module structure: separate lib wire/transport/fixture/tests; nested route
+  page/query tests, view/messages/styles/loading/presentation tests; comparative
+  Playwright configs/spec; default-disabled public E2E; Java command/unit test and
+  opt-in current packaged PostgreSQL/Spring/Next acceptance. Guide:
+  `COMPARATIVE_SCORING_RECEIPTS.md`; decisions/ADR-085 records the boundaries.
+- Five partial metrics retain exact ratios and unavailable/pending/NA semantics.
+  Selected records expose both reference pairs' assignment/mapping bindings,
+  provider/index/calendar revisions, level observations and continuity provenance.
+  Provider identity whitespace is preserved as escaped text. Explicitly state
+  that DEMO provenance claims are not independent provider or market authentication.
+  KO/EN, keyboard/native GET, table-only horizontal scroll, loading/noscript,
+  disabled/empty/missing/invalid/failure and retry are supported.
+- CI adds 20 exact scoring paths (79 total), one exact previous call-page blob
+  and separate endpoint/comparative-link delta proofs; no old product exception
+  or workflow change. Existing tests/calculators/contracts/providers stay frozen.
+- Focused checks: 12 command tests, 64 new Web tests pass. Full Java 21 Maven
+  verify: **2937/2937 PASS**, zero failures/errors/skips; executable JAR packaging
+  passes in **3m56s** (`.cache/adr085-api-full.log`).
+- Initial unrestricted Web parallel run hit three existing 5-second test
+  timeouts while API verification ran. No test/assertion/timeout changes:
+  repeated all Web tests with `--maxWorkers=2`, **917/917 PASS** across 68 files,
+  **34.83s** (`.cache/adr085-web-unit-2.log`). Final full Web lint also passes.
+- The production/browser rehearsal uses a new source-identical, secret-free
+  mirror under `.cache/adr085-browser-c8edda1a4fb448adb97bafa0b72d5a4a`.
+  Only its build-generated next-env file can change; preserve the user's original
+  `apps/web/next-env.d.ts` hash
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  Full browser, CI tooling and visual evidence are recorded after completion.
+- Next scope: the five-metric DEMO input/storage/command/audit flow is integrated;
+  remaining metrics/event windows and final canonical outcome publication still
+  need explicit bounded work. Actual Ubuntu deployment waits for a prepared
+  server. This phase does not claim full P3 or live production completion.
+- First packaged/production rehearsal passed all 12 new state/layout browser
+  checks (empty/ready/unavailable/recovered x 1440/1280/390), real restricted-role
+  append/idempotence and inventory invariants. Its ordinary public-suite segment
+  hit one unchanged locale-button height assertion; no unrelated source or test
+  was edited. The repeat passed that assertion; full results follow.
+- Visual QA found long missing-reason chains inheriting the global table
+  white-space:nowrap rule. Override only the new route's reason class with normal
+  wrapping, and add explicit no-overflow, keyboard horizontal scroll and final
+  sector-column visibility checks to the new browser test. Retain the old
+  receipt/global styles unchanged. Rebuild/rehearse these final sources.
+- The unchanged-source repeat passed the full packaged rehearsal and all
+  **99 public E2E cases** (no retries) in addition to its 12 production audit
+  state/layout checks. Evidence: `.cache/adr085-browser-2.log` and
+  `.cache/adr085-evidence-4480673217623220436/`. The first locale-height failure
+  was not reproduced; its exact cause is not established. Do not claim a product
+  fix to the unchanged global locale control.
+- Final CI tooling on the wrapping/scroll-test source hashes: **305/311 PASS**,
+  six existing Windows capability skips, **98.511s**
+  (`.cache/adr085-ci-final.log`). Current/legacy custody, all 79 scoring pins,
+  exact endpoint/comparative call-link proofs, fixture contracts, workflow limits
+  and diff whitespace checks pass. Full Web lint passes after the final changes.
+  Final production rebuild/rehearsal of the wrapping correction is recorded below.
+- Requested conditional push approval for **27 exact files** (1 Java command,
+  2 Java test/harness files, 17 Web files including the one existing call-link
+  edit, 3 CI Python files, CI README, guide, ADR and implementation log).
+  No real private value was found in planned public files; no existing user
+  change is included. PR creation and merge remain user actions.
+- Final source-identical production rebuild and packaged acceptance PASS in
+  **3m16s** (`.cache/adr085-browser-final.log`): **12/12 production audit cases**
+  (four states x 1440/1280/390) and **99/99 public E2E cases**, without retries
+  or skips. Restricted-role command append, identical retry, unchanged parent
+  inventory, SELECT-only UI and permission-revoke/recovery checks all pass.
+  Final evidence: `.cache/adr085-evidence-3483133161202252588/`.
+- Visually inspected final desktop/mobile screenshots: reason text wraps without
+  cell overlap; keyboard horizontal scrolling reaches the final sector column.
+  The final browser assertions also verify these conditions at all three widths.
+  No ADR-085-labelled test container remains after the harness, and the user's
+  original next-env.d.ts hash remains unchanged. Implementation and local
+  verification are complete.
+- User approved publication of this phase's verified **27 files** to
+  `feature/p3-comparative-receipt-command-audit`. Recheck exact staged paths,
+  current source custody and private-value exclusion before commit/push;
+  preserve next-env.d.ts. Return a title/body-prefilled compare link against
+  develop without creating or merging the PR.

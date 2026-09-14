@@ -1,4 +1,4 @@
-"""ADR-080 through 084: exact scoring custody; old calculators and link predecessor stay frozen."""
+"""ADR-080 through 085: exact scoring custody; old calculators and link predecessors stay frozen."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,26 @@ import stat
 from current_contracts import blob_record
 
 CONTENT_SHA256 = {
+    "apps/web/src/lib/comparative-scoring-receipts.ts": "116addb59a0ce9fe856873adee988962ebf8a3caa2ecc7175ac6ef79a8214c88",
+    "apps/web/src/lib/comparative-scoring-receipts.test.ts": "8ed0aa14e8f5161a14ba4c9737de89dfe9c067d3beb4ef0ab78adb774965ccb3",
+    "apps/web/src/lib/comparative-scoring-receipts.server.ts": "9e21c3020b7b4e278124e97bfbd5658abf98ddf6f5f6adac6209373b00f3e62d",
+    "apps/web/src/lib/comparative-scoring-receipts.server.test.ts": "3c143e3321e4dfc0707d61ae914eaeb88748f17c61e1450c170fe6a469206b40",
+    "apps/web/src/lib/comparative-scoring-receipts.fixture.ts": "3686a489039f0b10dcb2a917cb288ccf2985811c9c8aa607723c66ff40df295c",
+    "apps/web/src/app/calls/[id]/comparative-scoring-receipts/receipts.module.css": "d6e9d10258e44168568f944084c64882bfadd6b061d89c36a47af31ee22d2038",
+    "apps/web/src/app/calls/[id]/comparative-scoring-receipts/receipt-view.tsx": "e6fecf33ce7fa1c35881b01b849bed446b061ae4ba76c14b924a74e242d2f4fa",
+    "apps/web/src/app/calls/[id]/comparative-scoring-receipts/receipt-view.test.tsx": "46d3cfa2028afc47b21e85b70b32fc7f0eaf4c555edfc6139f66b6896ea37062",
+    "apps/web/src/app/calls/[id]/comparative-scoring-receipts/page.tsx": "3b66321665c2547515070b6f64d8e97f5a2ca9a782beb36300db63a3dfacfc6f",
+    "apps/web/src/app/calls/[id]/comparative-scoring-receipts/page.test.tsx": "147c614e1267f3c4190f3c86eef23638537c3df137f6fef35ede2c9d9883d266",
+    "apps/web/src/app/calls/[id]/comparative-scoring-receipts/messages.ts": "2278d7ff1620df9f0deab84b999b6a97f1259e7777408ef0f1fd28cd4626ff63",
+    "apps/web/src/app/calls/[id]/comparative-scoring-receipts/loading.tsx": "a65a0b68062672981caf1a38f6225662d94950f3159b3ee97dcde71c59a09d15",
+    "apps/web/e2e/comparative-scoring-receipts.spec.ts": "992d02f31bde60861661e6825f2f2b1d08525bdc176f09327930e3010da5d9eb",
+    "apps/web/comparative-scoring/tests/receipts.spec.ts": "7d90ec0e883646f8023d100bf33e0c02368988c37da033b2bc02bca2fd7aef92",
+    "apps/web/comparative-scoring/public.config.ts": "1b4729d870f7f2b5f95fe7b5e73db831618fd2e2ce13c628ad0bc04d01e546ab",
+    "apps/web/comparative-scoring/full-stack.config.ts": "024ff7fe449558ae639593a0deea0351570ed234ea880330c86cae2457a9f6b5",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/DemoComparativeScoringReceiptCommandTest.java": "4635e3ed9762866fc4bdc2b834e26e6682c6725c6a43ec8b74927b5ce4baaf5f",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringReceiptBrowserIT.java": "4e859dd554c2df5ad9f11ad02d658510d4d8d5ec5a083aedc362a5171f6d5e05",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/DemoComparativeScoringReceiptCommand.java": "818b96be013330a0072d9864da71b848baf65230b1e32ac56c61a2350e9d5d00",
+    "COMPARATIVE_SCORING_RECEIPTS.md": "4eaf48ddd621697647d9f737275f4db0635481f92ced53924c42a26495daf86e",
     "contracts/comparative-scoring-receipts.openapi.yaml": "3ba5f76e502372db9a00ae76a48f80dc3049a0706217bbd25e14b06dbe5b99db",
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringReceiptResponseTest.java": "0751add4b0e915097641ca838c540a29ee37f593be521a2c8f18fdd4038ad52c",
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringReceiptPostgreSqlTest.java": "b104960073236a4bec893f22a6389a65a7f6011e82599278d3a9f6b59c188e40",
@@ -45,7 +65,7 @@ CONTENT_SHA256 = {
     "apps/web/src/lib/scoring-receipts.server.ts": "37182bbbb59caaf55e4555f52674f4dfbdbe99c5ade7d2eca708395ecc060144",
     "apps/web/src/lib/scoring-receipts.test.ts": "537d575db16170f188cb04989108b3cd5df7b65609f559a2e6c4aa76109ef8d5",
     "apps/web/src/lib/scoring-receipts.ts": "8e33991db3005599b86601d773c98f24b523f49a212e107f04eca7a91e52dbe2",
-    "apps/web/src/app/calls/[id]/page.tsx": "f581509ef4010c03e1ca5399eca11bbc35cb4db2eba0fb5b8734d2bbd62e4cf5",
+    "apps/web/src/app/calls/[id]/page.tsx": "952e33b130acb45b89037a5be354ce68e805c73b6af63adc62b9a4ca52ff1fc3",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/ScoringReceiptRepository.java": "1d5ec9dff8cd4b0a95e8193810eacbb595378842d8fd0393f29564348a87efaf",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/EndpointScoringInputCodec.java": "e784b6eafa4c6f3768138f5f10b67cdd37d1f79f9a0add6400b74c19fdbf1af1",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/ScoringLedgerVerifier.java": "76471bd19dfe2dc159716b367ff6e31f351bc53f8e0a46f2e39740cea126ebcb",
@@ -79,6 +99,11 @@ COMPARATIVE_RECEIPT_PREVIOUS_RECORDS = {
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ScoringReceiptPostgreSqlTest.java": "100644 blob f20be94fdfd322819f2ba54e99c469177a10e3b3",
 }
 
+COMPARATIVE_AUDIT_BASE = "a2deca96386f5c8d0e38e263a8a493db4af16e77"
+COMPARATIVE_AUDIT_PREVIOUS_RECORDS = {
+    "apps/web/src/app/calls/[id]/page.tsx": "100644 blob 91c5471f9279c9cdda9721d018ff465726b5e4b0",
+}
+
 
 def current_bytes(root: Path, relative: str) -> bytes:
     path = root
@@ -105,6 +130,8 @@ def verify_scoring(root: Path, baseline: dict, current: dict) -> dict:
         accepted_records = {original, blob_record(raw)}
         if relative in COMPARATIVE_RECEIPT_PREVIOUS_RECORDS:
             accepted_records.add(COMPARATIVE_RECEIPT_PREVIOUS_RECORDS[relative])
+        if relative in COMPARATIVE_AUDIT_PREVIOUS_RECORDS:
+            accepted_records.add(COMPARATIVE_AUDIT_PREVIOUS_RECORDS[relative])
         if current.get(relative) not in accepted_records or (original is not None and relative not in current):
             raise ValueError("Unreviewed committed scoring source: " + relative)
         if relative in current:

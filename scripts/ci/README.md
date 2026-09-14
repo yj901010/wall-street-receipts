@@ -399,3 +399,20 @@ hashes. The old V11->V12 delta test still verifies its exact V12 intermediate.
 No workflow, historical calculator, provider DTO, fixture, runtime configuration
 or Web source changes. Run current full API verification, all CI Python tests,
 current/legacy custody validation, fixture validation and workflow limits.
+
+## ADR-085 comparative command and audit
+
+Scoring custody now has 79 exact paths: 78 additions and the reviewed call-page
+link edits. Twenty additions provide a separate comparative append command,
+current API/production-Next browser acceptance, Web wire/transport/UI tests,
+default-disabled public E2E and an operator guide. The existing call page gains
+one exact DEMO comparative link; all 58 other prior scoring paths keep their bytes.
+The old endpoint-link proof is retained against the exact merged intermediate,
+and a new proof compares only the comparative link to that predecessor.
+
+Run full current API verify and Web lint/unit/build, then the opt-in
+ComparativeScoringReceiptBrowserIT against the current packaged JAR and secret-free
+source mirror. It executes restricted-role append and SELECT-only UI acceptance
+at 1440/1280/390 plus all ordinary public E2E. All migration, financial evaluator,
+old receipt, fixture and workflow bytes stay frozen. No historical browser test
+projection substitutes for the new current acceptance.
