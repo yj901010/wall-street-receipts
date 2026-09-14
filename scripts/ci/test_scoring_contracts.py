@@ -25,12 +25,14 @@ class ScoringCustodyTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
 
-    def test_exact_forty_seven_additions_and_one_closed_link_edit(self):
-        self.assertEqual(len(scoring.SCORING_PATHS), 48)
+    def test_exact_fifty_eight_additions_and_one_closed_link_edit(self):
+        self.assertEqual(len(scoring.SCORING_PATHS), 59)
         self.assertFalse(scoring.SCORING_PATHS & (bridge.FIXED_CI_PATHS | bridge.CPI_PATHS | bridge.NAVIGATION_PATHS))
-        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 25)
+        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 30)
         self.assertIn("contracts/scoring-receipts.openapi.yaml", scoring.SCORING_PATHS)
         self.assertIn("apps/api/src/main/resources/db/migration/V12__demo_scoring_receipts.sql", scoring.SCORING_PATHS)
+        self.assertIn("apps/api/src/main/resources/db/migration/V13__demo_comparative_scoring_receipts.sql", scoring.SCORING_PATHS)
+        self.assertIn("contracts/comparative-scoring-receipts.openapi.yaml", scoring.SCORING_PATHS)
         self.assertEqual(scoring.verify_scoring(SOURCE, self.baseline, self.current), self.current)
         self.assertEqual(scoring.verify_scoring(self.root, self.baseline, self.baseline), self.baseline)
         self.assertEqual(set(self.baseline), {"apps/web/src/app/calls/[id]/page.tsx"})
@@ -128,3 +130,50 @@ class ScoringCustodyTests(unittest.TestCase):
             self.assertFalse(validator.is_valid({**missing, "booleanValue": False}))
         for mutation in ({"booleanValue": True}, {"decimalValue": None}, {"decimalValue": 0}, {"reasons": ["MISSING"]}):
             self.assertFalse(validator.is_valid({**available, **mutation}))
+
+    def test_only_old_upgrade_target_is_pinned_without_weakening_its_assertions(self):
+        self.assertEqual(len(scoring.COMPARATIVE_RECEIPT_PREVIOUS_RECORDS), 1)
+        previous = {**self.current, **scoring.COMPARATIVE_RECEIPT_PREVIOUS_RECORDS}
+        self.assertEqual(scoring.verify_scoring(self.root, self.baseline, previous), previous)
+        for relative, record in scoring.COMPARATIVE_RECEIPT_PREVIOUS_RECORDS.items():
+            old = bridge.git(SOURCE, "show", scoring.COMPARATIVE_RECEIPT_BASE + ":" + relative)
+            self.assertEqual(blob_record(old), record)
+            exact = b'var flyway = Flyway.configure().dataSource(db.getJdbcUrl(), db.getUsername(), db.getPassword()).load();'
+            self.assertEqual(old.count(exact), 1)
+            self.assertEqual(self.raw[relative], old.replace(exact, exact.replace(b'.load();', b'.target("12").load();')))
+            (self.root / relative).write_bytes(old)
+            with self.assertRaisesRegex(ValueError, "Unreviewed current"):
+                scoring.verify_scoring(self.root, self.baseline, previous)
+
+    def test_comparative_contract_is_additive_read_only_and_explicitly_incomplete(self):
+        contract = yaml.safe_load((SOURCE / "contracts/comparative-scoring-receipts.openapi.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(contract["openapi"], "3.1.0")
+        self.assertEqual(set(contract["paths"]), {"/v1/calls/{callId}/comparative-scoring-receipts",
+                         "/v1/calls/{callId}/comparative-scoring-receipts/{receiptId}"})
+        for route in contract["paths"].values():
+            self.assertEqual(set(route), {"parameters", "get"})
+            self.assertEqual(set(route["get"]["responses"]), {"200", "400", "404", "503"})
+        schemas = contract["components"]["schemas"]
+        for schema in schemas.values():
+            Draft202012Validator.check_schema(schema)
+        for name in ("Receipt", "ReferenceEvidence", "Level"):
+            self.assertFalse(schemas[name]["additionalProperties"])
+            self.assertEqual(set(schemas[name]["required"]), set(schemas[name]["properties"]))
+        receipt = schemas["Receipt"]
+        for name, value in {"scope": "PARTIAL_COMPARATIVE", "dataMode": "DEMO", "dataComplete": False,
+                            "methodologyId": "wsr-demo-comparative-preview", "methodologyVersion": "1.0.0",
+                            "methodologyDefinitionHash": "6fb2d737d177662ec072277f1e345ca10a2c9447d35353bc46c1f886669ad6d2"}.items():
+            self.assertEqual(receipt["properties"][name], {"const": value})
+        for name in ("benchmarkReturn", "sectorReturn"):
+            self.assertEqual(receipt["properties"][name], {"$ref": "#/components/schemas/DecimalMetric"})
+        for name in ("benchmarkEvidence", "sectorEvidence"):
+            self.assertEqual(receipt["properties"][name]["oneOf"], [
+                {"$ref": "#/components/schemas/ReferenceEvidence"}, {"type": "null"}])
+        self.assertEqual(schemas["DecimalMetric"]["allOf"][1], {"properties": {"booleanValue": {"type": "null"}}})
+        level = Draft202012Validator(schemas["Level"]["properties"]["value"])
+        for value in ("4000", "0.000000000001", "99999999999999999999999999.999999999999"):
+            level.validate(value)
+        for value in (0, None, "-1", "4e3", "1x123", "1.0000000000001"):
+            self.assertFalse(level.is_valid(value))
+        old = yaml.safe_load((SOURCE / "contracts/scoring-receipts.openapi.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(schemas["Metric"], old["components"]["schemas"]["Metric"])

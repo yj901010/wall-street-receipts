@@ -1,4 +1,4 @@
-"""ADR-080 through 083: exact scoring custody; old calculators and link predecessor stay frozen."""
+"""ADR-080 through 084: exact scoring custody; old calculators and link predecessor stay frozen."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,17 @@ import stat
 from current_contracts import blob_record
 
 CONTENT_SHA256 = {
+    "contracts/comparative-scoring-receipts.openapi.yaml": "3ba5f76e502372db9a00ae76a48f80dc3049a0706217bbd25e14b06dbe5b99db",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringReceiptResponseTest.java": "0751add4b0e915097641ca838c540a29ee37f593be521a2c8f18fdd4038ad52c",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringReceiptPostgreSqlTest.java": "b104960073236a4bec893f22a6389a65a7f6011e82599278d3a9f6b59c188e40",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringReceiptBoundaryTest.java": "74a72759f860ea32b3e1fa84b272e67a1ded4ca7aaf2a275a5e4775d4db5e15f",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringReceiptApiTest.java": "f065f57089dea2172606fa752f5294b3c9d213ffdab3f019bddbcb91622e16f5",
+    "apps/api/src/main/resources/db/migration/V13__demo_comparative_scoring_receipts.sql": "672d655fb7e224dc3d7c5d1462ee1d6fd669be810ec5acfacdb13abbb6637fce",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/web/scoring/ComparativeScoringReceiptResponse.java": "f9a2529c3343308ab2b7afcbaac42f40472e5476862f4f6524b2f299f6cb9e9b",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/web/scoring/ComparativeScoringReceiptController.java": "0b988590f0fbc79b82e1e3590942bb622130782029add4f961fc3844cb161e65",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/infrastructure/persistence/JdbcComparativeScoringReceiptRepository.java": "d37f3a946432dde492501ee11ed6c014a657e0bae43476f3d0e7f25bda31a5d3",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringReceiptService.java": "09d63369faf041a5e71d51a28caabab79b5949ca14a8ebd2eae48349357d4bf8",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/ComparativeScoringReceiptRepository.java": "652043d3358d5c3c73aaaae771db12d6e4d17aada73bab02f82baba78ab6843e",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringEvaluator.java": "5468dc0b1cf29a7669c84856a8c530b8f6f90f2a5a491f47e39661a297b087e1",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringInput.java": "4ffd5a7c27fa83e92d4c396be052a01556b38a302e63f5c7ced28bbf81ec59f5",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/ComparativeScoringInputCodec.java": "f10b1bffc8fc93de2e43086e9cef01f7245c9972e744365a48a0ff4d6b9ec583",
@@ -46,7 +57,7 @@ CONTENT_SHA256 = {
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/EndpointScoringInputCodecTest.java": "181c0eb2d0c48c03a60c3d8d2c4fad8b7189a601410433df8c8a06e4c6176cd7",
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ScoringReceiptApiTest.java": "ff4433b4d6e872dd4e3431306cad12da8477de11641d098a37b173305b163ac7",
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ScoringReceiptFixture.java": "b94418a4efb9935a8d22328a09654716ed369ba97f4d8567218e8255e097da95",
-    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ScoringReceiptPostgreSqlTest.java": "b900f80c1f628e5d8c0fea3cca5638482998182eb92ccfe321e77fa595c96a8e",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ScoringReceiptPostgreSqlTest.java": "e2215d74aab9fab8e330e63bab735bd3095c05bf36102b8df16aa72fde7689ef",
     "contracts/scoring-receipts.openapi.yaml": "c60c94a98d2836257f7c37db0a009ac6e24ff359edf5b97accbdaf23bd1d5a0a",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/EndpointScoringInput.java": "11ace610cbce855d28f9dcc3c7d8f0777dbf49ecacf202cd165d15505d3c1121",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/EndpointScoringMethodology.java": "20cd6ad2642cf4b8075e5218a87fe410cb02b6c66153817b7c9c3a20168bd99d",
@@ -60,6 +71,13 @@ EDITED_BASELINE_RECORDS = {
     "apps/web/src/app/calls/[id]/page.tsx": "100644 blob dd81025d965f7b779dbb789c1d65e1683781be02",
 }
 SCORING_PATHS = frozenset(CONTENT_SHA256)
+
+# Only the old upgrade acceptance is pinned to its explicit V11 -> V12 target.
+# New V12 -> V13 acceptance executes separately; no old product or golden edit.
+COMPARATIVE_RECEIPT_BASE = "a68bae277391bc99950564642fddef6a166fa62d"
+COMPARATIVE_RECEIPT_PREVIOUS_RECORDS = {
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/ScoringReceiptPostgreSqlTest.java": "100644 blob f20be94fdfd322819f2ba54e99c469177a10e3b3",
+}
 
 
 def current_bytes(root: Path, relative: str) -> bytes:
@@ -84,7 +102,10 @@ def verify_scoring(root: Path, baseline: dict, current: dict) -> dict:
         raw = current_bytes(root, relative)
         if hashlib.sha256(raw).hexdigest() != expected:
             raise ValueError("Unreviewed current scoring source: " + relative)
-        if current.get(relative) not in {original, blob_record(raw)} or (original is not None and relative not in current):
+        accepted_records = {original, blob_record(raw)}
+        if relative in COMPARATIVE_RECEIPT_PREVIOUS_RECORDS:
+            accepted_records.add(COMPARATIVE_RECEIPT_PREVIOUS_RECORDS[relative])
+        if current.get(relative) not in accepted_records or (original is not None and relative not in current):
             raise ValueError("Unreviewed committed scoring source: " + relative)
         if relative in current:
             adjusted[relative] = current[relative]
