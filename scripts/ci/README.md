@@ -416,3 +416,19 @@ source mirror. It executes restricted-role append and SELECT-only UI acceptance
 at 1440/1280/390 plus all ordinary public E2E. All migration, financial evaluator,
 old receipt, fixture and workflow bytes stay frozen. No historical browser test
 projection substitutes for the new current acceptance.
+
+## ADR-086 target-hit scoring input
+
+Scoring custody now pins 87 paths: eight new Java application/test files and
+all 79 previous paths unchanged. A dedicated regression compares the previous
+bytes to the exact ADR-085 merge and proves the eight paths are additions only.
+No new baseline-edit exception, workflow body, product route or migration exists.
+The separate six-meaning DEMO input composes existing target eligibility, exact
+attested-window selection, comparison and readiness over the unchanged comparative
+profile. Raw tick coverage, persistence and publication are not implied.
+
+Run current full API verify (including the new TargetHitScoring*Test classes),
+all CI Python tests, current/legacy custody, fixture contracts and workflow limits.
+The Web route/command still accepts only its existing profile. No updated browser
+behavior is claimed; do not substitute synthetic aggregate attestations for raw
+trade coverage or enable a provider to exercise this pure application slice.
