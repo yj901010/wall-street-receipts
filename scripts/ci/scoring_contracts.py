@@ -1,4 +1,4 @@
-"""ADR-080 through 085: exact scoring custody; old calculators and link predecessors stay frozen."""
+"""ADR-080 through 086: exact scoring custody; old calculators and link predecessors stay frozen."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,14 @@ import stat
 from current_contracts import blob_record
 
 CONTENT_SHA256 = {
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringInput.java": "77968b6fbc1634c42796eed653efe7d31f5186cfcd0342086f1e4e51e394a330",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringEvaluator.java": "e910480b2d0a0f21e857d38583ff9236c4946491275d1dbad1aa4796cc0205f1",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringMethodology.java": "ebfb6ba070bd31ecd7cdaa623eea9b75fe40760cecd6136c5d8c65abdc0798e6",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringInputCodec.java": "ed32a0e1534b2a6992d1982bc41190af3e67aeaaf386cd4815a89ba783c252dd",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringFixture.java": "46e124f252e8115d8fe88c656ed0f8e9747770a172c1a3f9bd8b7cf375198c92",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringInputTest.java": "106559ad7e759fc0b5f933d49a86ca711aabbea46ffe8dc9d5cc3cc82ff0e7cd",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringEvaluatorTest.java": "535754e483c3345582e9fa2ebffc3f68d84498f73b8b3f556833e40f4a89cc16",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringInputCodecTest.java": "06651de5a45214f4d532887cb59efd97c41ee17196d7da72b89150920b7c3f4f",
     "apps/web/src/lib/comparative-scoring-receipts.ts": "116addb59a0ce9fe856873adee988962ebf8a3caa2ecc7175ac6ef79a8214c88",
     "apps/web/src/lib/comparative-scoring-receipts.test.ts": "8ed0aa14e8f5161a14ba4c9737de89dfe9c067d3beb4ef0ab78adb774965ccb3",
     "apps/web/src/lib/comparative-scoring-receipts.server.ts": "9e21c3020b7b4e278124e97bfbd5658abf98ddf6f5f6adac6209373b00f3e62d",

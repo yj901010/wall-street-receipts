@@ -25,10 +25,10 @@ class ScoringCustodyTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
 
-    def test_exact_seventy_eight_additions_and_one_closed_link_edit(self):
-        self.assertEqual(len(scoring.SCORING_PATHS), 79)
+    def test_exact_eighty_six_additions_and_one_closed_link_edit(self):
+        self.assertEqual(len(scoring.SCORING_PATHS), 87)
         self.assertFalse(scoring.SCORING_PATHS & (bridge.FIXED_CI_PATHS | bridge.CPI_PATHS | bridge.NAVIGATION_PATHS))
-        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 33)
+        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 41)
         self.assertIn("contracts/scoring-receipts.openapi.yaml", scoring.SCORING_PATHS)
         self.assertIn("apps/api/src/main/resources/db/migration/V12__demo_scoring_receipts.sql", scoring.SCORING_PATHS)
         self.assertIn("apps/api/src/main/resources/db/migration/V13__demo_comparative_scoring_receipts.sql", scoring.SCORING_PATHS)
@@ -39,6 +39,24 @@ class ScoringCustodyTests(unittest.TestCase):
         for path in ("SCORING_RECEIPTS.md", "apps/web/e2e/scoring-receipts.spec.ts",
                      "apps/web/scoring/tests/receipts.spec.ts", "apps/web/src/lib/scoring-receipts.server.ts"):
             self.assertIn(path, scoring.SCORING_PATHS)
+
+    def test_target_hit_adds_eight_closed_paths_and_preserves_every_previous_scoring_byte(self):
+        base = "20477b72a822926fbcb009f770cca1bb5c44e7af"
+        prefix = "apps/api/src/"
+        suffix = "/java/com/wallstreetreceipts/api/application/scoring/"
+        added = {prefix + kind + suffix + name + ".java" for kind, names in (
+            ("main", ("TargetHitScoringInput", "TargetHitScoringInputCodec", "TargetHitScoringEvaluator", "TargetHitScoringMethodology")),
+            ("test", ("TargetHitScoringFixture", "TargetHitScoringInputTest", "TargetHitScoringEvaluatorTest", "TargetHitScoringInputCodecTest")),
+        ) for name in names}
+        self.assertEqual(len(added), 8)
+        self.assertTrue(added <= scoring.SCORING_PATHS)
+        previous = scoring.SCORING_PATHS - added
+        self.assertEqual(len(previous), 79)
+        for relative in previous:
+            with self.subTest(path=relative):
+                self.assertEqual(self.raw[relative], bridge.git(SOURCE, "show", base + ":" + relative).replace(b"\r\n", b"\n"))
+        for relative in added:
+            self.assertEqual(bridge.git(SOURCE, "ls-tree", base, "--", relative), b"")
 
     def test_each_current_byte_and_committed_mode_type_object_is_required(self):
         for relative, raw in self.raw.items():

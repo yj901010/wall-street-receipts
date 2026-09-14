@@ -9749,3 +9749,61 @@ configured origin or any network endpoint.
   current source custody and private-value exclusion before commit/push;
   preserve next-env.d.ts. Return a title/body-prefilled compare link against
   develop without creating or merging the PR.
+
+## ADR-086 — DEMO target-hit input and replay (2026-09-14)
+
+- PR #33 `feat(scoring): add comparative receipt command and audit` merged at
+  `20477b72a822926fbcb009f770cca1bb5c44e7af`. PR CI #78/run 34795933102
+  succeeded; merge CI #79/run 34797752085 was running at the initial check.
+  Branch `feature/p3-target-hit-scoring-input` starts at that merged develop.
+- Merge CI #79/run 34797752085 subsequently completed successfully; confirmed
+  before this feature's final verification and publication.
+- Added TargetHitScoringInput, TargetHitScoringMethodology,
+  TargetHitScoringInputCodec and TargetHitScoringEvaluator in application/scoring.
+  The separate DEMO six-meaning profile preserves the entire comparative receipt
+  and reuses its exact horizon. Original terms/target/catalog/as-of feed existing
+  eligibility; only ready eligibility invokes the full-window selector. Existing
+  orchestration and readiness preserve every typed source without null-to-false
+  conversion or endpoint/index fallback. dataComplete stays false.
+- Explicit caller-supplied aggregate candidates, not verified raw trades. No
+  provider, real DB, registry activation, new command, API or Web route is wired.
+  All old calculators, policies, streams, migrations, receipts and UI stay frozen.
+  Input has 4096-member bounds; independent canonical encoding has 1 MiB total,
+  strict UTF-8, closed types, normalized decimal values and exact roundtrip.
+- New three JUnit classes and one test-only synthetic fixture cover exact
+  bullish/bearish/strong comparisons, independent evidence, maturity microseconds,
+  N/A versus missing, multi-session windows, PIT, poisoning/ambiguity, correction
+  basis, immutable/bounded input, malformed encodings, replay and locale/zone.
+  Focused final run: **62/62 PASS**, zero failures/errors/skips, **16.559s**
+  (`.cache/adr086-focused-final.log`). Initial hash-registration run passed the
+  semantic checks and intentionally lacked the two new golden hash expectations;
+  those canonical definition/input values are now pinned and pass.
+- CI custody adds eight exact Java paths (87 total), preserving all 79 previous
+  scoring paths against the exact merged predecessor. No general product or
+  neighboring-path exception. Full API/package and CI validation results follow.
+- Next: separately versioned persistence/ledger replay/read API for this profile,
+  then explicit command/audit UI. MFE/MAE raw-coverage prerequisites, alpha,
+  canonical lifecycle/ranking and actual Ubuntu deployment remain unfinished.
+  Requested conditional public-push approval for exactly **14 files**; exclude
+  real private values and the existing user-owned next-env.d.ts change.
+- User approved the verified 14-file commit/push to
+  `feature/p3-target-hit-scoring-input`. Publish only after full checks and exact
+  staged-path/private-value verification; do not create or merge a PR.
+- Full CI Python suite: **306/312 PASS**, six existing Windows capability skips,
+  no failures/errors, **136.977s** (`.cache/adr086-ci.log`). Current/legacy custody,
+  all 87 scoring pins, exact previous-79-byte preservation, fixture contracts,
+  workflow limits and diff whitespace checks pass. Workflow remains 29,069 bytes;
+  largest run remains 598 characters. Exact 14-file and private-value checks pass.
+- Full Java 21 Maven verify: **2999/2999 PASS**, zero failures/errors/skips,
+  including PostgreSQL integration, in **3m13s** (`.cache/adr086-api-full.log`).
+  Executable Spring Boot JAR packaging passes under `.cache/adr086-api/`.
+  All 62 new cases pass within the full run as well as the focused run.
+- No Web source or responsive behavior changed; no Web lint/unit/build/browser
+  rerun is claimed for this pure API composition phase. ADR-085's prior accepted
+  UI is byte-preserved by current custody checks. No real server/database was
+  migrated or seeded, and no live provider was called by this phase.
+- User-owned `apps/web/next-env.d.ts` remains unchanged at SHA256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  Final exact staged-path, private-value and source-custody verification precede
+  the approved feature commit/push. PR creation, hosted PR CI and merge remain
+  user actions; local verification is complete.
