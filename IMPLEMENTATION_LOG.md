@@ -9879,3 +9879,72 @@ configured origin or any network endpoint.
   `feature/p3-target-hit-receipt-persistence`. Recheck exact staged paths,
   private-value exclusion and source custody before commit/push; preserve the
   user's next-env.d.ts. PR creation, hosted PR CI and merge remain user actions.
+
+## ADR-088 — DEMO target-hit command and read-only audit (2026-09-14)
+
+- PR #35 `feat(scoring): persist demo target-hit receipts` merged at
+  `9b80fe0985933e3752687074ae2ca1f2b6707fb5`; PR CI #82/run 34804737070 and
+  merge CI #83/run 34805669176 succeeded. New branch:
+  `feature/p3-target-hit-receipt-command-audit` from this merged develop.
+- Added DemoTargetHitScoringReceiptCommand using only explicit dedicated loopback
+  DEMO configuration, confirmation and bounded ADR-086 binary input. No startup,
+  migrations, importer, HTTP writer or live provider. Uses unchanged ADR-087
+  append/ledger verification; identical input retains UUID/time. Uncertain commit
+  is UNCONFIRMED, never proof of rollback. Old profile bytes/confirmations reject.
+- Added server-rendered `/calls/[id]/target-hit-scoring-receipts`, independent
+  disabled-by-default transport, strict closed wire validator, KO/EN messages,
+  table and selected evidence panels. GET-only exact UUID/list; unknown/duplicate
+  query rejected before fetch, 5s abort and 1 MiB limit, no credentials/fallback.
+  Java calculates six metrics; browser preserves ratios, hit/miss/null states and
+  selected target/window evidence with caller-attested—not raw-trade—disclosure.
+- Only old product edit: DEMO target-hit receipt link on call detail. All prior
+  profile/command/calculator/API contract/fixture/V1-V14 migration bytes retained.
+  CI pins 20 additions (118 scoring paths), exact old call-page predecessor and
+  new link, preserving old link/upgrade proofs and 97 other prior files.
+- Initial focused command tests: **12/12 PASS**, zero failures/errors/skips,
+  **14.224s** (`.cache/adr088-api-focused.log`), including all-test compilation.
+  Focused Web: **94/94 PASS**, four files, **2.26s** (`.cache/adr088-web-focused.log`).
+- User approved exactly **27 files** for push after complete verification. Exclude
+  private values and preserve existing next-env.d.ts; no PR creation or merge.
+  Full API/Web/CI and owned packaged-command/production-screen results follow.
+- Next work remains bounded financial metrics/raw coverage or canonical lifecycle;
+  six-metric DEMO audit flow is not completed P3, ranking, live data or deployment.
+- Full Java 21 Maven verify: **3150/3150 PASS**, zero failures/errors/skips,
+  **3m54s** (`.cache/adr088-api-full.log`), including PostgreSQL integration and
+  executable Spring Boot JAR at `.cache/adr088-api/`. No product Java changed
+  after this run. The separate browser acceptance is recorded below, not counted
+  as part of those unit/integration cases.
+- Full Web lint PASS (`.cache/adr088-web-lint.log`); all **1011/1011** Vitest cases
+  in 72 files PASS, **21.05s** (`.cache/adr088-web-unit.log`). Fresh Next production
+  build and TypeScript PASS on the source-identical secret-free Web mirror.
+- Initial browser rehearsal stopped when the new synthetic future candidate was
+  constructed with availableAt before advancing capturedAt. Corrected only the
+  test's construction order, preserving domain invariants and product code;
+  repinned its exact bytes and reran actual acceptance.
+- Final TargetHitScoringReceiptBrowserIT **PASS**, **3m41s**
+  (`.cache/adr088-browser-2.log`). Current packaged CLI executes restricted-role
+  inserts, exact identity/hash retries and six explicit hit/miss/pending/missing-
+  window/missing-reference/correction inputs. Old inventories remain equal.
+  SELECT-only API and production UI pass empty/ready/unavailable/recovered at
+  1440/1280/390: **12/12 PASS**. Future marker never appears. Native GET locator,
+  exact selection, KO/EN, keyboard scroll, reason wrapping, no document overflow
+  and noscript limitation checks pass. Full public development E2E: **105/105 PASS**.
+  Evidence: `.cache/adr088-evidence-17191021676656826344/`; screenshots are under
+  `.cache/adr088-browser-5c224c48371045cdb731ad205fbafd8c/apps/web/.cache/target-hit-scoring-full-stack/`.
+  Visually inspected desktop/mobile metric and selected-evidence screenshots;
+  dense tables scroll independently and long evidence identifiers wrap.
+- Initial full Python CI **310/316 PASS**, six existing Windows capability skips,
+  **102.233s** (`.cache/adr088-ci-full.log`). Final after test correction/repin:
+  **310/316 PASS**, same six skips, zero failures/errors, **147.523s**
+  (`.cache/adr088-ci-final.log`). All 118 source pins and historical link/upgrade
+  proofs pass. Current fixture/workflow limits and diff whitespace PASS; unchanged
+  workflow remains 29,069 bytes, largest run 598 characters. This does not claim
+  all 84 Ubuntu historical bodies or this feature's hosted PR CI ran locally.
+- Exact 27-file scope and private-value exclusion pass without printing secrets.
+  No ADR-088-labelled test container remains; only owned test processes were
+  stopped. No real user DB/server migrated or seeded; no live provider activated.
+  The user-owned next-env.d.ts remains SHA256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Local implementation and verification complete. Publish the approved 27-file
+  feature commit after final staged custody/private-value checks; return a filled
+  compare link against develop. PR creation, hosted CI and merge are user actions.
