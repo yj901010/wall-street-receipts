@@ -1,4 +1,4 @@
-"""ADR-080 through 087: exact scoring custody; old calculators and link predecessors stay frozen."""
+"""ADR-080 through 088: exact scoring custody; old calculators and link predecessors stay frozen."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,26 @@ import stat
 from current_contracts import blob_record
 
 CONTENT_SHA256 = {
+    "TARGET_HIT_SCORING_RECEIPTS.md": "7893ee9a473b97f27581df6e785452e48b28f91858023108202af74c6c0ed869",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/DemoTargetHitScoringReceiptCommand.java": "2861dc10b71f97fc650cea89085e1837031d9d11732cd4c28e83999db48e86a8",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringReceiptBrowserIT.java": "5dae071c9a4d6a71c6d5b98286470d950e0e544749985ab957bf4cd0e68ad903",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/DemoTargetHitScoringReceiptCommandTest.java": "22935d17e050e88ed6750dde73983786e6c2099e3c6fc1ad34ca317078aa52ba",
+    "apps/web/target-hit-scoring/full-stack.config.ts": "29cd538ed46b8f547754c205c672e6e1496a32111308422c436929ca5409ef88",
+    "apps/web/target-hit-scoring/public.config.ts": "58767b32c2579e5fc486e0b79f9bdec1f96c05b0a677bd99fdc3f5386927307c",
+    "apps/web/target-hit-scoring/tests/receipts.spec.ts": "be4ba4e6a93bf38da424813d2e8f090745c3548c2482a03fbb0d5bfe2faabf07",
+    "apps/web/e2e/target-hit-scoring-receipts.spec.ts": "f3a1ba9ab5f83c7e31d8c9768ca5b1bd7e62a7bc6b90e15f03235f15dd60914f",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/loading.tsx": "15c4d3dde69cc9e25bc69c9ee003d1fba2e66889032d7934fdea3223b3fba4f5",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/messages.ts": "61c33d3907664fd3320b37a0f8ff869dc3f071c2e5956e3d1c9abfc75fc1b2c9",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/page.test.tsx": "336f6e59f44540159f2af6bd6db9d4570d89ad56baef845b6d97d62f62ece4b8",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/page.tsx": "0000a3ebd21e808a6480276a31ddb9a417a3ac0dd1f4da990b5cc4a2429c97ec",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/receipt-view.test.tsx": "5bf0afbf69d57a4832e45a37f056944c0870a4f50a3dfaa7c4dcb1989d17700e",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/receipt-view.tsx": "ad6783e7c4402316c39c72d591317ae8c1684a131888daba02ad35e1d628cd2b",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/receipts.module.css": "ac5d615e1aae5d858abf574cfa6485cf146db1970c48829a2f9401062f0b3e6f",
+    "apps/web/src/lib/target-hit-scoring-receipts.fixture.ts": "5193ae3edcb4ac9d09d570b9e5aeaf54b2b55de746edffa011db9d287f2a1dd4",
+    "apps/web/src/lib/target-hit-scoring-receipts.server.test.ts": "3676226abfe96d39fe13798a7a6beb33ef68561899fd857710818ab3d325e10a",
+    "apps/web/src/lib/target-hit-scoring-receipts.server.ts": "4012adb0a3ff39b746cf3a40d4de38ecbc75124ca95ed45407a327911ff655d7",
+    "apps/web/src/lib/target-hit-scoring-receipts.test.ts": "73589ed18964283a179d74f6e9066bc401f9b6e1aa19f9201a7511bc61741550",
+    "apps/web/src/lib/target-hit-scoring-receipts.ts": "ae3c257a39289dce25d4c30aadfe5b791d8d7851fa19d33b2ac543a35dd7ce31",
     "contracts/target-hit-scoring-receipts.openapi.yaml": "5b8aa986ea4457a048ea99fff8bc427981b16e7d7e65abc19e0647c71d51d6a9",
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringReceiptResponseTest.java": "f51ee11c8e0e42feb81c4e0ebc49837e4f185c60bea7b0186bddd725da82db4f",
     "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringReceiptPostgreSqlTest.java": "364f15d57326518a7978fec46167a9bae762d35d51a5d0d528eb751c8945503d",
@@ -84,7 +104,7 @@ CONTENT_SHA256 = {
     "apps/web/src/lib/scoring-receipts.server.ts": "37182bbbb59caaf55e4555f52674f4dfbdbe99c5ade7d2eca708395ecc060144",
     "apps/web/src/lib/scoring-receipts.test.ts": "537d575db16170f188cb04989108b3cd5df7b65609f559a2e6c4aa76109ef8d5",
     "apps/web/src/lib/scoring-receipts.ts": "8e33991db3005599b86601d773c98f24b523f49a212e107f04eca7a91e52dbe2",
-    "apps/web/src/app/calls/[id]/page.tsx": "952e33b130acb45b89037a5be354ce68e805c73b6af63adc62b9a4ca52ff1fc3",
+    "apps/web/src/app/calls/[id]/page.tsx": "325bb336b4c1f6c71a53b5b4f19a716e359b828fec2d143def41a5633a09814c",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/port/out/ScoringReceiptRepository.java": "1d5ec9dff8cd4b0a95e8193810eacbb595378842d8fd0393f29564348a87efaf",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/EndpointScoringInputCodec.java": "e784b6eafa4c6f3768138f5f10b67cdd37d1f79f9a0add6400b74c19fdbf1af1",
     "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/ScoringLedgerVerifier.java": "76471bd19dfe2dc159716b367ff6e31f351bc53f8e0a46f2e39740cea126ebcb",
@@ -143,6 +163,34 @@ TARGET_HIT_RECEIPT_ADDITIONS = frozenset({
 })
 
 
+TARGET_HIT_AUDIT_BASE = "9b80fe0985933e3752687074ae2ca1f2b6707fb5"
+TARGET_HIT_AUDIT_PREVIOUS_RECORDS = {
+    "apps/web/src/app/calls/[id]/page.tsx": "100644 blob 7ddf31756ac3f57ee6aeaade527827edace04aea",
+}
+TARGET_HIT_AUDIT_ADDITIONS = frozenset({
+    "TARGET_HIT_SCORING_RECEIPTS.md",
+    "apps/api/src/main/java/com/wallstreetreceipts/api/application/scoring/DemoTargetHitScoringReceiptCommand.java",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/TargetHitScoringReceiptBrowserIT.java",
+    "apps/api/src/test/java/com/wallstreetreceipts/api/application/scoring/DemoTargetHitScoringReceiptCommandTest.java",
+    "apps/web/target-hit-scoring/full-stack.config.ts",
+    "apps/web/target-hit-scoring/public.config.ts",
+    "apps/web/target-hit-scoring/tests/receipts.spec.ts",
+    "apps/web/e2e/target-hit-scoring-receipts.spec.ts",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/loading.tsx",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/messages.ts",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/page.test.tsx",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/page.tsx",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/receipt-view.test.tsx",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/receipt-view.tsx",
+    "apps/web/src/app/calls/[id]/target-hit-scoring-receipts/receipts.module.css",
+    "apps/web/src/lib/target-hit-scoring-receipts.fixture.ts",
+    "apps/web/src/lib/target-hit-scoring-receipts.server.test.ts",
+    "apps/web/src/lib/target-hit-scoring-receipts.server.ts",
+    "apps/web/src/lib/target-hit-scoring-receipts.test.ts",
+    "apps/web/src/lib/target-hit-scoring-receipts.ts",
+})
+
+
 def current_bytes(root: Path, relative: str) -> bytes:
     path = root
     for part in Path(relative).parts:
@@ -170,6 +218,8 @@ def verify_scoring(root: Path, baseline: dict, current: dict) -> dict:
             accepted_records.add(COMPARATIVE_RECEIPT_PREVIOUS_RECORDS[relative])
         if relative in COMPARATIVE_AUDIT_PREVIOUS_RECORDS:
             accepted_records.add(COMPARATIVE_AUDIT_PREVIOUS_RECORDS[relative])
+        if relative in TARGET_HIT_AUDIT_PREVIOUS_RECORDS:
+            accepted_records.add(TARGET_HIT_AUDIT_PREVIOUS_RECORDS[relative])
         if relative in TARGET_HIT_RECEIPT_PREVIOUS_RECORDS:
             accepted_records.add(TARGET_HIT_RECEIPT_PREVIOUS_RECORDS[relative])
         if current.get(relative) not in accepted_records or (original is not None and relative not in current):

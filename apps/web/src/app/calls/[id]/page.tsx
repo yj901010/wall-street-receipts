@@ -115,6 +115,9 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
           {locale === "ko" ? "DEMO 비교 평가 기록" : "DEMO comparative scoring receipts"}
         </Link></p>}
 
+        {call.dataMode === "DEMO" && <p><Link href={`/calls/${encodeURIComponent(call.callId)}/target-hit-scoring-receipts`} prefetch={false}>
+          {locale === "ko" ? "DEMO 목표가 도달 평가 기록" : "DEMO target-hit scoring receipts"}
+        </Link></p>}
         <section className="detail-heading" aria-labelledby="call-title">
           <div>
             <p className="eyebrow">{messages.canonicalCall(call.callId)}</p>

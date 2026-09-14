@@ -25,10 +25,10 @@ class ScoringCustodyTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
 
-    def test_exact_ninety_seven_additions_and_one_closed_link_edit(self):
-        self.assertEqual(len(scoring.SCORING_PATHS), 98)
+    def test_exact_117_additions_and_one_closed_link_edit(self):
+        self.assertEqual(len(scoring.SCORING_PATHS), 118)
         self.assertFalse(scoring.SCORING_PATHS & (bridge.FIXED_CI_PATHS | bridge.CPI_PATHS | bridge.NAVIGATION_PATHS))
-        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 46)
+        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 49)
         self.assertIn("contracts/scoring-receipts.openapi.yaml", scoring.SCORING_PATHS)
         self.assertIn("apps/api/src/main/resources/db/migration/V12__demo_scoring_receipts.sql", scoring.SCORING_PATHS)
         self.assertIn("apps/api/src/main/resources/db/migration/V13__demo_comparative_scoring_receipts.sql", scoring.SCORING_PATHS)
@@ -50,11 +50,12 @@ class ScoringCustodyTests(unittest.TestCase):
         ) for name in names}
         self.assertEqual(len(added), 8)
         self.assertTrue(added <= scoring.SCORING_PATHS)
-        previous = scoring.SCORING_PATHS - added - scoring.TARGET_HIT_RECEIPT_ADDITIONS
+        previous = scoring.SCORING_PATHS - added - scoring.TARGET_HIT_RECEIPT_ADDITIONS - scoring.TARGET_HIT_AUDIT_ADDITIONS
         self.assertEqual(len(previous), 79)
         for relative in previous:
             with self.subTest(path=relative):
-                actual = self.raw[relative]
+                actual = (bridge.git(SOURCE, "show", scoring.TARGET_HIT_AUDIT_BASE + ":" + relative)
+                          if relative in scoring.TARGET_HIT_AUDIT_PREVIOUS_RECORDS else self.raw[relative])
                 if relative in scoring.TARGET_HIT_RECEIPT_PREVIOUS_RECORDS:
                     actual = bridge.git(SOURCE, "show", scoring.TARGET_HIT_RECEIPT_BASE + ":" + relative)
                     self.assertEqual(blob_record(actual), scoring.TARGET_HIT_RECEIPT_PREVIOUS_RECORDS[relative])
@@ -129,8 +130,10 @@ class ScoringCustodyTests(unittest.TestCase):
         old = bridge.git(SOURCE, "show", scoring.COMPARATIVE_AUDIT_BASE + ":" + relative)
         self.assertEqual(blob_record(old), scoring.COMPARATIVE_AUDIT_PREVIOUS_RECORDS[relative])
         added = "        {call.dataMode === \"DEMO\" && <p><Link href={`/calls/${encodeURIComponent(call.callId)}/comparative-scoring-receipts`} prefetch={false}>\n          {locale === \"ko\" ? \"DEMO 비교 평가 기록\" : \"DEMO comparative scoring receipts\"}\n        </Link></p>}\n".encode("utf-8")
-        self.assertEqual(self.raw[relative].count(added), 1)
-        self.assertEqual(self.raw[relative].replace(added, b""), old)
+        intermediate = bridge.git(SOURCE, "show", scoring.TARGET_HIT_AUDIT_BASE + ":" + relative)
+        self.assertEqual(blob_record(intermediate), scoring.TARGET_HIT_AUDIT_PREVIOUS_RECORDS[relative])
+        self.assertEqual(intermediate.count(added), 1)
+        self.assertEqual(intermediate.replace(added, b""), old)
         previous = {**self.current, **scoring.COMPARATIVE_AUDIT_PREVIOUS_RECORDS}
         self.assertEqual(scoring.verify_scoring(self.root, self.baseline, previous), previous)
         (self.root / relative).write_bytes(old)
@@ -224,7 +227,7 @@ class ScoringCustodyTests(unittest.TestCase):
         self.assertIn("apps/api/src/main/resources/db/migration/V14__demo_target_hit_scoring_receipts.sql", added)
         for path in added:
             self.assertEqual(bridge.git(SOURCE, "ls-tree", scoring.TARGET_HIT_RECEIPT_BASE, "--", path), b"")
-        previous = scoring.SCORING_PATHS - added
+        previous = scoring.SCORING_PATHS - added - scoring.TARGET_HIT_AUDIT_ADDITIONS
         self.assertEqual(len(previous), 87)
         self.assertEqual(len(scoring.TARGET_HIT_RECEIPT_PREVIOUS_RECORDS), 1)
         for path in previous:
@@ -235,11 +238,40 @@ class ScoringCustodyTests(unittest.TestCase):
                 self.assertEqual(old.count(exact), 1)
                 self.assertEqual(self.raw[path], old.replace(exact, exact.replace(b'.load();', b'.target("13").load();')))
             else:
-                self.assertEqual(self.raw[path], old)
+                actual = (bridge.git(SOURCE, "show", scoring.TARGET_HIT_AUDIT_BASE + ":" + path)
+                          if path in scoring.TARGET_HIT_AUDIT_PREVIOUS_RECORDS else self.raw[path])
+                self.assertEqual(actual, old)
         committed = {**self.current, **scoring.TARGET_HIT_RECEIPT_PREVIOUS_RECORDS}
         self.assertEqual(scoring.verify_scoring(self.root, self.baseline, committed), committed)
         path = next(iter(scoring.TARGET_HIT_RECEIPT_PREVIOUS_RECORDS))
         (self.root / path).write_bytes(bridge.git(SOURCE, "show", scoring.TARGET_HIT_RECEIPT_BASE + ":" + path))
+        with self.assertRaisesRegex(ValueError, "Unreviewed current"):
+            scoring.verify_scoring(self.root, self.baseline, committed)
+
+    def test_target_hit_audit_preserves_97_previous_paths_and_adds_only_exact_link(self):
+        added = scoring.TARGET_HIT_AUDIT_ADDITIONS
+        self.assertEqual(len(added), 20)
+        self.assertTrue(added <= scoring.SCORING_PATHS)
+        self.assertEqual(sum(path.endswith(".java") for path in added), 3)
+        self.assertIn("TARGET_HIT_SCORING_RECEIPTS.md", added)
+        for path in added:
+            self.assertEqual(bridge.git(SOURCE, "ls-tree", scoring.TARGET_HIT_AUDIT_BASE, "--", path), b"")
+        previous = scoring.SCORING_PATHS - added
+        self.assertEqual(len(previous), 98)
+        self.assertEqual(set(scoring.TARGET_HIT_AUDIT_PREVIOUS_RECORDS), {"apps/web/src/app/calls/[id]/page.tsx"})
+        for path in previous:
+            old = bridge.git(SOURCE, "show", scoring.TARGET_HIT_AUDIT_BASE + ":" + path)
+            if path in scoring.TARGET_HIT_AUDIT_PREVIOUS_RECORDS:
+                self.assertEqual(blob_record(old), scoring.TARGET_HIT_AUDIT_PREVIOUS_RECORDS[path])
+                link = "        {call.dataMode === \"DEMO\" && <p><Link href={`/calls/${encodeURIComponent(call.callId)}/target-hit-scoring-receipts`} prefetch={false}>\n          {locale === \"ko\" ? \"DEMO 목표가 도달 평가 기록\" : \"DEMO target-hit scoring receipts\"}\n        </Link></p>}\n".encode("utf-8")
+                self.assertEqual(self.raw[path].count(link), 1)
+                self.assertEqual(self.raw[path].replace(link, b""), old)
+            else:
+                self.assertEqual(self.raw[path], old)
+        committed = {**self.current, **scoring.TARGET_HIT_AUDIT_PREVIOUS_RECORDS}
+        self.assertEqual(scoring.verify_scoring(self.root, self.baseline, committed), committed)
+        path = next(iter(scoring.TARGET_HIT_AUDIT_PREVIOUS_RECORDS))
+        (self.root / path).write_bytes(bridge.git(SOURCE, "show", scoring.TARGET_HIT_AUDIT_BASE + ":" + path))
         with self.assertRaisesRegex(ValueError, "Unreviewed current"):
             scoring.verify_scoring(self.root, self.baseline, committed)
 

@@ -1,5 +1,11 @@
 # Size-bounded CI contracts
 
+ADR-088 adds the target-hit DEMO command and read-only audit UI. Scoring custody
+contains 118 paths: 20 exact additions and one additive call-detail link. All 97
+other previous paths remain frozen. Historical link/upgrade proofs retain their
+pinned predecessors. Current API/Web suites and opt-in packaged-command
+TargetHitScoringReceiptBrowserIT exercise the new route, not historical sources.
+
 The entry point is `.github/workflows/ci.yml`. Its repository-contract job calls
 small commands here; the web, API, and call-audit integration jobs still run
 against the **current checkout**.
