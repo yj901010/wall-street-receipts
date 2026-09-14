@@ -1,0 +1,326 @@
+openapi: 3.1.0
+info:
+  title: DEMO partial target-hit scoring receipt reads
+  version: 1.0.0
+  description: >-
+    ADR-087 additive API. Replays preserved ADR-086 canonical inputs against their
+    pinned methodology and persisted DEMO call/source/snapshot binding. Six partial
+    metric meanings include target hit as well as the unchanged comparative profile.
+    Not a canonical outcome, complete score or live price attestation. Selected
+    window/reference evidence is caller-attested DEMO input, not independently
+    verified raw trades or provider authentication. No future or rejected candidates
+    are published. No alpha, MFE/MAE, ranking, HTTP writer or unknown query parameters.
+paths:
+  /v1/calls/{callId}/target-hit-scoring-receipts:
+    parameters:
+      - $ref: '#/components/parameters/CallId'
+    get:
+      operationId: recentDemoTargetHitScoringReceipts
+      description: >-
+        Up to 20 verified records, ordered by recordedAt descending then receiptId
+        descending. hasMore indicates omitted older records; no automatic winner
+        selection or pagination cursor. A broken published row fails the whole
+        page. Empty known DEMO call returns an empty list. HEAD also supported.
+      responses:
+        '200':
+          description: Verified DEMO page; Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [dataMode, source, limit, hasMore, items]
+                properties:
+                  dataMode: {const: DEMO}
+                  source: {const: PERSISTED_DEMO_INPUT_REPLAY}
+                  limit: {const: 20}
+                  hasMore: {type: boolean}
+                  items:
+                    type: array
+                    maxItems: 20
+                    items: {$ref: '#/components/schemas/Receipt'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '404': {$ref: '#/components/responses/Missing'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /v1/calls/{callId}/target-hit-scoring-receipts/{receiptId}:
+    parameters:
+      - $ref: '#/components/parameters/CallId'
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    get:
+      operationId: selectedDemoTargetHitScoringReceipt
+      description: Exact call-scoped record; never falls back to another receipt. HEAD also supported.
+      responses:
+        '200':
+          description: Verified DEMO receipt; Cache-Control no-store.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Receipt'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '404': {$ref: '#/components/responses/Missing'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+components:
+  parameters:
+    CallId:
+      name: callId
+      in: path
+      required: true
+      schema: {type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'}
+  responses:
+    Invalid:
+      description: Invalid identifier or any query parameter; no-store, sanitized.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Missing:
+      description: Unknown/non-DEMO call, unknown receipt or receipt belonging to another call; no-store.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Unavailable:
+      description: Storage/transaction/integrity/replay failure; no-store, no input or driver details.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, dataMode]
+      properties:
+        code: {enum: [INVALID_TARGET_HIT_SCORING_QUERY, TARGET_HIT_SCORING_RECEIPT_NOT_FOUND, TARGET_HIT_SCORING_RECEIPT_UNAVAILABLE]}
+        dataMode: {const: DEMO}
+    Metric:
+      type: object
+      additionalProperties: false
+      required: [state, decimalValue, booleanValue, reasons]
+      description: >-
+        Only AVAILABLE has a value: scale-12 decimal string for returns/errors,
+        Boolean for directionalWin or targetHit. Ratios, not percentage points. Other states
+        have two null values and preserve the nested reason chain. Neutral
+        direction is NOT_APPLICABLE independently of asset-return readiness.
+      properties:
+        state: {enum: [AVAILABLE, PENDING, UNAVAILABLE, NOT_APPLICABLE]}
+        decimalValue: {type: [string, 'null'], pattern: '^-?[0-9]+\.[0-9]{12}$'}
+        booleanValue: {type: [boolean, 'null']}
+        reasons: {type: array, items: {type: string}}
+      oneOf:
+        - properties:
+            state: {const: AVAILABLE}
+            reasons: {maxItems: 0}
+          oneOf:
+            - properties: {decimalValue: {type: string}, booleanValue: {type: 'null'}}
+            - properties: {decimalValue: {type: 'null'}, booleanValue: {type: boolean}}
+        - properties:
+            state: {enum: [PENDING, UNAVAILABLE, NOT_APPLICABLE]}
+            decimalValue: {type: 'null'}
+            booleanValue: {type: 'null'}
+            reasons: {minItems: 1}
+    Receipt:
+      type: object
+      additionalProperties: false
+      required:
+        - receiptId
+        - callId
+        - snapshotId
+        - snapshotProvenanceId
+        - snapshotRole
+        - basisRevisionId
+        - basisRevisionSequence
+        - basisEventTimeUtc
+        - methodologyId
+        - methodologyVersion
+        - methodologyDefinitionHash
+        - inputFingerprint
+        - ledgerFingerprint
+        - evaluationAsOfUtc
+        - evaluationAsOfKst
+        - recordedAtUtc
+        - recordedAtKst
+        - dataMode
+        - scope
+        - dataComplete
+        - source
+        - termsProvenanceId
+        - horizon
+        - assetReturn
+        - directionalWin
+        - targetError
+        - benchmarkReturn
+        - sectorReturn
+        - benchmarkEvidence
+        - sectorEvidence
+        - targetHit
+        - windowEvidence
+      properties:
+        receiptId: {type: string, format: uuid}
+        callId: {type: string}
+        snapshotId: {type: string}
+        snapshotProvenanceId: {type: string}
+        snapshotRole: {const: ORIGINAL_CALL_CONTEXT_ONLY_NOT_PRICE_SOURCE}
+        basisRevisionId: {type: [string, 'null']}
+        basisRevisionSequence: {type: [integer, 'null'], minimum: 1}
+        basisEventTimeUtc: {type: string, format: date-time}
+        methodologyId: {const: wsr-demo-target-hit-preview}
+        methodologyVersion: {const: 1.0.0}
+        methodologyDefinitionHash: {const: aaa8684e12a5d83df36eff5a15107828931526b36ccfcca71ac8f968804b1b1e}
+        inputFingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        ledgerFingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        evaluationAsOfUtc: {type: string, format: date-time}
+        evaluationAsOfKst: {type: string, description: 'ISO offset date-time, +09:00; zero seconds may be omitted.'}
+        recordedAtUtc: {type: string, format: date-time}
+        recordedAtKst: {type: string, description: 'ISO offset date-time, +09:00; zero seconds may be omitted.'}
+        dataMode: {const: DEMO}
+        scope: {const: PARTIAL_TARGET_HIT}
+        dataComplete: {const: false}
+        source: {const: PERSISTED_DEMO_INPUT_REPLAY}
+        termsProvenanceId: {type: string}
+        horizon: {type: string}
+        assetReturn: {$ref: '#/components/schemas/DecimalMetric'}
+        directionalWin: {$ref: '#/components/schemas/BooleanMetric'}
+        targetError: {$ref: '#/components/schemas/DecimalMetric'}
+        benchmarkReturn: {$ref: '#/components/schemas/DecimalMetric'}
+        sectorReturn: {$ref: '#/components/schemas/DecimalMetric'}
+        benchmarkEvidence:
+          oneOf:
+            - $ref: '#/components/schemas/ReferenceEvidence'
+            - type: 'null'
+        sectorEvidence:
+          oneOf:
+            - $ref: '#/components/schemas/ReferenceEvidence'
+            - type: 'null'
+        targetHit: {$ref: '#/components/schemas/BooleanMetric'}
+        windowEvidence:
+          oneOf:
+            - $ref: '#/components/schemas/WindowEvidence'
+            - type: 'null'
+      allOf:
+        - if:
+            properties:
+              targetHit:
+                properties: {state: {const: AVAILABLE}}
+          then:
+            properties: {windowEvidence: {$ref: '#/components/schemas/WindowEvidence'}}
+          else:
+            properties: {windowEvidence: {type: 'null'}}
+    BooleanMetric:
+      allOf:
+        - $ref: '#/components/schemas/Metric'
+        - properties: {decimalValue: {type: 'null'}}
+    DecimalMetric:
+      allOf:
+        - $ref: '#/components/schemas/Metric'
+        - properties: {booleanValue: {type: 'null'}}
+    ReferenceEvidence:
+      type: object
+      additionalProperties: false
+      description: >-
+        Only a selected resolved reference pair. Null when no pair resolved; retained
+        if a resolved pair produces OUTPUT_NOT_REPRESENTABLE. These identifiers are
+        replayed DEMO provenance claims, not proof of external provider authenticity.
+      required: [bindingId, bindingProvenanceId, sourceBindingRole, sourceBindingId, referenceAssetId,
+                 providerId, indexId, definitionRevision, currency, calendarId, calendarRevision,
+                 basisLevel, endpointLevel, continuityEvidenceId, continuityProvenanceId]
+      properties:
+        bindingId: {type: string}
+        bindingProvenanceId: {type: string}
+        sourceBindingRole: {enum: [BENCHMARK_ASSIGNMENT, SECTOR_MAPPING]}
+        sourceBindingId: {type: string}
+        referenceAssetId: {type: string}
+        providerId: {type: string}
+        indexId: {type: string}
+        definitionRevision: {type: string}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        calendarId: {type: string}
+        calendarRevision: {type: string}
+        basisLevel: {$ref: '#/components/schemas/Level'}
+        endpointLevel: {$ref: '#/components/schemas/Level'}
+        continuityEvidenceId: {type: string}
+        continuityProvenanceId: {type: string}
+    Level:
+      type: object
+      additionalProperties: false
+      required: [observationId, providerEventId, value, observedAtUtc, sourceId, sourceRevision, provenanceId]
+      properties:
+        observationId: {type: string}
+        providerEventId: {type: string}
+        value: {type: string, pattern: '^[0-9]+(\.[0-9]{1,12})?$', description: 'Positive reference index level, not a price or percentage.'}
+        observedAtUtc: {type: string, format: date-time}
+        sourceId: {type: string}
+        sourceRevision: {type: string}
+        provenanceId: {type: string}
+    PositiveLevel:
+      type: string
+      description: Positive exact NUMERIC(38,12) decimal text, not a percentage.
+      pattern: '^(?:0|[1-9][0-9]{0,25})(\.[0-9]{1,12})?$'
+      not: {pattern: '^0(\.0+)?$'}
+    WindowEvidence:
+      type: object
+      additionalProperties: false
+      required: [attestationScope, target, binding, observation, selectedField, selectedValue]
+      properties:
+        attestationScope: {"const":"CALLER_ATTESTED_DEMO_CAUSAL_WINDOW_NOT_RAW_TRADE_VERIFICATION"}
+        target: {"$ref":"#/components/schemas/TargetEvidence"}
+        binding: {"$ref":"#/components/schemas/WindowBinding"}
+        observation: {"$ref":"#/components/schemas/WindowObservation"}
+        selectedField: {"enum":["HIGH","LOW"]}
+        selectedValue: {"$ref":"#/components/schemas/PositiveLevel"}
+    TargetEvidence:
+      type: object
+      additionalProperties: false
+      required: [evidenceId, provenanceId, currency, adjustmentBasis, value, availableAtUtc, capturedAtUtc]
+      properties:
+        evidenceId: {"type":"string"}
+        provenanceId: {"type":"string"}
+        currency: {"type":"string","pattern":"^[A-Z]{3}$"}
+        adjustmentBasis: {"const":"SPLIT_AND_REVERSE_SPLIT_ADJUSTED_TO_ENDPOINT_SHARE_BASIS_DIVIDEND_UNADJUSTED"}
+        value: {"$ref":"#/components/schemas/PositiveLevel"}
+        availableAtUtc: {"type":"string","format":"date-time"}
+        capturedAtUtc: {"type":"string","format":"date-time"}
+    WindowBinding:
+      type: object
+      additionalProperties: false
+      required: [bindingId, revision, assetId, primaryVenueId, currency, priceSourceId, priceSourceRevision, availableAtUtc, capturedAtUtc, provenanceId]
+      properties:
+        bindingId: {"type":"string"}
+        revision: {"type":"string"}
+        assetId: {"type":"string"}
+        primaryVenueId: {"type":"string"}
+        currency: {"type":"string","pattern":"^[A-Z]{3}$"}
+        priceSourceId: {"type":"string"}
+        priceSourceRevision: {"type":"string"}
+        availableAtUtc: {"type":"string","format":"date-time"}
+        capturedAtUtc: {"type":"string","format":"date-time"}
+        provenanceId: {"type":"string"}
+    WindowObservation:
+      type: object
+      additionalProperties: false
+      required: [observationId, providerEventId, assetId, venueId, currency, priceSourceId, priceSourceRevision, provenanceId, calendarId, catalogRevision, orderedSessionIds, lowerBoundUtc, lowerBoundType, upperBoundUtc, upperBoundType, priceField, coverageCompleteness, adjustmentBasis, corporateActionContinuity, availableAtUtc, capturedAtUtc, windowHigh, windowLow]
+      properties:
+        observationId: {"type":"string"}
+        providerEventId: {"type":"string"}
+        assetId: {"type":"string"}
+        venueId: {"type":"string"}
+        currency: {"type":"string","pattern":"^[A-Z]{3}$"}
+        priceSourceId: {"type":"string"}
+        priceSourceRevision: {"type":"string"}
+        provenanceId: {"type":"string"}
+        calendarId: {"type":"string"}
+        catalogRevision: {"type":"string"}
+        orderedSessionIds: {"type":"array","minItems":1,"maxItems":4096,"uniqueItems":true,"items":{"type":"string","minLength":1}}
+        lowerBoundUtc: {"type":"string","format":"date-time"}
+        lowerBoundType: {"const":"EXCLUSIVE"}
+        upperBoundUtc: {"type":"string","format":"date-time"}
+        upperBoundType: {"const":"INCLUSIVE"}
+        priceField: {"const":"PRIMARY_VENUE_REGULAR_SESSION_CAUSAL_WINDOW_HIGH_LOW_PAIR"}
+        coverageCompleteness: {"const":"EXACT_CAUSAL_WINDOW_SESSION_UNION"}
+        adjustmentBasis: {"const":"SPLIT_AND_REVERSE_SPLIT_ADJUSTED_TO_ENDPOINT_SHARE_BASIS_DIVIDEND_UNADJUSTED"}
+        corporateActionContinuity: {"const":"SPLIT_REVERSE_SPLIT_CONTINUOUS"}
+        availableAtUtc: {"type":"string","format":"date-time"}
+        capturedAtUtc: {"type":"string","format":"date-time"}
+        windowHigh: {"$ref":"#/components/schemas/PositiveLevel"}
+        windowLow: {"$ref":"#/components/schemas/PositiveLevel"}

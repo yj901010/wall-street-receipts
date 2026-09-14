@@ -90,6 +90,27 @@ class CpiCustodyTests(unittest.TestCase):
                 expected = expected.replace(last, last.replace(b'");', b'",') + b'\n            "' + inventory + b'");')
                 expected = expected.replace(b'emitsTheExactPackagedV1ThroughV12Inventory', b'emitsTheExactPackagedV1ThroughV13Inventory')
             self.assertNotEqual(expected, old)
+            intermediate = bridge.git(SOURCE, "show", cpi.TARGET_HIT_RECEIPT_BASE + ":" + relative)
+            self.assertEqual(blob_record(intermediate), cpi.TARGET_HIT_RECEIPT_PREVIOUS_RECORDS[relative])
+            self.assertEqual(intermediate, expected)
+            (self.root / relative).write_bytes(old)
+            with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):
+                self.verify(previous)
+
+    def test_target_hit_receipt_changes_only_latest_assertions_and_additive_v14_inventory(self):
+        self.assertEqual(set(cpi.TARGET_HIT_RECEIPT_PREVIOUS_RECORDS), set(cpi.COMPARATIVE_RECEIPT_PREVIOUS_RECORDS))
+        previous = {**self.current, **cpi.TARGET_HIT_RECEIPT_PREVIOUS_RECORDS}
+        self.assertEqual(self.verify(previous), previous)
+        for relative, record in cpi.TARGET_HIT_RECEIPT_PREVIOUS_RECORDS.items():
+            old = bridge.git(SOURCE, "show", cpi.TARGET_HIT_RECEIPT_BASE + ":" + relative)
+            self.assertEqual(blob_record(old), record)
+            expected = old.replace(b'.isEqualTo("13")', b'.isEqualTo("14")').replace(b'.hasSize(13)', b'.hasSize(14)')
+            if relative.endswith("ReleaseSchemaInventoryCommandTest.java"):
+                inventory = b'migration|14|14|64656d6f20746172676574206869742073636f72696e67207265636569707473|SQL|5631345f5f64656d6f5f7461726765745f6869745f73636f72696e675f72656365697074732e73716c|2082867604|V14__demo_target_hit_scoring_receipts.sql|6a9ed80b22e1baedb98adadb7191b24364ed8ecbee61efe49290c8831aae5d96|2238'
+                last = next(line for line in old.splitlines() if b'migration|13|13|' in line)
+                expected = expected.replace(last, last.replace(b'");', b'",') + b'\n            "' + inventory + b'");')
+                expected = expected.replace(b'emitsTheExactPackagedV1ThroughV13Inventory', b'emitsTheExactPackagedV1ThroughV14Inventory')
+            self.assertNotEqual(expected, old)
             self.assertEqual(self.expected[relative], expected)
             (self.root / relative).write_bytes(old)
             with self.assertRaisesRegex(ValueError, "Unreviewed current CPI"):

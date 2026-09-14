@@ -85,6 +85,7 @@ FIXED_CI_PATHS = frozenset({
     "decisions/ADR-084-demo-comparative-receipt-persistence.md",
     "decisions/ADR-085-demo-comparative-receipt-command-and-audit.md",
     "decisions/ADR-086-demo-target-hit-scoring-input.md",
+    "decisions/ADR-087-demo-target-hit-receipt-persistence.md",
     "scripts/ci/scoring_contracts.py", "scripts/ci/test_scoring_contracts.py",
     "scripts/ci/test_cpi_operator_transport.py",
     "scripts/ci/test_cpi_operator_lifecycle.py",

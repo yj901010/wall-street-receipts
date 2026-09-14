@@ -432,3 +432,20 @@ all CI Python tests, current/legacy custody, fixture contracts and workflow limi
 The Web route/command still accepts only its existing profile. No updated browser
 behavior is claimed; do not substitute synthetic aggregate attestations for raw
 trade coverage or enable a provider to exercise this pure application slice.
+
+## ADR-087 target-hit receipt persistence
+
+Scoring custody pins 98 paths, adding 11 exact sources for the V14 table, service,
+repository, read-only controller/projection, four tests and OpenAPI contract.
+The one old comparative upgrade test retains its original V13 target explicitly;
+86 other scoring paths keep their exact merged bytes. Six existing CPI-owned
+migration/release tests advance only latest expectations and append the exact V14
+inventory. Preserve the historical V12/V13 delta proofs and exact predecessor
+mode/type/blob checks; no general product, financial golden or workflow changes.
+
+Run current full API verify and CI Python/contract/fixture/limit checks. New real
+PostgreSQL acceptance upgrades populated V13, preserves both older receipt types,
+executes concurrent/idempotent and restricted-role appends, and checks SELECT-only
+HTTP/restart/corruption behavior. The API remains partial DEMO and publishes only
+selected caller-attested window evidence, not raw-trade verification. Web and
+commands are unchanged; do not claim a newly executed responsive/browser check.

@@ -25,42 +25,45 @@ import com.wallstreetreceipts.api.infrastructure.persistence.JdbcAnalystCallRepo
 import com.wallstreetreceipts.api.infrastructure.provider.fixture.FixtureAnalystCallProvider;
 
 /** Mandatory real PostgreSQL migration, concurrent append, restart and SELECT-only HTTP acceptance. */
-class ComparativeScoringReceiptPostgreSqlTest {
+class TargetHitScoringReceiptPostgreSqlTest {
     @Test @Timeout(90)
     void upgradeConcurrencyRestartRestrictedReadsAndFailClosedIntegrity() throws Exception {
         try (var db = new PostgreSQLContainer<>("postgres:17-alpine").withDatabaseName("scoring_receipt_demo")
                 .withUsername("receipt_demo_owner").withPassword("DisposableDatabaseOnly").withReuse(false)
-                .withLabel("com.wallstreetreceipts.scoring-test", "ADR-084")
+                .withLabel("com.wallstreetreceipts.scoring-test", "ADR-087")
                 .withCreateContainerCmdModifier(cmd -> cmd.getHostConfig().withPortBindings(
                         new PortBinding(Ports.Binding.bindIpAndPort("127.0.0.1", 0), ExposedPort.tcp(5432))))) {
             db.start();
             assertThat(InetAddress.getByName(db.getHost()).isLoopbackAddress()).isTrue();
             assertThat(db.getContainerInfo().getNetworkSettings().getPorts().getBindings().get(ExposedPort.tcp(5432))[0].getHostIp()).isEqualTo("127.0.0.1");
-            Flyway.configure().dataSource(db.getJdbcUrl(), db.getUsername(), db.getPassword()).target("12").load().migrate();
+            Flyway.configure().dataSource(db.getJdbcUrl(), db.getUsername(), db.getPassword()).target("13").load().migrate();
             var ds = new DriverManagerDataSource(db.getJdbcUrl(), db.getUsername(), db.getPassword());
             var owner = new JdbcTemplate(ds);
             var calls = new JdbcAnalystCallRepository(new NamedParameterJdbcTemplate(ds));
             var provider = new FixtureAnalystCallProvider(new ObjectMapper());
             var transactions = new TransactionTemplate(new DataSourceTransactionManager(ds));
             var call = transactions.execute(s -> { calls.importDataSet(provider.load()); return ScoringReceiptFixture.seed(provider, calls); });
-            UUID oldId; byte[] oldBytes;
+            UUID oldId, comparativeId; byte[] oldBytes, comparativeBytes;
             try (var context = start(db, db.getUsername(), db.getPassword())) {
                 var old = context.getBean(ScoringReceiptService.class).append(ScoringReceiptFixture.input(call), "receipt-snapshot").stored();
                 oldId = old.receiptId(); oldBytes = old.inputBytes();
+                var comparative = context.getBean(ComparativeScoringReceiptService.class).append(
+                        ComparativeScoringFixture.input(ScoringReceiptFixture.input(call)), "receipt-snapshot").stored();
+                comparativeId = comparative.receiptId(); comparativeBytes = comparative.inputBytes();
             }
             var beforeUpgrade = inventory(owner);
-            var flyway = Flyway.configure().dataSource(db.getJdbcUrl(), db.getUsername(), db.getPassword()).target("13").load();
+            var flyway = Flyway.configure().dataSource(db.getJdbcUrl(), db.getUsername(), db.getPassword()).load();
             assertThat(flyway.migrate().migrationsExecuted).isEqualTo(1);
-            assertThat(flyway.info().applied()).hasSize(13);
-            var afterUpgrade = inventory(owner); afterUpgrade.remove("demo_comparative_scoring_receipts");
+            assertThat(flyway.info().applied()).hasSize(14);
+            var afterUpgrade = inventory(owner); afterUpgrade.remove("demo_target_hit_scoring_receipts");
             assertThat(afterUpgrade).isEqualTo(beforeUpgrade);
             assertThat(flyway.migrate().migrationsExecuted).isZero();
-            var input = ComparativeScoringFixture.input(ScoringReceiptFixture.input(call));
+            var input = TargetHitScoringFixture.input(ScoringReceiptFixture.input(call), "160", "80");
             UUID id; byte[] originalBytes;
             try (var context = start(db, db.getUsername(), db.getPassword()); var pool = Executors.newFixedThreadPool(6)) {
-                var service = context.getBean(ComparativeScoringReceiptService.class);
+                var service = context.getBean(TargetHitScoringReceiptService.class);
                 var gate = new CountDownLatch(1);
-                var tasks = new ArrayList<Future<ComparativeScoringReceiptService.Verified>>();
+                var tasks = new ArrayList<Future<TargetHitScoringReceiptService.Verified>>();
                 for (int n = 0; n < 6; n++) tasks.add(pool.submit(() -> { gate.await(); return service.append(input, "receipt-snapshot"); }));
                 gate.countDown();
                 var saved = tasks.getFirst().get(10, TimeUnit.SECONDS).stored();
@@ -69,19 +72,19 @@ class ComparativeScoringReceiptPostgreSqlTest {
                     var entry = task.get(10, TimeUnit.SECONDS).stored();
                     assertThat(entry.receiptId()).isEqualTo(id); assertThat(entry.recordedAt()).isEqualTo(saved.recordedAt());
                 }
-                assertThat(owner.queryForObject("SELECT COUNT(*) FROM demo_comparative_scoring_receipts", Integer.class)).isEqualTo(1);
-                service.append(ComparativeScoringFixture.input(edit(input.endpoint(), "evaluationAsOf", AS_OF.plusSeconds(1))), "receipt-snapshot");
+                assertThat(owner.queryForObject("SELECT COUNT(*) FROM demo_target_hit_scoring_receipts", Integer.class)).isEqualTo(1);
+                service.append(TargetHitScoringFixture.input(edit(input.comparative().endpoint(), "evaluationAsOf", AS_OF.plusSeconds(1)), "160", "80"), "receipt-snapshot");
                 assertThat(service.find(call.id(), id).stored().inputBytes()).isEqualTo(originalBytes);
                 var revision = ScoringReceiptFixture.correction(call);
                 context.getBean(AnalystCallRevisionRepository.class).saveIfAbsent(revision);
-                var corrected = service.append(ComparativeScoringFixture.input(ScoringReceiptFixture.corrected(input.endpoint(), revision)), "receipt-snapshot");
+                var corrected = service.append(TargetHitScoringFixture.input(ScoringReceiptFixture.corrected(input.comparative().endpoint(), revision), "160", "80"), "receipt-snapshot");
                 assertThat(corrected.stored().basisRevisionSequence()).isEqualTo(1);
                 for (var assignment : List.of("data_complete=TRUE", "data_mode='LIVE'", "receipt_scope='FULL'",
                         "recorded_at=evaluation_as_of - INTERVAL '1 second'", "snapshot_id='demo-snapshot-001'",
                         "basis_revision_id='receipt-correction',basis_revision_sequence=2,basis_revision_type='CORRECTION'",
                         "basis_revision_id='receipt-correction',basis_revision_sequence=1,basis_revision_type='CANCELLATION'",
                         "basis_revision_sequence=1", "input_bytes=decode('', 'hex')", "input_bytes=decode(repeat('00',1048577),'hex')")) {
-                    assertThatThrownBy(() -> owner.update("UPDATE demo_comparative_scoring_receipts SET " + assignment + " WHERE receipt_id=?", id.toString()))
+                    assertThatThrownBy(() -> owner.update("UPDATE demo_target_hit_scoring_receipts SET " + assignment + " WHERE receipt_id=?", id.toString()))
                             .isInstanceOf(DataAccessException.class);
                 }
             }
@@ -90,44 +93,62 @@ class ComparativeScoringReceiptPostgreSqlTest {
             owner.execute("GRANT SELECT ON ALL TABLES IN SCHEMA public TO receipt_demo_reader");
             owner.execute("CREATE ROLE receipt_demo_append LOGIN PASSWORD 'DisposableAppendOnly'");
             owner.execute("GRANT USAGE ON SCHEMA public TO receipt_demo_append");
-            owner.execute("GRANT SELECT,INSERT ON demo_comparative_scoring_receipts TO receipt_demo_append");
+            owner.execute("GRANT SELECT ON ALL TABLES IN SCHEMA public TO receipt_demo_append");
+            owner.execute("GRANT INSERT ON demo_target_hit_scoring_receipts TO receipt_demo_append");
+            owner.execute("GRANT UPDATE(call_id) ON analyst_calls TO receipt_demo_append");
             var appendOnly = new JdbcTemplate(new DriverManagerDataSource(db.getJdbcUrl(), "receipt_demo_append", "DisposableAppendOnly"));
-            assertThat(appendOnly.queryForObject("SELECT has_table_privilege(current_user,'demo_comparative_scoring_receipts','INSERT')", Boolean.class)).isTrue();
-            for (var sql : List.of("UPDATE demo_comparative_scoring_receipts SET data_complete=FALSE WHERE FALSE", "DELETE FROM demo_comparative_scoring_receipts WHERE FALSE"))
+            assertThat(appendOnly.queryForObject("SELECT has_table_privilege(current_user,'demo_target_hit_scoring_receipts','INSERT')", Boolean.class)).isTrue();
+            for (var sql : List.of("UPDATE demo_target_hit_scoring_receipts SET data_complete=FALSE WHERE FALSE", "DELETE FROM demo_target_hit_scoring_receipts WHERE FALSE"))
                 assertThatThrownBy(() -> appendOnly.update(sql)).isInstanceOf(DataAccessException.class);
+            var beforeRestrictedAppend = inventory(owner);
+            try (var context = start(db, "receipt_demo_append", "DisposableAppendOnly")) {
+                var service = context.getBean(TargetHitScoringReceiptService.class);
+                var same = service.append(input, "receipt-snapshot");
+                assertThat(same.stored().receiptId()).isEqualTo(id);
+                service.append(TargetHitScoringFixture.input(edit(input.comparative().endpoint(),
+                        "evaluationAsOf", AS_OF.plusSeconds(2)), "149", "80"), "receipt-snapshot");
+            }
+            var afterRestrictedAppend = inventory(owner);
+            beforeRestrictedAppend.remove("demo_target_hit_scoring_receipts");
+            afterRestrictedAppend.remove("demo_target_hit_scoring_receipts");
+            assertThat(afterRestrictedAppend).isEqualTo(beforeRestrictedAppend);
             try (var context = start(db, "receipt_demo_reader", "DisposableReaderOnly");
                  var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).build()) {
                 var reader = context.getBean(JdbcTemplate.class);
                 assertThat(reader.queryForObject("SELECT current_user", String.class)).isEqualTo("receipt_demo_reader");
-                assertThatThrownBy(() -> reader.update("DELETE FROM demo_comparative_scoring_receipts WHERE FALSE")).isInstanceOf(DataAccessException.class);
+                assertThatThrownBy(() -> reader.update("DELETE FROM demo_target_hit_scoring_receipts WHERE FALSE")).isInstanceOf(DataAccessException.class);
                 var base = URI.create("http://127.0.0.1:" + context.getWebServer().getPort());
-                var path = "/v1/calls/demo-call/comparative-scoring-receipts";
+                var path = "/v1/calls/demo-call/target-hit-scoring-receipts";
                 var beforeReads = inventory(owner);
                 var oldResponse = send(client, base.resolve("/v1/calls/demo-call/scoring-receipts/" + oldId), "GET");
                 assertThat(oldResponse.statusCode()).isEqualTo(200);
                 assertThat(oldResponse.body()).contains("PARTIAL_ENDPOINT", "0.200000000000").doesNotContain("benchmarkReturn");
                 assertThat(context.getBean(ScoringReceiptService.class).find(call.id(), oldId).stored().inputBytes()).isEqualTo(oldBytes);
+                assertThat(context.getBean(ComparativeScoringReceiptService.class).find(call.id(), comparativeId).stored().inputBytes()).isEqualTo(comparativeBytes);
+                var comparativeResponse = send(client, base.resolve("/v1/calls/demo-call/comparative-scoring-receipts/" + comparativeId), "GET");
+                assertThat(comparativeResponse.statusCode()).isEqualTo(200);
+                assertThat(comparativeResponse.body()).contains("PARTIAL_COMPARATIVE", "0.100000000000").doesNotContain("targetHit", "windowEvidence");
                 for (var method : List.of("GET", "HEAD")) {
                     for (var route : List.of(path, path + "/" + id)) {
                         var response = send(client, base.resolve(route), method);
                         assertThat(response.statusCode()).isEqualTo(200);
                         assertThat(response.headers().firstValue("cache-control")).contains("no-store");
                         if (method.equals("HEAD")) assertThat(response.body()).isEmpty();
-                        else assertThat(response.body()).contains("PARTIAL_COMPARATIVE", "0.200000000000", "0.100000000000", "-0.050000000000", "BENCHMARK_ASSIGNMENT", "SECTOR_MAPPING", "PERSISTED_DEMO_INPUT_REPLAY").doesNotContain("inputBytes");
+                        else assertThat(response.body()).contains("PARTIAL_TARGET_HIT", "0.200000000000", "0.100000000000", "-0.050000000000", "BENCHMARK_ASSIGNMENT", "SECTOR_MAPPING", "PERSISTED_DEMO_INPUT_REPLAY", "targetHit", "windowEvidence", "CALLER_ATTESTED_DEMO_CAUSAL_WINDOW_NOT_RAW_TRADE_VERIFICATION").doesNotContain("inputBytes");
                     }
                 }
                 assertThat(send(client, base.resolve(path), "POST").statusCode()).isEqualTo(405);
-                assertThat(send(client, base.resolve("/v1/calls/demo-call-002/comparative-scoring-receipts/" + id), "GET").statusCode()).isEqualTo(404);
+                assertThat(send(client, base.resolve("/v1/calls/demo-call-002/target-hit-scoring-receipts/" + id), "GET").statusCode()).isEqualTo(404);
                 assertThat(inventory(owner)).isEqualTo(beforeReads);
-                owner.update("UPDATE demo_comparative_scoring_receipts SET input_bytes=? WHERE receipt_id=?", new byte[]{1,2,3}, id.toString());
+                owner.update("UPDATE demo_target_hit_scoring_receipts SET input_bytes=? WHERE receipt_id=?", new byte[]{1,2,3}, id.toString());
                 var corrupted = inventory(owner);
                 for (var route : List.of(path, path + "/" + id)) {
                     var response = send(client, base.resolve(route), "GET");
                     assertThat(response.statusCode()).isEqualTo(503);
-                    assertThat(response.body()).isEqualTo("{\"code\":\"COMPARATIVE_SCORING_RECEIPT_UNAVAILABLE\",\"dataMode\":\"DEMO\"}");
+                    assertThat(response.body()).isEqualTo("{\"code\":\"TARGET_HIT_SCORING_RECEIPT_UNAVAILABLE\",\"dataMode\":\"DEMO\"}");
                 }
                 assertThat(inventory(owner)).isEqualTo(corrupted);
-                owner.update("UPDATE demo_comparative_scoring_receipts SET input_bytes=? WHERE receipt_id=?", originalBytes, id.toString());
+                owner.update("UPDATE demo_target_hit_scoring_receipts SET input_bytes=? WHERE receipt_id=?", originalBytes, id.toString());
                 assertThat(send(client, base.resolve(path + "/" + id), "GET").statusCode()).isEqualTo(200);
                 owner.update("UPDATE market_snapshots SET asset_price=998 WHERE call_id='demo-call'");
                 assertThat(send(client, base.resolve(path + "/" + id), "GET").statusCode()).isEqualTo(503);

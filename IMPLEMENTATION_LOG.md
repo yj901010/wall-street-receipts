@@ -9807,3 +9807,75 @@ configured origin or any network endpoint.
   Final exact staged-path, private-value and source-custody verification precede
   the approved feature commit/push. PR creation, hosted PR CI and merge remain
   user actions; local verification is complete.
+
+## ADR-087 — DEMO target-hit receipt persistence and reads (2026-09-14)
+
+- PR #34 `feat(scoring): compose demo target-hit inputs` merged at
+  `718b03209ee19c69c665f795a2598c8702d07ab2`. PR CI #80/run 34798944141
+  succeeded; merge CI #81/run 34799263931 was running at the initial check.
+  Branch `feature/p3-target-hit-receipt-persistence` starts at that develop.
+- Merge CI #81/run 34799263931 subsequently succeeded, confirmed before final
+  local verification.
+- Added V14 demo_target_hit_scoring_receipts, insert/select repository/JDBC,
+  explicit in-process service and two read routes:
+  `/v1/calls/{callId}/target-hit-scoring-receipts` and
+  `/v1/calls/{callId}/target-hit-scoring-receipts/{receiptId}`.
+  GET/HEAD only, no-store, bounded latest-20 plus hasMore, exact call/UUID scoping
+  and sanitized failure; no HTTP append or new command/UI.
+- Full ADR-086 canonical bytes, definition/input/ledger hashes and original/
+  correction identity are stored. Existing ledger verifier checks persisted DEMO
+  terms/source/snapshot. Concurrent append serializes on the call; identical
+  retry retains UUID/time. Read-only repeatable-read replays bytes and ledger,
+  fails closed on drift and never writes a replacement. Clock/UTC microseconds,
+  foreign-key/scope/size constraints and exact ratio strings are preserved.
+- Six metric meanings stay partial; target-hit false is a real calculated miss,
+  never missing evidence. Selected window evidence includes target/binding/source,
+  exact high/low, boundaries/session IDs and explicit caller-attested DEMO scope.
+  No raw tick coverage or provider-authentication claim; future/rejected candidates
+  never reach the response. Existing endpoint/comparative product bytes stay frozen.
+- Four new tests cover API/ledger, projection, boundary and real PostgreSQL.
+  Initial focused suite: **136/136 PASS**, zero failures/errors/skips, **1m00s**
+  (`.cache/adr087-focused.log`). V13->V14 preserves actual old receipts and
+  inventories; six concurrent appends return one identity; actual restricted-role
+  append, restart, SELECT-only HTTP, constraints, corruption and recovery pass.
+  An additional actual-JSON/OpenAPI-field check is included in final verification.
+- CI pins 11 additions (98 scoring paths); the only old scoring test edit pins its
+  historical V13 upgrade target. Six existing migration/release tests change only
+  latest-version assertions and the exact V14 inventory. Historical V12/V13
+  proofs remain separately verified; no workflow or broad product exception.
+- Next: explicit DEMO command and read-only audit UI for this new profile.
+  Canonical lifecycle, MFE/MAE/raw-coverage prerequisites, alpha/ranking and actual
+  Ubuntu deployment remain unfinished. No user DB/server migration or live feed.
+- Requested separate public-push approval for exactly **26 files**: 6 production
+  Java/SQL, 4 new tests, 7 closed existing test edits, 1 API contract, 5 CI Python
+  files, CI README, ADR and implementation log. Exclude actual private values and
+  preserve the user's existing next-env.d.ts. PR creation/merge remain user actions.
+- Initial full Maven verify: **3136/3136 PASS**, zero failures/errors/skips,
+  including PostgreSQL and JAR packaging, **3m35s** (`.cache/adr087-api-full.log`).
+  Initial full Python CI: **309/315 PASS**, six existing Windows capability skips,
+  zero failures/errors, **154.061s** (`.cache/adr087-ci.log`).
+- Final review added strict stored-UUID canonical validation and two regression
+  cases: shortened/uppercase UUIDs must fail closed instead of being normalized
+  into published identities. Final source is re-pinned and reverified below.
+- Final Java 21 Maven verify: **3138/3138 PASS**, zero failures/errors/skips,
+  including all **139 new cases**, PostgreSQL integration and executable JAR
+  packaging, **3m46s** (`.cache/adr087-api-final.log`, `.cache/adr087-api/`).
+- Final full Python CI: **309/315 PASS**, six existing Windows capability skips,
+  zero failures/errors, **162.356s** (`.cache/adr087-ci-final.log`). Current source
+  custody, all 98 scoring pins, exact predecessor preservation, fixture contracts,
+  workflow limits and whitespace checks pass. Workflow remains 29,069 bytes;
+  largest run is 598 characters. This is local validation, not a claim that all
+  84 historical Ubuntu-runner bodies or this feature's hosted CI were run locally.
+- Exact 26-file scope, feature/base/remote, empty index, credential-pattern and
+  in-memory local .env private-value exclusion checks pass without printing keys.
+  No ADR-087-labelled test container remains. No user database/server was migrated
+  or seeded; no live market provider was activated.
+- Web behavior is unchanged; no new Web lint/unit/build/responsive run is claimed.
+  Existing accepted Web source is byte-preserved by custody. User-owned
+  `apps/web/next-env.d.ts` remains unchanged at SHA256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- Local implementation and verification are complete. User subsequently approved
+  publication of this phase's verified **26 files** to
+  `feature/p3-target-hit-receipt-persistence`. Recheck exact staged paths,
+  private-value exclusion and source custody before commit/push; preserve the
+  user's next-env.d.ts. PR creation, hosted PR CI and merge remain user actions.
