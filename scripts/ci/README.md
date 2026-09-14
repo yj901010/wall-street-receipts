@@ -381,3 +381,21 @@ is the only added documentation allowlist path. Existing runtime, DB migration,
 provider, public API/Web and historical workflow bodies are unchanged. Run the
 ordinary API suite and `test_scoring_contracts.py` against these exact bytes; do
 not substitute a historical test projection for the current composition tests.
+
+## ADR-084 comparative receipt persistence
+
+The scoring registry pins 59 exact paths: 58 additions and the existing closed
+call-page link edit. Eleven new paths implement separate comparative persistence,
+the V13 migration, a two-read OpenAPI contract and four Java test sources.
+Only the old PostgreSQL upgrade test changes within previous scoring pins:
+its existing V11->V12 acceptance now explicitly targets V12. Its exact prior
+blob and one-line delta are tested; new real PostgreSQL acceptance proves the
+populated V12->V13 upgrade and preserves an actual old receipt.
+
+Six existing CPI-owned migration/release tests advance only latest version/count
+expectations and the exact additive V13 inventory line. Exact prior V12 blobs
+are accepted only for precommit custody; current working bytes must match new
+hashes. The old V11->V12 delta test still verifies its exact V12 intermediate.
+No workflow, historical calculator, provider DTO, fixture, runtime configuration
+or Web source changes. Run current full API verification, all CI Python tests,
+current/legacy custody validation, fixture validation and workflow limits.

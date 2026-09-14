@@ -9586,3 +9586,71 @@ configured origin or any network endpoint.
   `feature/p3-comparative-scoring-input`. Final current custody, exact staged
   paths, private-value exclusion and next-env preservation precede publication.
   Return only a title/body-prefilled PR creation link against develop.
+
+## ADR-084 — DEMO comparative receipt persistence and reads (2026-09-14)
+
+- Confirmed PR #31 merged at `a68bae277391bc99950564642fddef6a166fa62d`;
+  PR CI #74/run 34563817529 and merge CI #75/run 34564069595 both succeeded.
+  Created `feature/p3-comparative-receipt-persistence` from that origin/develop.
+- Added separate ComparativeScoringReceiptRepository, JDBC adapter, transactional
+  ComparativeScoringReceiptService, read-only controller/projection and additive
+  V13 table. Existing endpoint bytes/method/ledger verifier/writer/API/Web remain
+  unchanged. Full comparative canonical input and actual endpoint ledger binding
+  are retained; numeric results are replayed, not persisted as canonical outcomes.
+- Routes: GET/HEAD `/v1/calls/{callId}/comparative-scoring-receipts` and the
+  call-scoped `/{receiptId}` child. No query parameters, HTTP writer, scheduler,
+  provider activation or new runtime dependency. Public explicit DEMO reads:
+  no-store, max 20 published rows with hasMore, sanitized 400/404/503.
+- Scope remains PARTIAL_COMPARATIVE and dataComplete=false. Five metrics preserve
+  unavailable/pending/NA semantics. Selected reference pair identifiers, level
+  values/times/source revisions and continuity provenance are projected; rejected
+  candidates are not. Comparative evidence is preserved caller-supplied DEMO
+  input, not independent external provider authentication or observed-value proof.
+- New tests cover storage/API replay and drift, all 13 comparative candidate-list
+  projection boundaries, partial states/output overflow, transaction/HTTP error
+  boundaries, and disposable PostgreSQL migration/concurrency/restart/SELECT-only
+  reads. V12->V13 acceptance seeds a real old receipt and compares every old
+  table inventory before/after. Existing V11->V12 acceptance is pinned to V12,
+  with assertions intact. Six old migration/release tests receive only exact
+  latest-version assertions and the additive V13 packaged inventory entry.
+- CI pins 11 new scoring paths (59 total) and exact closed predecessor deltas.
+  One ADR allowlist entry, no general product exception or workflow-body edits.
+  Contract and custody tests retain old method and migration proofs.
+- Initial H2 tests: 35 passed. First real PostgreSQL attempt could not start
+  because Docker Desktop was stopped; started installed Docker in the background.
+  Repeated focused acceptance passed 117/117 with no failures/errors/skips,
+  including real V12->V13, six concurrent appends, old V11->V12 and exact release
+  inventory. No existing database was used. Full final verification follows.
+- No Web feature change; responsive/browser, Web lint and build are not repeated
+  for this API-only change. Previous PR #31 and merge CI verified those unchanged
+  surfaces. Preserve the user's pre-existing next-env.d.ts bytes and actual keys.
+- Next: explicit opt-in comparative DEMO append command and read-only audit UI
+  using this new API; actual Ubuntu deployment awaits a prepared server. No PR
+  creation, merge, or public push is authorized by this implementation step.
+
+### ADR-084 final local acceptance
+
+- Full Java 21 Maven `verify`: **2925/2925 PASS**, zero failures/errors/skips,
+  executable Spring Boot JAR packaging PASS, **2m36s**. Includes **112 new cases**:
+  36 H2 API, 6 HTTP/transaction boundary, 1 real PostgreSQL acceptance and 69
+  projection tests. Evidence: `.cache/adr084-api-full.log`,
+  `.cache/adr084-api/surefire-reports/` and packaged artifact.
+- Full CI Python suite: **304/310 PASS**, six existing Windows capability skips,
+  no failures/errors, **55.949s** (`.cache/adr084-ci.log`). Current/legacy source
+  custody, all 59 scoring pins, closed migration deltas, OpenAPI/DEMO fixture
+  contracts, workflow limits and `git diff --check` PASS. Workflow remains
+  29,069 bytes; largest run remains 598 characters.
+- The user's only pre-existing dirty file `apps/web/next-env.d.ts` is unchanged
+  at SHA256 `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+  No actual server/database was migrated, no provider was enabled, and no hosted
+  CI has run for this unpushed feature.
+- Requested separate public-push approval for exactly **26 files**: 6 production
+  Java/SQL, 4 new Java tests, 7 closed existing test edits, 1 OpenAPI contract,
+  5 CI Python files, 1 CI README, implementation log and ADR. Final staged-path
+  and private-value checks precede any approved commit/push. PR creation/merge
+  remain user actions.
+- User approved the verified **26-file** commit/push to
+  `feature/p3-comparative-receipt-persistence`. Recheck exact staged paths,
+  current source custody and private-value exclusion before publication; preserve
+  next-env.d.ts. Return a title/body-prefilled compare link against develop,
+  without creating or merging the PR.

@@ -1,0 +1,236 @@
+openapi: 3.1.0
+info:
+  title: DEMO partial comparative scoring receipt reads
+  version: 1.0.0
+  description: >-
+    ADR-084 additive API. Replays preserved ADR-083 canonical inputs against their
+    pinned methodology and persisted DEMO call/source/snapshot binding. Not a
+    canonical outcome, live price attestation, aggregate, or complete score.
+    Includes asset return, directional win, target error, benchmark return and sector
+    return. Selected comparative evidence is caller-supplied DEMO input, not provider
+    authentication or an independent observed-value attestation. Raw candidates are
+    never returned. No alpha, target hit, MFE/MAE, ranking or full score.
+    No HTTP append operation. Unknown query parameters are rejected.
+paths:
+  /v1/calls/{callId}/comparative-scoring-receipts:
+    parameters:
+      - $ref: '#/components/parameters/CallId'
+    get:
+      operationId: recentDemoComparativeScoringReceipts
+      description: >-
+        Up to 20 verified records, ordered by recordedAt descending then receiptId
+        descending. hasMore indicates omitted older records; no automatic winner
+        selection or pagination cursor. A broken published row fails the whole
+        page. Empty known DEMO call returns an empty list. HEAD also supported.
+      responses:
+        '200':
+          description: Verified DEMO page; Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [dataMode, source, limit, hasMore, items]
+                properties:
+                  dataMode: {const: DEMO}
+                  source: {const: PERSISTED_DEMO_INPUT_REPLAY}
+                  limit: {const: 20}
+                  hasMore: {type: boolean}
+                  items:
+                    type: array
+                    maxItems: 20
+                    items: {$ref: '#/components/schemas/Receipt'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '404': {$ref: '#/components/responses/Missing'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /v1/calls/{callId}/comparative-scoring-receipts/{receiptId}:
+    parameters:
+      - $ref: '#/components/parameters/CallId'
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    get:
+      operationId: selectedDemoComparativeScoringReceipt
+      description: Exact call-scoped record; never falls back to another receipt. HEAD also supported.
+      responses:
+        '200':
+          description: Verified DEMO receipt; Cache-Control no-store.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Receipt'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '404': {$ref: '#/components/responses/Missing'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+components:
+  parameters:
+    CallId:
+      name: callId
+      in: path
+      required: true
+      schema: {type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'}
+  responses:
+    Invalid:
+      description: Invalid identifier or any query parameter; no-store, sanitized.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Missing:
+      description: Unknown/non-DEMO call, unknown receipt or receipt belonging to another call; no-store.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Unavailable:
+      description: Storage/transaction/integrity/replay failure; no-store, no input or driver details.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, dataMode]
+      properties:
+        code: {enum: [INVALID_COMPARATIVE_SCORING_QUERY, COMPARATIVE_SCORING_RECEIPT_NOT_FOUND, COMPARATIVE_SCORING_RECEIPT_UNAVAILABLE]}
+        dataMode: {const: DEMO}
+    Metric:
+      type: object
+      additionalProperties: false
+      required: [state, decimalValue, booleanValue, reasons]
+      description: >-
+        Only AVAILABLE has a value: scale-12 decimal string for returns/errors,
+        Boolean for directionalWin. Ratios, not percentage points. Other states
+        have two null values and preserve the nested reason chain. Neutral
+        direction is NOT_APPLICABLE independently of asset-return readiness.
+      properties:
+        state: {enum: [AVAILABLE, PENDING, UNAVAILABLE, NOT_APPLICABLE]}
+        decimalValue: {type: [string, 'null'], pattern: '^-?[0-9]+\.[0-9]{12}$'}
+        booleanValue: {type: [boolean, 'null']}
+        reasons: {type: array, items: {type: string}}
+      oneOf:
+        - properties:
+            state: {const: AVAILABLE}
+            reasons: {maxItems: 0}
+          oneOf:
+            - properties: {decimalValue: {type: string}, booleanValue: {type: 'null'}}
+            - properties: {decimalValue: {type: 'null'}, booleanValue: {type: boolean}}
+        - properties:
+            state: {enum: [PENDING, UNAVAILABLE, NOT_APPLICABLE]}
+            decimalValue: {type: 'null'}
+            booleanValue: {type: 'null'}
+            reasons: {minItems: 1}
+    Receipt:
+      type: object
+      additionalProperties: false
+      required:
+        - receiptId
+        - callId
+        - snapshotId
+        - snapshotProvenanceId
+        - snapshotRole
+        - basisRevisionId
+        - basisRevisionSequence
+        - basisEventTimeUtc
+        - methodologyId
+        - methodologyVersion
+        - methodologyDefinitionHash
+        - inputFingerprint
+        - ledgerFingerprint
+        - evaluationAsOfUtc
+        - evaluationAsOfKst
+        - recordedAtUtc
+        - recordedAtKst
+        - dataMode
+        - scope
+        - dataComplete
+        - source
+        - termsProvenanceId
+        - horizon
+        - assetReturn
+        - directionalWin
+        - targetError
+        - benchmarkReturn
+        - sectorReturn
+        - benchmarkEvidence
+        - sectorEvidence
+      properties:
+        receiptId: {type: string, format: uuid}
+        callId: {type: string}
+        snapshotId: {type: string}
+        snapshotProvenanceId: {type: string}
+        snapshotRole: {const: ORIGINAL_CALL_CONTEXT_ONLY_NOT_PRICE_SOURCE}
+        basisRevisionId: {type: [string, 'null']}
+        basisRevisionSequence: {type: [integer, 'null'], minimum: 1}
+        basisEventTimeUtc: {type: string, format: date-time}
+        methodologyId: {const: wsr-demo-comparative-preview}
+        methodologyVersion: {const: 1.0.0}
+        methodologyDefinitionHash: {const: 6fb2d737d177662ec072277f1e345ca10a2c9447d35353bc46c1f886669ad6d2}
+        inputFingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        ledgerFingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        evaluationAsOfUtc: {type: string, format: date-time}
+        evaluationAsOfKst: {type: string, description: 'ISO offset date-time, +09:00; zero seconds may be omitted.'}
+        recordedAtUtc: {type: string, format: date-time}
+        recordedAtKst: {type: string, description: 'ISO offset date-time, +09:00; zero seconds may be omitted.'}
+        dataMode: {const: DEMO}
+        scope: {const: PARTIAL_COMPARATIVE}
+        dataComplete: {const: false}
+        source: {const: PERSISTED_DEMO_INPUT_REPLAY}
+        termsProvenanceId: {type: string}
+        horizon: {type: string}
+        assetReturn: {$ref: '#/components/schemas/Metric'}
+        directionalWin: {$ref: '#/components/schemas/Metric'}
+        targetError: {$ref: '#/components/schemas/Metric'}
+        benchmarkReturn: {$ref: '#/components/schemas/DecimalMetric'}
+        sectorReturn: {$ref: '#/components/schemas/DecimalMetric'}
+        benchmarkEvidence:
+          oneOf:
+            - $ref: '#/components/schemas/ReferenceEvidence'
+            - type: 'null'
+        sectorEvidence:
+          oneOf:
+            - $ref: '#/components/schemas/ReferenceEvidence'
+            - type: 'null'
+    DecimalMetric:
+      allOf:
+        - $ref: '#/components/schemas/Metric'
+        - properties: {booleanValue: {type: 'null'}}
+    ReferenceEvidence:
+      type: object
+      additionalProperties: false
+      description: >-
+        Only a selected resolved reference pair. Null when no pair resolved; retained
+        if a resolved pair produces OUTPUT_NOT_REPRESENTABLE. These identifiers are
+        replayed DEMO provenance claims, not proof of external provider authenticity.
+      required: [bindingId, bindingProvenanceId, sourceBindingRole, sourceBindingId, referenceAssetId,
+                 providerId, indexId, definitionRevision, currency, calendarId, calendarRevision,
+                 basisLevel, endpointLevel, continuityEvidenceId, continuityProvenanceId]
+      properties:
+        bindingId: {type: string}
+        bindingProvenanceId: {type: string}
+        sourceBindingRole: {enum: [BENCHMARK_ASSIGNMENT, SECTOR_MAPPING]}
+        sourceBindingId: {type: string}
+        referenceAssetId: {type: string}
+        providerId: {type: string}
+        indexId: {type: string}
+        definitionRevision: {type: string}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        calendarId: {type: string}
+        calendarRevision: {type: string}
+        basisLevel: {$ref: '#/components/schemas/Level'}
+        endpointLevel: {$ref: '#/components/schemas/Level'}
+        continuityEvidenceId: {type: string}
+        continuityProvenanceId: {type: string}
+    Level:
+      type: object
+      additionalProperties: false
+      required: [observationId, providerEventId, value, observedAtUtc, sourceId, sourceRevision, provenanceId]
+      properties:
+        observationId: {type: string}
+        providerEventId: {type: string}
+        value: {type: string, pattern: '^[0-9]+(\.[0-9]{1,12})?$', description: 'Positive reference index level, not a price or percentage.'}
+        observedAtUtc: {type: string, format: date-time}
+        sourceId: {type: string}
+        sourceRevision: {type: string}
+        provenanceId: {type: string}
