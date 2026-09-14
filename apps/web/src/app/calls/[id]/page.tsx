@@ -111,6 +111,9 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
         {call.dataMode === "DEMO" && <p><Link href={`/calls/${encodeURIComponent(call.callId)}/scoring-receipts`} prefetch={false}>
           {locale === "ko" ? "DEMO 평가 기록" : "DEMO scoring receipts"}
         </Link></p>}
+        {call.dataMode === "DEMO" && <p><Link href={`/calls/${encodeURIComponent(call.callId)}/comparative-scoring-receipts`} prefetch={false}>
+          {locale === "ko" ? "DEMO 비교 평가 기록" : "DEMO comparative scoring receipts"}
+        </Link></p>}
 
         <section className="detail-heading" aria-labelledby="call-title">
           <div>

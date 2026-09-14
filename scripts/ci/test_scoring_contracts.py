@@ -25,10 +25,10 @@ class ScoringCustodyTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
 
-    def test_exact_fifty_eight_additions_and_one_closed_link_edit(self):
-        self.assertEqual(len(scoring.SCORING_PATHS), 59)
+    def test_exact_seventy_eight_additions_and_one_closed_link_edit(self):
+        self.assertEqual(len(scoring.SCORING_PATHS), 79)
         self.assertFalse(scoring.SCORING_PATHS & (bridge.FIXED_CI_PATHS | bridge.CPI_PATHS | bridge.NAVIGATION_PATHS))
-        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 30)
+        self.assertEqual(sum("/application/scoring/" in p for p in scoring.SCORING_PATHS), 33)
         self.assertIn("contracts/scoring-receipts.openapi.yaml", scoring.SCORING_PATHS)
         self.assertIn("apps/api/src/main/resources/db/migration/V12__demo_scoring_receipts.sql", scoring.SCORING_PATHS)
         self.assertIn("apps/api/src/main/resources/db/migration/V13__demo_comparative_scoring_receipts.sql", scoring.SCORING_PATHS)
@@ -92,13 +92,28 @@ class ScoringCustodyTests(unittest.TestCase):
         relative = next(iter(self.baseline))
         old = bridge.git(SOURCE, "show", bridge.BASELINE + ":" + relative)
         self.assertEqual(blob_record(old), self.baseline[relative])
-        new = self.raw[relative]
+        new = bridge.git(SOURCE, "show", scoring.COMPARATIVE_AUDIT_BASE + ":" + relative)
+        self.assertEqual(blob_record(new), scoring.COMPARATIVE_AUDIT_PREVIOUS_RECORDS[relative])
         added = b'''        {call.dataMode === "DEMO" && <p><Link href={`/calls/${encodeURIComponent(call.callId)}/scoring-receipts`} prefetch={false}>
           {locale === "ko" ? "DEMO \xed\x8f\x89\xea\xb0\x80 \xea\xb8\xb0\xeb\xa1\x9d" : "DEMO scoring receipts"}
         </Link></p>}
 '''
         self.assertEqual(new.count(added), 1)
         self.assertEqual(new.replace(added, b""), old)
+
+    def test_comparative_link_is_the_only_new_edit_and_requires_exact_predecessor(self):
+        relative = next(iter(self.baseline))
+        self.assertEqual(set(scoring.COMPARATIVE_AUDIT_PREVIOUS_RECORDS), {relative})
+        old = bridge.git(SOURCE, "show", scoring.COMPARATIVE_AUDIT_BASE + ":" + relative)
+        self.assertEqual(blob_record(old), scoring.COMPARATIVE_AUDIT_PREVIOUS_RECORDS[relative])
+        added = "        {call.dataMode === \"DEMO\" && <p><Link href={`/calls/${encodeURIComponent(call.callId)}/comparative-scoring-receipts`} prefetch={false}>\n          {locale === \"ko\" ? \"DEMO 비교 평가 기록\" : \"DEMO comparative scoring receipts\"}\n        </Link></p>}\n".encode("utf-8")
+        self.assertEqual(self.raw[relative].count(added), 1)
+        self.assertEqual(self.raw[relative].replace(added, b""), old)
+        previous = {**self.current, **scoring.COMPARATIVE_AUDIT_PREVIOUS_RECORDS}
+        self.assertEqual(scoring.verify_scoring(self.root, self.baseline, previous), previous)
+        (self.root / relative).write_bytes(old)
+        with self.assertRaisesRegex(ValueError, "Unreviewed current"):
+            scoring.verify_scoring(self.root, self.baseline, previous)
 
     def test_additive_contract_has_only_two_reads_and_explicit_partial_scope(self):
         contract = yaml.safe_load((SOURCE / "contracts/scoring-receipts.openapi.yaml").read_text(encoding="utf-8"))
