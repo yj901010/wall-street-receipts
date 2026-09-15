@@ -308,6 +308,7 @@ class ProductTreeTests(unittest.TestCase):
                         patch.object(bridge, "verify_cpi", return_value={}), \
                         patch.object(bridge, "verify_scoring", return_value={}), \
                         patch.object(bridge, "verify_reference_widget", return_value={}), \
+                        patch.object(bridge, "verify_raw_feed_intake", return_value={}), \
                         patch.object(bridge, "verify_navigation", return_value={}):
                     with self.assertRaisesRegex(ValueError, "Unexpected uncommitted"):
                         bridge.validate_product(SOURCE, manifest)
@@ -320,6 +321,7 @@ class ProductTreeTests(unittest.TestCase):
                 patch.object(bridge, "verify_cpi", return_value={}), \
                 patch.object(bridge, "verify_scoring", return_value={}), \
                 patch.object(bridge, "verify_reference_widget", return_value={}), \
+                patch.object(bridge, "verify_raw_feed_intake", return_value={}), \
                 patch.object(bridge, "verify_navigation", return_value={}):
             bridge.validate_product(SOURCE, manifest)
         with patch.object(bridge, "git", side_effect=[b"", b"", changed, b"", changed]), \
@@ -327,6 +329,7 @@ class ProductTreeTests(unittest.TestCase):
                 patch.object(bridge, "verify_cpi", return_value={}), \
                 patch.object(bridge, "verify_scoring", return_value={}), \
                 patch.object(bridge, "verify_reference_widget", return_value={}), \
+                patch.object(bridge, "verify_raw_feed_intake", return_value={}), \
                 patch.object(bridge, "verify_navigation", return_value={}):
             with self.assertRaisesRegex(ValueError, "must not be staged"):
                 bridge.validate_product(SOURCE, manifest)

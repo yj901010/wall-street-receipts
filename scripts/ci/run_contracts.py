@@ -28,6 +28,7 @@ from navigation_contracts import ADDED_PATHS, NAVIGATION_PATHS, verify_navigatio
 from cpi_contracts import CPI_ADDED_PATHS, CPI_PATHS, verify_cpi
 from scoring_contracts import SCORING_PATHS, verify_scoring
 from reference_widget_contracts import REFERENCE_WIDGET_PATHS, verify_reference_widget
+from raw_feed_intake_contracts import RAW_FEED_INTAKE_PATHS, verify_raw_feed_intake
 from legacy_environment import legacy_step_environment
 from historical_guard_migrations import migrated_python_body
 
@@ -93,6 +94,8 @@ FIXED_CI_PATHS = frozenset({
     "scripts/ci/test_cpi_operator_lifecycle.py",
     "scripts/ci/reference_widget_contracts.py", "scripts/ci/test_reference_widget_contracts.py",
     "decisions/ADR-089-opt-in-vunelix-reference-widget.md",
+    "scripts/ci/raw_feed_intake_contracts.py", "scripts/ci/test_raw_feed_intake_contracts.py",
+    "decisions/ADR-090-offline-raw-feed-intake.md",
 })
 
 
@@ -276,11 +279,12 @@ def validate_product(root, manifest):
     adjusted = verify_cpi(root, git, adjusted, current)
     adjusted = verify_scoring(root, adjusted, current)
     adjusted = verify_reference_widget(root, adjusted, current)
+    adjusted = verify_raw_feed_intake(root, adjusted, current)
     compare_product_trees(adjusted, current, allowed)
     changed = set(filter(None, git(root, "diff", "--name-only", "-z", "HEAD").decode().split("\0")))
     untracked = set(filter(None, git(root, "ls-files", "--others", "--exclude-standard", "-z").decode().split("\0")))
-    require(changed <= allowed | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS | CPI_PATHS | SCORING_PATHS | REFERENCE_WIDGET_PATHS
-            and untracked <= allowed | ADDED_PATHS | CPI_ADDED_PATHS | SCORING_PATHS | REFERENCE_WIDGET_PATHS,
+    require(changed <= allowed | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS | CPI_PATHS | SCORING_PATHS | REFERENCE_WIDGET_PATHS | RAW_FEED_INTAKE_PATHS
+            and untracked <= allowed | ADDED_PATHS | CPI_ADDED_PATHS | SCORING_PATHS | REFERENCE_WIDGET_PATHS | RAW_FEED_INTAKE_PATHS,
             "Unexpected uncommitted product or untracked file")
     require(not git(root, "diff", "--cached", "--name-only", "--", NEXT_ENV),
             "User-owned Next declaration must not be staged")
@@ -288,7 +292,7 @@ def validate_product(root, manifest):
 
 def snapshot(root, manifest):
     files = {}
-    for relative in sorted(permitted_paths(manifest) | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS | CPI_PATHS | SCORING_PATHS | REFERENCE_WIDGET_PATHS):
+    for relative in sorted(permitted_paths(manifest) | {NEXT_ENV, TEST_PATH} | NAVIGATION_PATHS | CPI_PATHS | SCORING_PATHS | REFERENCE_WIDGET_PATHS | RAW_FEED_INTAKE_PATHS):
         path = root / relative
         require(not path.is_symlink(), "Source custody path must not be linked")
         files[relative] = digest(path.read_bytes()) if path.is_file() else None
