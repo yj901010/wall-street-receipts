@@ -455,3 +455,16 @@ executes concurrent/idempotent and restricted-role appends, and checks SELECT-on
 HTTP/restart/corruption behavior. The API remains partial DEMO and publishes only
 selected caller-attested window evidence, not raw-trade verification. Web and
 commands are unchanged; do not claim a newly executed responsive/browser check.
+
+## ADR-089 opt-in reference widget
+
+Independent reference-widget custody pins 13 additions: eight route/island/unit
+sources, one default-off public test, two browser configs, one transport-only
+browser test and the runbook. All 118 scoring paths and existing product/workflow
+bytes remain frozen. The bridge validates and snapshots these paths explicitly;
+no neighboring route, provider, arbitrary embed or broad allowlist is accepted.
+
+Run full Web lint/unit/build and public E2E plus the separate production browser
+suite described in VUNELIX_REFERENCE_WIDGET.md. No real provider runs in tests.
+Run all current CI Python tests, fixture validation, bridge validation and limits.
+Production/public-source acceptance remains separate and disabled by default.

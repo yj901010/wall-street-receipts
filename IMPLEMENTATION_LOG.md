@@ -9948,3 +9948,78 @@ configured origin or any network endpoint.
 - Local implementation and verification complete. Publish the approved 27-file
   feature commit after final staged custody/private-value checks; return a filled
   compare link against develop. PR creation, hosted CI and merge are user actions.
+
+## ADR-089 — Opt-in Vunelix reference-display pilot (2026-09-15)
+
+- User selected the Vunelix widget direction but has no deployment domain.
+  Local-only implementation branches from merged develop
+  `3742e2371841b3bb226fd1b3ebe7a2f00a860fde` (PR #36) as
+  `feature/p3-vunelix-reference-widget`. No account/domain registered or live
+  provider activated, and no publication authorization assumed from older phases.
+- Added literal `/market/reference/AAPL`: server-rendered KO/EN evidence warnings,
+  separate opt-in client island, bounded CSS, unit tests. Source/mode/feed-coverage
+  and timestamp limitations remain visible. The server-only
+  `VUNELIX_REFERENCE_WIDGET` flag defaults off; malformed values fail closed.
+  Exact `enabled` still requires a visitor click. No existing navigation changes;
+  noindex/nofollow is not access control. Only NASDAQ:AAPL is requested.
+- Vendor native component/module URL is a reference-display boundary, not a raw
+  provider or canonical mapper. Shadow DOM is not a security sandbox and the URL
+  version query does not freeze remote bytes. No remote code runs in this phase's
+  tests. An actual sensitive origin requires security/separate-origin review.
+  Provider timestamp/timezone stays provider-owned; no KST/freshness conversion.
+  Script load is not evidence of quotes, and the 15-second wait is not termination
+  of vendor execution. Full-document reset/exit and late-load warnings are explicit.
+- No price extraction, fallback fixture/zero, API/DB/migration, scoring, snapshot,
+  dependency or old product edit. Existing financial calculators, fixtures and
+  all 118 scoring pins are unchanged. Added a separate 13-path exact-byte custody
+  verifier and eight mutation/metadata/integration tests; the frozen 29,069-byte
+  workflow and its largest 598-character run remain unchanged.
+- Added VUNELIX_REFERENCE_WIDGET.md and ADR-089 for activation prerequisites,
+  public-display rights/privacy review, domain-registration ambiguity and real
+  market-hour acceptance. Free embedding claims do not establish underlying US
+  feed rights, complete SIP coverage, latency or permission to extract data.
+- Focused Web tests **21/21 PASS**. Full Vitest **1032/1032 PASS**, 75 files,
+  **18.96s**. Final Web lint PASS. Source-identical secret-free production build
+  and TypeScript PASS, including the new route. User-owned next-env.d.ts was not
+  generated/overwritten: builds used `.cache/adr089-web-20260915/apps/web`.
+  Verified 280 source/public/test files plus explicit configs and fixtures match;
+  no `.env*` exists in the mirror's three project roots.
+- Initial focused test launch hit sandbox spawn restrictions; permitted local
+  subprocess execution resolved it. Initial browser setup had the wrong config-
+  relative cwd; corrected it. Actual keyboard check then exposed a 1px default
+  button focus outline; added a visible 2px focus style. Final opt-in production
+  browser tests **12/12 PASS**, no retries, **7.7s**, at 1440/1280/390 widths.
+  Covers consent, no pre-click external request, fixed attributes, transport-only
+  success, empty module, error, timeout, English copy, no fabricated price and
+  full-document unload. Visually inspected desktop/mobile screenshots under
+  `.cache/adr089-web-20260915/apps/web/.cache/reference-widget-results/`.
+  Screenshots say TEST TRANSPORT ONLY — NO QUOTE, not observed market data.
+- Initial public browser launch through the package manager auto-installed into
+  the mirror and rewired 14 generated dependency junctions, mixing module identity
+  across Playwright workers. Restored only those junctions to the original local
+  lockfile store; no package contents were deleted. Dedicated configs now invoke
+  Node directly with fresh owned loopback servers, never reuse a user's service.
+  The next 4-worker public run had 98/108 passes: three new checks counted Next's
+  dev-tools button, seven existing cases timed out under concurrent development
+  load. Scoped the new button assertion to the product main landmark and made
+  the new public rehearsal serial; old product/tests and their timeouts unchanged.
+  Final full public development E2E **108/108 PASS**, no retries, **2.6m**,
+  including default-off/no-external-request acceptance at all three widths.
+- Initial CI launch used a system Python without PyYAML. Installed the unchanged
+  CI requirements into `.cache/adr089-ci-env`, not the system runtime. Final full
+  Python CI **318 passed, 6 existing Windows capability skips, 324 total**, zero
+  failures/errors, **166.934s**. Current bridge, fixture contracts, workflow limits
+  and diff whitespace PASS. No new Maven/API/DB run is claimed because Java and
+  database behavior are byte-preserved. No claim that the 84 historical Ubuntu
+  bodies or hosted PR CI ran locally.
+- Remaining: domain selection/registration, provider public-display and feed/
+  delay verification, security/privacy review and real market-hour acceptance
+  before activation; deterministic raw-coverage/P3 work remains separate. No
+  commit/push, PR creation, merge, deployment or paid service connection performed.
+  Existing user next-env.d.ts remains SHA256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- After local acceptance, the user approved the proposed **20-file** commit/push
+  to the public `feature/p3-vunelix-reference-widget` branch by asking to proceed.
+  Recheck exact staged scope, private-value exclusion and source custody before
+  publication. Preserve the existing next-env.d.ts; PR creation, hosted PR CI,
+  merge, domain registration and actual provider activation remain separate.
