@@ -10023,3 +10023,50 @@ configured origin or any network endpoint.
   Recheck exact staged scope, private-value exclusion and source custody before
   publication. Preserve the existing next-env.d.ts; PR creation, hosted PR CI,
   merge, domain registration and actual provider activation remain separate.
+
+## ADR-090 — Offline raw-feed documentation intake (2026-09-15)
+
+- PR #37 merged ADR-089 at `f16cb642e61b5e0377ba3830c2c3993110fda532`;
+  its PR CI #86 succeeded. Started `feature/p3-raw-feed-intake-preflight` from
+  this merged develop. The existing user next-env.d.ts remains the only unrelated
+  working-tree change. No domain, live provider or actual feed has been selected.
+- ADR-034 still blocks executable raw-window coverage on selected-feed protocol
+  and rights review. The Vunelix embed cannot meet that requirement. This slice
+  prepares that review locally; it does not add MFE/MAE/alpha/lifecycle arithmetic,
+  a canonical policy, market data, provider adapter or automatic authorization.
+- Added standard-library `scripts/review_raw_feed_intake.py`, one blank no-provider
+  example, Korean RAW_FEED_INTAKE.md and ADR-090. An explicitly supplied local
+  UTF-8 JSON names a candidate and references for 15 technical/rights categories.
+  The CLI reports missing references or READY_FOR_HUMAN_REVIEW only. Provider,
+  raw-coverage, ingestion and scoring permission flags stay false in both reports.
+  Irrelevant/invented/expired references may pass syntax and still need review.
+- Closed fields, 64 KiB bound, bounded strings/lists, duplicate JSON/requirement/
+  citation rejection, strict citation URL form, local regular-file and parent-
+  link/reparse guards. No URL/network/DNS, credential/config discovery, input
+  modification, report file creation, subprocess or DB activity in the CLI.
+  Reports never echo submitted provider/product/document/path strings; errors
+  are static codes. SHA-256 identifies exact bytes, not evidence authenticity.
+- Added 23 functional tests including real CLI exit 0/2/1 meanings, syntax/size/
+  type/Unicode/URL checks, blank and fully supplied synthetic documents, all-false
+  flags, sanitized output, path/link/replacement boundaries and stdlib imports.
+  Added five independent custody tests and four exact pins (CLI, functional test,
+  blank example, runbook). Existing scoring, reference-widget, CPI and navigation
+  bytes match the merged predecessor; historical workflow/fixtures remain frozen.
+- Focused functional tests **23/23 PASS**, **0.294s**. Combined functional/custody
+  tests **28/28 PASS**, **4.090s**, no failures/errors/skips. Current bridge PASS.
+  Full Python CI **346 passed, 6 existing Windows capability skips, 352 total**,
+  zero failures/errors, **134.692s**. Blank-example CLI returned DOCUMENTS_MISSING,
+  16 missing items, all permission flags false and expected exit 2. Fixture
+  contracts, workflow limits and diff whitespace PASS. No Java/Web/DB source changes;
+  no newly executed Maven, Next build, browser or responsive result is claimed.
+- This is an 11-file local preparation change, not completed P3 or approved raw
+  coverage. Next: collect the exact candidate's technical and rights references,
+  complete human/P5 review and user approval, then separately review the executable
+  raw contract and MFE/MAE. Actual private documents/data stay outside public Git.
+  Publication requires separate approval; PR creation, merge, deployment, live
+  connection and provider purchase remain out of scope. User next-env.d.ts remains SHA256
+  `7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc`.
+- After verification, the user explicitly approved committing/pushing exactly
+  these **11 files** to public `feature/p3-raw-feed-intake-preflight`. Recheck
+  exact staged scope, private-value exclusion and source custody before publishing.
+  Preserve next-env.d.ts; PR creation, hosted PR CI and merge remain separate.

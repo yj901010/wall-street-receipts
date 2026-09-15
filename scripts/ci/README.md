@@ -468,3 +468,15 @@ Run full Web lint/unit/build and public E2E plus the separate production browser
 suite described in VUNELIX_REFERENCE_WIDGET.md. No real provider runs in tests.
 Run all current CI Python tests, fixture validation, bridge validation and limits.
 Production/public-source acceptance remains separate and disabled by default.
+
+## ADR-090 offline raw-feed documentation intake
+
+The separate intake verifier pins four additions only: standard-library CLI,
+functional CLI tests, blank no-provider JSON example and runbook. The bridge and
+source snapshot include all four without allowing neighboring scripts/examples.
+All previous scoring, reference-widget and frozen product/workflow bytes remain
+unchanged. Functional tests run in normal Python discovery, including subprocess
+execution of the real CLI with synthetic document references and all permission
+flags false. Run all current CI tests, bridge, fixtures and workflow limits.
+No actual provider, raw tick, network connection, new dependency or public quote
+is exercised; READY_FOR_HUMAN_REVIEW never means a feed is approved for ingestion.
